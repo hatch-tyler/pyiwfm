@@ -1,3 +1,69 @@
+class IWFMNodes:
+    ''' defines the IWFM Nodes object. This class is composed of many
+    GroundwaterNodes that exist within a model application. 
+
+    Attributes
+    ----------
+    nd : int
+        number of GroundwaterNode objects in the model application
+
+    fact : float
+        length conversion factor for the x- and y- coordinates
+
+    nodes : list
+        list of GroundwaterNode objects
+
+    Methods
+    -------
+    from_file : classmethod
+        creates an IWFMNodes object from the IWFM nodal coordinate file
+    '''
+    def __init__(self, nd, fact, nodes):
+        # check that the number of nodes variable nd is an integer
+        if not isinstance(nd, int):
+            raise TypeError("nd must be an integer")
+
+        self.nd = nd
+
+        # check that the conversion factor variable is a number
+        if not isinstance(fact, (int, float)):
+            raise TypeError("fact must be a number")
+
+        self.fact = fact
+
+        # check that nodes is a list of GroundwaterNode objects
+        if not isinstance(nodes, (list, tuple)) and all([isinstance(node, GroundwaterNode) for node in nodes]):
+            raise TypeError("nodes must be a list or tuple of GroundwaterNode objects")
+
+        if len(nodes) != nd:
+            raise ValueError("there must be {} nodes. {} were provided".format(nd, len(nodes)))
+
+        self.nodes = nodes
+    
+    @classmethod
+    def from_file(cls, nodes_file):
+        ''' alternate class constructor read from a text file '''
+
+        if isinstance(nodes_file, str):
+            with open(nodes_file, 'r') as f:
+                count = 0
+                for line in f:
+                    if line[0] not in ['C', 'c', '*']:
+                        if count == 0:
+                            nd = int(line.split('/')[0].strip())
+                        elif count == 1:
+                            fact = float(line.split('/'[0].strip()))
+                        count += 1
+                    if count == 2:
+                        break
+
+                nodes = []
+                for line in f:
+                    if line[0] not in ['C', 'c', '*']:
+                        nodes.append(GroundwaterNode.from_string(line))
+
+        return cls(nd, fact, nodes)
+
 class GroundwaterNode:
     ''' defines the groundwater node object. This class is a base
     class and has no knowledge of other node objects defined in a
