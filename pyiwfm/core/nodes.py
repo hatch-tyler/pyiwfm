@@ -61,7 +61,7 @@ class IWFMNodes:
                         if count == 0:
                             nd = int(line.split('/')[0].strip())
                         elif count == 1:
-                            fact = float(line.split('/'[0].strip()))
+                            fact = float(line.split('/')[0].strip())
                         count += 1
                     if count == 2:
                         break
