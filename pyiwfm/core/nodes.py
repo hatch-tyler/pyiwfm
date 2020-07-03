@@ -132,6 +132,9 @@ class GroundwaterNode:
         self.x = x
         self.y = y
 
+    def __repr__(self):
+        return 'GroundwaterNode({}, {}, {})'.format(self.node_id, self.x, self.y)
+
     @classmethod
     def from_string(cls, string):
         ''' alternate class constructor designed to be used to read
