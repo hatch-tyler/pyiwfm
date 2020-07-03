@@ -1,5 +1,8 @@
+import os
 import numpy as np
 import pandas as pd
+
+from pyiwfm.utilities.utilities import dataframe_to_structured_array
 
 class IWFMNodes:
     ''' defines the IWFM Nodes object. This class is composed of many
@@ -18,6 +21,9 @@ class IWFMNodes:
 
     Methods
     -------
+    get_node_coordinates_from_id : instance method
+        returns a tuple with x,y coordinates for a provided node_id
+    
     from_file : classmethod
         creates an IWFMNodes object from the IWFM nodal coordinate file
 
@@ -115,6 +121,48 @@ class IWFMNodes:
         '''
         return pd.DataFrame(self.to_dict())
 
+    def to_featureclass(self, out_feature_class, spatial_reference=None):
+        ''' converts the nodes to a ArcGIS point feature class
+        
+        Notes
+        -----
+        This method requires an ArcGIS license
+        
+        Parameters
+        ----------
+        out_feature_class : str
+            file name for resulting feature class
+        
+        spatial_reference : str, arcpy.SpatialReference, int (optional)
+            str: projection file, coordinate system name, or well-known text string
+            int: coordinate system factory code
+            https://pro.arcgis.com/en/pro-app/arcpy/classes/pdf/projected_coordinate_systems.pdf
+        
+        Returns
+        -------
+        None
+            creates a feature class at the designated location
+        '''
+        import arcpy
+
+        # check that out_feature_class is a string
+        if not isinstance(out_feature_class, str):
+            raise TypeError('out_feature_class must be a string')
+
+        # check if feature class already exists
+        if not os.path.exists(out_feature_class):
+            
+            # if feature class does not exist, check if path exists
+            if not os.path.exists(os.path.dirname(out_feature_class)):
+                raise ValueError('file path does not exist: {}'.format(os.path.dirname))
+        
+            arr = dataframe_to_structured_array(self.to_dataframe())
+
+            arcpy.da.NumPyArrayToFeatureClass(arr, out_feature_class, ("x", "y"), spatial_reference)
+
+        else:
+            print("feature class already exists")
+        
 
 class GroundwaterNode:
     ''' defines the groundwater node object. This class is a base
@@ -156,7 +204,7 @@ class GroundwaterNode:
         self.y = y
 
     def __repr__(self):
-        return 'GroundwaterNode({}, {}, {})'.format(self.node_id, self.x, self.y)
+        return 'GroundwaterNode(node_id={}, x={}, y={})'.format(self.node_id, self.x, self.y)
 
     @classmethod
     def from_string(cls, string):
