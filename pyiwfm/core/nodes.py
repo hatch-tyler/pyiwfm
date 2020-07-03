@@ -68,7 +68,7 @@ class IWFMNodes:
         node_ids = [node.node_id for node in self.nodes]
         
         if node_id not in node_ids:
-            raise ValueError("id provided is not a valid node_id")
+            raise ValueError("node_id provided is not a valid node_id")
 
         return [(node.x, node.y) for node in self.nodes if node_id == node.node_id][0]
     
