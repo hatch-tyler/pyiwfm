@@ -1,3 +1,6 @@
+import numpy as np
+import pandas as pd
+
 class IWFMNodes:
     ''' defines the IWFM Nodes object. This class is composed of many
     GroundwaterNodes that exist within a model application. 
@@ -17,6 +20,12 @@ class IWFMNodes:
     -------
     from_file : classmethod
         creates an IWFMNodes object from the IWFM nodal coordinate file
+
+    to_dict : instance method
+        converts the nodes attribute to a python dictionary
+
+    to_dataframe : instance method
+        converts the nodes attribute to a pandas DataFrame
     '''
     def __init__(self, nd, fact, nodes):
         # check that the number of nodes variable nd is an integer
@@ -63,6 +72,26 @@ class IWFMNodes:
                         nodes.append(GroundwaterNode.from_string(line))
 
         return cls(nd, fact, nodes)
+
+    def to_dict(self):
+        ''' converts the list of GroundwaterNode objects to a python 
+        dictionary
+        '''
+        node_ids = [node.node_id for node in self.nodes]
+        x_coords = [node.x for node in self.nodes]
+        y_coords = [node.y for node in self.nodes]
+
+        return dict(node_id=node_ids,
+                    x=x_coords,
+                    y=y_coords)
+
+
+    def to_dataframe(self):
+        ''' converts the list of GroundwaterNode objects to a Pandas
+        DataFrame Object 
+        '''
+        return pd.DataFrame(self.to_dict())
+
 
 class GroundwaterNode:
     ''' defines the groundwater node object. This class is a base
