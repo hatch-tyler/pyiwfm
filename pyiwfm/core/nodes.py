@@ -48,6 +48,29 @@ class IWFMNodes:
             raise ValueError("there must be {} nodes. {} were provided".format(nd, len(nodes)))
 
         self.nodes = nodes
+
+    def get_node_coordinates_from_id(self, node_id):
+        ''' returns the x and y coordinates for a node_id
+        
+        Parameters
+        ----------
+        node_id : int
+            node_id with corresponding x-y coordinates
+
+        Returns
+        -------
+        tuple
+            x-y coordinate pair for node_id
+        '''
+        if not isinstance(node_id, int):
+            raise TypeError("id must be an integer. value provided is a {}".format(type(node_id)))
+
+        node_ids = [node.node_id for node in self.nodes]
+        
+        if node_id not in node_ids:
+            raise ValueError("id provided is not a valid node_id")
+
+        return [(node.x, node.y) for node in self.nodes if node_id == node.node_id][0]
     
     @classmethod
     def from_file(cls, nodes_file):
