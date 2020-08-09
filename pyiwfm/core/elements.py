@@ -53,3 +53,6 @@ class Element:
             self.node_ids = np.array(node_ids)
 
         self.subregion = subregion
+
+    def __repr__(self):
+        return 'Element(element_id={}, node_ids={}, subregion={})'.format(self.element_id, self.node_ids, self.subregion)
