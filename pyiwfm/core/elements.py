@@ -56,3 +56,24 @@ class Element:
 
     def __repr__(self):
         return 'Element(element_id={}, node_ids={}, subregion={})'.format(self.element_id, self.node_ids, self.subregion)
+
+    @classmethod
+    def from_string(cls, string):
+        ''' alternate class constructor designed to be used to read
+        from a text file 
+        '''
+        if not isinstance(string, str):
+            raise TypeError("value provided must be a string type. type provided: {}".format(type(string)))
+
+        string_list = string.split()
+
+        # check list has 6 items i.e. element_id, node1, node2, node3, node4, subregion
+        if len(string_list) != 6:
+            raise ValueError("string must include exactly 6 values for a groundwater node")
+
+        element_id = int(string_list[0])
+        node_ids = np.array([int(val) for val in string_list[1:6]])
+        subregion = int(string_list[6])
+
+        return cls(element_id, node_ids, subregion)
+
