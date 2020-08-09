@@ -89,7 +89,7 @@ class IWFMElements:
             count = 0
             for line in f:
                 if line[0] not in ['C', 'c', '*']:
-                    rnames.append(line.split('/').strip())
+                    rnames.append(line.split('/')[0].strip())
                     count += 1
                     if count == nregn:
                         break
