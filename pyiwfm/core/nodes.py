@@ -158,7 +158,7 @@ class IWFMNodes:
         
             arr = dataframe_to_structured_array(self.to_dataframe())
 
-            arcpy.da.NumPyArrayToFeatureClass(arr, out_feature_class, ("x", "y"), spatial_reference)
+            arcpy.da.NumPyArrayToFeatureClass(arr, out_feature_class, ("x", "y"), spatial_reference) # pylint: disable=no-member
 
         else:
             print("feature class already exists")
