@@ -41,6 +41,18 @@ class Element:
             if not all([isinstance(val, int) for val in node_ids]):
                 raise TypeError("each node id in node_ids must be an integer")
 
+            # check if a 0 is provided as one of the ids in node_ids, 
+            # there must only be 1 it must be the last value node_id
+            if isinstance(node_ids, np.array):
+                zero_index = np.where(node_ids, 0)[0]
+            else:
+                zero_index = [i for i in range(len(node_ids)) if node_ids[i] == 0]
+                
+            if len(zero_index) > 1:
+                raise ValueError("{} node ids were provided equal to 0. There can only be one".format(len(zero_index)))
+            elif len(zero_index) == 1 and zero_index[0] != 3:
+                raise IndexError("A 0 can only be provided as the last value of node_ids")
+
         # check that subregions is an integer
         if not isinstance(subregion, int):
             raise TypeError("subregion must be an integer")
