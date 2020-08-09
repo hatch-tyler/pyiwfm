@@ -130,7 +130,7 @@ class Element:
             raise TypeError("element_id must be an integer")
 
         # check that node_ids are a list, tuple, or array of integers
-        if not isinstance(node_ids, (list, tuple, np.array)):
+        if not isinstance(node_ids, (list, tuple, np.ndarray)):
             raise TypeError("node_ids must be provided as a list, tuple, or np.array")
         else:
             # length must be equal to 4
@@ -142,7 +142,7 @@ class Element:
 
             # check if a 0 is provided as one of the ids in node_ids, 
             # there must only be 1 it must be the last value node_id
-            if isinstance(node_ids, np.array):
+            if isinstance(node_ids, np.ndarray):
                 zero_index = np.where(node_ids, 0)[0]
             else:
                 zero_index = [i for i in range(len(node_ids)) if node_ids[i] == 0]
