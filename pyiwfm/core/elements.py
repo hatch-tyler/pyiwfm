@@ -2,6 +2,61 @@ import os
 import numpy as np
 import pandas as pd
 
+class IWFMElements:
+    ''' Defines IWFM Elements object. This class is composed
+    of many Elements that exist within a model application
+
+    Attributes
+    ----------
+    ne : int
+        number of Element objects in the model application
+
+    nregn : int
+        number of subregions in the model application
+
+    rnames : list of str
+        names defined for each of the nregn subregions
+
+    elements : list
+        list of Element Object instances
+
+    Methods
+    -------
+
+    '''
+    def __init__(self, ne, nregn, rnames, elements):
+        # check that the number of elements is an integer
+        if not isinstance(ne, int):
+            raise TypeError("the number of elements, ne, must be an integer")
+
+        self.ne = ne
+
+        # check that the number of subregions is an integer
+        if not isinstance(nregn, int):
+            raise TypeError("the number of subregions, nregn, must be an integer")
+
+        self.nregn = nregn
+
+        # check that the rnames is a list of strings
+        if not isinstance(rnames, list) and all([isinstance(val, str) for val in rnames]):
+            raise TypeError("rnames must be a list of strings")
+
+        # check that length of rnames is equal to nregn
+        if len(rnames) != nregn:
+            raise ValueError("There must be {} subregion names in rnames. {} provided".format(nregn, len(rnames)))
+
+        self.rnames = rnames
+                
+        # check that elements is a list of Element objects
+        if not isinstance(elements, (list, tuple)) and all([isinstance(element, Element) for element in elements]):
+            raise TypeError("elements must be a list or tuple of Element objects")
+
+        # check that length of elements is equal to ne
+        if len(elements) != ne:
+            raise ValueError("There must be {} elements. {} provided.".format(ne, len(elements)))
+
+        self.elements = elements
+
 class Element:
     ''' Defines a Model Element Object. This is a base class
     and has no other knowledge of other Element objects defined
