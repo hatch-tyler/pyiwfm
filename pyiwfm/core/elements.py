@@ -183,8 +183,8 @@ class Element:
             raise ValueError("string must include exactly 6 values for a groundwater node")
 
         element_id = int(string_list[0])
-        node_ids = np.array([int(val) for val in string_list[1:6]])
-        subregion = int(string_list[6])
+        node_ids = np.array([int(val) for val in string_list[1:5]])
+        subregion = int(string_list[5])
 
         return cls(element_id, node_ids, subregion)
 
