@@ -57,6 +57,50 @@ class IWFMElements:
 
         self.elements = elements
 
+    @classmethod
+    def from_file(cls, elements_file):
+        ''' alternate class constructor read from a text file 
+        
+        Parameters
+        ----------
+        elements_file : str
+            file path and name for the IWFM elements file
+
+        Returns
+        -------
+        instance of IWFMElements class
+        '''
+        if not isinstance(elements_file, str):
+            raise TypeError("elements_file must be a string")
+
+        with open(elements_file, 'r') as f:
+            count = 0
+            for line in f:
+                if line[0] not in ['C', 'c', '*']:
+                    if count == 0:
+                        ne = int(line.split('/')[0].strip())
+                    elif count == 1:
+                        nregn = int(line.split('/')[0].strip())
+                    count += 1
+                    if count == 2:
+                        break
+
+            rnames=[]
+            count = 0
+            for line in f:
+                if line[0] not in ['C', 'c', '*']:
+                    rnames.append(line.split('/').strip())
+                    count += 1
+                    if count == nregn:
+                        break
+
+            elements = []
+            for line in f:
+                if line[0] not in ['C', 'c', '*']:
+                    elements.append(Element.from_string(line))
+
+        return cls(ne, nregn, rnames, elements)
+
 class Element:
     ''' Defines a Model Element Object. This is a base class
     and has no other knowledge of other Element objects defined
