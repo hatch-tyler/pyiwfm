@@ -25,6 +25,9 @@ class IWFMElements:
     get_subregion_from_id : instance method
         returns the subregion integer id for a given element_id
 
+    get_nodes_from_id : instance method
+        returns the array of node_ids for a given element_id
+
     from_file : class method
         creates an IWFMElements object from the IWFM element configuration file
 
@@ -84,6 +87,29 @@ class IWFMElements:
             raise ValueError("element_id provided is not a valid element_id")
 
         return [element.subregion for element in self.elements if element_id == element.element_id][0]
+
+    def get_nodes_from_id(self, element_id):
+        ''' returns the array of node_ids for a given element_id
+
+        Parameters
+        ----------
+        element_id : int
+            element_id with a corresponding set of node_ids
+
+        Returns
+        -------
+        np.array
+            integer array of node_ids for given element_id
+        '''
+        if not isinstance(element_id, int):
+            raise TypeError("id must be an integer. value provided is a {}".format(type(element_id)))
+
+        element_ids = [element.element_id for element in self.elements]
+        
+        if element_id not in element_ids:
+            raise ValueError("element_id provided is not a valid element_id")
+
+        return [element.node_ids for element in self.elements if element_id == element.element_id][0]
 
     @classmethod
     def from_file(cls, elements_file):
