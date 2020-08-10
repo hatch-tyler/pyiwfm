@@ -57,6 +57,29 @@ class IWFMElements:
 
         self.elements = elements
 
+    def get_subregion_from_id(self, element_id):
+        ''' returns the subregion id for a given element_id
+
+        Parameters
+        ----------
+        element_id : int
+            element_id with a corresponding subregion id
+
+        Returns
+        -------
+        int
+            subregion id for Element object
+        '''
+        if not isinstance(element_id, int):
+            raise TypeError("id must be an integer. value provided is a {}".format(type(element_id)))
+
+        element_ids = [element.element_id for element in self.elements]
+        
+        if element_id not in element_ids:
+            raise ValueError("element_id provided is not a valid element_id")
+
+        return [element.subregion for element in self.elements if element_id == element.element_id][0]
+
     @classmethod
     def from_file(cls, elements_file):
         ''' alternate class constructor read from a text file 
@@ -137,13 +160,13 @@ class Element:
             assert len(node_ids) == 4
 
             # check that all values in node_ids are integers
-            if not all([isinstance(val, int) for val in node_ids]):
-                raise TypeError("each node id in node_ids must be an integer")
+            if not all([isinstance(val, (int, np.int32, np.int64)) for val in node_ids]):
+                raise TypeError("each node id in node_ids must be an integer: {}".format(node_ids))
 
             # check if a 0 is provided as one of the ids in node_ids, 
             # there must only be 1 it must be the last value node_id
             if isinstance(node_ids, np.ndarray):
-                zero_index = np.where(node_ids, 0)[0]
+                zero_index = np.where(node_ids == 0)[0]
             else:
                 zero_index = [i for i in range(len(node_ids)) if node_ids[i] == 0]
                 
@@ -158,7 +181,7 @@ class Element:
 
         self.element_id = element_id
         
-        if isinstance(node_ids, np.array):
+        if isinstance(node_ids, np.ndarray):
             self.node_ids = node_ids
         else:
             self.node_ids = np.array(node_ids)
