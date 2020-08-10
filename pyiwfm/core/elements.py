@@ -88,6 +88,21 @@ class IWFMElements:
 
         return [element.subregion for element in self.elements if element_id == element.element_id][0]
 
+    def get_subregion_name_from_id(self, element_id):
+        ''' returns the subregion name for the subregion associated 
+        with a given element_id '''
+        if not isinstance(element_id, int):
+            raise TypeError("id must be an integer. value provided is a {}".format(type(element_id)))
+
+        element_ids = [element.element_id for element in self.elements]
+        
+        if element_id not in element_ids:
+            raise ValueError("element_id provided is not a valid element_id")
+
+        subregion_id = [element.subregion for element in self.elements if element_id == element.element_id][0]
+
+        return self.rnames[subregion_id - 1]
+
     def get_nodes_from_id(self, element_id):
         ''' returns the array of node_ids for a given element_id
 
@@ -110,6 +125,53 @@ class IWFMElements:
             raise ValueError("element_id provided is not a valid element_id")
 
         return [element.node_ids for element in self.elements if element_id == element.element_id][0]
+
+    def to_dict(self):
+        ''' converts the list of Element objects to a python dictionary '''
+        element_ids = np.array([element.element_id for element in self.elements])
+        node_array = np.array([element.node_ids for element in self.elements])
+        node1 = node_array[:,0]
+        node2 = node_array[:,1]
+        node3 = node_array[:,2]
+        node4 = node_array[:,3]
+        subregion = np.array([element.subregion for element in self.elements])
+
+        return dict(element_id=element_ids,
+                    node1=node1,
+                    node2=node2,
+                    node3=node3,
+                    node4=node4,
+                    subregion=subregion)
+
+    def to_dataframe(self, filter_zeros=True):
+        '''converts the list of Element objects to a pandas DataFrame object 
+        Parameters
+        ----------
+        filter_zeros : bool, default=True
+            flag to remove node_ids equal to 0
+            
+        Returns
+        -------
+        pd.DataFrame
+            pandas DataFrame object of Element data 
+        '''
+        element_ids = np.array([element.element_id for element in self.elements])
+        node_array = np.array([element.node_ids for element in self.elements])
+        subregions = np.array([element.subregion for element in self.elements])
+
+        num_elem, num_nodes = node_array.shape
+
+        elements_dict = dict(ElementID=np.repeat(element_ids, num_nodes),
+                             NodeNum=np.tile(np.arange(1, num_nodes + 1), num_elem),
+                             NodeID=node_array.flatten(),
+                             Subregion=np.repeat(subregions, num_nodes))
+        
+        df = pd.DataFrame(elements_dict)
+
+        if filter_zeros:
+            return df[df['NodeID'] != 0]
+        else:
+            return df
 
     @classmethod
     def from_file(cls, elements_file):
