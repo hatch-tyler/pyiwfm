@@ -22,6 +22,11 @@ class IWFMElements:
 
     Methods
     -------
+    get_subregion_from_id : instance method
+        returns the subregion integer id for a given element_id
+
+    from_file : class method
+        creates an IWFMElements object from the IWFM element configuration file
 
     '''
     def __init__(self, ne, nregn, rnames, elements):
