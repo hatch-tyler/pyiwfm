@@ -46,8 +46,26 @@ class IWFMStratigraphy:
 
         self.stratigraphy = stratigraphy
 
+    def get_ground_surface_elevations(self):
+        ''' returns all ground surface elevations provided in the IWFM Stratigraphy File '''
+        return np.array([ns.gse for ns in self.stratigraphy])
+
+    def to_dataframe(self):
+        ''' converts the list of NodeStratigraphy objects to a pandas DataFrame '''
+        names = IWFMStratigraphy._get_stratigraphy_column_names(self.nl)
+
+        node_ids = np.array([ns.node_id for ns in self.stratigraphy])
+        gse = np.array([ns.gse for ns in self.stratigraphy])
+        layer_thicknesses = np.array([ns.layer_thicknesses for ns in self.stratigraphy])
+
+        df = pd.concat([pd.DataFrame(node_ids),pd.DataFrame(gse), pd.DataFrame(layer_thicknesses)], axis=1)
+        df.columns = names
+
+        return df
+
+
     @staticmethod
-    def _get_stratigraphy_data_names(num_layers):
+    def _get_stratigraphy_column_names(num_layers):
         ''' private static method to generate variable names for aquitard
         and aquifer layers 
         
