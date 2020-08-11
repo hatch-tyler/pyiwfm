@@ -20,7 +20,11 @@ class IWFMStratigraphy:
     
     Methods
     -------
-    
+    get_ground_surface_elevation : instance method
+        returns a numpy array of the ground surface elevations at each GroundwaterNode
+
+    to_dataframe : instance method
+        converts the stratigraphy data into a pandas DataFrame
     '''
     def __init__(self, nl, fact, stratigraphy):
 
@@ -62,7 +66,6 @@ class IWFMStratigraphy:
         df.columns = names
 
         return df
-
 
     @staticmethod
     def _get_stratigraphy_column_names(num_layers):
