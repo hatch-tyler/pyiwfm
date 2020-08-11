@@ -213,6 +213,11 @@ class IWFMElements:
             elements = []
             for line in f:
                 if line[0] not in ['C', 'c', '*']:
+
+                    # handle case where a blank line exists
+                    if len(line.split()) == 0:
+                        continue
+
                     elements.append(Element.from_string(line))
 
         return cls(ne, nregn, rnames, elements)
