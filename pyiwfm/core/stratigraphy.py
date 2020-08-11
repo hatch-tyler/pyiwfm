@@ -39,7 +39,10 @@ class IWFMStratigraphy:
             raise TypeError("stratigraphy must be a list of NodeStratigraphy objects")
 
         # check that the layer thickness arrays are all equal to 2 times the number of layers
-        #layer_check = np.where(np.array([ns.layer_thicknesses]))
+        layer_check = np.where(np.array([len(ns.layer_thicknesses) for ns in stratigraphy]) != 2 * self.nl)[0]
+        
+        if len(layer_check) > 0:
+            raise ValueError("stratigraphy provided does not match the number of layers provided")
 
         self.stratigraphy = stratigraphy
 
