@@ -36,10 +36,10 @@ class IWFMStratigraphy:
         if not isinstance(fact, (int, float)):
             raise TypeError("fact must be an number")
 
-        self.fact = fact
+        self.fact = float(fact)
 
         # check that stratigraphy is a list and all items in the list are NodeStratigraphy objects
-        if not isinstance(stratigraphy, list) and all([isinstance(item, NodeStratigraphy) for item in stratigraphy]):
+        if not isinstance(stratigraphy, list) and not all([isinstance(item, NodeStratigraphy) for item in stratigraphy]):
             raise TypeError("stratigraphy must be a list of NodeStratigraphy objects")
 
         # check that the layer thickness arrays are all equal to 2 times the number of layers
