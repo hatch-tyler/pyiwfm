@@ -18,8 +18,11 @@ class LinkedListNode:
     def __del__(self):
         pass
 
+    def __repr__(self):
+        return "LinkedListNode(value={}, next_value={})".format(self.__value, self.__next_value)
+
     def get_next(self):
-        return self.__next_value.get_value()
+        return self.__next_value
 
     def get_value(self):
         return self.__value
@@ -31,7 +34,7 @@ class LinkedListNode:
             raise TypeError("node must be of type LinkedListNode")
 
         if self.__next_value is not None:
-            set_last_message("Can only add a node to the end of a linked list.", FATAL, this_procedure)
+            set_last_message("Can only add a node to the end of the linked list.", FATAL, this_procedure)
         
         self.__next_value = node
 
