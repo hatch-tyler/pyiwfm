@@ -11,3 +11,29 @@ class BinaryTree:
         self.data = data
         self.left = left
         self.right = right
+
+    def __del__(self):
+        pass
+    
+    def add_node(self):
+        pass
+
+    def get_n_nodes(self):
+        pass
+
+    def get_pointer_to_node(self):
+        pass
+
+    def get_ordered_integer_key_list(self):
+        pass
+
+    def get_ordered_real_key_list(self):
+        pass
+
+    def get_ordered_char_key_list(self):
+        pass
+
+    def get_ordered_list(self):
+        pass
+
+    
