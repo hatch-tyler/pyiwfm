@@ -75,28 +75,28 @@ class GenericLinkedList:
     '''
     def __init__(self, n_nodes=None, head=None, tail=None, current=None):
         if n_nodes is None:
-            self.__n_nodes = 0
+            self._n_nodes = 0
         elif not isinstance(n_nodes, int):
             raise TypeError('n_nodes must be an integer')
 
         if head is None:
-            self.__head = LinkedListNode(None)
+            self._head = LinkedListNode(None)
         elif isinstance(head, LinkedListNode):
-            self.__head = head
+            self._head = head
         else:
             raise TypeError('head must be of type LinkedListNode')
 
         if tail is None:
-            self.__tail = LinkedListNode(None)
+            self._tail = LinkedListNode(None)
         elif isinstance(tail, LinkedListNode):
-            self.__tail = tail
+            self._tail = tail
         else:
             raise TypeError('tail must be of type LinkedListNode')
 
         if current is None:
-            self.__current = LinkedListNode(None)
+            self._current = LinkedListNode(None)
         elif isinstance(current, LinkedListNode):
-            self.__current = current
+            self._current = current
         else:
             raise TypeError('current must be of type LinkedListNode')
 
@@ -104,15 +104,15 @@ class GenericLinkedList:
         # move to the head of the list
         self.reset()
 
-        for _ in range(self.__n_nodes):
-            current = self.__current
+        for _ in range(self._n_nodes):
+            current = self._current
             self.next_node()
             del(current)
 
-        self.__n_nodes = 0
+        self._n_nodes = 0
 
     def __repr__(self):
-        node = self.__head
+        node = self._head
         nodes = []
         while node is not None:
             nodes.append(node.get_value())
@@ -122,13 +122,13 @@ class GenericLinkedList:
         return " -> ".join([str(i) for i in nodes])
 
     def get_n_nodes(self):
-        return self.__n_nodes
+        return self._n_nodes
 
     def get_current_value(self):
-        return self.__current.get_value()
+        return self._current.get_value()
 
     def convert_to_integer_array(self):
-        if self.__n_nodes == 0:
+        if self._n_nodes == 0:
             return
         
         this_procedure = MODULE_NAME+"convert_to_integer_array"
@@ -140,7 +140,7 @@ class GenericLinkedList:
         if not out_list:
             set_last_message('Error in allocating memory to convert a linked list to an integer array.', FATAL, this_procedure)
         
-        for _ in range(self.__n_nodes):
+        for _ in range(self._n_nodes):
             current = self.get_current_value()
             if isinstance(current, int):
                 out_list.append(current)
@@ -149,23 +149,23 @@ class GenericLinkedList:
         return np.array(out_list, dtype=np.int)
 
     def add_node(self, value):
-        if self.__n_nodes == 0:
-           self.__head = LinkedListNode(value)
-           self.__tail = self.__head
+        if self._n_nodes == 0:
+           self._head = LinkedListNode(value)
+           self._tail = self._head
 
         else:
             new_node = LinkedListNode(value)
-            self.__tail.set_next(new_node)
-            self.__tail = new_node
+            self._tail.set_next(new_node)
+            self._tail = new_node
 
-        self.__current = self.__tail
-        self.__n_nodes += 1
+        self._current = self._tail
+        self._n_nodes += 1
 
     def reset(self):
-        self.__current = self.__head
+        self._current = self._head
 
     def next_node(self):
-        self.__current = self.__current.get_next()
+        self._current = self._current.get_next()
 
 if __name__ == '__main__':
     node_list = GenericLinkedList()
