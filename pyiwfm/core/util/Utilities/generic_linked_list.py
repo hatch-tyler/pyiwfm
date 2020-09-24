@@ -29,16 +29,16 @@ class GenericLinkedList:
 
     Attributes
     ----------
-    __n_nodes : int, private
+    _n_nodes : int, private
         number of nodes in linked list
 
-    __head : LinkedListNode
+    _head : LinkedListNode
         first node in the linked list
 
-    __tail : LinkedListNode
+    _tail : LinkedListNode
         last node in the linked list
 
-    __current : LinkedListNode
+    _current : LinkedListNode
         current node in the linked list
 
     Methods
