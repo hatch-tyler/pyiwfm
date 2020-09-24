@@ -7,6 +7,42 @@ This is the binary_tree module of the python version of IWFM
 MODULE_NAME = 'Class_BinaryTree::'
 
 class BinaryTree:
+    ''' This is a base class for a key-value Binary Tree
+
+    Attributes
+    ----------
+    _key : int, float, or str, private
+        key used to organize the Binary Tree Nodes
+
+    _data : any data or object type
+        data stored in the Binary Tree
+
+    _left : BinaryTree
+        linked Binary Tree Node with a key less than the root key (_key)
+
+    _right : BinaryTree
+        linked Binary Tree Node with a key greater than the root key (_key)
+
+    Methods
+    -------
+    add_node : instance method
+        adds a new key value pair to the Binary Tree
+
+    get_n_nodes : instance method
+        returns the total number of key-value pairs in the Binary Tree
+
+    get_pointer_to_node: instance method
+        returns the value (_data attribute) for the given key
+
+    get_ordered_key_list : instance method
+        returns an ordered list of the keys in the Binary Tree
+
+    _get_n_nodes_recursive : instance method, private
+        traverses the BinaryTree recursively to obtain a count of all nodes
+
+    _get_ordered_keys_recursive : instance method, private
+        traverses the BinaryTree recursively to obtain the ordered list of keys
+    '''
     def __init__(self, key=None, data=None):
         self._key = key
         self._data = data
