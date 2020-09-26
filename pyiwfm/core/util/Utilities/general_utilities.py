@@ -138,6 +138,14 @@ def lower_case(string):
     return string.lower()
 
 def strip_text_until_character(in_text, character, back=False):
+    location = first_location(character, in_text, back)
+    
+    if location > -1:
+        return in_text[:location]
+    
+    return in_text
+
+def clean_special_characters(string):
     pass
 
 
