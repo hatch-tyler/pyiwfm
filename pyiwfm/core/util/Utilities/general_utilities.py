@@ -4,6 +4,8 @@ Author: Tyler Hatch PhD, PE
 
 This is the general_utilities module of the python version of IWFM
 '''
+import numpy as np
+
 # local imports
 from message_logger import set_last_message
 from message_logger import FATAL
@@ -146,7 +148,174 @@ def strip_text_until_character(in_text, character, back=False):
     return in_text
 
 def clean_special_characters(string):
+    ''' replaces special characters (ascii values less than 32) with a space '''
+    for i, c in enumerate(string):
+        if ord(c) < 32:
+            string[i] = " "
+    
+    return string
+
+def clean_special_characters_string_array(string_array):
+    ''' cleans special characters for each string in a string array (list) '''
+    return [clean_special_characters(string) for string in string_array]
+
+def get_start_location(string, column_number):
+    ''' returns the index of the start location of the column 
+    
+    Parameters
+    ----------
+    string : str
+        data string to locate start location of column number
+        
+    column_number : int
+        column number to locate start location
+        
+    Returns
+    -------
+    int
+        index for the start location corresponding to the column number
+    '''
+    work_string = clean_special_characters(string)
+    work_string = strip_text_until_character(work_string, '/', back=True)
+
+    # count columns, spaces or comma in string
+    column_counter = 0
+
+    # initially set current location to empty
+    is_current_location_empty = True
+
+    # loop through each character in the string
+    for work_location, c in enumerate(string):
+        is_previous_location_empty = is_current_location_empty
+        is_current_location_empty = False
+        
+        # check if the current character is a space or comma
+        if (c == ' ') or (c == ','):
+            is_current_location_empty = True
+        
+        # only increase the column count if the current location is not empty 
+        # and the previous location was empty
+        if is_previous_location_empty and (not is_current_location_empty):
+            column_counter += 1
+
+        # when the column counter equals the column number return the location
+        if column_counter == column_number:
+            return work_location
+
+def prepare_title(title_lines, title_length, title_start_location):
+    ''' formats the title
+    '''
+    lead = '*'
+
+    title = lead + '*' * title_length + '\n'
+
+    for line in title_lines:
+        title = title + lead + '*' + line[:title_length-2] + '*' + '\n'
+
+    title = title + lead + '*' * title_length
+
+    return title
+
+def alloc_1D_int_array():
+    raise NotImplementedError
+
+def alloc_1D_real_array():
+    raise NotImplementedError
+
+def alloc_1D_logical_array():
+    raise NotImplementedError
+
+def alloc_1D_character_array():
+    raise NotImplementedError
+
+def alloc_2D_character_array():
+    raise NotImplementedError
+
+def alloc_2D_real_array():
+    raise NotImplementedError
+
+def alloc_3D_real_array():
+    raise NotImplementedError
+
+def alloc_2d_int_array():
+    raise NotImplementedError
+
+def alloc_pointer_to_1D_logical_array():
+    raise NotImplementedError
+
+def alloc_pointer_to_1D_real_array():
+    raise NotImplementedError
+
+def alloc_pointer_to_1D_character_array():
+    raise NotImplementedError
+
+def locate_item_in_array(item, list_of_items):
+    ''' returns the index of the item in the list of items
+    
+    Parameters
+    ----------
+    item : int, float, or str
+        item to locate in the array
+        
+    list_of_items : list, np.ndarray
+        array of items
+
+    Returns
+    -------
+    int
+        index of the first location matching them item 
+    '''
+    if isinstance(list_of_items, list):
+        return list_of_items.index(item)
+
+    if isinstance(list_of_items, np.ndarray):
+        return np.where(list_of_items == item)[0][0]
+
+def locate_set_in_array(items_list, list_of_items):
+    ''' locates the first occurrence of each item in the items_list within the list_of_items
+    
+    Parameters
+    ----------
+    items_list : list or np.ndarray
+        array of items to locate in list_of_items
+        
+    list_of_items : list or np.ndarray
+        array of items where the index is located
+        
+    Returns
+    -------
+    list or np.ndarray
+        list of locations of first occurrences 
+    '''
+    locations = []
+    
+    for item in items_list:
+        locations.append(locate_item_in_array(item, list_of_items))
+
+    return locations
+
+def normalize_array(arr):
+    ''' rescales an array by its sum '''
+    if isinstance(arr, np.ndarray):
+        total = arr.sum()
+
+        if total != 0:
+            return arr/total
+
+    if isinstance(arr, list):
+        total = sum(arr)
+
+        if total != 0:
+            return [val/total for val in arr]
+
+def shell_sort_no_second_array(arr):
+    ''' sorts an integer array using shell sort '''
     pass
+
+def shell_sort_second_array(arr1, arr2):
+    ''' sorts a second array based on the values of another array using shell sort '''
+    pass
+
 
 
 
