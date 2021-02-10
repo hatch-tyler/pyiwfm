@@ -376,8 +376,84 @@ def shell_sort_no_second_array(arr):
     
 
 def shell_sort_second_array(arr1, arr2):
-    ''' sorts a second array based on the values of another array using shell sort '''
-    pass
+    ''' sorts a second array based on the values of another array using shell sort
+    
+    Parameters
+    ----------
+    arr1 : list or np.ndarray of integers
+
+    arr2 : list or np.ndarray of any type
+    
+    Returns
+    -------
+    list or np.ndarray
+        same as input 
+    '''
+    
+    # check that arr1 is array-like
+    if not isinstance(arr1, (list, np.ndarray)):
+        raise TypeError("arr1 must be a list or np.ndarray")
+
+    # check that array of type list is an integer array
+    if isinstance(arr1, list) and not all([isinstance(val, int) for val in arr1]):
+        raise ValueError("All values in arr1 must be integers")
+
+    # check that array of type np.ndarray is an integer array
+    if isinstance(arr1, np.ndarray) and arr1.dtype != np.dtype('int'):
+        raise ValueError("arr1 must be an integer array")
+
+    # check that arr2 is array-like
+    if not isinstance(arr2, (list, np.ndarray)):
+        raise TypeError("arr2 must be a list or np.ndarray")
+
+    # check that length of arr1 and arr2 are equal
+    if len(arr1) != len(arr2):
+        raise ValueError("arr1 and arr2 must be the same length")
+
+    # set initial increment
+    inc = 1
+
+    # determine length of arr
+    n = len(arr1)
+
+    # scale increment based on length of array
+    while True:
+        inc = 3*inc + 1
+
+        if inc > n:
+            break
+    
+    # sort array
+    while True:
+        # rescale increment for subset of array
+        inc = int(inc/3)
+        
+        # loop through subset of array and compare values
+        for i in range(inc, n):
+            va = arr1[i]
+            ib = arr2[i]
+            j = i
+            
+            # if array value at location j-inc is greater than location i 
+            # insert larger value to larger index
+            while arr1[j-inc] > va:
+                arr1[j] = arr1[j-inc]
+                arr2[j] = arr2[j-inc]
+                j =  j-inc
+                
+                # exit loop when index j is less than or equal to current inc
+                if j <= inc:
+                    break
+            
+            arr1[j] = va
+            arr2[j] = ib
+
+        # exit loop if current inc is less than or equal to first index
+        # in fortran arrays are 1-based whereas python arrays are 0-based
+        if inc <= 0:
+            break
+
+    return arr1, arr2
 
 
 
