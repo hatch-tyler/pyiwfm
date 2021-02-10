@@ -309,8 +309,71 @@ def normalize_array(arr):
             return [val/total for val in arr]
 
 def shell_sort_no_second_array(arr):
-    ''' sorts an integer array using shell sort '''
-    pass
+    ''' sorts an integer array using shell sort 
+    
+    Parameters
+    ----------
+    arr : list or np.ndarray
+    
+    Returns
+    -------
+    list or np.ndarray
+        same as input 
+    '''
+    
+    # check that arr is array-like
+    if not isinstance(arr, (list, np.ndarray)):
+        raise TypeError("arr must be a list or np.ndarray")
+
+    # check that array of type list is an integer array
+    if isinstance(arr, list) and not all([isinstance(val, int) for val in arr]):
+        raise ValueError("All values in array must be integers")
+
+    if isinstance(arr, np.ndarray) and arr.dtype != np.dtype('int'):
+        raise ValueError("arr must be an integer array")
+
+    # set initial increment
+    inc = 1
+
+    # determine length of arr
+    n = len(arr)
+
+    # scale increment based on length of array
+    while True:
+        inc = 3*inc + 1
+
+        if inc > n:
+            break
+    
+    # sort array
+    while True:
+        # rescale increment for subset of array
+        inc = int(inc/3)
+        
+        # loop through subset of array and compare values
+        for i in range(inc, n):
+            va = arr[i]
+            j = i
+            
+            # if array value at location j-inc is greater than location i 
+            # insert larger value to larger index
+            while arr[j-inc] > va:
+                arr[j] = arr[j-inc]
+                j =  j-inc
+                
+                # exit loop when index j is less than or equal to current inc
+                if j <= inc:
+                    break
+            
+            arr[j] = va
+
+        # exit loop if current inc is less than or equal to first index
+        # in fortran arrays are 1-based whereas python arrays are 0-based
+        if inc <= 0:
+            break
+
+    return arr
+    
 
 def shell_sort_second_array(arr1, arr2):
     ''' sorts a second array based on the values of another array using shell sort '''
