@@ -455,7 +455,27 @@ def shell_sort_second_array(arr1, arr2):
 
     return arr1, arr2
 
+def get_unique_array_components(array_in):
+    ''' returns an array of unique components
 
+    Parameters
+    ----------
+    array_in : list, tuple, np.ndarray of integers
+        integer array used to find unique components
+
+    Returns
+    -------
+    array_out : same as input 
+    '''
+    if isinstance(array_in, (list, tuple)):
+        if all([isinstance(val, int) for val in array_in]):
+            array_out = list(set(array_in))
+
+    if isinstance(array_in, np.ndarray):
+        if array_in.dtype == np.int:
+            array_out = np.unique(array_in)
+
+    return array_out
 
 
 
