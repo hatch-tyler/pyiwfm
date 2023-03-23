@@ -4,9 +4,10 @@ import pandas as pd
 
 from pyiwfm.utilities.utilities import dataframe_to_structured_array
 
+
 class IWFMNodes:
-    ''' defines the IWFM Nodes object. This class is composed of many
-    GroundwaterNodes that exist within a model application. 
+    """defines the IWFM Nodes object. This class is composed of many
+    GroundwaterNodes that exist within a model application.
 
     Attributes
     ----------
@@ -23,7 +24,7 @@ class IWFMNodes:
     -------
     get_node_coordinates_from_id : instance method
         returns a tuple with x,y coordinates for a provided node_id
-    
+
     from_file : classmethod
         creates an IWFMNodes object from the IWFM nodal coordinate file
 
@@ -32,7 +33,8 @@ class IWFMNodes:
 
     to_dataframe : instance method
         converts the nodes attribute to a pandas DataFrame
-    '''
+    """
+
     def __init__(self, nd, fact, nodes):
         # check that the number of nodes variable nd is an integer
         if not isinstance(nd, int):
@@ -47,17 +49,21 @@ class IWFMNodes:
         self.fact = fact
 
         # check that nodes is a list of GroundwaterNode objects
-        if not isinstance(nodes, (list, tuple)) and all([isinstance(node, GroundwaterNode) for node in nodes]):
+        if not isinstance(nodes, (list, tuple)) and all(
+            [isinstance(node, GroundwaterNode) for node in nodes]
+        ):
             raise TypeError("nodes must be a list or tuple of GroundwaterNode objects")
 
         if len(nodes) != nd:
-            raise ValueError("there must be {} nodes. {} were provided".format(nd, len(nodes)))
+            raise ValueError(
+                "there must be {} nodes. {} were provided".format(nd, len(nodes))
+            )
 
         self.nodes = nodes
 
     def get_node_coordinates_from_id(self, node_id):
-        ''' returns the x and y coordinates for a node_id
-        
+        """returns the x and y coordinates for a node_id
+
         Parameters
         ----------
         node_id : int
@@ -67,124 +73,126 @@ class IWFMNodes:
         -------
         tuple
             x-y coordinate pair for node_id
-        '''
+        """
         if not isinstance(node_id, int):
-            raise TypeError("id must be an integer. value provided is a {}".format(type(node_id)))
+            raise TypeError(
+                "id must be an integer. value provided is a {}".format(type(node_id))
+            )
 
         node_ids = [node.node_id for node in self.nodes]
-        
+
         if node_id not in node_ids:
             raise ValueError("node_id provided is not a valid node_id")
 
         return [(node.x, node.y) for node in self.nodes if node_id == node.node_id][0]
-    
+
     @classmethod
     def from_file(cls, nodes_file):
-        ''' alternate class constructor read from a text file '''
+        """alternate class constructor read from a text file"""
 
         if isinstance(nodes_file, str):
-            with open(nodes_file, 'r') as f:
+            with open(nodes_file, "r") as f:
                 count = 0
                 for line in f:
-                    if line[0] not in ['C', 'c', '*']:
+                    if line[0] not in ["C", "c", "*"]:
                         if count == 0:
-                            nd = int(line.split('/')[0].strip())
+                            nd = int(line.split("/")[0].strip())
                         elif count == 1:
-                            fact = float(line.split('/')[0].strip())
+                            fact = float(line.split("/")[0].strip())
                         count += 1
                     if count == 2:
                         break
 
                 nodes = []
                 for line in f:
-                    if line[0] not in ['C', 'c', '*']:
+                    if line[0] not in ["C", "c", "*"]:
                         nodes.append(GroundwaterNode.from_string(line))
 
         return cls(nd, fact, nodes)
 
     def to_dict(self):
-        ''' converts the list of GroundwaterNode objects to a python 
+        """converts the list of GroundwaterNode objects to a python
         dictionary
-        '''
+        """
         node_ids = [node.node_id for node in self.nodes]
         x_coords = [node.x for node in self.nodes]
         y_coords = [node.y for node in self.nodes]
 
-        return dict(node_id=node_ids,
-                    x=x_coords,
-                    y=y_coords)
-
+        return dict(node_id=node_ids, x=x_coords, y=y_coords)
 
     def to_dataframe(self):
-        ''' converts the list of GroundwaterNode objects to a Pandas
-        DataFrame Object 
-        '''
+        """converts the list of GroundwaterNode objects to a Pandas
+        DataFrame Object
+        """
         return pd.DataFrame(self.to_dict())
 
     def to_featureclass(self, out_feature_class, spatial_reference=None):
-        ''' converts the nodes to a ArcGIS point feature class
-        
+        """converts the nodes to a ArcGIS point feature class
+
         Notes
         -----
         This method requires an ArcGIS license
-        
+
         Parameters
         ----------
         out_feature_class : str
             file name for resulting feature class
-        
+
         spatial_reference : str, arcpy.SpatialReference, int (optional)
             str: projection file, coordinate system name, or well-known text string
             int: coordinate system factory code
             https://pro.arcgis.com/en/pro-app/arcpy/classes/pdf/projected_coordinate_systems.pdf
-        
+
         Returns
         -------
         None
             creates a feature class at the designated location
-        '''
+        """
         import arcpy
 
         # check that out_feature_class is a string
         if not isinstance(out_feature_class, str):
-            raise TypeError('out_feature_class must be a string')
+            raise TypeError("out_feature_class must be a string")
 
         # check if feature class already exists
         if not os.path.exists(out_feature_class):
-            
+
             # if feature class does not exist, check if path exists
             if not os.path.exists(os.path.dirname(out_feature_class)):
-                raise ValueError('file path does not exist: {}'.format(os.path.dirname))
-        
+                raise ValueError("file path does not exist: {}".format(os.path.dirname))
+
             arr = dataframe_to_structured_array(self.to_dataframe())
 
-            arcpy.da.NumPyArrayToFeatureClass(arr, out_feature_class, ("x", "y"), spatial_reference) # pylint: disable=no-member
+            arcpy.da.NumPyArrayToFeatureClass(
+                arr, out_feature_class, ("x", "y"), spatial_reference
+            )  # pylint: disable=no-member
 
         else:
             print("feature class already exists")
-        
+
 
 class GroundwaterNode:
-    ''' defines the groundwater node object. This class is a base
+    """defines the groundwater node object. This class is a base
     class and has no knowledge of other node objects defined in a
     model application.
-    
+
     Attributes
     ----------
     node_id : int
         unique identifier for node
-        
+
     x : float
         x-coordinate for node location
-        
+
     y : float
         y-coordinate for node location
-        
+
     Methods
     -------
     from_string : classmethod
         creates a GroundwaterNode object from a string containing 3 values
-    '''
+    """
+
     def __init__(self, node_id, x, y):
 
         # check that node_id is an integer
@@ -204,28 +212,33 @@ class GroundwaterNode:
         self.y = y
 
     def __repr__(self):
-        return 'GroundwaterNode(node_id={}, x={}, y={})'.format(self.node_id, self.x, self.y)
+        return "GroundwaterNode(node_id={}, x={}, y={})".format(
+            self.node_id, self.x, self.y
+        )
 
     @classmethod
     def from_string(cls, string):
-        ''' alternate class constructor designed to be used to read
-        from a text file 
-        '''
+        """alternate class constructor designed to be used to read
+        from a text file
+        """
         # check that string is a string
         if not isinstance(string, str):
-            raise TypeError("value provided must be a string type. type provided: {}".format(type(string)))
+            raise TypeError(
+                "value provided must be a string type. type provided: {}".format(
+                    type(string)
+                )
+            )
 
         string_list = string.split()
 
         # check list has 3 items i.e. node_id, x, y
         if len(string_list) != 3:
-            raise ValueError("string must include exactly 3 values for a groundwater node")
+            raise ValueError(
+                "string must include exactly 3 values for a groundwater node"
+            )
 
         node_id = int(string_list[0])
         x = float(string_list[1])
         y = float(string_list[2])
 
         return cls(node_id, x, y)
-
-
-
