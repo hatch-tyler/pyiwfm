@@ -1,4 +1,4 @@
-'''
+"""
 generic_linked_list.py
 Author: Tyler Hatch PhD, PE
 
@@ -14,18 +14,18 @@ in the class that inherits from it.
 
 Here it appears as a base class but with methods intact to inherit similarly 
 to the Fortran implementation
-'''
+"""
 import numpy as np
 
 # local imports
-from message_logger import set_last_message
-from message_logger import FATAL
-from linked_list_node import LinkedListNode
+from pyiwfm.core.util.Utilities.message_logger import set_last_message, FATAL
+from pyiwfm.core.util.Utilities.linked_list_node import LinkedListNode
 
-MODULE_NAME = 'GenericLinkedList::'
+MODULE_NAME = "GenericLinkedList::"
+
 
 class GenericLinkedList:
-    ''' This is a base class for a Linked List
+    """This is a base class for a Linked List
 
     Attributes
     ----------
@@ -71,34 +71,35 @@ class GenericLinkedList:
         9
 
     >>>print(linked_list.convert_to_integer_array())
-        [1 2 3 4 5 6 7 8 9]    
-    '''
+        [1 2 3 4 5 6 7 8 9]
+    """
+
     def __init__(self, n_nodes=None, head=None, tail=None, current=None):
         if n_nodes is None:
             self._n_nodes = 0
         elif not isinstance(n_nodes, int):
-            raise TypeError('n_nodes must be an integer')
+            raise TypeError("n_nodes must be an integer")
 
         if head is None:
             self._head = LinkedListNode(None)
         elif isinstance(head, LinkedListNode):
             self._head = head
         else:
-            raise TypeError('head must be of type LinkedListNode')
+            raise TypeError("head must be of type LinkedListNode")
 
         if tail is None:
             self._tail = LinkedListNode(None)
         elif isinstance(tail, LinkedListNode):
             self._tail = tail
         else:
-            raise TypeError('tail must be of type LinkedListNode')
+            raise TypeError("tail must be of type LinkedListNode")
 
         if current is None:
             self._current = LinkedListNode(None)
         elif isinstance(current, LinkedListNode):
             self._current = current
         else:
-            raise TypeError('current must be of type LinkedListNode')
+            raise TypeError("current must be of type LinkedListNode")
 
     def __del__(self):
         # move to the head of the list
@@ -107,7 +108,7 @@ class GenericLinkedList:
         for _ in range(self._n_nodes):
             current = self._current
             self.next_node()
-            del(current)
+            del current
 
         self._n_nodes = 0
 
@@ -118,7 +119,7 @@ class GenericLinkedList:
             nodes.append(node.get_value())
             node = node.get_next()
         nodes.append("None")
-        
+
         return " -> ".join([str(i) for i in nodes])
 
     def get_n_nodes(self):
@@ -130,16 +131,20 @@ class GenericLinkedList:
     def convert_to_integer_array(self):
         if self._n_nodes == 0:
             return
-        
-        this_procedure = MODULE_NAME+"convert_to_integer_array"
+
+        this_procedure = MODULE_NAME + "convert_to_integer_array"
 
         # move to the head of the list
         self.reset()
 
         out_list = []
         if not out_list:
-            set_last_message('Error in allocating memory to convert a linked list to an integer array.', FATAL, this_procedure)
-        
+            set_last_message(
+                "Error in allocating memory to convert a linked list to an integer array.",
+                FATAL,
+                this_procedure,
+            )
+
         for _ in range(self._n_nodes):
             current = self.get_current_value()
             if isinstance(current, int):
@@ -150,8 +155,8 @@ class GenericLinkedList:
 
     def add_node(self, value):
         if self._n_nodes == 0:
-           self._head = LinkedListNode(value)
-           self._tail = self._head
+            self._head = LinkedListNode(value)
+            self._tail = self._head
 
         else:
             new_node = LinkedListNode(value)
@@ -167,7 +172,8 @@ class GenericLinkedList:
     def next_node(self):
         self._current = self._current.get_next()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     node_list = GenericLinkedList()
     print(node_list.get_n_nodes())
 

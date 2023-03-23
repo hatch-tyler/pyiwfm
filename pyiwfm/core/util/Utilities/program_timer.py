@@ -1,9 +1,9 @@
-'''
+"""
 program_timer.py
 Author: Tyler Hatch PhD, PE
 
 This is the program_timer module of the python version of IWFM
-'''
+"""
 # std library imports
 import time
 
@@ -11,40 +11,48 @@ import time
 timer_stopped = False
 timer_started = False
 
+
 def start_timer():
-    ''' records start time 
+    """
+    Record start time
+    
     Parameters
     ----------
     None
-    
+
     Returns
     -------
     float
-        time in seconds since the Epoch 
-    '''
+        time in seconds since the Epoch
+    """
     global timer_started
     timer_started = True
-    
+
     return time.time()
 
+
 def stop_timer():
-    ''' records stop time
+    """
+    Record stop time
+
     Parameters
     ----------
     None
-    
+
     Returns
     -------
     float
-        time in seconds since the Epoch 
-    '''
+        time in seconds since the Epoch
+    """
     global timer_stopped
     timer_stopped = True
 
     return time.time()
 
+
 def get_run_time(start_time, stop_time):
-    ''' calculates the program run time from
+    """
+    Calculate the program run time from
     the start time and stop time.
 
     Parameters
@@ -67,7 +75,7 @@ def get_run_time(start_time, stop_time):
     >>> stop = stop_timer()
     >>> get_run_time(start, stop)
     ... (0, 0, 10.000308990478516)
-    '''
+    """
 
     if not timer_started:
         return 0, 0, 0
@@ -81,17 +89,20 @@ def get_run_time(start_time, stop_time):
 
     return int(hours), int(minutes), seconds
 
+
 def int_to_text(number):
-    ''' converts a number to a string '''
+    """
+    Convert a number to a string
+    """
     return str(number)
-    
+
 
 if __name__ == "__main__":
-    
+
     start_time_values = start_timer()
 
     time.sleep(10)
-    
+
     end_time_values = stop_timer()
 
     hour, minute, second = get_run_time(start_time_values, end_time_values)
