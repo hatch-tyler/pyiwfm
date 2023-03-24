@@ -701,10 +701,24 @@ def adjust_timestamp_with_year_4000(adjusted_timestamp, timestamp):
     return adjusted_timestamp, False
 
 
+def timestamp_to_year_4000(timestamp):
+    """
+    Convert timestamp to timestamp with year 4000 flag
+    
+    Parameters
+    ----------
+    timestamp : str
+        timestamp to convert from actual date to date with 4000 flag as year
+    
+    Returns
+    -------
+    str
+        converted timestamp with year 4000 flag
+    """
+    # get year to replace from timestamp
+    year = extract_year(timestamp)
 
-
-def timestamp_to_year_4000():
-    pass
+    return timestamp.replace(str(year), "4000")
 
 
 def increment_timestamp():
