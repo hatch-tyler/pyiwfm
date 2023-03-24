@@ -880,16 +880,54 @@ def increment_julian_date_and_minutes_after_midnight(interval_inminutes, num_int
     return end_julian_date, end_minutes_after_midnight
         
 
-def set_simulation_timestep():
-    pass
+def set_simulation_timestep(deltat_inminutes):
+    """
+    Set simulation time step length
+    
+    Parameters
+    ----------
+    deltat_inminutes : int
+        number of minutes corresponding to the simulation timestep
+    
+    Returns
+    -------
+    None
+        sets module variable simulation_timestep_inminutes
+    """
+    global simulation_timestep_inminutes
+
+    simulation_timestep_inminutes = deltat_inminutes
 
 
-def set_cache_limit():
-    pass
+def set_cache_limit(cache):
+    """
+    Set the cache size for the time series data output
+    
+    Parameters
+    ----------
+    cache : int
+        cache size for storing time series data
+        
+    Return
+    ------
+    None
+        sets module variable simulation_timestep_inminutes
+    """
+    global cache_limit
+
+    cache_limit = cache
 
 
 def get_cache_limit():
-    pass
+    """
+    get the cache size for time series data output
+    
+    Returns
+    -------
+    int
+        cache size for time sereis data
+    """
+    return cache_limit
 
 
 def set_tsd_cache_size():
