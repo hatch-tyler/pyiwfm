@@ -721,13 +721,164 @@ def timestamp_to_year_4000(timestamp):
     return timestamp.replace(str(year), "4000")
 
 
-def increment_timestamp():
-    pass
+def increment_timestamp(timestamp, interval_inminutes, num_intervals=1):
+    """
+    Increment a timestamp by a certain number of minutes
+    
+    Parameters
+    ----------
+    timestamp : str
+        timestamp to increment
+
+    interval_inminutes : int
+        number of minutes in an interval of time to increment timestamp
+
+    num_intervals : int default 1
+        number of intervals to increment time
+
+    Returns
+    -------
+    str
+        timestamp incremented by number of intervals of the specified interval length
+    """
+    # convert timestamp to julian date and number of minutes after midnight
+    julian_date, minutes_after_midnight = timestamp_to_julian_date_and_minutes(timestamp)
+
+    # increment julian date and minutes past midnight
+    sign = 1
+    local_minutes = interval_inminutes
+    
+    if interval_inminutes < 0:
+        sign = -1
+        local_minutes = abs(interval_inminutes)
+    
+    end_julian_date, end_minutes_after_midnight = increment_julian_date_and_minutes_after_midnight(local_minutes, sign*num_intervals, julian_date, minutes_after_midnight)
+
+    return julian_date_and_minutes_to_timestamp(end_julian_date, end_minutes_after_midnight)
 
 
-def increment_julian_date_and_minutes_after_midnight():
-    pass
 
+def increment_julian_date_and_minutes_after_midnight(interval_inminutes, num_intervals, begin_julian_date, begin_minutes_after_midnight):
+    """
+    Increment a julian date and number of minutes after midnight by a certain number of minutes
+    
+    Parameters
+    ----------
+    interval_inminutes : int
+        number of minutes making up an interval of time
+        
+    num_intervals : int
+        number of time intervals to increment in time
+        
+    begin_julian_date : int
+        julian date to increment by the specified number of intervals
+        
+    begin_minutes_after_midnight : int
+        number of minutes after midnight to use when incrementing time
+        
+    Returns
+    -------
+    tuple[int, int]
+        julian date and minutes after midnight after incrementing by a 
+        specified number of intervals of a certain size
+    """
+    days_in_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
+    # interval is less than or equal to a week (60*24*7)
+    if interval_inminutes <= 10080:
+        # get number of minutes to increment
+        all_minutes = interval_inminutes * num_intervals
+
+        # get number of days
+        n_days = all_minutes / 1440
+
+        # get number of minutes
+        n_minutes = all_minutes - (n_days * 1440)
+
+        # increment values
+        end_julian_date = begin_julian_date + n_days
+        end_minutes_after_midnight = begin_minutes_after_midnight + n_minutes
+
+        # check dates for adjustments i.e. minutes after midnight exceeding a day
+        if end_minutes_after_midnight > 1440:
+            end_julian_date += 1
+            end_minutes_after_midnight -= 1440
+        elif end_minutes_after_midnight < 1:
+            end_julian_date -= 1
+            end_minutes_after_midnight += 1440
+
+    # interval is greater than or equal to smallest month i.e. 28 days (60*24*28)
+    elif interval_inminutes >= 40320:
+        # get day, month, and year
+        day, month, year = julian_date_to_day_month_year(begin_julian_date)
+
+        # determine if last day in month
+        is_last_day = False
+        if month in [1, 3, 5, 7, 8, 10, 12]:
+            if day == 31:
+                is_last_day = True
+
+        elif month in [4, 6, 9, 11]:
+            if day == 30:
+                is_last_day = True
+            
+        else:
+            if is_leap_year(year):
+                if day == 29:
+                    is_last_day = True
+            
+            else:
+                if day == 28:
+                    is_last_day = True
+            
+        # find number of years and months to increment
+        if interval_inminutes > 40320 and interval_inminutes <= 44640:
+            n_years = int(num_intervals / 12)
+            n_months = num_intervals - n_years*12
+
+        else:
+            n_years = num_intervals
+            n_months = 0
+
+        # increment date
+        year += n_years
+        month += n_months
+
+        # check month is valid
+        if month > 12:
+            year += 1
+            month -= 12
+        elif month < 1:
+            year -= 1
+            month += 12
+
+        # set day to end of month for monthly or annual intervals
+        if is_last_day:
+            if begin_minutes_after_midnight == 1440:
+                if month == 2:
+                    if is_leap_year(year):
+                        day = 29
+                    else:
+                        day = 28
+                else:
+                    day = days_in_month[month-1]
+
+        # correct day if in february and greater than 28 for non-leap year or 29 for leap year
+        if month == 2:
+            if day > 28:
+                if is_leap_year(year):
+                    day = 29
+
+                else:
+                    day = 28
+
+        # compute the ending julian date
+        end_julian_date = day_month_year_to_julian_date(day, month, year)
+
+        end_minutes_after_midnight = begin_minutes_after_midnight
+
+    return end_julian_date, end_minutes_after_midnight
+        
 
 def set_simulation_timestep():
     pass
