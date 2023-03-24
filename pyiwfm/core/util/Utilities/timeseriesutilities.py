@@ -4,8 +4,9 @@ Author: Tyler Hatch PhD, PE
 
 This is the timeseries_utilities module of the python version of IWFM
 """
-from pyiwfm.core.util.Utilities.general_utilities import count_occurence, first_location
+import numpy as np
 
+from pyiwfm.core.util.Utilities.general_utilities import count_occurence, first_location
 from pyiwfm.core.util.Utilities.message_logger import log_message, FATAL
 
 MODNAME = "TimeSeriesUtilities::"
@@ -646,12 +647,60 @@ def julian_to_timestamp(julian):
     return julian_date_and_minutes_to_timestamp(julian_date, minutes_after_midnight)
 
 
-def get_julian_dates_between_timestamps_with_time_increment():
+def get_julian_dates_between_timestamps_with_time_increment(interval_inminutes, begin_date_and_time, end_date_and_time):
+    """
+    Get a list of julian dates between two time stamps using a time increment
+    
+    Parameters
+    ----------
+    interval_inminutes : int
+        time interval between time stamps used to generate list
+        
+    begin_date_and_time : str
+        time stamp of beginning date and time
+        
+    end_date_and_time : str
+        time stamp of ending date and time
+        
+    Returns
+    -------
+    np.ndarray
+    """
     pass
 
 
-def adjust_timestamp_with_year_4000():
-    pass
+def adjust_timestamp_with_year_4000(adjusted_timestamp, timestamp):
+    """
+    Adjust the year 4000 flag with the year of another time stamp
+    
+    Parameters
+    ----------
+    adjusted_timestamp : str
+        timestamp to be adjusted if 4000 used as placeholder for year
+
+    timestamp : str
+        timestamp to use when adjusting the timestamp from 4000 to actual year
+
+    Returns
+    -------
+    tuple[str, bool]
+        adjusted timestamp and True if 4000 flag used otherwise False
+    """
+    if extract_year(adjusted_timestamp) == 4000:
+        # set year 4000 flag to True
+        year4000flag = True
+
+        # get year from timestamp
+        year = extract_year(timestamp)
+
+        # replace 4000 with year in adjusted_timestamp
+        adjusted_timestamp.replace("4000", str(year))
+
+        return adjusted_timestamp, year4000flag
+    
+    return adjusted_timestamp, False
+
+
 
 
 def timestamp_to_year_4000():
