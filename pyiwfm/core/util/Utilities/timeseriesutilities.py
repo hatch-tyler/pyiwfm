@@ -7,7 +7,7 @@ This is the timeseries_utilities module of the python version of IWFM
 import numpy as np
 
 from pyiwfm.core.util.Utilities.general_utilities import count_occurence, first_location
-from pyiwfm.core.util.Utilities.message_logger import log_message, FATAL
+from pyiwfm.core.util.Utilities.message_logger import log_message, FATAL, set_last_message
 
 MODNAME = "TimeSeriesUtilities::"
 
@@ -92,7 +92,7 @@ def is_time_interval_valid(interval):
     Return the index of the time interval if valid
     """
     if interval not in RECOGNIZED_INTERVALS:
-        return -1
+        return None
 
     return RECOGNIZED_INTERVALS.index(interval)
 
@@ -938,8 +938,30 @@ def adjust_rate_type_data():
     pass
 
 
-def time_units_check_less_than_or_equal():
-    pass
+def time_units_check_less_than_or_equal(time_unit1, time_unit2):
+    """
+    Check if one time unit is less than or equal to another
+    
+    Parameters
+    ----------
+    time_unit1 : str
+        time unit to compare
+        
+    time_unit2 : str
+        time unit to compare against
+        
+    Returns
+    -------
+    bool
+        True if time_unit1 is less than or equal to time_unit2 otherwise False
+    """
+    time_unit1_inminutes, _ = ctimestep_to_rtimestep(time_unit1)
+    time_unit2_inminutes, _ = ctimestep_to_rtimestep(time_unit2)
+
+    if time_unit1_inminutes <= time_unit2_inminutes:
+        return True
+    
+    return False
 
 
 def check_for_less_than():
@@ -962,9 +984,66 @@ def n_periods_between_times():
     pass
 
 
-def ctimestep_to_rtimestep():
-    pass
+def ctimestep_to_rtimestep(unit_t, return_status=False):
+    """
+    Convert character time step to minutes and number time step
+    
+    Parameters
+    ----------
+    unit_t : str
+        character time step
+
+    return_status : bool default False
+        flag to determine if to return the status
+
+    Returns
+    -------
+    tuple[int, float]
+        if return_status=False timestep in minutes and timestep
+    
+    tuple[int, float, int]
+        if return_status=True timestep in minutes, timestep and status
+    """
+    this_procedure = MODNAME + "CTimeStep_To_RTimeStep"
+
+    if return_status:
+        status = 0
+
+    deltat_inminutes = 0
+    deltat = 1.0
+
+    timestep_index = is_time_interval_valid(unit_t)
+
+    if not timestep_index:
+        if return_status:
+            set_last_message(f"{unit_t} is not a recognized time step", FATAL, this_procedure)
+            status = -1
+        else:
+            log_message(f"{unit_t} is not a recognized time step", FATAL, this_procedure)
+    else:
+        deltat_inminutes = RECOGNIZED_INTERVALS_INMINUTES[timestep_index]
+
+    if return_status:
+        return deltat_inminutes, deltat, status
+    else:
+        return deltat_inminutes, deltat
 
 
-def time_interval_conversion():
+def time_interval_conversion(to_interval, from_interval):
+    """
+    Compute conversion factor between two intervals
+    
+    Parameters
+    ----------
+    to_interval : str
+        time interval to convert to
+
+    from_interval : str
+        time interval to convert from
+
+    Returns
+    -------
+    float
+        conversion factor between time intervals
+    """
     pass
