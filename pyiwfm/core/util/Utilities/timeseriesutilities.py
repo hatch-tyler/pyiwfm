@@ -964,8 +964,33 @@ def time_units_check_less_than_or_equal(time_unit1, time_unit2):
     return False
 
 
-def check_for_less_than():
-    pass
+def check_for_less_than(timestamp1, timestamp2):
+    """
+    Check if one timestamp is less than another
+    
+    Parameters
+    ----------
+    timestamp1 : str
+        timestamp to check if less than another
+        
+    timestamp2 : str
+        timestamp to compare to see if other is less
+        
+    Returns
+    -------
+    bool
+        True if timestamp1 is less than timestamp2, otherwise False
+    """
+    julian_date1, minutes_after_midnight1 = timestamp_to_julian_date_and_minutes(timestamp1)
+    julian_date2, minutes_after_midnight2 = timestamp_to_julian_date_and_minutes(timestamp2)
+
+    if julian_date1 < julian_date2:
+        return True
+    elif julian_date1 == julian_date2:
+        if minutes_after_midnight1 < minutes_after_midnight2:
+            return True
+        
+    return False
 
 
 def check_for_greater_than():
