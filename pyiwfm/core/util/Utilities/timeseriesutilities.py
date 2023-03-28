@@ -6,7 +6,7 @@ This is the timeseries_utilities module of the python version of IWFM
 """
 import numpy as np
 
-from pyiwfm.core.util.Utilities.general_utilities import count_occurence, first_location
+from pyiwfm.core.util.Utilities.general_utilities import count_occurence, first_location, upper_case
 from pyiwfm.core.util.Utilities.message_logger import log_message, FATAL, set_last_message
 
 MODNAME = "TimeSeriesUtilities::"
@@ -1096,8 +1096,9 @@ def ctimestep_to_rtimestep(unit_t, return_status=False):
     deltat = 1.0
 
     timestep_index = is_time_interval_valid(unit_t)
-
-    if not timestep_index:
+    
+    # check for None. python treats 0 as false, so a valid index of zero would be treated as an error
+    if timestep_index is None:
         if return_status:
             set_last_message(f"{unit_t} is not a recognized time step", FATAL, this_procedure)
             status = -1
@@ -1129,4 +1130,24 @@ def time_interval_conversion(to_interval, from_interval):
     float
         conversion factor between time intervals
     """
-    pass
+    this_procedure = MODNAME + "TimeIntervalConversion"
+
+    # convert from_interval from string to minutes
+    from_interval_inminutes, _, error_code = ctimestep_to_rtimestep(upper_case(from_interval), return_status=True)
+
+    if error_code != 0:
+        log_message(f"{upper_case(from_interval)} is not a valid time interval", FATAL, this_procedure)
+
+    # convert from_interval from string to minutes
+    to_interval_inminutes, _, error_code = ctimestep_to_rtimestep(upper_case(to_interval), return_status=True)
+
+    if error_code != 0:
+        log_message(f"{upper_case(to_interval)} is not a valid time interval", FATAL, this_procedure)
+
+    conversion_factor = to_interval_inminutes / from_interval_inminutes
+
+    return conversion_factor
+
+    
+
+
