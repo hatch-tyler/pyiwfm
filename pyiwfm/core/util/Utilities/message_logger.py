@@ -197,31 +197,31 @@ def get_last_message():
 
 def get_log_file_unit(file_name):
     raise NotImplementedError(
-        "This construct is not used in the" + "python implementation of IWFM"
+        "This construct is not used in the python implementation of IWFM"
     )
 
 
 def get_file_unit_number(file_name):
     raise NotImplementedError(
-        "This construct is not used in the" + "python implementation of IWFM"
+        "This construct is not used in the python implementation of IWFM"
     )
 
 
 def is_log_file_defined():
     raise NotImplementedError(
-        "This construct is not used in the" + "python implementation of IWFM"
+        "This construct is not used in the python implementation of IWFM"
     )
 
 
 def get_a_unit_number():
     raise NotImplementedError(
-        "This construct is not used in the" + "python implementation of IWFM"
+        "This construct is not used in the python implementation of IWFM"
     )
 
 
 def primitive_error_handler(message):
     raise NotImplementedError(
-        "This construct is not used in the" + "python implementation of IWFM"
+        "This construct is not used in the python implementation of IWFM"
     )
 
 
@@ -253,7 +253,7 @@ def log_all_message_types(message_array, error_level, prog_name, destination):
         """function to write message to its destination"""
         if dest == FILE:
             for msg in messages:
-                log_file.write(msg + "\n")
+                log_file.write(f"{msg}\n")
         if dest == SCREEN:
             for msg in messages:
                 print(msg)
@@ -300,11 +300,11 @@ def log_all_message_types(message_array, error_level, prog_name, destination):
         if will_print_to_file:
             log_file.write("* INFO : \n")
             print_message_array(several_messages, FILE)
-            log_file.write("*   ({})\n".format(prog_name))
+            log_file.write(f"*   ({prog_name})\n")
 
         print("* INFO : ")
         print_message_array(several_messages, SCREEN)
-        print("*   ({})".format(prog_name))
+        print(f"*   ({prog_name})")
 
     elif error_level == WARN:
         warnings_generated = True
@@ -312,66 +312,50 @@ def log_all_message_types(message_array, error_level, prog_name, destination):
         if will_print_to_file:
             log_file.write("* WARN : \n")
             print_message_array(several_messages, FILE)
-            log_file.write("*   ({})\n".format(prog_name))
+            log_file.write(f"*   ({prog_name})\n")
 
         print("* WARN : ")
         print_message_array(several_messages, SCREEN)
-        print("*   ({})".format(prog_name))
+        print(f"*   ({prog_name})")
 
     elif error_level == FATAL:
 
         if will_print_to_file:
-            log_file.write(" ")
-            log_file.write(
-                "*******************************************************************************"
-            )
-            log_file.write("* FATAL: ")
+            log_file.write("\n")
+            log_file.write(f"{'*'*79}\n")
+            log_file.write("* FATAL:\n")
             print_message_array(several_messages, FILE)
-            log_file.write("*   ({})".format(prog_name))
-            log_file.write(
-                "*******************************************************************************"
-            )
+            log_file.write(f"*   ({prog_name})\n")
+            log_file.write(f"{'*'*79}")
 
         print(" ")
-        print(
-            "*******************************************************************************"
-        )
+        print(f"{'*'*79}")
         print("* FATAL: ")
         print_message_array(several_messages, SCREEN)
-        print("*   ({})".format(prog_name))
-        print(
-            "*******************************************************************************"
-        )
+        print(f"*   ({prog_name})")
+        print(f"{'*'*79}")
 
     else:
         if will_print_to_file:
-            log_file.write(" ")
+            log_file.write("\n")
+            log_file.write(f"{'*'*79}\n")
+            log_file.write("*\n")
+            log_file.write("* FATAL:\n")
             log_file.write(
-                "*******************************************************************************"
+                f"*   Incorrect error level returned from procedure {prog_name}\n"
             )
-            log_file.write("*")
-            log_file.write("* FATAL:")
-            log_file.write(
-                "*   Incorrect error level returned from procedure {}".format(prog_name)
-            )
-            log_file.write("*   ({})".format(prog_name))
-            log_file.write("*")
-            log_file.write(
-                "*******************************************************************************"
-            )
+            log_file.write(f"*   ({prog_name})\n")
+            log_file.write("*\n")
+            log_file.write(f"{'*'*79}")
 
         print(" ")
-        print(
-            "*******************************************************************************"
-        )
+        print(f"{'*'*79}")
         print("*")
         print("* FATAL:")
-        print("*   Incorrect error level returned from procedure {}".format(prog_name))
-        print('*   ("{}")'.format(prog_name))
+        print(f"*   Incorrect error level returned from procedure {prog_name}")
+        print('*   ("{prog_name}")')
         print("*")
-        print(
-            "*******************************************************************************"
-        )
+        print(f"{'*'*79}")
 
 
 def log_message(
@@ -419,18 +403,18 @@ def log_last_message(destination=default_message_destination):
     None
         logs last_message
     """
-    message_local = "*******************************************************************************"
+    message_local = f"{'*'*79}"
 
     if last_message_type == INFO:
-        message_local = "{}{}* INFO: ".format(message_local, LINE_FEED)
+        message_local = f"{message_local}{LINE_FEED}* INFO: "
     elif last_message_type == WARN:
-        message_local = "{}{}* WARN: ".format(message_local, LINE_FEED)
+        message_local = f"{message_local}{LINE_FEED}* WARN: "
     elif last_message_type == FATAL:
-        message_local = "{}{}* FATAL: ".format(message_local, LINE_FEED)
+        message_local = f"{message_local}{LINE_FEED}* FATAL: "
 
-    message_local = "{}{}{}".format(message_local, LINE_FEED, last_message)
-    message_local = "{}{}*   ({}){}{}".format(
-        message_local, LINE_FEED, last_message_procedure, LINE_FEED, "*" * 80
+    message_local = f"{message_local}{LINE_FEED}{last_message}"
+    message_local = (
+        f"{message_local}{LINE_FEED}*   ({last_message_procedure}){LINE_FEED}{'*'*80}"
     )
 
     log_message(message_local, MESSAGE, "", destination)
@@ -438,7 +422,7 @@ def log_last_message(destination=default_message_destination):
 
 def check_console_availability():
     raise NotImplementedError(
-        "This construct is not used in the" + "python implementation of IWFM"
+        "This construct is not used in the python implementation of IWFM"
     )
 
 
@@ -472,9 +456,9 @@ def print_run_time(
 
     # format results in message_array
     if len(message_array) == 0:
-        message_array.append("{}{}".format(LINE_FEED, "*" * 50))
+        message_array.append(f"{LINE_FEED}{'*'*50}")
     else:
-        message_array[0] = "{}{}".format(LINE_FEED, "*" * 50)
+        message_array[0] = f"{LINE_FEED}{'*'*50}"
 
     if len(message_array) <= 1:
         message_array.append("TOTAL RUN TIME: ")
@@ -482,35 +466,34 @@ def print_run_time(
         message_array[1] = "TOTAL RUN TIME: "
 
     if hours > 0:
-        message_array[1] = "{}{} HOURS {} MINUTES {:6.3f} SECONDS".format(
-            message_array[1], hours, minutes, seconds
-        )
+        message_array[
+            1
+        ] = f"{message_array[1]}{hours} HOURS {minutes} MINUTES {seconds:6.3f} SECONDS"
     elif minutes > 0:
-        message_array[1] = "{}{} MINUTES {:6.3f} SECONDS".format(
-            message_array[1], minutes, seconds
-        )
+        message_array[1] = f"{message_array[1]}{minutes} MINUTES {seconds:6.3f} SECONDS"
+
     else:
-        message_array[1] = "{}{:6.3f} SECONDS".format(message_array[1], seconds)
+        message_array[1] = f"{message_array[1]}{seconds:6.3f} SECONDS"
 
     if warnings_generated:
         if len(message_array) <= 2:
             message_array.append(
-                "WARNINGS/INFORMATIONAL MESSAGES ARE GENERATED!{}".format(LINE_FEED)
+                f"WARNINGS/INFORMATIONAL MESSAGES ARE GENERATED!{LINE_FEED}"
             )
         else:
             message_array[
                 2
-            ] = "WARNINGS/INFORMATIONAL MESSAGES ARE GENERATED!{}".format(LINE_FEED)
+            ] = f"WARNINGS/INFORMATIONAL MESSAGES ARE GENERATED!{LINE_FEED}"
 
         try:
             log_file_name = log_file.name
         except:
             pass
         else:
-            message_array[2] = "{}FOR DETAILS CHECK FILE '{}'.{}".format(
-                message_array[2], log_file_name, LINE_FEED
-            )
-        message_array[2] = "{}{}".format(message_array[2], "*" * 50)
+            message_array[
+                2
+            ] = f"{message_array[2]}FOR DETAILS CHECK FILE '{log_file_name}'.{LINE_FEED}"
+        message_array[2] = f"{message_array[2]}{'*'*50}"
     else:
         if len(message_array) <= 2:
             message_array.append("*" * 50)
