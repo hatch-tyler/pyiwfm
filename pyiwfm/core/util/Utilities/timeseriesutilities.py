@@ -6,8 +6,16 @@ This is the timeseries_utilities module of the python version of IWFM
 """
 import numpy as np
 
-from pyiwfm.core.util.Utilities.general_utilities import count_occurence, first_location, upper_case
-from pyiwfm.core.util.Utilities.message_logger import log_message, FATAL, set_last_message
+from pyiwfm.core.util.Utilities.general_utilities import (
+    count_occurence,
+    first_location,
+    upper_case,
+)
+from pyiwfm.core.util.Utilities.message_logger import (
+    log_message,
+    FATAL,
+    set_last_message,
+)
 
 MODNAME = "TimeSeriesUtilities::"
 
@@ -436,7 +444,7 @@ def timestamp_to_julian_date_and_minutes(timestamp, return_status=False):
     -------
     tuple[int, int]
         if return_status = False, julian date and number of minutes past midnight
-    
+
     tuple[int, int, int]
         if return_status = True, julian date, number of minutes past midnight, and status
     """
@@ -459,14 +467,16 @@ def timestamp_to_julian_date_and_minutes(timestamp, return_status=False):
             this_procedure,
         )
         return
-    
+
     status = error_code
 
-    minutes_after_midnight = int(extract_hour(timestamp) * 60) + extract_minute(timestamp)
+    minutes_after_midnight = int(extract_hour(timestamp) * 60) + extract_minute(
+        timestamp
+    )
 
     if return_status:
         return julian_date, minutes_after_midnight, status
-    
+
     return julian_date, minutes_after_midnight
 
 
@@ -615,19 +625,19 @@ def timestamp_to_julian(timestamp, return_status=False):
     julian_date, minutes_after_midnight, status = timestamp_to_julian_date_and_minutes(
         timestamp, return_status=True
     )
-    
-    julian = float(julian_date) + minutes_after_midnight/1440
-    
+
+    julian = float(julian_date) + minutes_after_midnight / 1440
+
     if return_status:
         return julian, status
-    
+
     return julian
 
 
 def julian_to_timestamp(julian):
     """
     Convert fractional julian time to timestamp
-    
+
     Parameters
     ----------
     julian : float
@@ -647,21 +657,23 @@ def julian_to_timestamp(julian):
     return julian_date_and_minutes_to_timestamp(julian_date, minutes_after_midnight)
 
 
-def get_julian_dates_between_timestamps_with_time_increment(interval_inminutes, begin_date_and_time, end_date_and_time):
+def get_julian_dates_between_timestamps_with_time_increment(
+    interval_inminutes, begin_date_and_time, end_date_and_time
+):
     """
     Get a list of julian dates between two time stamps using a time increment
-    
+
     Parameters
     ----------
     interval_inminutes : int
         time interval between time stamps used to generate list
-        
+
     begin_date_and_time : str
         time stamp of beginning date and time
-        
+
     end_date_and_time : str
         time stamp of ending date and time
-        
+
     Returns
     -------
     np.ndarray
@@ -679,7 +691,7 @@ def get_julian_dates_between_timestamps_with_time_increment(interval_inminutes, 
 def adjust_timestamp_with_year_4000(adjusted_timestamp, timestamp):
     """
     Adjust the year 4000 flag with the year of another time stamp
-    
+
     Parameters
     ----------
     adjusted_timestamp : str
@@ -704,19 +716,19 @@ def adjust_timestamp_with_year_4000(adjusted_timestamp, timestamp):
         adjusted_timestamp.replace("4000", str(year))
 
         return adjusted_timestamp, year4000flag
-    
+
     return adjusted_timestamp, False
 
 
 def timestamp_to_year_4000(timestamp):
     """
     Convert timestamp to timestamp with year 4000 flag
-    
+
     Parameters
     ----------
     timestamp : str
         timestamp to convert from actual date to date with 4000 flag as year
-    
+
     Returns
     -------
     str
@@ -731,7 +743,7 @@ def timestamp_to_year_4000(timestamp):
 def increment_timestamp(timestamp, interval_inminutes, num_intervals=1):
     """
     Increment a timestamp by a certain number of minutes
-    
+
     Parameters
     ----------
     timestamp : str
@@ -749,60 +761,70 @@ def increment_timestamp(timestamp, interval_inminutes, num_intervals=1):
         timestamp incremented by number of intervals of the specified interval length
     """
     # convert timestamp to julian date and number of minutes after midnight
-    julian_date, minutes_after_midnight = timestamp_to_julian_date_and_minutes(timestamp)
+    julian_date, minutes_after_midnight = timestamp_to_julian_date_and_minutes(
+        timestamp
+    )
 
     # increment julian date and minutes past midnight
     sign = 1
     local_interval = interval_inminutes
-    
+
     if interval_inminutes < 0:
         sign = -1
         local_interval = abs(interval_inminutes)
-    
-    end_julian_date, end_minutes_after_midnight = increment_julian_date_and_minutes_after_midnight(local_interval, sign*num_intervals, julian_date, minutes_after_midnight)
 
-    return julian_date_and_minutes_to_timestamp(end_julian_date, end_minutes_after_midnight)
+    (
+        end_julian_date,
+        end_minutes_after_midnight,
+    ) = increment_julian_date_and_minutes_after_midnight(
+        local_interval, sign * num_intervals, julian_date, minutes_after_midnight
+    )
+
+    return julian_date_and_minutes_to_timestamp(
+        end_julian_date, end_minutes_after_midnight
+    )
 
 
-
-def increment_julian_date_and_minutes_after_midnight(interval_inminutes, num_intervals, begin_julian_date, begin_minutes_after_midnight):
+def increment_julian_date_and_minutes_after_midnight(
+    interval_inminutes, num_intervals, begin_julian_date, begin_minutes_after_midnight
+):
     """
     Increment a julian date and number of minutes after midnight by a certain number of minutes
-    
+
     Parameters
     ----------
     interval_inminutes : int
         number of minutes making up an interval of time
-        
+
     num_intervals : int
         number of time intervals to increment in time
-        
+
     begin_julian_date : int
         julian date to increment by the specified number of intervals
-        
+
     begin_minutes_after_midnight : int
         number of minutes after midnight to use when incrementing time
-        
+
     Returns
     -------
     tuple[int, int]
-        julian date and minutes after midnight after incrementing by a 
+        julian date and minutes after midnight after incrementing by a
         specified number of intervals of a certain size
     """
     days_in_month = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
     # interval is less than or equal to a week (60*24*7)
     if interval_inminutes <= 10080:
-        
+
         # get number of minutes to increment
         all_minutes = interval_inminutes * num_intervals
 
         # get number of days
         n_days = int(all_minutes / 1440)
-        
+
         # get number of minutes
         n_minutes = all_minutes - int(n_days * 1440)
-        
+
         # increment values
         end_julian_date = begin_julian_date + n_days
         end_minutes_after_midnight = begin_minutes_after_midnight + n_minutes
@@ -829,20 +851,20 @@ def increment_julian_date_and_minutes_after_midnight(interval_inminutes, num_int
         elif month in [4, 6, 9, 11]:
             if day == 30:
                 is_last_day = True
-            
+
         else:
             if is_leap_year(year):
                 if day == 29:
                     is_last_day = True
-            
+
             else:
                 if day == 28:
                     is_last_day = True
-            
+
         # find number of years and months to increment
         if interval_inminutes >= 40320 and interval_inminutes <= 44640:
             n_years = int(num_intervals / 12)
-            n_months = num_intervals - int(n_years*12)
+            n_months = num_intervals - int(n_years * 12)
 
         else:
             n_years = num_intervals
@@ -869,7 +891,7 @@ def increment_julian_date_and_minutes_after_midnight(interval_inminutes, num_int
                     else:
                         day = 28
                 else:
-                    day = days_in_month[month-1]
+                    day = days_in_month[month - 1]
 
         # correct day if in february and greater than 28 for non-leap year or 29 for leap year
         if month == 2:
@@ -886,17 +908,17 @@ def increment_julian_date_and_minutes_after_midnight(interval_inminutes, num_int
         end_minutes_after_midnight = begin_minutes_after_midnight
 
     return end_julian_date, end_minutes_after_midnight
-        
+
 
 def set_simulation_timestep(deltat_inminutes):
     """
     Set simulation time step length
-    
+
     Parameters
     ----------
     deltat_inminutes : int
         number of minutes corresponding to the simulation timestep
-    
+
     Returns
     -------
     None
@@ -910,12 +932,12 @@ def set_simulation_timestep(deltat_inminutes):
 def set_cache_limit(cache):
     """
     Set the cache size for the time series data output
-    
+
     Parameters
     ----------
     cache : int
         cache size for storing time series data
-        
+
     Return
     ------
     None
@@ -929,7 +951,7 @@ def set_cache_limit(cache):
 def get_cache_limit():
     """
     get the cache size for time series data output
-    
+
     Returns
     -------
     int
@@ -949,15 +971,15 @@ def adjust_rate_type_data():
 def time_units_check_less_than_or_equal(time_unit1, time_unit2):
     """
     Check if one time unit is less than or equal to another
-    
+
     Parameters
     ----------
     time_unit1 : str
         time unit to compare
-        
+
     time_unit2 : str
         time unit to compare against
-        
+
     Returns
     -------
     bool
@@ -968,94 +990,106 @@ def time_units_check_less_than_or_equal(time_unit1, time_unit2):
 
     if time_unit1_inminutes <= time_unit2_inminutes:
         return True
-    
+
     return False
 
 
 def check_for_less_than(timestamp1, timestamp2):
     """
     Check if one timestamp is less than another
-    
+
     Parameters
     ----------
     timestamp1 : str
         timestamp to check if less than another
-        
+
     timestamp2 : str
         timestamp to compare to see if other is less
-        
+
     Returns
     -------
     bool
         True if timestamp1 is less than timestamp2, otherwise False
     """
-    julian_date1, minutes_after_midnight1 = timestamp_to_julian_date_and_minutes(timestamp1)
-    julian_date2, minutes_after_midnight2 = timestamp_to_julian_date_and_minutes(timestamp2)
+    julian_date1, minutes_after_midnight1 = timestamp_to_julian_date_and_minutes(
+        timestamp1
+    )
+    julian_date2, minutes_after_midnight2 = timestamp_to_julian_date_and_minutes(
+        timestamp2
+    )
 
     if julian_date1 < julian_date2:
         return True
     elif julian_date1 == julian_date2:
         if minutes_after_midnight1 < minutes_after_midnight2:
             return True
-        
+
     return False
 
 
 def check_for_greater_than(timestamp1, timestamp2):
     """
     Check if one timestamp is greater than another
-    
+
     Parameters
     ----------
     timestamp1 : str
         timestamp to check if greater than another
-        
+
     timestamp2 : str
         timestamp to compare to see if other is greater
-        
+
     Returns
     -------
     bool
         True if timestamp1 is greater than timestamp2, otherwise False
     """
-    julian_date1, minutes_after_midnight1 = timestamp_to_julian_date_and_minutes(timestamp1)
-    julian_date2, minutes_after_midnight2 = timestamp_to_julian_date_and_minutes(timestamp2)
+    julian_date1, minutes_after_midnight1 = timestamp_to_julian_date_and_minutes(
+        timestamp1
+    )
+    julian_date2, minutes_after_midnight2 = timestamp_to_julian_date_and_minutes(
+        timestamp2
+    )
 
     if julian_date1 > julian_date2:
         return True
     elif julian_date1 == julian_date2:
         if minutes_after_midnight1 > minutes_after_midnight2:
             return True
-        
+
     return False
 
 
 def check_for_greater_than_or_equal_to(timestamp1, timestamp2):
     """
     Check if one timestamp is greater than or equal to another
-    
+
     Parameters
     ----------
     timestamp1 : str
         timestamp to check if greater than or equal to another
-        
+
     timestamp2 : str
         timestamp to compare to see if other is greater than or equal
-        
+
     Returns
     -------
     bool
         True if timestamp1 is greater than or equal to timestamp2, otherwise False
     """
-    julian_date1, minutes_after_midnight1 = timestamp_to_julian_date_and_minutes(timestamp1)
-    julian_date2, minutes_after_midnight2 = timestamp_to_julian_date_and_minutes(timestamp2)
+    julian_date1, minutes_after_midnight1 = timestamp_to_julian_date_and_minutes(
+        timestamp1
+    )
+    julian_date2, minutes_after_midnight2 = timestamp_to_julian_date_and_minutes(
+        timestamp2
+    )
 
     if julian_date1 >= julian_date2:
         return True
     elif julian_date1 == julian_date2:
         if minutes_after_midnight1 >= minutes_after_midnight2:
             return True
-        
+
     return False
 
 
@@ -1070,7 +1104,7 @@ def n_periods_between_times():
 def ctimestep_to_rtimestep(unit_t, return_status=False):
     """
     Convert character time step to minutes and number time step
-    
+
     Parameters
     ----------
     unit_t : str
@@ -1083,7 +1117,7 @@ def ctimestep_to_rtimestep(unit_t, return_status=False):
     -------
     tuple[int, float]
         if return_status=False timestep in minutes and timestep
-    
+
     tuple[int, float, int]
         if return_status=True timestep in minutes, timestep and status
     """
@@ -1096,14 +1130,18 @@ def ctimestep_to_rtimestep(unit_t, return_status=False):
     deltat = 1.0
 
     timestep_index = is_time_interval_valid(unit_t)
-    
+
     # check for None. python treats 0 as false, so a valid index of zero would be treated as an error
     if timestep_index is None:
         if return_status:
-            set_last_message(f"{unit_t} is not a recognized time step", FATAL, this_procedure)
+            set_last_message(
+                f"{unit_t} is not a recognized time step", FATAL, this_procedure
+            )
             status = -1
         else:
-            log_message(f"{unit_t} is not a recognized time step", FATAL, this_procedure)
+            log_message(
+                f"{unit_t} is not a recognized time step", FATAL, this_procedure
+            )
     else:
         deltat_inminutes = RECOGNIZED_INTERVALS_INMINUTES[timestep_index]
 
@@ -1116,7 +1154,7 @@ def ctimestep_to_rtimestep(unit_t, return_status=False):
 def time_interval_conversion(to_interval, from_interval):
     """
     Compute conversion factor between two intervals
-    
+
     Parameters
     ----------
     to_interval : str
@@ -1133,21 +1171,29 @@ def time_interval_conversion(to_interval, from_interval):
     this_procedure = MODNAME + "TimeIntervalConversion"
 
     # convert from_interval from string to minutes
-    from_interval_inminutes, _, error_code = ctimestep_to_rtimestep(upper_case(from_interval), return_status=True)
+    from_interval_inminutes, _, error_code = ctimestep_to_rtimestep(
+        upper_case(from_interval), return_status=True
+    )
 
     if error_code != 0:
-        log_message(f"{upper_case(from_interval)} is not a valid time interval", FATAL, this_procedure)
+        log_message(
+            f"{upper_case(from_interval)} is not a valid time interval",
+            FATAL,
+            this_procedure,
+        )
 
     # convert from_interval from string to minutes
-    to_interval_inminutes, _, error_code = ctimestep_to_rtimestep(upper_case(to_interval), return_status=True)
+    to_interval_inminutes, _, error_code = ctimestep_to_rtimestep(
+        upper_case(to_interval), return_status=True
+    )
 
     if error_code != 0:
-        log_message(f"{upper_case(to_interval)} is not a valid time interval", FATAL, this_procedure)
+        log_message(
+            f"{upper_case(to_interval)} is not a valid time interval",
+            FATAL,
+            this_procedure,
+        )
 
     conversion_factor = to_interval_inminutes / from_interval_inminutes
 
     return conversion_factor
-
-    
-
-
