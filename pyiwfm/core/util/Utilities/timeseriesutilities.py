@@ -1096,70 +1096,91 @@ def check_for_greater_than_or_equal_to(timestamp1, timestamp2):
 def n_periods_between_timestamps(deltat_inminutes, begin_timestamp, end_timestamp):
     """
     Compute the number of periods between two timestamps
-    
+
     Parameters
     ----------
     deltat_inminutes : int
         number of minutes for the time increment between two timestamps
-        
+
     begin_timestamp : str
         starting timestamp for determining number of periods
-        
+
     end_timestamp : str
         ending timestamp for determining number of periods
-        
+
     Returns
     -------
     int
         number of periods of length deltat_inminutes between begin_timestamp and end_timestamp
     """
-    # convert to julian dates and minutes after midnight    
-    begin_julian_date, begin_minutes_after_midnight = timestamp_to_julian_date_and_minutes(begin_timestamp)
-    end_julian_date, end_minutes_after_midnight = timestamp_to_julian_date_and_minutes(end_timestamp)
+    # convert to julian dates and minutes after midnight
+    (
+        begin_julian_date,
+        begin_minutes_after_midnight,
+    ) = timestamp_to_julian_date_and_minutes(begin_timestamp)
+    end_julian_date, end_minutes_after_midnight = timestamp_to_julian_date_and_minutes(
+        end_timestamp
+    )
 
     # get day, month, and year if interval is greater than or equal to a month
     if deltat_inminutes >= 40320:
-        begin_day, begin_month, begin_year = julian_date_to_day_month_year(begin_julian_date)
+        begin_day, begin_month, begin_year = julian_date_to_day_month_year(
+            begin_julian_date
+        )
         end_day, end_month, end_year = julian_date_to_day_month_year(end_julian_date)
 
     # monthly timestamp
     if deltat_inminutes >= 40320 and deltat_inminutes <= 44640:
-        n_period = ((end_year - begin_year) * 12) + (end_month - begin_month) + int((end_day - begin_day) / 27)
-        temp_timestamp = increment_timestamp(begin_timestamp, deltat_inminutes, n_period)
+        n_period = (
+            ((end_year - begin_year) * 12)
+            + (end_month - begin_month)
+            + int((end_day - begin_day) / 27)
+        )
+        temp_timestamp = increment_timestamp(
+            begin_timestamp, deltat_inminutes, n_period
+        )
 
         if check_for_greater_than(temp_timestamp, end_timestamp):
             n_period -= 1
 
     elif deltat_inminutes > 525600:
-        n_period = (end_year - begin_year) + int(((end_month - begin_month) + int((end_day - begin_day)/28))/12)
-        temp_timestamp = increment_timestamp(begin_timestamp, deltat_inminutes, n_period)
+        n_period = (end_year - begin_year) + int(
+            ((end_month - begin_month) + int((end_day - begin_day) / 28)) / 12
+        )
+        temp_timestamp = increment_timestamp(
+            begin_timestamp, deltat_inminutes, n_period
+        )
 
         if check_for_greater_than(temp_timestamp, end_timestamp):
             n_period -= 1
 
     else:
-        n_period = int((((end_julian_date - begin_julian_date) * 1440) + (end_minutes_after_midnight - begin_minutes_after_midnight)) / deltat_inminutes)
+        n_period = int(
+            (
+                ((end_julian_date - begin_julian_date) * 1440)
+                + (end_minutes_after_midnight - begin_minutes_after_midnight)
+            )
+            / deltat_inminutes
+        )
 
     return n_period
-
-
 
 
 def n_periods_between_times(delta_t, begin_time, end_time):
     """
     Compute number of periods between two times
-    
+
     Parameters
     ----------
     delta_t : float
         timestep between begin and end times
-        
+
     begin_time : float
         start time for determining number of periods
-        
+
     end_time : float
         end time for determining number of periods
-        
+
     Returns
     -------
     int
