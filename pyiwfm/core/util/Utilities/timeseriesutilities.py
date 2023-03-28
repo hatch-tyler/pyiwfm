@@ -211,12 +211,12 @@ def day_month_year_to_julian_date(day, month, year, return_status=False):
             this_procedure,
         )
 
-    julian_date = int(
+    julian_date = (
         day
         - 32075
-        + 1461 * (year + 4800 + (month - 14) / 12) / 4
-        + 367 * (month - 2 - (month - 14) / 12 * 12) / 12
-        - 3 * ((year + 4900 + (month - 14) / 12) / 100) / 4
+        + int(1461 * (year + 4800 + int((month - 14) / 12)) / 4)
+        + int(367 * (month - 2 - int((month - 14) / 12) * 12) / 12)
+        - int(3 * int((year + 4900 + int((month - 14) / 12)) / 100) / 4)
     )
 
     if not return_status:
@@ -462,7 +462,7 @@ def timestamp_to_julian_date_and_minutes(timestamp, return_status=False):
     
     status = error_code
 
-    minutes_after_midnight = extract_hour(timestamp) * 60 + extract_minute(timestamp)
+    minutes_after_midnight = int(extract_hour(timestamp) * 60) + extract_minute(timestamp)
 
     if return_status:
         return julian_date, minutes_after_midnight, status
@@ -582,7 +582,7 @@ def julian_date_and_minutes_to_timestamp(julian_date, minutes_after_midnight):
         timestamp
     """
     hours = int(minutes_after_midnight / 60)
-    minutes = minutes_after_midnight - hours * 60
+    minutes = int(minutes_after_midnight - hours * 60)
 
     if hours == 0 and minutes == 0:
         hours = 24
@@ -666,7 +666,14 @@ def get_julian_dates_between_timestamps_with_time_increment(interval_inminutes, 
     -------
     np.ndarray
     """
-    pass
+    timestamp = begin_date_and_time
+    julian_dates = []
+    while check_for_less_than(timestamp, end_date_and_time):
+        jd = timestamp_to_julian(timestamp)
+        julian_dates.append(jd)
+        timestamp = increment_timestamp(timestamp, interval_inminutes, 1)
+
+    return np.array(julian_dates)
 
 
 def adjust_timestamp_with_year_4000(adjusted_timestamp, timestamp):
@@ -746,13 +753,13 @@ def increment_timestamp(timestamp, interval_inminutes, num_intervals=1):
 
     # increment julian date and minutes past midnight
     sign = 1
-    local_minutes = interval_inminutes
+    local_interval = interval_inminutes
     
     if interval_inminutes < 0:
         sign = -1
-        local_minutes = abs(interval_inminutes)
+        local_interval = abs(interval_inminutes)
     
-    end_julian_date, end_minutes_after_midnight = increment_julian_date_and_minutes_after_midnight(local_minutes, sign*num_intervals, julian_date, minutes_after_midnight)
+    end_julian_date, end_minutes_after_midnight = increment_julian_date_and_minutes_after_midnight(local_interval, sign*num_intervals, julian_date, minutes_after_midnight)
 
     return julian_date_and_minutes_to_timestamp(end_julian_date, end_minutes_after_midnight)
 
@@ -786,15 +793,16 @@ def increment_julian_date_and_minutes_after_midnight(interval_inminutes, num_int
 
     # interval is less than or equal to a week (60*24*7)
     if interval_inminutes <= 10080:
+        
         # get number of minutes to increment
         all_minutes = interval_inminutes * num_intervals
 
         # get number of days
-        n_days = all_minutes / 1440
-
+        n_days = int(all_minutes / 1440)
+        
         # get number of minutes
-        n_minutes = all_minutes - (n_days * 1440)
-
+        n_minutes = all_minutes - int(n_days * 1440)
+        
         # increment values
         end_julian_date = begin_julian_date + n_days
         end_minutes_after_midnight = begin_minutes_after_midnight + n_minutes
@@ -832,9 +840,9 @@ def increment_julian_date_and_minutes_after_midnight(interval_inminutes, num_int
                     is_last_day = True
             
         # find number of years and months to increment
-        if interval_inminutes > 40320 and interval_inminutes <= 44640:
+        if interval_inminutes >= 40320 and interval_inminutes <= 44640:
             n_years = int(num_intervals / 12)
-            n_months = num_intervals - n_years*12
+            n_months = num_intervals - int(n_years*12)
 
         else:
             n_years = num_intervals
