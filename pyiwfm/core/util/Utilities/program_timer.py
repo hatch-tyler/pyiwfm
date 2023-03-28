@@ -15,7 +15,7 @@ timer_started = False
 def start_timer():
     """
     Record start time
-    
+
     Parameters
     ----------
     None
