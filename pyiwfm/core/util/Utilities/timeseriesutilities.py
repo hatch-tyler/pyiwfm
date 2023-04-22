@@ -955,17 +955,120 @@ def get_cache_limit():
     Returns
     -------
     int
-        cache size for time sereis data
+        cache size for time series data
     """
     return cache_limit
 
 
-def set_tsd_cache_size():
-    pass
+def set_tsd_cache_size(file_name, n_columns, n_rows=1):
+    """
+    Set in-memory storage of timeseries data before print-out
+    
+    Parameters
+    ----------
+    file_name : str
+        output file name for time series data
+    
+    n_columns : int
+        number of columns of timeseries data
+        
+    n_rows : int, default 1
+        number of rows of timeseries data
+    
+    Returns
+    -------
+    """
+    this_procedure = MODNAME + "SetTSDCacheSize"
+
+    if n_rows * n_columns > cache_limit:
+        n_batch = 1
+    else:
+        n_batch = cache_limit / (n_rows * n_columns)
+
+    # Check if the storage arrays are already defined
+    if 'values_for_output' in locals():
+        del values_for_output
+        if 'time_array' in locals():
+            del time_array
+
+    # Allocate memory for the data storage array
+    values_for_output = np.empty((n_rows, n_columns, n_batch))
+
+    # Allocate memory for the time storage array
+    if 'time_array' in locals():
+        time_array = np.empty(n_batch)
+
+    # Set the data fields
+    number_of_data_batch = n_batch
+    number_of_data_rows = n_rows
+    number_of_data_columns = n_columns
+
+    return values_for_output, number_of_data_batch, number_of_data_rows, number_of_data_columns, time_array
 
 
-def adjust_rate_type_data():
-    pass
+def adjust_rate_type_data(r, rate_type_data_array, conversion_factor=None, data_interval=None, last_data_date=None):
+    """
+    Modify the time series rate type input data so that its time unit is consistent with simulation timestep
+    
+    Parameters
+    ----------
+    r : np.ndarray
+        2D array of float containing time series rate type input data
+        
+    rate_type_data_array : np.ndarray
+        1D array of bool containing 
+
+    conversion_factor : float or None, default None
+        conversion factor between time series rate type units and simulation units
+
+    data_interval : int or None, default None
+        time step length in minutes
+
+    last_data_date : str or None, default None
+        timestamp for last data read
+
+    Returns
+    -------
+    np.ndarray
+        2D array of float containing adjusted time series rate type data
+    """
+    # get the dimensions of the rate type data
+    nrow, ncol = r.shape
+    r1d = r.flatten()
+
+    if conversion_factor is not None:
+        factor = conversion_factor
+    
+    elif data_interval is not None and last_data_date is not None:
+        if data_interval == 0:
+            factor = 1.0
+        else:
+            # decrement the time stamp of the data last read by the data interval in minutes
+            timestamp_begin = increment_timestamp(last_data_date, -data_interval)
+
+            # compute conversion factor
+            factor = float(n_periods(simulation_timestep_inminutes, timestamp_begin, last_data_date))
+
+    # convert
+    if rate_type_data_array.size == 1:
+        # If RateTypeDataArray has only one element
+        if rate_type_data_array[0]:
+            # If the element is True, divide the entire input array r by the conversion factor
+            r /= factor
+    else:
+        # If RateTypeDataArray has more than one element
+        # Update the flattened array r1d by dividing only the selected elements by the conversion factor
+        r1d[rate_type_data_array] /= factor
+        
+        # Reshape the flattened array r1d back to 2D array r with the original shape, using column-major order
+        r = r1d.reshape((nrow, ncol), order='F')
+
+    return r  # Return the adjusted array r
+
+    
+
+
+
 
 
 def time_units_check_less_than_or_equal(time_unit1, time_unit2):
@@ -1187,6 +1290,30 @@ def n_periods_between_times(delta_t, begin_time, end_time):
         number of periods of length delta_t between begin_time and end_time
     """
     return (end_time - begin_time) / delta_t
+
+def n_periods(deltat, begin_time_or_timestamp, end_time_or_timestamp):
+    """
+    Interface for calling n_periods_between_times or n_periods_between_timestamps
+
+    Parameters
+    ----------
+    deltat : int or float
+        number of minutes between timestamps or timestep between begin and end times
+
+    begin_time_or_timestamp : str or float
+        beginning timestamp or start time
+
+    end_time_or_timestamp : str or float
+        ending timestamp or end time
+    """
+    if isinstance(deltat, int) and isinstance(begin_time_or_timestamp, str) and isinstance(end_time_or_timestamp, str):
+        return n_periods_between_timestamps(deltat, begin_time_or_timestamp, end_time_or_timestamp)
+
+    elif isinstance(deltat, float) and isinstance(begin_time_or_timestamp, float) and isinstance(end_time_or_timestamp, float):
+        return n_periods_between_times(deltat, begin_time_or_timestamp, end_time_or_timestamp)
+
+    else:
+        raise TypeError("inputs must match those for either n_periods_between_timestamps or n_periods_between_times")
 
 
 def ctimestep_to_rtimestep(unit_t, return_status=False):
