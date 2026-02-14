@@ -321,7 +321,7 @@ class TestDssTimeSeriesAdapter:
         """read() raises ImportError when pyiwfm.io.dss is not importable."""
         adapter = DssTimeSeriesAdapter()
         with patch.dict("sys.modules", {"pyiwfm.io.dss": None}):
-            with pytest.raises(ImportError, match="pydsstools"):
+            with pytest.raises(ImportError, match="HEC-DSS"):
                 adapter.read("test.dss")
 
     def test_read_delegates_to_dss_reader(self) -> None:
@@ -348,7 +348,7 @@ class TestDssTimeSeriesAdapter:
     def test_read_metadata_raises_import_error_when_missing(self) -> None:
         adapter = DssTimeSeriesAdapter()
         with patch.dict("sys.modules", {"pyiwfm.io.dss": None}):
-            with pytest.raises(ImportError, match="pydsstools"):
+            with pytest.raises(ImportError, match="HEC-DSS"):
                 adapter.read_metadata("test.dss")
 
     def test_read_metadata_returns_catalog_info(self) -> None:

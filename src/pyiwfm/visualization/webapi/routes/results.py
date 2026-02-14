@@ -4,19 +4,10 @@ Results data API routes: heads, hydrographs, locations.
 
 from __future__ import annotations
 
-import math
-
 from fastapi import APIRouter, HTTPException, Query
 
 from pyiwfm.visualization.webapi.config import model_state
-
-
-def _sanitize_values(values: list) -> list:
-    """Replace NaN/Inf with None in a list of numeric values for JSON safety."""
-    return [
-        None if (isinstance(v, float) and (math.isnan(v) or math.isinf(v))) else v
-        for v in values
-    ]
+from pyiwfm.visualization.webapi.utils import sanitize_values as _sanitize_values
 
 router = APIRouter(prefix="/api/results", tags=["results"])
 
@@ -274,6 +265,88 @@ def get_hydrograph(
         )
 
 
+@router.get("/gw-hydrograph-all-layers")
+def get_gw_hydrograph_all_layers(
+    location_id: int = Query(description="1-based GW hydrograph location ID"),
+) -> dict:
+    """Get head time series at a GW hydrograph node for ALL layers.
+
+    Uses the head HDF5 data to extract per-layer head at the node
+    associated with the given hydrograph location.
+    """
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    model = model_state.model
+    if model is None or model.groundwater is None:
+        raise HTTPException(status_code=404, detail="No groundwater component")
+
+    locs = model.groundwater.hydrograph_locations
+    column_index = location_id - 1
+    if column_index < 0 or column_index >= len(locs):
+        raise HTTPException(
+            status_code=404,
+            detail=f"GW hydrograph {location_id} out of range [1, {len(locs)}]",
+        )
+
+    loc = locs[column_index]
+    name = loc.name or f"GW Hydrograph {location_id}"
+
+    # Get the GW node ID for this hydrograph location
+    node_id = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
+    if node_id == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No node ID for hydrograph location {location_id}",
+        )
+
+    loader = model_state.get_head_loader()
+    if loader is None or loader.n_frames == 0:
+        raise HTTPException(status_code=404, detail="No head data available")
+
+    # Use cached node_id -> index mapping
+    node_id_to_idx = model_state.get_node_id_to_idx()
+    node_idx = node_id_to_idx.get(node_id)
+    if node_idx is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Node {node_id} not found in grid",
+        )
+
+    n_layers = loader.get_frame(0).shape[1]
+    times_iso = [t.isoformat() for t in loader.times]
+
+    # Pre-allocate per-layer value lists
+    layer_values: list[list[float | None]] = [[] for _ in range(n_layers)]
+
+    # Iterate timesteps (outer) then layers (inner) so each HDF5 frame
+    # is loaded exactly once — O(n_frames) frame loads vs O(n_frames * n_layers).
+    for ts in range(loader.n_frames):
+        frame = loader.get_frame(ts)
+        for layer_idx in range(n_layers):
+            v = float(frame[node_idx, layer_idx])
+            if v < -9000:
+                layer_values[layer_idx].append(None)
+            else:
+                layer_values[layer_idx].append(round(v, 3))
+
+    layers_data: list[dict] = []
+    for layer_idx in range(n_layers):
+        layers_data.append({
+            "layer": layer_idx + 1,
+            "values": _sanitize_values(layer_values[layer_idx]),
+        })
+
+    return {
+        "location_id": location_id,
+        "node_id": node_id,
+        "name": name,
+        "n_layers": n_layers,
+        "times": times_iso,
+        "layers": layers_data,
+    }
+
+
 @router.get("/hydrographs-multi")
 def get_hydrographs_multi(
     type: str = Query(description="Type: gw or stream"),
@@ -446,4 +519,81 @@ def get_drawdown(
         "reference_timestep": reference_timestep,
         "n_timesteps": len(timesteps),
         "timesteps": timesteps,
+    }
+
+
+@router.get("/heads-by-element")
+def get_heads_by_element(
+    timestep: int = Query(default=0, ge=0, description="Timestep index"),
+    layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
+) -> dict:
+    """Get per-element head values (vertex-averaged) for a timestep and layer.
+
+    Returns a lightweight array of head values indexed by element position
+    (matching the order of features in the mesh GeoJSON).  Each value is the
+    average of the head at the element's vertex nodes.
+    """
+    loader = model_state.get_head_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No head data available")
+
+    if timestep >= loader.n_frames:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Timestep {timestep} out of range [0, {loader.n_frames})",
+        )
+
+    frame = loader.get_frame(timestep)
+    layer_idx = layer - 1
+    if layer_idx >= frame.shape[1]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Layer {layer} out of range [1, {frame.shape[1]}]",
+        )
+
+    head_values = frame[:, layer_idx]
+
+    model = model_state.model
+    if model is None or model.grid is None:
+        raise HTTPException(status_code=404, detail="No model grid available")
+
+    grid = model.grid
+
+    # Use cached mappings
+    node_id_to_idx = model_state.get_node_id_to_idx()
+    sorted_elem_ids = model_state.get_sorted_elem_ids()
+    elem_heads: list[float | None] = []
+    for eid in sorted_elem_ids:
+        elem = grid.elements[eid]
+        node_vals: list[float] = []
+        for nid in elem.vertices:
+            idx = node_id_to_idx.get(nid)
+            if idx is not None and idx < len(head_values):
+                v = float(head_values[idx])
+                if v > -9000:
+                    node_vals.append(v)
+        if node_vals:
+            avg = sum(node_vals) / len(node_vals)
+            elem_heads.append(round(avg, 3))
+        else:
+            elem_heads.append(None)
+
+    # Compute min/max excluding dry cells
+    valid = [v for v in elem_heads if v is not None]
+    if valid:
+        valid.sort()
+        lo = valid[max(0, int(len(valid) * 0.02))]
+        hi = valid[min(len(valid) - 1, int(len(valid) * 0.98))]
+    else:
+        lo, hi = 0.0, 1.0
+
+    dt = loader.times[timestep] if timestep < len(loader.times) else None
+
+    return {
+        "timestep_index": timestep,
+        "datetime": dt.isoformat() if dt else None,
+        "layer": layer,
+        "values": elem_heads,
+        "min": round(lo, 3),
+        "max": round(hi, 3),
     }

@@ -41,7 +41,7 @@ class ModelState:
     """
 
     def __init__(self) -> None:
-        self._model: "IWFMModel | None" = None
+        self._model: IWFMModel | None = None
         self._mesh_3d: bytes | None = None
         self._mesh_surface: bytes | None = None
         self._surface_json_data: dict | None = None
@@ -55,19 +55,23 @@ class ModelState:
         # Diversion timeseries cache
         self._diversion_ts_data: tuple | None = None
 
+        # Cached grid index maps (populated lazily, cleared on set_model)
+        self._node_id_to_idx: dict[int, int] | None = None
+        self._sorted_elem_ids: list[int] | None = None
+
         # Results-related state
         self._crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
         self._transformer: Any = None  # pyproj Transformer (lazy)
         self._geojson_cache: dict[int, dict] = {}  # layer -> GeoJSON in WGS84
-        self._head_loader: "LazyHeadDataLoader | None" = None
-        self._gw_hydrograph_reader: "IWFMHydrographReader | None" = None
-        self._stream_hydrograph_reader: "IWFMHydrographReader | None" = None
-        self._budget_readers: dict[str, "BudgetReader"] = {}
+        self._head_loader: LazyHeadDataLoader | None = None
+        self._gw_hydrograph_reader: IWFMHydrographReader | None = None
+        self._stream_hydrograph_reader: IWFMHydrographReader | None = None
+        self._budget_readers: dict[str, BudgetReader] = {}
         self._results_dir: Path | None = None
         self._observations: dict[str, dict] = {}  # id -> observation data
 
     @property
-    def model(self) -> "IWFMModel | None":
+    def model(self) -> IWFMModel | None:
         """Get the loaded model."""
         return self._model
 
@@ -77,7 +81,7 @@ class ModelState:
         return self._model is not None
 
     def set_model(
-        self, model: "IWFMModel",
+        self, model: IWFMModel,
         crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs",
     ) -> None:
         """Set the model and reset caches."""
@@ -100,6 +104,8 @@ class ModelState:
         self._observations = {}
         self._stream_reach_boundaries = None
         self._diversion_ts_data = None
+        self._node_id_to_idx = None
+        self._sorted_elem_ids = None
 
         # Determine results directory from model metadata
         sim_file = model.metadata.get("simulation_file")
@@ -128,7 +134,6 @@ class ModelState:
 
     def _compute_mesh_3d(self) -> bytes:
         """Compute 3D mesh as VTU XML string."""
-        import io
         import vtk
 
         if self._model is None:
@@ -475,15 +480,11 @@ class ModelState:
     def _get_transformer(self) -> Any:
         """Get or create the pyproj Transformer for CRS reprojection."""
         if self._transformer is None:
-            try:
-                from pyproj import Transformer
+            from pyproj import Transformer
 
-                self._transformer = Transformer.from_crs(
-                    self._crs, "EPSG:4326", always_xy=True
-                )
-            except ImportError:
-                logger.warning("pyproj not installed; coordinates will not be reprojected")
-                return None
+            self._transformer = Transformer.from_crs(
+                self._crs, "EPSG:4326", always_xy=True
+            )
         return self._transformer
 
     def reproject_coords(self, x: float, y: float) -> tuple[float, float]:
@@ -544,7 +545,7 @@ class ModelState:
     # Head data access
     # ------------------------------------------------------------------
 
-    def get_head_loader(self) -> "LazyHeadDataLoader | None":
+    def get_head_loader(self) -> LazyHeadDataLoader | None:
         """Get the lazy head data loader, initializing if needed."""
         if self._head_loader is not None:
             return self._head_loader
@@ -595,7 +596,7 @@ class ModelState:
     # Hydrograph readers (IWFM text output files)
     # ------------------------------------------------------------------
 
-    def get_gw_hydrograph_reader(self) -> "IWFMHydrographReader | None":
+    def get_gw_hydrograph_reader(self) -> IWFMHydrographReader | None:
         """Get or create the GW hydrograph reader from the output file."""
         if self._gw_hydrograph_reader is not None:
             return self._gw_hydrograph_reader
@@ -629,7 +630,7 @@ class ModelState:
 
         return self._gw_hydrograph_reader
 
-    def get_stream_hydrograph_reader(self) -> "IWFMHydrographReader | None":
+    def get_stream_hydrograph_reader(self) -> IWFMHydrographReader | None:
         """Get or create the stream hydrograph reader from the output file."""
         if self._stream_hydrograph_reader is not None:
             return self._stream_hydrograph_reader
@@ -716,6 +717,36 @@ class ModelState:
                     "reach_id": getattr(node, "reach_id", 0),
                 })
 
+        # Subsidence hydrograph locations
+        if self._model.groundwater:
+            subs_config = getattr(self._model.groundwater, "subsidence_config", None)
+            if subs_config is not None:
+                grid = self._model.grid
+                specs = getattr(subs_config, "hydrograph_specs", [])
+                for spec in specs:
+                    x, y = spec.x, spec.y
+                    # Node-based specs (hydtyp=1) may have x=0, y=0;
+                    # look up coordinates from the associated grid node
+                    if x == 0.0 and y == 0.0 and grid:
+                        node_id = getattr(spec, "node_id", 0) or getattr(spec, "gw_node", 0)
+                        if node_id:
+                            gw_node = grid.nodes.get(node_id)
+                            if gw_node:
+                                x, y = gw_node.x, gw_node.y
+                    if x == 0.0 and y == 0.0:
+                        continue  # Skip if still no valid coordinates
+                    try:
+                        lng, lat = self.reproject_coords(x, y)
+                    except Exception:
+                        continue
+                    result["subsidence"].append({
+                        "id": spec.id,
+                        "lng": lng,
+                        "lat": lat,
+                        "name": spec.name or f"Subsidence Obs {spec.id}",
+                        "layer": spec.layer,
+                    })
+
         return result
 
     # ------------------------------------------------------------------
@@ -751,7 +782,7 @@ class ModelState:
 
         return available
 
-    def get_budget_reader(self, budget_type: str) -> "BudgetReader | None":
+    def get_budget_reader(self, budget_type: str) -> BudgetReader | None:
         """Get or create a BudgetReader for the given budget type."""
         if budget_type in self._budget_readers:
             return self._budget_readers[budget_type]
@@ -822,6 +853,27 @@ class ModelState:
             del self._observations[obs_id]
             return True
         return False
+
+    # ------------------------------------------------------------------
+    # Grid index mappings (cached)
+    # ------------------------------------------------------------------
+
+    def get_node_id_to_idx(self) -> dict[int, int]:
+        """Get cached node_id -> array index mapping."""
+        if self._node_id_to_idx is None:
+            if self._model is None or self._model.grid is None:
+                return {}
+            sorted_ids = sorted(self._model.grid.nodes.keys())
+            self._node_id_to_idx = {nid: i for i, nid in enumerate(sorted_ids)}
+        return self._node_id_to_idx
+
+    def get_sorted_elem_ids(self) -> list[int]:
+        """Get cached sorted element ID list (matching GeoJSON feature order)."""
+        if self._sorted_elem_ids is None:
+            if self._model is None or self._model.grid is None:
+                return []
+            self._sorted_elem_ids = sorted(self._model.grid.elements.keys())
+        return self._sorted_elem_ids
 
     # ------------------------------------------------------------------
     # Results info

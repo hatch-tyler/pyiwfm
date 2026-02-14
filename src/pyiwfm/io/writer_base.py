@@ -46,8 +46,8 @@ def _check_dss():
     """Check if DSS support is available."""
     if not HAS_DSS:
         raise ImportError(
-            "DSS support requires heclib. Install with the IWFM distribution "
-            "or set output format to TEXT."
+            "DSS support requires the bundled HEC-DSS library (pyiwfm.io.dss). "
+            "The library may not be available on this platform."
         )
 
 

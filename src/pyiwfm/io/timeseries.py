@@ -13,13 +13,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Sequence, Any, Iterator
+from typing import Any
 
+import h5py
 import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
-from pyiwfm.core.exceptions import FileFormatError
 
 
 class TimeSeriesFileType(Enum):
@@ -190,12 +190,12 @@ class AsciiTimeSeriesAdapter(BaseTimeSeriesReader):
         last_time = None
 
         from pyiwfm.io.timeseries_ascii import (
+            IWFM_TIMESTAMP_LENGTH,
             _is_comment_line,
             parse_iwfm_timestamp,
-            IWFM_TIMESTAMP_LENGTH,
         )
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Read NDATA
             for line in f:
                 if _is_comment_line(line):
@@ -253,7 +253,8 @@ class DssTimeSeriesAdapter(BaseTimeSeriesReader):
             from pyiwfm.io.dss import DSSTimeSeriesReader
         except ImportError as e:
             raise ImportError(
-                "DSS support requires pydsstools. Install with: pip install pydsstools"
+                "DSS support requires the bundled HEC-DSS library. "
+                "Check that pyiwfm.io.dss is importable."
             ) from e
 
         pathname = kwargs.get("pathname", "")
@@ -277,7 +278,8 @@ class DssTimeSeriesAdapter(BaseTimeSeriesReader):
             from pyiwfm.io.dss import DSSFile
         except ImportError as e:
             raise ImportError(
-                "DSS support requires pydsstools. Install with: pip install pydsstools"
+                "DSS support requires the bundled HEC-DSS library. "
+                "Check that pyiwfm.io.dss is importable."
             ) from e
 
         pathname = kwargs.get("pathname", "")
@@ -302,13 +304,6 @@ class Hdf5TimeSeriesAdapter(BaseTimeSeriesReader):
         **kwargs: Any,
     ) -> tuple[NDArray[np.datetime64], NDArray[np.float64], TimeSeriesMetadata]:
         """Read HDF5 time series file."""
-        try:
-            import h5py
-        except ImportError as e:
-            raise ImportError(
-                "HDF5 support requires h5py. Install with: pip install h5py"
-            ) from e
-
         dataset_path = kwargs.get("dataset", "/timeseries/data")
         time_path = kwargs.get("time_dataset", "/timeseries/time")
 
@@ -338,13 +333,6 @@ class Hdf5TimeSeriesAdapter(BaseTimeSeriesReader):
 
     def read_metadata(self, filepath: Path | str, **kwargs: Any) -> TimeSeriesMetadata:
         """Read HDF5 file metadata."""
-        try:
-            import h5py
-        except ImportError as e:
-            raise ImportError(
-                "HDF5 support requires h5py. Install with: pip install h5py"
-            ) from e
-
         dataset_path = kwargs.get("dataset", "/timeseries/data")
 
         with h5py.File(filepath, "r") as f:
@@ -387,17 +375,14 @@ class UnifiedTimeSeriesReader:
             TimeSeriesFileType.ASCII: AsciiTimeSeriesAdapter(),
         }
 
-        # Add optional adapters
+        # HDF5 is always available (h5py is a core dependency)
+        self._adapters[TimeSeriesFileType.HDF5] = Hdf5TimeSeriesAdapter()
+
+        # DSS adapter: bundled ctypes library may fail to load on some platforms
         try:
             from pyiwfm.io.dss import HAS_DSS_LIBRARY
             if HAS_DSS_LIBRARY:
                 self._adapters[TimeSeriesFileType.DSS] = DssTimeSeriesAdapter()
-        except ImportError:
-            pass
-
-        try:
-            import h5py
-            self._adapters[TimeSeriesFileType.HDF5] = Hdf5TimeSeriesAdapter()
         except ImportError:
             pass
 

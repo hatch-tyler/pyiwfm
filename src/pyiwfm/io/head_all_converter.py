@@ -24,10 +24,10 @@ from __future__ import annotations
 
 import argparse
 import logging
-import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import h5py
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -127,13 +127,6 @@ def convert_headall_to_hdf(
     Path
         Path to the created HDF5 file.
     """
-    try:
-        import h5py
-    except ImportError:
-        raise ImportError(
-            "h5py is required for HDF5 conversion. Install with: pip install h5py"
-        )
-
     text_path = Path(text_file)
     if hdf_file is None:
         hdf_path = text_path.with_suffix(".hdf")
@@ -142,7 +135,7 @@ def convert_headall_to_hdf(
 
     logger.info("Converting %s -> %s (n_layers=%d)", text_path, hdf_path, n_layers)
 
-    with open(text_path, "r") as fh:
+    with open(text_path) as fh:
         # --- Read header (6 lines: 4 title + NODE + TIME) ---
         header_lines_read = 0
         title_count = 0

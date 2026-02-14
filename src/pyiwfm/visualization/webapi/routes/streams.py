@@ -54,6 +54,24 @@ def _node_z(gw_node: int, strat, lookup: dict[int, int]) -> float:
     return 0.0
 
 
+def _make_stream_node(
+    sn, grid, strat, lookup: dict[int, int], reach_id: int = 0,
+) -> StreamNode | None:
+    """Resolve a stream node's GW node to grid coordinates and build a StreamNode.
+
+    Returns None if the stream node has no valid gw_node in the grid.
+    """
+    gw_node = getattr(sn, "gw_node", None)
+    if gw_node is None or gw_node not in grid.nodes:
+        return None
+    nd = grid.nodes[gw_node]
+    z = _node_z(gw_node, strat, lookup)
+    return StreamNode(
+        id=sn.id, x=nd.x, y=nd.y, z=z,
+        reach_id=reach_id or getattr(sn, "reach_id", 0),
+    )
+
+
 # ===================================================================
 # Shared reach-building logic (used by all 3 stream endpoints)
 # ===================================================================
@@ -98,15 +116,10 @@ def _build_reaches_from_connectivity(stream, grid, strat, lookup):
     def _add_node(nid: int) -> None:
         if nid in added_nodes or nid not in valid_nodes:
             return
-        sn = valid_nodes[nid]
-        gw = sn.gw_node
-        nd = grid.nodes[gw]
-        z = _node_z(gw, strat, lookup)
-        nodes_data.append(StreamNode(
-            id=sn.id, x=nd.x, y=nd.y, z=z,
-            reach_id=getattr(sn, "reach_id", 0),
-        ))
-        added_nodes.add(nid)
+        sn_node = _make_stream_node(valid_nodes[nid], grid, strat, lookup)
+        if sn_node is not None:
+            nodes_data.append(sn_node)
+            added_nodes.add(nid)
 
     for head in head_nodes:
         if head in visited:
@@ -191,15 +204,12 @@ def _build_reaches_from_preprocessor_binary(stream, grid, strat, lookup):
 
         for sn_id in reach_sn_ids:
             if sn_id not in added_nodes:
-                sn = valid_nodes[sn_id]
-                gw = sn.gw_node
-                nd = grid.nodes[gw]
-                z = _node_z(gw, strat, lookup)
-                nodes_data.append(StreamNode(
-                    id=sn.id, x=nd.x, y=nd.y, z=z,
-                    reach_id=reach_id,
-                ))
-                added_nodes.add(sn_id)
+                sn_node = _make_stream_node(
+                    valid_nodes[sn_id], grid, strat, lookup, reach_id=reach_id,
+                )
+                if sn_node is not None:
+                    nodes_data.append(sn_node)
+                    added_nodes.add(sn_id)
 
         reaches_data.append(reach_sn_ids)
 
@@ -233,13 +243,10 @@ def _build_streams_from_nodes(stream, grid, strat, lookup):
     for rid in sorted(by_reach.keys()):
         reach_nodes: list[int] = []
         for sn in by_reach[rid]:
-            gw_node = sn.gw_node
-            node = grid.nodes[gw_node]
-            z = _node_z(gw_node, strat, lookup)
-            nodes_data.append(
-                StreamNode(id=sn.id, x=node.x, y=node.y, z=z, reach_id=rid)
-            )
-            reach_nodes.append(sn.id)
+            sn_node = _make_stream_node(sn, grid, strat, lookup, reach_id=rid)
+            if sn_node is not None:
+                nodes_data.append(sn_node)
+                reach_nodes.append(sn.id)
         if len(reach_nodes) >= 2:
             reaches_data.append(reach_nodes)
 
@@ -272,14 +279,14 @@ def _build_streams_from_reaches(stream, grid, strat, lookup):
                     or getattr(sn_or_id, "gw_node", None)
                 )
             if gw_node is not None and gw_node in grid.nodes:
-                node = grid.nodes[gw_node]
-                z = _node_z(gw_node, strat, lookup)
-                nodes_data.append(
-                    StreamNode(
-                        id=sn_id, x=node.x, y=node.y, z=z,
-                        reach_id=getattr(reach, "id", 0),
-                    )
+                sn_node = StreamNode(
+                    id=sn_id,
+                    x=grid.nodes[gw_node].x,
+                    y=grid.nodes[gw_node].y,
+                    z=_node_z(gw_node, strat, lookup),
+                    reach_id=getattr(reach, "id", 0),
                 )
+                nodes_data.append(sn_node)
                 reach_nodes.append(sn_id)
         if reach_nodes:
             reaches_data.append(reach_nodes)
@@ -354,14 +361,9 @@ def _build_stream_data(stream, grid, strat, lookup):
         nodes_data: list[StreamNode] = []
         reach_nodes: list[int] = []
         for sn in sorted(stream.nodes.values(), key=lambda n: n.id):
-            gw_node = getattr(sn, "gw_node", None)
-            if gw_node is not None and gw_node in grid.nodes:
-                node = grid.nodes[gw_node]
-                z = _node_z(gw_node, strat, lookup)
-                nodes_data.append(StreamNode(
-                    id=sn.id, x=node.x, y=node.y, z=z,
-                    reach_id=0,
-                ))
+            sn_node = _make_stream_node(sn, grid, strat, lookup, reach_id=0)
+            if sn_node is not None:
+                nodes_data.append(sn_node)
                 reach_nodes.append(sn.id)
         reaches_data = [reach_nodes] if len(reach_nodes) >= 2 else []
         return nodes_data, reaches_data
@@ -496,10 +498,7 @@ def get_streams_vtp() -> Response:
     if not model.has_streams or model.streams is None:
         raise HTTPException(status_code=404, detail="No stream data in model")
 
-    try:
-        import vtk
-    except ImportError:
-        raise HTTPException(status_code=500, detail="VTK required")
+    import vtk
 
     stream = model.streams
     grid = model.grid

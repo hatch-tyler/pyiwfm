@@ -106,7 +106,7 @@ html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 
 html_theme_options = {
-    "github_url": "https://github.com/CADWRDeltaModeling/pyiwfm",
+    "github_url": "https://github.com/CA-DWR/pyiwfm",
     "show_toc_level": 2,
     "navigation_depth": 4,
     "show_nav_level": 2,
@@ -129,7 +129,7 @@ html_theme_options = {
 }
 
 html_context = {
-    "github_user": "CADWRDeltaModeling",
+    "github_user": "CA-DWR",
     "github_repo": "pyiwfm",
     "github_version": "main",
     "doc_path": "docs",

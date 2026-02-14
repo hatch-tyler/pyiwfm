@@ -3,6 +3,7 @@
  *
  * Loads each layer as a separate actor with distinct colors.
  * Supports cross-section slice rendering.
+ * Supports property-based scalar coloring via the Property dropdown (Issue 2).
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -18,12 +19,15 @@ import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
 import vtkCellArray from '@kitware/vtk.js/Common/Core/CellArray';
 import vtkPoints from '@kitware/vtk.js/Common/Core/Points';
 import vtkPolyData from '@kitware/vtk.js/Common/DataModel/PolyData';
+import vtkDataArray from '@kitware/vtk.js/Common/Core/DataArray';
+import vtkColorTransferFunction from '@kitware/vtk.js/Rendering/Core/ColorTransferFunction';
 import { useViewerStore } from '../../stores/viewerStore';
 import {
   fetchMeshLayer,
   fetchModelInfo,
   fetchSliceJson,
   fetchStreams,
+  fetchPropertyData,
 } from '../../api/client';
 import { LAYER_COLORS } from '../../constants/colors';
 
@@ -33,8 +37,10 @@ interface ViewerRefs {
   renderer: any;
   renderWindow: any;
   layerActors: Map<number, any>;  // layer index (0-based) -> actor
+  layerPolyDatas: Map<number, any>;  // layer index -> polyData (for adding scalars)
   streamActor: any;
   sliceActors: any[];  // multiple actors for per-layer slice coloring
+  nLayers: number;
 }
 
 export default function Viewer3D() {
@@ -44,8 +50,10 @@ export default function Viewer3D() {
     renderer: null,
     renderWindow: null,
     layerActors: new Map(),
+    layerPolyDatas: new Map(),
     streamActor: null,
     sliceActors: [],
+    nLayers: 0,
   });
 
   const [loadingMesh, setLoadingMesh] = useState(true);
@@ -55,6 +63,7 @@ export default function Viewer3D() {
   const {
     setMeshLoaded,
     modelInfo,
+    activeProperty,
     opacity,
     showEdges,
     zExaggeration,
@@ -72,7 +81,7 @@ export default function Viewer3D() {
       points: number[],
       polys: number[],
       color: [number, number, number],
-    ): any => {
+    ): { actor: any; polyData: any } => {
       const pts = vtkPoints.newInstance();
       pts.setData(new Float32Array(points), 3);
 
@@ -92,7 +101,7 @@ export default function Viewer3D() {
       actor.getProperty().setColor(...color);
       actor.getProperty().setEdgeVisibility(false);
 
-      return actor;
+      return { actor, polyData };
     },
     [],
   );
@@ -106,6 +115,7 @@ export default function Viewer3D() {
       // We need to know how many layers to fetch
       const info = await fetchModelInfo();
       const nLayers = info.n_layers;
+      vtkRefs.current.nLayers = nLayers;
 
       // Fetch all layers in parallel
       const promises = Array.from({ length: nLayers }, (_, i) =>
@@ -121,13 +131,14 @@ export default function Viewer3D() {
         if (meshData.n_cells === 0) return;
 
         const color = LAYER_COLORS[i % LAYER_COLORS.length];
-        const actor = createPolyDataActor(
+        const { actor, polyData } = createPolyDataActor(
           meshData.points,
           meshData.polys,
           color,
         );
 
         vtkRefs.current.layerActors.set(i, actor);
+        vtkRefs.current.layerPolyDatas.set(i, polyData);
         renderer.addActor(actor);
       });
 
@@ -170,6 +181,109 @@ export default function Viewer3D() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Track current LUT for cleanup
+  const currentLutRef = useRef<any>(null);
+
+  // Property-based coloring effect
+  useEffect(() => {
+    const nLayers = vtkRefs.current.nLayers;
+    if (nLayers === 0) return;
+
+    if (activeProperty === 'layer') {
+      // Clean up old LUT
+      if (currentLutRef.current) {
+        currentLutRef.current.delete();
+        currentLutRef.current = null;
+      }
+      // Revert to fixed layer colors
+      vtkRefs.current.layerActors.forEach((actor, i) => {
+        const mapper = actor.getMapper();
+        mapper.setScalarVisibility(false);
+        const color = LAYER_COLORS[i % LAYER_COLORS.length];
+        actor.getProperty().setColor(...color);
+      });
+      vtkRefs.current.renderWindow?.render();
+      return;
+    }
+
+    // Cancellation flag for stale async operations
+    let cancelled = false;
+
+    // Fetch property data for each layer and apply scalar coloring
+    const applyProperty = async () => {
+      try {
+        // Fetch property data for all layers in parallel (1-based layer numbers)
+        const promises = Array.from({ length: nLayers }, (_, i) =>
+          fetchPropertyData(activeProperty, i + 1).catch(() => null),
+        );
+        const results = await Promise.all(promises);
+
+        // Bail out if a newer property selection has superseded this one
+        if (cancelled) return;
+
+        // Compute global min/max across all layers for consistent coloring
+        let globalMin = Infinity;
+        let globalMax = -Infinity;
+        for (const r of results) {
+          if (r) {
+            globalMin = Math.min(globalMin, r.min);
+            globalMax = Math.max(globalMax, r.max);
+          }
+        }
+        if (!isFinite(globalMin) || !isFinite(globalMax)) return;
+
+        // Clean up old LUT before creating a new one
+        if (currentLutRef.current) {
+          currentLutRef.current.delete();
+        }
+
+        // Build a color transfer function (viridis-like: blue -> cyan -> green -> yellow)
+        const lut = vtkColorTransferFunction.newInstance();
+        currentLutRef.current = lut;
+        lut.addRGBPoint(globalMin, 0.267, 0.005, 0.329);
+        lut.addRGBPoint(globalMin + (globalMax - globalMin) * 0.25, 0.282, 0.141, 0.458);
+        lut.addRGBPoint(globalMin + (globalMax - globalMin) * 0.5, 0.127, 0.567, 0.551);
+        lut.addRGBPoint(globalMin + (globalMax - globalMin) * 0.75, 0.544, 0.774, 0.247);
+        lut.addRGBPoint(globalMax, 0.993, 0.906, 0.144);
+
+        // Apply scalars to each layer actor
+        results.forEach((propData, layerIdx) => {
+          const actor = vtkRefs.current.layerActors.get(layerIdx);
+          const polyData = vtkRefs.current.layerPolyDatas.get(layerIdx);
+          if (!actor || !polyData || !propData) return;
+
+          // Create cell data array from property values
+          const scalars = vtkDataArray.newInstance({
+            name: activeProperty,
+            values: new Float32Array(propData.values),
+            numberOfComponents: 1,
+          });
+
+          polyData.getCellData().setScalars(scalars);
+
+          const mapper = actor.getMapper();
+          mapper.setLookupTable(lut);
+          mapper.setScalarRange(globalMin, globalMax);
+          mapper.setScalarVisibility(true);
+          mapper.setScalarModeToUseCellData();
+          mapper.setColorModeToMapScalars();
+        });
+
+        vtkRefs.current.renderWindow?.render();
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to apply property coloring:', error);
+        }
+      }
+    };
+
+    applyProperty();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProperty]);
 
   // Update layer visibility and opacity
   // When cross-section is active, reduce mesh opacity so the slice plane is visible
@@ -265,7 +379,7 @@ export default function Viewer3D() {
           const colorIdx = ((layerNum - 1) % LAYER_COLORS.length + LAYER_COLORS.length) % LAYER_COLORS.length;
           const color = LAYER_COLORS[colorIdx];
 
-          const actor = createPolyDataActor(data.points, cellPolys, color);
+          const { actor } = createPolyDataActor(data.points, cellPolys, color);
           actor.getProperty().setOpacity(0.95);
           actor.getProperty().setEdgeVisibility(true);
           actor.getProperty().setEdgeColor(0.15, 0.15, 0.15);

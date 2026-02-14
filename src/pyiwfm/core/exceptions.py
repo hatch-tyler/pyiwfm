@@ -35,6 +35,10 @@ class IWFMIOError(PyIWFMError):
     pass
 
 
+# Backwards-compatible alias
+IOError = IWFMIOError  # noqa: A001
+
+
 class FileFormatError(IWFMIOError):
     """Error raised when file format is invalid."""
 

@@ -362,6 +362,47 @@ export async function fetchHydrograph(type: string, locationId: number): Promise
   return response.json();
 }
 
+// All-layers GW hydrograph
+export interface GWAllLayersLayer {
+  layer: number;
+  values: (number | null)[];
+}
+
+export interface GWAllLayersData {
+  location_id: number;
+  node_id: number;
+  name: string;
+  n_layers: number;
+  times: string[];
+  layers: GWAllLayersLayer[];
+}
+
+export async function fetchGWHydrographAllLayers(locationId: number): Promise<GWAllLayersData> {
+  const response = await fetch(`${API_BASE}/results/gw-hydrograph-all-layers?location_id=${locationId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch all-layers hydrograph: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// Per-element head values
+export interface HeadByElementData {
+  timestep_index: number;
+  datetime: string | null;
+  layer: number;
+  values: (number | null)[];
+  min: number;
+  max: number;
+}
+
+export async function fetchHeadsByElement(timestep: number, layer: number = 1): Promise<HeadByElementData> {
+  const response = await fetch(`${API_BASE}/results/heads-by-element?timestep=${timestep}&layer=${layer}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch heads by element: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // ===================================================================
 // Mesh GeoJSON API
 // ===================================================================

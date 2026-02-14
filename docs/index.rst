@@ -47,9 +47,7 @@ Features
 - **Read/Write IWFM Files**: Support for ASCII, binary, HDF5, and HEC-DSS formats
 - **Mesh Generation**: Create finite element meshes using Triangle or Gmsh
 - **GIS Export**: Export to GeoPackage, Shapefile, and GeoJSON formats
-- **Interactive Web Viewer**: Browser-based 3D visualization with Trame and PyVista
-- **Multi-Scale Viewing**: View data at element, subregion, or custom zone scales
-- **Zone Editor**: Interactively create and edit spatial zones
+- **Interactive Web Viewer**: Browser-based visualization with FastAPI, React, vtk.js, and deck.gl
 - **PEST++ Calibration**: Complete interface for parameter estimation with PEST++
 - **Ensemble Methods**: Prior/posterior ensemble generation for pestpp-ies
 - **Subprocess Runner**: Run IWFM executables and manage scenarios

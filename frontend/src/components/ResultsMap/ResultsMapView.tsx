@@ -29,7 +29,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { useViewerStore } from '../../stores/viewerStore';
 import {
-  fetchMeshGeoJSON, fetchHeads, fetchHeadTimes,
+  fetchMeshGeoJSON, fetchHeadsByElement, fetchHeadTimes,
   fetchHydrographLocations, fetchHydrograph,
   fetchSubregions, fetchStreamGeoJSON, fetchWells,
   fetchPropertyMap, fetchElementDetail,
@@ -253,8 +253,9 @@ export function ResultsMapView() {
     headCacheRef.current = {};
   }, [headLayer]);
 
-  // Load head values when timestep changes — only when coloring by head
-  // Uses a cache to avoid refetching, and prefetches next timestep when animating.
+  // Load per-element head values when timestep changes — only when coloring by head.
+  // Uses fetchHeadsByElement (vertex-averaged) so values align 1:1 with GeoJSON features.
+  // Cache avoids refetching, and prefetches next timestep when animating.
   useEffect(() => {
     if (!hasHeads || !colorByHead) return;
 
@@ -272,16 +273,12 @@ export function ResultsMapView() {
       const delay = isAnimating ? 50 : 200;
       debounceRef.current = setTimeout(async () => {
         try {
-          const data = await fetchHeads(headTimestep, headLayer);
-          const vals = data.values;
+          const data = await fetchHeadsByElement(headTimestep, headLayer);
+          const vals = data.values as number[];
 
-          // Compute min/max excluding extreme values
-          const sorted = [...vals].filter(v => v > -9000 && v < 1e10).sort((a, b) => a - b);
-          let lo = 0, hi = 1;
-          if (sorted.length > 0) {
-            lo = sorted[Math.floor(sorted.length * 0.02)];
-            hi = sorted[Math.floor(sorted.length * 0.98)];
-          }
+          // Use server-computed min/max (2nd–98th percentile)
+          const lo = data.min;
+          const hi = data.max;
 
           // Store in cache (evict oldest if at limit)
           const cache = headCacheRef.current;
@@ -305,14 +302,10 @@ export function ResultsMapView() {
       const nextTs = headTimestep + 1;
       const nextKey = `${nextTs}:${headLayer}`;
       if (!headCacheRef.current[nextKey]) {
-        fetchHeads(nextTs, headLayer).then(data => {
-          const vals = data.values;
-          const sorted = [...vals].filter(v => v > -9000 && v < 1e10).sort((a, b) => a - b);
-          let lo = 0, hi = 1;
-          if (sorted.length > 0) {
-            lo = sorted[Math.floor(sorted.length * 0.02)];
-            hi = sorted[Math.floor(sorted.length * 0.98)];
-          }
+        fetchHeadsByElement(nextTs, headLayer).then(data => {
+          const vals = data.values as number[];
+          const lo = data.min;
+          const hi = data.max;
           const cache = headCacheRef.current;
           const keys = Object.keys(cache);
           if (keys.length >= HEAD_CACHE_LIMIT) {
@@ -322,6 +315,13 @@ export function ResultsMapView() {
         }).catch(() => {});
       }
     }
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+    };
   }, [headTimestep, headLayer, hasHeads, colorByHead, isAnimating, resultsInfo]);
 
   // Load property map when coloring by a non-head property
@@ -479,6 +479,18 @@ export function ResultsMapView() {
     // Symmetric range for diverging scale
     const diffAbsMax = Math.max(Math.abs(diffMin), Math.abs(diffMax));
 
+    // Build element_id → feature index map for value lookups.
+    // GeoJSON features and per-element value arrays are both in sorted
+    // element-ID order, so feature index == value array index.  We also
+    // build a reverse map for tooltip hover lookups.
+    const elemIdToIdx: Record<number, number> = {};
+    if (geojson) {
+      geojson.features.forEach((f, i) => {
+        const eid = (f.properties as Record<string, unknown>)?.element_id as number;
+        if (eid != null) elemIdToIdx[eid] = i;
+      });
+    }
+
     // 1. Mesh colored by head values, property, or head difference
     if (geojson) {
       result.push(new GeoJsonLayer({
@@ -488,10 +500,9 @@ export function ResultsMapView() {
         stroked: true,
         lineWidthMinPixels: 0.5,
         getLineColor: [100, 100, 100, 80],
-        getFillColor: (f: GeoJSON.Feature) => {
+        getFillColor: (_f: GeoJSON.Feature, { index }: { index: number }) => {
           if (!activeValues) return [200, 200, 200, 100] as [number, number, number, number];
-          const elemId = (f.properties as Record<string, unknown>)?.element_id as number;
-          const idx = (elemId ?? 1) - 1;
+          const idx = index;
           if (idx < 0 || idx >= activeValues.length) return [200, 200, 200, 100] as [number, number, number, number];
           const val = activeValues[idx];
           if (val === null || val === undefined || isNaN(val as number)) {
@@ -522,7 +533,7 @@ export function ResultsMapView() {
           if (info.object && activeValues) {
             const props = (info.object as GeoJSON.Feature).properties as Record<string, unknown>;
             const elemId = (props?.element_id as number) ?? 0;
-            const idx = elemId - 1;
+            const idx = elemIdToIdx[elemId] ?? -1;
             const val = idx >= 0 && idx < activeValues.length ? activeValues[idx] : null;
             const label = useDiffColor ? 'Head Diff' : colorByHead ? 'Head' : (propertyMeta?.name ?? mapColorProperty);
             const units = useDiffColor ? 'ft' : colorByHead ? 'ft' : (propertyMeta?.units ?? '');

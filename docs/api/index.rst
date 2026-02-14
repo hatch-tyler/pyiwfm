@@ -87,10 +87,10 @@ Visualization
    pyiwfm.visualization.gis_export
    pyiwfm.visualization.vtk_export
    pyiwfm.visualization.plotting
-   pyiwfm.visualization.web.app
-   pyiwfm.visualization.web.viewer
-   pyiwfm.visualization.web.properties
-   pyiwfm.visualization.web.multi_scale
+   pyiwfm.visualization.webapi.config
+   pyiwfm.visualization.webapi.server
+   pyiwfm.visualization.webapi.head_loader
+   pyiwfm.visualization.webapi.hydrograph_reader
 
 Comparison
 ~~~~~~~~~~

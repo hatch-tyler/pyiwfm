@@ -20,6 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import h5py
 import numpy as np
 from numpy.typing import NDArray
 
@@ -97,12 +98,6 @@ class LazyHeadDataLoader:
         """Load metadata from the HDF5 file without reading all data."""
         if not self._file_path.exists():
             logger.warning(f"Head data file not found: {self._file_path}")
-            return
-
-        try:
-            import h5py
-        except ImportError:
-            logger.warning("h5py not installed; cannot load HDF5 head data")
             return
 
         try:
@@ -185,11 +180,6 @@ class LazyHeadDataLoader:
 
     def _load_frame(self, frame_idx: int) -> NDArray[np.float64]:
         """Load a single frame from disk."""
-        try:
-            import h5py
-        except ImportError:
-            return np.zeros((self._n_nodes, self._n_layers))
-
         with h5py.File(self._file_path, "r") as f:
             if self._iwfm_native:
                 ds = f[_IWFM_NATIVE_DATASET]

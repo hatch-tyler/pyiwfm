@@ -40,57 +40,68 @@ creating 2D plots of model meshes and data.
 Interactive Web Viewer
 ----------------------
 
-The web visualization modules provide an interactive 3D model viewer built on
-Trame and PyVista, with multi-scale viewing, zone editing, and property
-visualization.
+The web viewer is a FastAPI backend + React SPA frontend with four tabs:
+Overview, 3D Mesh (vtk.js), Results Map (deck.gl + MapLibre), and Budgets
+(Plotly).
 
-Web Application
-~~~~~~~~~~~~~~~
+Configuration
+~~~~~~~~~~~~~
 
-The main web application class that creates the Trame-based interactive viewer.
+The ``ModelState`` singleton that holds the loaded ``IWFMModel`` and provides
+lazy getters for head data, budget data, stream reach boundaries, and
+coordinate reprojection.
 
-.. automodule:: pyiwfm.visualization.web.app
+.. automodule:: pyiwfm.visualization.webapi.config
    :members:
    :undoc-members:
    :show-inheritance:
 
-Mesh Viewer
-~~~~~~~~~~~
+Server
+~~~~~~
 
-PyVista mesh creation, rendering, and interaction management.
+FastAPI application creation, CRS configuration, and static file serving.
 
-.. automodule:: pyiwfm.visualization.web.viewer
+.. automodule:: pyiwfm.visualization.webapi.server
    :members:
    :undoc-members:
    :show-inheritance:
 
-Property Visualizer
-~~~~~~~~~~~~~~~~~~~
+Head Data Loader
+~~~~~~~~~~~~~~~~
 
-Property display with colormaps, layer filtering, and value range management.
+Lazy HDF5 head results reader with per-frame caching.
 
-.. automodule:: pyiwfm.visualization.web.properties
+.. automodule:: pyiwfm.visualization.webapi.head_loader
    :members:
    :undoc-members:
    :show-inheritance:
 
-Multi-Scale Visualizer
-~~~~~~~~~~~~~~~~~~~~~~
+Hydrograph Reader
+~~~~~~~~~~~~~~~~~
 
-Scale-aware rendering that supports element, subregion, and custom zone views
-with spatial aggregation.
+Parser for IWFM ``.out`` text hydrograph files.
 
-.. automodule:: pyiwfm.visualization.web.multi_scale
+.. automodule:: pyiwfm.visualization.webapi.hydrograph_reader
    :members:
    :undoc-members:
    :show-inheritance:
 
-Zone Editor Widget
-~~~~~~~~~~~~~~~~~~
+Properties
+~~~~~~~~~~
 
-Interactive zone creation and editing with element selection and undo/redo.
+Property extraction and caching for the web viewer.
 
-.. automodule:: pyiwfm.visualization.web.widgets.zone_editor
+.. automodule:: pyiwfm.visualization.webapi.properties
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Slicing
+~~~~~~~
+
+Cross-section slice plane computation.
+
+.. automodule:: pyiwfm.visualization.webapi.slicing
    :members:
    :undoc-members:
    :show-inheritance:

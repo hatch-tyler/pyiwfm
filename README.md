@@ -14,7 +14,7 @@ pip install -e ".[gis]"
 # With mesh generation
 pip install -e ".[mesh]"
 
-# With web viewer (FastAPI + vtk.js)
+# With web viewer (FastAPI + React + vtk.js + deck.gl)
 pip install -e ".[webapi]"
 
 # With all optional dependencies
@@ -78,6 +78,10 @@ if HAS_DSS_LIBRARY:
 pyiwfm includes an interactive web viewer built with FastAPI (backend) and React + vtk.js + deck.gl (frontend). Launch it with:
 
 ```bash
+# CRS is optional — defaults to C2VSimFG UTM Zone 10N for most models
+pyiwfm viewer --model-dir /path/to/model
+
+# Specify CRS explicitly if needed
 pyiwfm viewer --model-dir /path/to/model --crs "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
 ```
 

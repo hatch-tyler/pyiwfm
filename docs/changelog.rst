@@ -286,32 +286,18 @@ Added
 - ``read_zone_file()``, ``write_zone_file()``: Auto-detecting universal I/O
 - ``auto_detect_zone_file()``: Format detection by extension and content
 
-**Interactive Web Viewer** (``pyiwfm.visualization.web``)
+**Interactive Web Viewer** (``pyiwfm.visualization.webapi``)
 
-- ``IWFMWebViewer``: Full Trame-based interactive 3D web application
-- Multi-scale viewing (element, subregion, custom zone scales)
-- ``MultiScaleVisualizer``: Scale-aware rendering with zone boundaries
-- ``PropertyVisualizer``: Property display with colormaps and layer filtering
-- ``MeshViewer``: PyVista mesh creation with LOD for large models
-- Cross-section slicing with configurable axis and position
-- Vertical exaggeration for stratigraphy visualization
-- Stream network overlay
-
-**Zone Editor Widget** (``pyiwfm.visualization.web.widgets``)
-
-- ``ZoneEditor``: Interactive zone creation and editing
-- Selection modes: single click, box select, paint
-- Element selection with add/remove/toggle/invert/adjacent operations
-- Zone CRUD with undo/redo support (20-level stack)
-- Zone persistence via file save/load
-
-**Model-Agnostic Launcher** (``run_iwfm_viewer.py``)
-
-- CLI launcher for any IWFM model
+- FastAPI backend + React SPA frontend with 4 tabs (Overview, 3D Mesh, Results Map, Budgets)
+- ``ModelState`` singleton for lazy model and results loading
+- vtk.js-based 3D mesh rendering with layer visibility, cross-section slicing, and z-exaggeration
+- deck.gl + MapLibre Results Map with head contours and hydrograph markers
+- Plotly budget charts with location/column selection
+- Stream network overlay on both 3D and 2D views
+- Server-side coordinate reprojection via ``pyproj``
+- ``pyiwfm viewer`` CLI launcher with ``--model-dir``, ``--crs``, ``--port`` options
 - Auto-detection of preprocessor and simulation files
 - Graceful degradation for missing components
-- ``--model-dir``, ``--preprocessor``, ``--simulation`` options
-- Theme support (light/dark), port configuration
 
 [0.1.0] - 2024-XX-XX
 --------------------

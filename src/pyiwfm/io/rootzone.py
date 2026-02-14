@@ -10,24 +10,18 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Sequence, TextIO
-
-import numpy as np
-from numpy.typing import NDArray
-
-logger = logging.getLogger(__name__)
+from typing import TextIO
 
 from pyiwfm.components.rootzone import (
-    RootZone,
     CropType,
-    SoilParameters,
-    ElementLandUse,
     LandUseType,
+    RootZone,
+    SoilParameters,
 )
 from pyiwfm.core.exceptions import FileFormatError
 
+logger = logging.getLogger(__name__)
 
 # IWFM comment characters — must appear in column 1 (first character of line)
 COMMENT_CHARS = ("C", "c", "*")
@@ -431,7 +425,7 @@ class RootZoneReader:
         filepath = Path(filepath)
         crops: dict[int, CropType] = {}
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             line_num = 0
             n_crops = None
 
@@ -496,7 +490,7 @@ class RootZoneReader:
         filepath = Path(filepath)
         params: dict[int, SoilParameters] = {}
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             line_num = 0
             n_elem = None
 
@@ -633,7 +627,10 @@ class RootZoneMainFileReader:
         self._line_num = 0
 
     def read(
-        self, filepath: Path | str, base_dir: Path | None = None
+        self,
+        filepath: Path | str,
+        base_dir: Path | None = None,
+        n_elements: int = 0,
     ) -> RootZoneMainFileConfig:
         """
         Parse RootZone main file.
@@ -646,6 +643,10 @@ class RootZoneMainFileReader:
             filepath: Path to the RootZone component main file
             base_dir: Base directory for resolving relative paths.
                      If None, uses the parent directory of filepath.
+            n_elements: Expected number of elements (from mesh).
+                     If > 0, the soil parameter parser will read
+                     exactly this many rows instead of relying on
+                     column-count heuristics.
 
         Returns:
             RootZoneMainFileConfig with parsed values
@@ -657,7 +658,7 @@ class RootZoneMainFileReader:
         config = RootZoneMainFileConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Read version header
             config.version = self._read_version(f)
             is_v411_plus = self._version_ge_411(config.version)
@@ -806,7 +807,7 @@ class RootZoneMainFileReader:
 
             # Per-element soil parameters
             config.element_soil_params = self._read_element_soil_params(
-                f, config
+                f, config, n_elements=n_elements
             )
 
         return config
@@ -858,7 +859,10 @@ class RootZoneMainFileReader:
         return base_dir / path
 
     def _read_element_soil_params(
-        self, f: TextIO, config: RootZoneMainFileConfig
+        self,
+        f: TextIO,
+        config: RootZoneMainFileConfig,
+        n_elements: int = 0,
     ) -> list[ElementSoilParamRow]:
         """Read per-element soil parameters.
 
@@ -875,6 +879,14 @@ class RootZoneMainFileReader:
         v4.12/v4.13 (16 cols):
             IE WP FC TN Lambda K K_Ponded KMethod CapRise iPrecCol
             fPrecFac iGenCol iDestAg iDestUrbIn iDestUrbOut iDestNVRV
+
+        Args:
+            f: Open file handle positioned at start of soil params.
+            config: RootZone config with version info.
+            n_elements: Expected element count from mesh.  When > 0
+                the parser reads exactly this many data rows,
+                tolerating short lines as long as the first column
+                is a valid integer element ID.
         """
         rows: list[ElementSoilParamRow] = []
         version = parse_version(config.version)
@@ -890,7 +902,10 @@ class RootZoneMainFileReader:
 
         blank_count = 0
         max_blanks = 3  # tolerate up to 3 consecutive blank lines
+        target = n_elements if n_elements > 0 else 0
         while True:
+            if target > 0 and len(rows) >= target:
+                break
             line_val = self._next_data_or_empty(f)
             if not line_val:
                 # Tolerate blank lines within the section
@@ -901,11 +916,34 @@ class RootZoneMainFileReader:
             blank_count = 0
             parts = line_val.split()
             if len(parts) < min_cols:
+                if target > 0 and len(rows) < target:
+                    # When we know the expected count, skip short
+                    # lines (section delimiters) and keep reading
+                    logger.debug(
+                        "Skipping short line (%d cols, need %d) at "
+                        "line %d while reading soil params "
+                        "(%d/%d rows read)",
+                        len(parts),
+                        min_cols,
+                        self._line_num,
+                        len(rows),
+                        target,
+                    )
+                    continue
                 break
             try:
                 row = self._parse_soil_param_row(parts, config)
                 rows.append(row)
             except (ValueError, IndexError):
+                if target > 0 and len(rows) < target:
+                    logger.debug(
+                        "Skipping unparseable line at %d while "
+                        "reading soil params (%d/%d rows read)",
+                        self._line_num,
+                        len(rows),
+                        target,
+                    )
+                    continue
                 break
 
         if rows:
@@ -916,6 +954,12 @@ class RootZoneMainFileReader:
                 rows[0].element_id,
                 rows[-1].element_id,
                 config.version,
+            )
+        if target > 0 and len(rows) != target:
+            logger.warning(
+                "Expected %d soil parameter rows but read %d",
+                target,
+                len(rows),
             )
         return rows
 

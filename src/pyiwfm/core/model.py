@@ -18,14 +18,14 @@ from pyiwfm.core.exceptions import ValidationError
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from pyiwfm.core.mesh import AppGrid
-    from pyiwfm.core.stratigraphy import Stratigraphy
     from pyiwfm.components.groundwater import AppGW, AquiferParameters
-    from pyiwfm.components.stream import AppStream
     from pyiwfm.components.lake import AppLake
     from pyiwfm.components.rootzone import RootZone
     from pyiwfm.components.small_watershed import AppSmallWatershed
+    from pyiwfm.components.stream import AppStream
     from pyiwfm.components.unsaturated_zone import AppUnsatZone
+    from pyiwfm.core.mesh import AppGrid
+    from pyiwfm.core.stratigraphy import Stratigraphy
     from pyiwfm.io.groundwater import KhAnomalyEntry
     from pyiwfm.io.supply_adjust import SupplyAdjustment
 
@@ -42,6 +42,7 @@ def _build_reaches_from_node_reach_ids(stream: AppStream) -> None:
         Stream network whose ``nodes`` are inspected.
     """
     from collections import defaultdict
+
     from pyiwfm.components.stream import StrmReach
 
     if stream.reaches:
@@ -123,8 +124,9 @@ def _apply_parametric_grids(
     Returns ``True`` if interpolation was performed.
     """
     import numpy as np
-    from pyiwfm.io.parametric_grid import ParametricGrid, ParamNode, ParamElement
+
     from pyiwfm.components.groundwater import AquiferParameters
+    from pyiwfm.io.parametric_grid import ParamElement, ParametricGrid, ParamNode
 
     node_ids = sorted(mesh.nodes.keys())
     n_nodes = len(node_ids)
@@ -263,13 +265,12 @@ class IWFMModel:
             >>> model = IWFMModel.from_preprocessor("Preprocessor/Preprocessor.in")
             >>> print(f"Loaded {model.n_nodes} nodes, {model.n_elements} elements")
         """
+        from pyiwfm.core.mesh import AppGrid, Subregion
+        from pyiwfm.io.ascii import read_elements, read_nodes, read_stratigraphy
         from pyiwfm.io.preprocessor import (
             read_preprocessor_main,
             read_subregions_file,
-            _resolve_path,
         )
-        from pyiwfm.io.ascii import read_nodes, read_elements, read_stratigraphy
-        from pyiwfm.core.mesh import AppGrid, Subregion
 
         pp_file = Path(pp_file)
         config = read_preprocessor_main(pp_file)
@@ -323,8 +324,8 @@ class IWFMModel:
         # Load stream geometry if requested
         if load_streams and config.streams_file and config.streams_file.exists():
             try:
-                from pyiwfm.io.streams import StreamReader, StreamSpecReader
                 from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
+                from pyiwfm.io.streams import StreamReader, StreamSpecReader
 
                 stream = AppStream()
                 first_error: Exception | None = None
@@ -364,7 +365,7 @@ class IWFMModel:
                     except Exception:
                         # Both paths failed — re-raise original error
                         if first_error is not None:
-                            raise first_error
+                            raise first_error from None
 
                 # Safety net: build reaches from node reach_ids
                 _build_reaches_from_node_reach_ids(stream)
@@ -376,8 +377,8 @@ class IWFMModel:
         # Load lake geometry if requested
         if load_lakes and config.lakes_file and config.lakes_file.exists():
             try:
-                from pyiwfm.io.lakes import LakeReader
                 from pyiwfm.components.lake import AppLake
+                from pyiwfm.io.lakes import LakeReader
 
                 reader = LakeReader()
                 lakes_dict = reader.read_lake_definitions(config.lakes_file)
@@ -442,7 +443,7 @@ class IWFMModel:
         # We need to read the full file structure carefully.
         # For now, we implement a simplified version that reads mesh/stratigraphy.
 
-        with FortranBinaryReader(binary_file) as f:
+        with FortranBinaryReader(binary_file) as _f:
             # Read header/version info if present
             try:
                 # Try to read as mesh first (standard pyiwfm binary format)
@@ -557,19 +558,19 @@ class IWFMModel:
             ...     "Preprocessor/Preprocessor.in"
             ... )
         """
-        from pyiwfm.io.simulation import SimulationReader
         from pyiwfm.io.groundwater import GroundwaterReader, GWMainFileReader
         from pyiwfm.io.gw_boundary import GWBoundaryReader
         from pyiwfm.io.gw_pumping import PumpingReader
-        from pyiwfm.io.gw_tiledrain import TileDrainReader
         from pyiwfm.io.gw_subsidence import SubsidenceReader
-        from pyiwfm.io.streams import StreamReader, StreamMainFileReader, StreamSpecReader
-        from pyiwfm.io.stream_diversion import DiversionSpecReader
-        from pyiwfm.io.stream_bypass import BypassSpecReader
-        from pyiwfm.io.stream_inflow import InflowReader
-        from pyiwfm.io.lakes import LakeReader, LakeMainFileReader
-        from pyiwfm.io.rootzone import RootZoneReader, RootZoneMainFileReader
+        from pyiwfm.io.gw_tiledrain import TileDrainReader
+        from pyiwfm.io.lakes import LakeMainFileReader, LakeReader
         from pyiwfm.io.preprocessor import _resolve_path
+        from pyiwfm.io.rootzone import RootZoneMainFileReader, RootZoneReader
+        from pyiwfm.io.simulation import SimulationReader
+        from pyiwfm.io.stream_bypass import BypassSpecReader
+        from pyiwfm.io.stream_diversion import DiversionSpecReader
+        from pyiwfm.io.stream_inflow import InflowReader
+        from pyiwfm.io.streams import StreamMainFileReader, StreamReader, StreamSpecReader
 
         # First load mesh and stratigraphy from preprocessor
         model = cls.from_preprocessor(preprocessor_file)
@@ -776,7 +777,8 @@ class IWFMModel:
 
                                 # Convert well specs to Well objects
                                 from pyiwfm.components.groundwater import (
-                                    Well, ElementPumping,
+                                    ElementPumping,
+                                    Well,
                                 )
                                 for ws in pump_config.well_specs:
                                     gw.add_well(Well(
@@ -847,7 +849,8 @@ class IWFMModel:
                                 model.metadata["gw_n_sub_irrigation"] = td_config.n_sub_irrigation
 
                                 from pyiwfm.components.groundwater import (
-                                    TileDrain, SubIrrigation,
+                                    SubIrrigation,
+                                    TileDrain,
                                 )
                                 for td in td_config.tile_drains:
                                     dest_type = "stream" if td.dest_type == 2 else "outside"
@@ -897,7 +900,10 @@ class IWFMModel:
 
                                 # Populate NodeSubsidence objects
                                 from pyiwfm.components.groundwater import (
-                                    NodeSubsidence, Subsidence as SubsidenceComp,
+                                    NodeSubsidence,
+                                )
+                                from pyiwfm.components.groundwater import (
+                                    Subsidence as SubsidenceComp,
                                 )
                                 for sp in subs_config.node_params:
                                     gw.add_node_subsidence(NodeSubsidence(
@@ -1011,7 +1017,10 @@ class IWFMModel:
             if stream_file.exists():
                 try:
                     from pyiwfm.components.stream import (
-                        AppStream, Diversion, Bypass, StrmNode,
+                        AppStream,
+                        Bypass,
+                        Diversion,
+                        StrmNode,
                     )
 
                     # Reuse preprocessor-loaded stream object if available
@@ -1258,8 +1267,8 @@ class IWFMModel:
                     # ---- Enrich reaches if still empty ----
                     if not stream.reaches and stream.nodes:
                         try:
-                            from pyiwfm.io.preprocessor import read_preprocessor_main
                             from pyiwfm.components.stream import StrmReach
+                            from pyiwfm.io.preprocessor import read_preprocessor_main
 
                             pp_config = read_preprocessor_main(preprocessor_file)
                             if (pp_config.streams_file
@@ -1391,7 +1400,11 @@ class IWFMModel:
                     # Try hierarchical reader first
                     try:
                         rz_main_reader = RootZoneMainFileReader()
-                        rz_config = rz_main_reader.read(rz_file, base_dir=base_dir)
+                        rz_config = rz_main_reader.read(
+                            rz_file,
+                            base_dir=base_dir,
+                            n_elements=n_elements,
+                        )
 
                         model.metadata["rootzone_version"] = rz_config.version
                         model.metadata["rootzone_gw_uptake"] = rz_config.gw_uptake_enabled
@@ -1506,14 +1519,14 @@ class IWFMModel:
                         _use_v5 = version_ge(rz_config.version, (5, 0))
                         try:
                             if _use_v5:
+                                from pyiwfm.io.rootzone_native import (
+                                    NativeRiparianReader,
+                                )
                                 from pyiwfm.io.rootzone_nonponded import (
                                     NonPondedCropReader,
                                 )
                                 from pyiwfm.io.rootzone_ponded import (
                                     PondedCropReader,
-                                )
-                                from pyiwfm.io.rootzone_native import (
-                                    NativeRiparianReader,
                                 )
 
                                 if (
@@ -1551,10 +1564,10 @@ class IWFMModel:
 
                             else:
                                 from pyiwfm.io.rootzone_v4x import (
+                                    NativeRiparianReaderV4x,
                                     NonPondedCropReaderV4x,
                                     PondedCropReaderV4x,
                                     UrbanReaderV4x,
-                                    NativeRiparianReaderV4x,
                                 )
 
                                 if (
@@ -1698,8 +1711,8 @@ class IWFMModel:
             model.source_files["swshed_main"] = sw_file
             if sw_file.exists():
                 try:
-                    from pyiwfm.io.small_watershed import SmallWatershedMainReader
                     from pyiwfm.components.small_watershed import AppSmallWatershed
+                    from pyiwfm.io.small_watershed import SmallWatershedMainReader
 
                     sw_reader = SmallWatershedMainReader()
                     sw_config = sw_reader.read(sw_file, base_dir=base_dir)
@@ -1724,8 +1737,8 @@ class IWFMModel:
             model.source_files["unsatzone_main"] = uz_file
             if uz_file.exists():
                 try:
-                    from pyiwfm.io.unsaturated_zone import UnsatZoneMainReader
                     from pyiwfm.components.unsaturated_zone import AppUnsatZone
+                    from pyiwfm.io.unsaturated_zone import UnsatZoneMainReader
 
                     uz_reader = UnsatZoneMainReader()
                     uz_config = uz_reader.read(uz_file, base_dir=base_dir)
