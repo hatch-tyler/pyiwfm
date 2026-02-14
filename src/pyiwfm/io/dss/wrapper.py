@@ -164,9 +164,14 @@ def _configure_argtypes(lib: CDLL) -> None:
     Setting explicit argtypes ensures ctypes marshals arguments correctly
     (especially pointer widths on 64-bit) and prevents access violations.
     """
-    # zopenExtended(long long *ifltab, const char *dssFilename) -> int
-    lib.zopenExtended.argtypes = [POINTER(c_int64), c_char_p]
-    lib.zopenExtended.restype = c_int
+    # zopenExtended (Windows DLL) or hec_dss_zopen (Linux upstream build)
+    # Both have signature: (long long *ifltab, const char *dssFilename) -> int
+    if hasattr(lib, "zopenExtended"):
+        lib.zopenExtended.argtypes = [POINTER(c_int64), c_char_p]
+        lib.zopenExtended.restype = c_int
+    if hasattr(lib, "hec_dss_zopen"):
+        lib.hec_dss_zopen.argtypes = [POINTER(c_int64), c_char_p]
+        lib.hec_dss_zopen.restype = c_int
 
     # zclose(long long *ifltab) -> void
     lib.zclose.argtypes = [POINTER(c_int64)]
@@ -297,11 +302,10 @@ class DSSFile:
         else:
             access = 2  # Read/write
 
-        # Call zopenExtended (DSS 7 API)
+        # Open via zopenExtended (Windows DLL) or hec_dss_zopen (Linux upstream)
         filepath_bytes = str(self.filepath).encode("utf-8")
-        # zopenExtended signature: int zopenExtended(long long *ifltab, const char *dssFilename)
-        # Returns status: 0 = success
-        status = _dss_lib.zopenExtended(
+        zopen_func = getattr(_dss_lib, "zopenExtended", None) or _dss_lib.hec_dss_zopen
+        status = zopen_func(
             self._ifltab.ctypes.data_as(POINTER(c_int64)),
             filepath_bytes,
         )

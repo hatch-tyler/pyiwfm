@@ -1,5 +1,8 @@
 # Dockerfile for pyiwfm with web visualization
 #
+# For full Linux support including HEC-DSS, use:
+#   docker build -f Dockerfile.full -t pyiwfm-full .
+#
 # Build: docker build -t pyiwfm .
 # Run:   docker run -p 8080:8080 -v /path/to/model:/model pyiwfm
 
@@ -8,6 +11,7 @@ FROM python:3.11-slim
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

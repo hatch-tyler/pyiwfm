@@ -1,0 +1,66 @@
+# Dockerfile.full - pyiwfm with HEC-DSS support (Linux)
+#
+# This multi-stage build compiles libhecdss.so from source using the cmake/
+# infrastructure, then produces a runtime image with full DSS support.
+#
+# Build: docker build -f Dockerfile.full -t pyiwfm-full .
+# Run:   docker run -p 8080:8080 -v /path/to/model:/model pyiwfm-full
+#
+# Build time: ~5-10 minutes (fetches hec-dss source from GitHub)
+
+# ── Stage 1: Build HEC-DSS shared library ────────────────────────────────────
+FROM python:3.11-slim AS hecdss-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . /app/
+
+# Build libhecdss.so and install it into the package lib directory
+RUN python cmake/build_hecdss.py --install
+
+# Verify the shared library was built
+RUN test -f src/pyiwfm/io/dss/lib/libhecdss.so \
+    && echo "libhecdss.so built successfully" \
+    || (echo "ERROR: libhecdss.so not found" && exit 1)
+
+# ── Stage 2: Runtime image ────────────────────────────────────────────────────
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy project source (with libhecdss.so already in place from builder)
+COPY --from=hecdss-builder /app /app
+
+# Also install the .so into the system library path for runtime linking
+COPY --from=hecdss-builder /app/src/pyiwfm/io/dss/lib/libhecdss.so /usr/local/lib/
+RUN ldconfig
+
+# Install pyiwfm with all dependencies
+RUN pip install --no-cache-dir -e ".[all]" || \
+    pip install --no-cache-dir -e ".[gis,viz,webapi]"
+
+# Verify HEC-DSS library is loadable
+RUN python -c "from pyiwfm.io.dss.wrapper import HAS_DSS_LIBRARY; assert HAS_DSS_LIBRARY, 'HEC-DSS library not loadable'; print('HEC-DSS library OK')"
+
+# Create directory for model data
+RUN mkdir -p /model
+
+# Expose the web viewer port
+EXPOSE 8080
+
+# Copy the startup script
+COPY docker-entrypoint.py /app/docker-entrypoint.py
+
+# Default command - start the web viewer
+CMD ["python", "/app/docker-entrypoint.py"]

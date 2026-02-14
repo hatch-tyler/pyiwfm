@@ -41,88 +41,94 @@ else()
     set(HECLIB_SRC_DIR "${heclib_SOURCE_DIR}/heclib/heclib_c")
 endif()
 
-# Find zlib
-find_package(ZLIB QUIET)
-if(NOT ZLIB_FOUND)
-    # Build zlib if not found
-    include(FetchContent)
-    FetchContent_Declare(
-        zlib
-        GIT_REPOSITORY https://github.com/madler/zlib.git
-        GIT_TAG v1.3.1
+# If FetchContent_MakeAvailable already created the hecdss target (the upstream
+# hec-dss repo has its own CMakeLists.txt), skip building our own and just use it.
+if(NOT TARGET hecdss)
+    # Find zlib
+    find_package(ZLIB QUIET)
+    if(NOT ZLIB_FOUND)
+        # Build zlib if not found
+        include(FetchContent)
+        FetchContent_Declare(
+            zlib
+            GIT_REPOSITORY https://github.com/madler/zlib.git
+            GIT_TAG v1.3.1
+        )
+        FetchContent_MakeAvailable(zlib)
+    endif()
+
+    # Collect heclib source files
+    file(GLOB_RECURSE HECLIB_SOURCES
+        "${HECLIB_SRC_DIR}/src/*.c"
     )
-    FetchContent_MakeAvailable(zlib)
-endif()
 
-# Collect heclib source files
-file(GLOB_RECURSE HECLIB_SOURCES
-    "${HECLIB_SRC_DIR}/src/*.c"
-)
+    # Create shared library
+    add_library(hecdss SHARED ${HECLIB_SOURCES})
 
-# Create shared library
-add_library(hecdss SHARED ${HECLIB_SOURCES})
-
-# Set library properties
-set_target_properties(hecdss PROPERTIES
-    VERSION 7.0
-    SOVERSION 7
-    C_STANDARD 99
-    C_STANDARD_REQUIRED ON
-    POSITION_INDEPENDENT_CODE ON
-)
-
-# Platform-specific settings
-if(WIN32)
+    # Set library properties
     set_target_properties(hecdss PROPERTIES
-        OUTPUT_NAME "hecdss"
-        SUFFIX ".dll"
-        PREFIX ""
+        VERSION 7.0
+        SOVERSION 7
+        C_STANDARD 99
+        C_STANDARD_REQUIRED ON
+        POSITION_INDEPENDENT_CODE ON
     )
-    # Export all symbols on Windows for ctypes compatibility
-    set_target_properties(hecdss PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
-    target_compile_definitions(hecdss PRIVATE
-        _CRT_SECURE_NO_WARNINGS
-        _CRT_NONSTDC_NO_WARNINGS
+
+    # Platform-specific settings
+    if(WIN32)
+        set_target_properties(hecdss PROPERTIES
+            OUTPUT_NAME "hecdss"
+            SUFFIX ".dll"
+            PREFIX ""
+        )
+        # Export all symbols on Windows for ctypes compatibility
+        set_target_properties(hecdss PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+        target_compile_definitions(hecdss PRIVATE
+            _CRT_SECURE_NO_WARNINGS
+            _CRT_NONSTDC_NO_WARNINGS
+        )
+    elseif(APPLE)
+        set_target_properties(hecdss PROPERTIES
+            OUTPUT_NAME "hecdss"
+            SUFFIX ".dylib"
+        )
+    else()
+        set_target_properties(hecdss PROPERTIES
+            OUTPUT_NAME "hecdss"
+            SUFFIX ".so"
+        )
+    endif()
+
+    # Compiler flags
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(hecdss PRIVATE
+            -fPIC
+            -std=gnu99
+            -Wall
+            -Wno-unused-variable
+            -Wno-unused-function
+        )
+    elseif(MSVC)
+        target_compile_options(hecdss PRIVATE
+            /W3
+            /MP
+        )
+    endif()
+
+    # Include directories
+    target_include_directories(hecdss PUBLIC
+        $<BUILD_INTERFACE:${HECLIB_SRC_DIR}/src/headers>
+        $<INSTALL_INTERFACE:include>
     )
-elseif(APPLE)
-    set_target_properties(hecdss PROPERTIES
-        OUTPUT_NAME "hecdss"
-        SUFFIX ".dylib"
-    )
+
+    # Link zlib
+    if(ZLIB_FOUND)
+        target_link_libraries(hecdss PRIVATE ZLIB::ZLIB)
+    else()
+        target_link_libraries(hecdss PRIVATE zlibstatic)
+    endif()
 else()
-    set_target_properties(hecdss PROPERTIES
-        OUTPUT_NAME "hecdss"
-        SUFFIX ".so"
-    )
-endif()
-
-# Compiler flags
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(hecdss PRIVATE
-        -fPIC
-        -std=gnu99
-        -Wall
-        -Wno-unused-variable
-        -Wno-unused-function
-    )
-elseif(MSVC)
-    target_compile_options(hecdss PRIVATE
-        /W3
-        /MP
-    )
-endif()
-
-# Include directories
-target_include_directories(hecdss PUBLIC
-    $<BUILD_INTERFACE:${HECLIB_SRC_DIR}/src/headers>
-    $<INSTALL_INTERFACE:include>
-)
-
-# Link zlib
-if(ZLIB_FOUND)
-    target_link_libraries(hecdss PRIVATE ZLIB::ZLIB)
-else()
-    target_link_libraries(hecdss PRIVATE zlibstatic)
+    message(STATUS "Using upstream hecdss target (already defined by FetchContent)")
 endif()
 
 # Installation
@@ -145,18 +151,20 @@ if(HECDSS_INSTALL_PYTHON)
     endif()
 endif()
 
-# Export symbols for ctypes
-# Generate a symbols file for documentation
-if(WIN32)
-    add_custom_command(TARGET hecdss POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E echo "Built hecdss.dll for Python ctypes"
-        COMMENT "HEC-DSS shared library built successfully"
-    )
-else()
-    add_custom_command(TARGET hecdss POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E echo "Built libhecdss.so for Python ctypes"
-        COMMENT "HEC-DSS shared library built successfully"
-    )
+# Post-build message (only for targets created in this directory)
+get_property(_hecdss_dir TARGET hecdss PROPERTY SOURCE_DIR)
+if(_hecdss_dir STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    if(WIN32)
+        add_custom_command(TARGET hecdss POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E echo "Built hecdss.dll for Python ctypes"
+            COMMENT "HEC-DSS shared library built successfully"
+        )
+    else()
+        add_custom_command(TARGET hecdss POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E echo "Built libhecdss.so for Python ctypes"
+            COMMENT "HEC-DSS shared library built successfully"
+        )
+    endif()
 endif()
 
 # Print configuration summary

@@ -23,6 +23,36 @@ docker build -t pyiwfm .
 docker run -p 8080:8080 -v /path/to/your/model:/model pyiwfm
 ```
 
+## HEC-DSS Support (Dockerfile.full)
+
+The standard `Dockerfile` does not include HEC-DSS support because the bundled library is Windows-only. `Dockerfile.full` compiles `libhecdss.so` from source using the project's `cmake/` build system.
+
+### Build
+
+```bash
+# Build the full image (fetches hec-dss source from GitHub, ~5-10 min first time)
+docker build -f Dockerfile.full -t pyiwfm-full .
+```
+
+### Run
+
+```bash
+docker run -p 8080:8080 -v /path/to/your/model:/model pyiwfm-full
+```
+
+### Using Docker Compose
+
+```bash
+docker-compose --profile dss up --build viewer-dss
+```
+
+### Verify HEC-DSS is working
+
+```bash
+docker run --rm pyiwfm-full python -c \
+  "from pyiwfm.io.dss import HAS_DSS_LIBRARY; assert HAS_DSS_LIBRARY; print('HEC-DSS OK')"
+```
+
 ## Configuration
 
 ### Environment Variables
@@ -31,7 +61,6 @@ docker run -p 8080:8080 -v /path/to/your/model:/model pyiwfm
 |----------|---------|-------------|
 | `PORT` | 8080 | Web server port |
 | `TITLE` | auto-detect | Viewer title (auto-detected from model name if not set) |
-| `THEME` | "light" | UI theme ("light" or "dark") |
 | `MODE` | "web" | "web" for viewer, "export" for VTK/GeoPackage export |
 | `MODEL_PATH` | "/model" | Path to model directory inside the container |
 
@@ -43,13 +72,6 @@ docker run -p 8080:8080 -v /path/to/your/model:/model pyiwfm
 | `/output` | Output directory for exported files |
 
 ## Usage Examples
-
-### View the sample model
-
-```bash
-# Using docker-compose (model path already configured)
-docker-compose up --build
-```
 
 ### View your own model
 
@@ -67,15 +89,6 @@ docker run \
   -v /path/to/your/model:/model:ro \
   -v /path/to/output:/output \
   -e MODE=export \
-  pyiwfm
-```
-
-### Run with dark theme
-
-```bash
-docker run -p 8080:8080 \
-  -v /path/to/model:/model:ro \
-  -e THEME=dark \
   pyiwfm
 ```
 

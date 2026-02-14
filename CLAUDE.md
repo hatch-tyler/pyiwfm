@@ -35,15 +35,25 @@ pre-commit run --all-files             # Run all pre-commit hooks
 
 ### CLI
 ```bash
-pyiwfm viewer /path/to/model           # Launch the web viewer
-pyiwfm export /path/to/model           # Export to VTK/GeoPackage
+pyiwfm viewer --model-dir /path/to/model   # Launch the web viewer
+pyiwfm export --model-dir /path/to/model   # Export to VTK/GeoPackage
 ```
 
 ### Frontend
 ```bash
 cd frontend && npm install && npm run build   # Build React frontend to webapi/static/
 cd frontend && npm run dev                    # Vite dev server with hot reload
+cd frontend && npm run lint                   # ESLint check
 ```
+
+### Docker
+```bash
+docker-compose up --build               # Build and start web viewer
+docker run -p 8080:8080 -v /path/to/model:/model pyiwfm  # Run with model mounted
+docker build -f Dockerfile.full -t pyiwfm-full .          # Full image with HEC-DSS support
+docker-compose --profile dss up --build viewer-dss        # Compose with HEC-DSS
+```
+See `DOCKER.md` for full configuration (env vars: PORT, TITLE, MODE, MODEL_PATH).
 
 ## Architecture
 
@@ -53,15 +63,19 @@ src/pyiwfm/
 ├── core/              # Mesh (Node, Element, AppGrid), Stratigraphy, TimeSeries, IWFMModel
 ├── components/        # Groundwater, Stream, Lake, RootZone, SmallWatershed, UnsaturatedZone
 ├── io/                # 50+ file type readers/writers (ASCII, binary, HDF5, HEC-DSS)
-├── runner/            # IWFMRunner (subprocess execution), PEST++ integration
+├── runner/            # IWFMRunner (subprocess execution), PEST++ integration, Scenario manager
 ├── visualization/
-│   ├── webapi/        # FastAPI viewer: config.py, server.py, routes/, static/
+│   ├── webapi/        # FastAPI viewer: config.py, server.py, routes/, services/, static/
 │   │                  # Also contains head_loader, hydrograph_reader, slicing, properties
 │   ├── vtk_export.py  # VTKExporter (2D/3D mesh, PyVista)
 │   └── ...            # Matplotlib plots, GIS export
+├── templates/         # Jinja2 templates for IWFM file generation
+│   ├── engine.py      # Hybrid Jinja2 + NumPy template engine
+│   ├── filters.py     # Custom Jinja2 filters (fortran_float, fortran_int, etc.)
+│   └── iwfm/          # Subdirs per component: groundwater, streams, lakes, rootzone, etc.
 ├── mesh_generation/   # Triangle and Gmsh wrappers
 ├── comparison/        # Model diffing and metrics
-└── cli/               # Command-line interface entry points
+└── cli/               # CLI entry points + _model_finder.py, _model_loader.py helpers
 
 frontend/              # React + TypeScript + vtk.js + deck.gl (builds to webapi/static/)
 ```
@@ -70,14 +84,17 @@ frontend/              # React + TypeScript + vtk.js + deck.gl (builds to webapi
 - **AppGrid**: Main mesh container with nodes, elements, faces, subregions (mirrors IWFM's Class_AppGrid)
 - **IWFMModel**: Orchestrates all components (grid, stratigraphy, groundwater, streams, lakes, rootzone, small watersheds, unsaturated zone)
 - **BaseReader/BaseWriter**: Abstract I/O classes in `io/base.py` and `io/writer_base.py`
+- **CommentAwareReader/CommentAwareWriter**: Extended base classes for roundtrip comment preservation
 
 ### I/O System
 The `io/` module handles 50+ IWFM file formats. Key patterns:
 - Readers parse IWFM ASCII/binary files into Python objects
-- Writers use Jinja2 templates from `templates/` directory
-- Comment preservation during roundtrip (read → write) via `comment_extractor.py`
-- `load_complete_model()` / `save_complete_model()` for full model I/O
+- Writers use Jinja2 templates via `templates/engine.py` (hybrid Jinja2 headers + NumPy array output)
+- Comment preservation during roundtrip (read → write) via `comment_extractor.py` and `comment_writer.py`
+- `load_complete_model()` / `save_complete_model()` for full model I/O (in `io/preprocessor.py`)
+- `CompleteModelLoader` / `CompleteModelWriter` for advanced loading (in `io/model_loader.py` / `io/model_writer.py`)
 - Each component (groundwater, streams, lakes, rootzone, etc.) has dedicated reader and writer modules
+- `head_all_converter` is intentionally NOT in `io/__init__.py`; import directly: `from pyiwfm.io.head_all_converter import convert_headall_to_hdf`
 
 ### Web Viewer Architecture
 The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D Mesh (vtk.js), Results Map (deck.gl + MapLibre), and Budgets (Plotly).
@@ -96,8 +113,11 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - 3D rendering: vtk.js in `components/Viewer3D/`
 - 2D map: deck.gl + MapLibre in `components/ResultsMap/`
 - Charts: Plotly in `components/BudgetDashboard/`
+- UI: MUI (Material UI) components
 - URL hash routing for tab navigation (#overview, #3d, #results, #budgets)
 - Builds to `src/pyiwfm/visualization/webapi/static/` via Vite
+- Path alias: `@` → `frontend/src/` (configured in `vite.config.ts`)
+- Dev proxy: `/api` → `http://localhost:8080` (backend must be running separately)
 
 ### PEST++ Integration
 `runner/pest*.py` modules provide parameter estimation workflow:
@@ -112,7 +132,8 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - Line length: 100 characters
 - NumPy-style docstrings
 - Uses 1-based IDs to match IWFM Fortran conventions
-- Pre-commit hooks: trailing whitespace, ruff lint/format, mypy
+- Pre-commit hooks: trailing whitespace, end-of-file-fixer, ruff lint/format, mypy
+- Ruff rules: E, W, F, I (isort), B (bugbear), C4 (comprehensions), UP (pyupgrade), NPY
 
 ## IWFM Domain Conventions
 
@@ -128,6 +149,7 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - Target is ES2020 — `new Map<K,V>()` with generics may not work; use `Record<string, T>` for caches
 - Plotly title objects must use `{ text: 'Title' }` format, not bare strings
 - All API responses should be typed; see existing patterns in `api/client.ts`
+- Build step is `tsc && vite build` — TypeScript errors block the build
 
 ## Optional Dependencies
 
@@ -136,4 +158,5 @@ Many modules have optional imports. Handle ImportError gracefully:
 - `mesh`: triangle, gmsh
 - `viz`: vtk, matplotlib
 - `webapi`: fastapi, uvicorn, pydantic, pyvista, vtk, pyproj, python-multipart
-- `dss`: pyhecdss (HEC-DSS 7 support)
+- `dss`: bundled HEC-DSS 7 C library (`io/dss/lib/hecdss.dll`) with ctypes wrapper; no external Python package needed. Set `HECDSS_LIB` env var to override library path.
+- `pest`: scipy

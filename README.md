@@ -78,10 +78,11 @@ if HAS_DSS_LIBRARY:
 pyiwfm includes an interactive web viewer built with FastAPI (backend) and React + vtk.js + deck.gl (frontend). Launch it with:
 
 ```bash
-pyiwfm viewer-new /path/to/model --crs "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
+pyiwfm viewer --model-dir /path/to/model --crs "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
 ```
 
-The viewer provides three tabs:
+The viewer provides four tabs:
+- **Overview**: Model summary and metadata
 - **3D Mesh**: Interactive vtk.js 3D rendering with layer visibility, cross-section slicing, stream network overlay, and z-exaggeration
 - **Results Map**: deck.gl + MapLibre map showing head contours, hydrograph locations, and observation upload/comparison
 - **Budgets**: Plotly charts of water budget time series with location/column selection
@@ -110,10 +111,6 @@ cd frontend && npm install && npm run build
 - **Mesh Generation**: Triangle and Gmsh wrappers
 - **Visualization**: GIS export, VTK 3D export, interactive web viewer with budget charts, head maps, and hydrograph comparison
 - **Model Comparison**: Diff and comparison metrics
-
-## Documentation
-
-See the [examples](examples/) directory for more usage examples.
 
 ## License
 
