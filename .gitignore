@@ -1,2 +1,70 @@
-*.pyc
-*ipynb
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test_output/
+
+# Linting / type checking
+.ruff_cache/
+.mypy_cache/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Claude Code
+.claude/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Documentation build
+docs/_build/
+
+# CMake build artifacts
+cmake/build/
+
+# Generated output
+output/
+
+# Jupyter
+*.ipynb
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*

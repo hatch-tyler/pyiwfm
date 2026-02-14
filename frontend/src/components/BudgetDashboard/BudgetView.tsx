@@ -1,0 +1,292 @@
+/**
+ * Budget Dashboard tab: budget type/location selection + charts.
+ * Renders multiple chart groups based on budget type classification,
+ * applies source-unit-aware conversions and time aggregation.
+ */
+
+import { useState, useEffect, useMemo } from 'react';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import { useViewerStore } from '../../stores/viewerStore';
+import { fetchBudgetTypes, fetchBudgetData } from '../../api/client';
+import type { BudgetData, BudgetUnitsMetadata } from '../../api/client';
+import { BudgetControls } from './BudgetControls';
+import { BudgetChart } from './BudgetChart';
+import { DiversionBalanceChart } from './DiversionBalanceChart';
+import { WaterBalanceSankey } from './WaterBalanceSankey';
+import { BudgetLocationMap } from './BudgetLocationMap';
+import { classifyColumns } from './budgetSplitter';
+import type { ChartGroup, ChartKind } from './budgetSplitter';
+import {
+  convertVolumeValues,
+  convertAreaValues,
+  getYAxisLabel,
+  getXAxisLabel,
+} from './budgetUnits';
+
+interface ConvertedChart {
+  data: BudgetData;
+  yAxisLabel: string;
+  xAxisLabel: string;
+  partialYearNote?: string;
+}
+
+/** Apply unit conversion to a single chart group's data. */
+function convertChartData(
+  group: ChartGroup,
+  volumeUnit: string,
+  rateUnit: string,
+  areaUnit: string,
+  lengthUnit: string,
+  timeAgg: string,
+  unitsMeta: BudgetUnitsMetadata | undefined,
+): ConvertedChart {
+  const sourceVolume = unitsMeta?.source_volume_unit ?? 'AF';
+  const sourceArea = unitsMeta?.source_area_unit ?? 'ACRES';
+
+  const isArea = group.chartKind === 'area';
+
+  let firstPartialNote: string | undefined;
+
+  const convertedColumns = group.data.columns.map((col) => {
+    if (isArea) {
+      const result = convertAreaValues(col.values, group.data.times, sourceArea, areaUnit, timeAgg);
+      if (!firstPartialNote && result.partialYearNote) firstPartialNote = result.partialYearNote;
+      return { name: col.name, values: result.values, units: col.units };
+    } else {
+      const result = convertVolumeValues(
+        col.values, group.data.times, sourceVolume, volumeUnit, rateUnit, timeAgg,
+      );
+      if (!firstPartialNote && result.partialYearNote) firstPartialNote = result.partialYearNote;
+      return { name: col.name, values: result.values, units: col.units };
+    }
+  });
+
+  // Get the converted time axis from the first column
+  let convertedTimes = group.data.times;
+  if (group.data.columns.length > 0) {
+    if (isArea) {
+      const result = convertAreaValues(
+        group.data.columns[0].values, group.data.times, sourceArea, areaUnit, timeAgg,
+      );
+      convertedTimes = result.times;
+    } else {
+      const result = convertVolumeValues(
+        group.data.columns[0].values, group.data.times, sourceVolume, volumeUnit, rateUnit, timeAgg,
+      );
+      convertedTimes = result.times;
+    }
+  }
+
+  const yAxisLabel = getYAxisLabel(group.chartKind, volumeUnit, rateUnit, areaUnit, lengthUnit, timeAgg);
+  const xAxisLabel = getXAxisLabel(timeAgg);
+
+  return {
+    data: {
+      location: group.data.location,
+      times: convertedTimes,
+      columns: convertedColumns,
+    },
+    yAxisLabel,
+    xAxisLabel,
+    partialYearNote: firstPartialNote,
+  };
+}
+
+/** Determine chart type for a given chart kind. */
+function getChartTypeForKind(
+  kind: ChartKind,
+  userChartType: 'area' | 'bar' | 'line',
+): 'area' | 'bar' | 'line' {
+  // Flow charts use user's selected type; storage/cumulative_subsidence/area use line
+  if (kind === 'flow') return userChartType;
+  if (kind === 'diversion_balance') return 'bar';
+  if (kind === 'cumulative_subsidence') return 'line';
+  return 'line';
+}
+
+export function BudgetView() {
+  const {
+    resultsInfo,
+    activeBudgetType, activeBudgetLocation, budgetChartType,
+    showBudgetSankey,
+    budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
+  } = useViewerStore();
+
+  const [budgetTypes, setBudgetTypes] = useState<string[]>([]);
+  const [budgetData, setBudgetData] = useState<BudgetData | null>(null);
+  const [unitsMeta, setUnitsMeta] = useState<BudgetUnitsMetadata | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
+
+  // Load available budget types
+  useEffect(() => {
+    if (resultsInfo?.available_budgets) {
+      setBudgetTypes(resultsInfo.available_budgets);
+    } else {
+      fetchBudgetTypes()
+        .then(setBudgetTypes)
+        .catch(console.error);
+    }
+  }, [resultsInfo]);
+
+  // Load budget data when type/location changes
+  useEffect(() => {
+    if (!activeBudgetType || !activeBudgetLocation) {
+      setBudgetData(null);
+      setUnitsMeta(undefined);
+      return;
+    }
+
+    setLoading(true);
+    fetchBudgetData(activeBudgetType, activeBudgetLocation)
+      .then((data) => {
+        setUnitsMeta(data.units_metadata);
+        setBudgetData(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load budget data:', err);
+        setBudgetData(null);
+        setUnitsMeta(undefined);
+        setLoading(false);
+      });
+  }, [activeBudgetType, activeBudgetLocation]);
+
+  // Classify columns into chart groups
+  const classified = useMemo(
+    () => budgetData && activeBudgetType
+      ? classifyColumns(budgetData, activeBudgetType)
+      : null,
+    [budgetData, activeBudgetType],
+  );
+
+  // Apply unit conversions to each chart group
+  const convertedCharts = useMemo(() => {
+    if (!classified) return [];
+    return classified.charts.map((group) =>
+      convertChartData(
+        group, budgetVolumeUnit, budgetRateUnit, budgetAreaUnit,
+        budgetLengthUnit, budgetTimeAgg, unitsMeta,
+      ),
+    );
+  }, [classified, budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg, unitsMeta]);
+
+  // Keep track of chart kinds for determining chart type
+  const chartKinds = useMemo(() => {
+    if (!classified) return [];
+    return classified.charts.map((g) => g.chartKind);
+  }, [classified]);
+
+  // Keep track of titles
+  const chartTitles = useMemo(() => {
+    if (!classified) return [];
+    return classified.charts.map((g) => g.title);
+  }, [classified]);
+
+  // Compute has*Columns from units metadata
+  const hasVolumeColumns = unitsMeta?.has_volume_columns ?? true;
+  const hasAreaColumns = unitsMeta?.has_area_columns ?? false;
+  const hasLengthColumns = unitsMeta?.has_length_columns ?? false;
+
+  if (budgetTypes.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <Typography color="text.secondary">
+          No budget data available. Load a model with simulation results.
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', height: '100%' }}>
+      {/* Left sidebar controls */}
+      <BudgetControls
+        budgetTypes={budgetTypes}
+        hasVolumeColumns={hasVolumeColumns}
+        hasAreaColumns={hasAreaColumns}
+        hasLengthColumns={hasLengthColumns}
+      />
+
+      {/* Main chart area */}
+      <Box sx={{ flexGrow: 1, overflow: 'hidden', position: 'relative' }}>
+        {showBudgetSankey ? (
+          <WaterBalanceSankey />
+        ) : convertedCharts.length > 1 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+            {convertedCharts.map((chart, i) => {
+              const kind = chartKinds[i];
+              const isStorage = kind === 'storage';
+              return (
+                <Box
+                  key={chartTitles[i]}
+                  sx={{
+                    flex: kind === 'flow' ? 2 : 1,
+                    minHeight: kind === 'flow' ? 250 : 200,
+                  }}
+                >
+                  {kind === 'diversion_balance' ? (
+                    <DiversionBalanceChart
+                      data={chart.data}
+                      yAxisLabel={chart.yAxisLabel}
+                      xAxisLabel={chart.xAxisLabel}
+                      title={chartTitles[i]}
+                      partialYearNote={chart.partialYearNote}
+                    />
+                  ) : (
+                    <BudgetChart
+                      data={chart.data}
+                      chartType={getChartTypeForKind(kind, budgetChartType)}
+                      loading={loading && i === 0}
+                      title={chartTitles[i]}
+                      dualAxis={isStorage}
+                      yAxisLabel={chart.yAxisLabel}
+                      xAxisLabel={chart.xAxisLabel}
+                      partialYearNote={chart.partialYearNote}
+                    />
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+        ) : convertedCharts.length === 1 ? (
+          chartKinds[0] === 'diversion_balance' ? (
+            <DiversionBalanceChart
+              data={convertedCharts[0].data}
+              yAxisLabel={convertedCharts[0].yAxisLabel}
+              xAxisLabel={convertedCharts[0].xAxisLabel}
+              title={chartTitles[0]}
+              partialYearNote={convertedCharts[0].partialYearNote}
+            />
+          ) : (
+            <BudgetChart
+              data={convertedCharts[0].data}
+              chartType={getChartTypeForKind(chartKinds[0], budgetChartType)}
+              loading={loading}
+              title={chartTitles[0]}
+              yAxisLabel={convertedCharts[0].yAxisLabel}
+              xAxisLabel={convertedCharts[0].xAxisLabel}
+              partialYearNote={convertedCharts[0].partialYearNote}
+            />
+          )
+        ) : (
+          <BudgetChart
+            data={budgetData}
+            chartType={budgetChartType}
+            loading={loading}
+          />
+        )}
+
+        {/* Location context mini-map */}
+        {activeBudgetType && activeBudgetLocation && !showBudgetSankey && (
+          <Box sx={{
+            position: 'absolute', top: 8, right: 8, width: 300, height: 250,
+            zIndex: 10, borderRadius: 1, overflow: 'hidden', boxShadow: 3,
+          }}>
+            <BudgetLocationMap budgetType={activeBudgetType} locationName={activeBudgetLocation} />
+          </Box>
+        )}
+      </Box>
+    </Box>
+  );
+}

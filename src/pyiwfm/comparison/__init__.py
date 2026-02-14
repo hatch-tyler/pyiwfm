@@ -1,0 +1,60 @@
+"""Model comparison tools for IWFM models."""
+
+from __future__ import annotations
+
+from pyiwfm.comparison.differ import (
+    DiffItem,
+    DiffType,
+    MeshDiff,
+    ModelDiff,
+    ModelDiffer,
+    StratigraphyDiff,
+)
+from pyiwfm.comparison.metrics import (
+    ComparisonMetrics,
+    SpatialComparison,
+    TimeSeriesComparison,
+    correlation_coefficient,
+    mae,
+    max_error,
+    mbe,
+    nash_sutcliffe,
+    percent_bias,
+    relative_error,
+    rmse,
+)
+from pyiwfm.comparison.report import (
+    ComparisonReport,
+    HtmlReport,
+    JsonReport,
+    ReportGenerator,
+    TextReport,
+)
+
+__all__ = [
+    # Differ
+    "DiffItem",
+    "DiffType",
+    "MeshDiff",
+    "ModelDiff",
+    "ModelDiffer",
+    "StratigraphyDiff",
+    # Metrics
+    "ComparisonMetrics",
+    "SpatialComparison",
+    "TimeSeriesComparison",
+    "correlation_coefficient",
+    "mae",
+    "max_error",
+    "mbe",
+    "nash_sutcliffe",
+    "percent_bias",
+    "relative_error",
+    "rmse",
+    # Report
+    "ComparisonReport",
+    "HtmlReport",
+    "JsonReport",
+    "ReportGenerator",
+    "TextReport",
+]

@@ -1,60 +1,120 @@
 # pyiwfm
----
 
-This project is a python library for working with the California Department of Water Resources (DWR) Integrated Water Flow Model (IWFM) Applications.
+Python package for reading, writing, visualizing, and comparing IWFM (Integrated Water Flow Model) models.
 
----
+## Installation
 
-1. **GroundwaterNodes**
+```bash
+# Basic installation
+pip install -e .
 
-    GroundwaterNodes in an IWFM application are the foundational component for the model geometry. Groundwater Nodes are the only place where
-    x-y coordinates exist, so they provide the positional information for the entire model geometry. All other model components either reference 
-    nodes directly or are composed of multiple nodes i.e. elements or multiple elements i.e. subregions or element groups.
+# With GIS support
+pip install -e ".[gis]"
 
-2. **IWFMNodes**
+# With mesh generation
+pip install -e ".[mesh]"
 
-   IWFMNodes are a container for all GroundwaterNodes contained in an IWFM application. This represents the information contained in the IWFM Nodal
-   Configuration File. This class is more likely to be used as a public class than GroundwaterNodes
+# With web viewer (FastAPI + vtk.js)
+pip install -e ".[webapi]"
 
-3. **Elements**
+# With all optional dependencies
+pip install -e ".[all]"
 
-   Elements in an IWFM application are composed of either 3 or 4 GroundwaterNodes ordered counter-clockwise. Elements define the computational mesh in the 
-   horizontal plane. Elements also identify which subregion the Element is part of. Subregions are used for the calculation of budgets from the 
-   simulation results.
+# Development installation
+pip install -e ".[dev]"
+```
 
-4. **IWFMElements**
+## Quick Start
 
-   IWFMElements are a container for all Elements in an IWFM application. This represents the information contained in the IWFM Element Configuration File.
-   This class is more likely to be used as a public class than Elements.
+```python
+from pyiwfm import AppGrid, Node, Element, Stratigraphy
+import numpy as np
 
-5. **AppGrid**
+# Create a simple mesh
+nodes = {
+    1: Node(id=1, x=0.0, y=0.0),
+    2: Node(id=2, x=100.0, y=0.0),
+    3: Node(id=3, x=100.0, y=100.0),
+    4: Node(id=4, x=0.0, y=100.0),
+}
 
-   AppGrid in an IWFM application is composed of IWFMNodes and IWFMElements. Together, the AppGrid provides the spatial definition of the model elements and
-   allows the calculation of element and subregion areas, checking that nodes are provided in counter-clockwise order, and writing spatial information. This 
-   class is designed to be used as the public class for obtaining both IWFMNode and IWFMElement information.
+elements = {
+    1: Element(id=1, vertices=(1, 2, 3, 4), subregion=1),
+}
 
-6. **IWFMStratigraphy**
+grid = AppGrid(nodes=nodes, elements=elements)
+grid.compute_areas()
+grid.compute_connectivity()
 
-   IWFMStratigraphy is a container that defines the computational mesh in the vertical plane. IWFMStratigraphy specifies the number of layers in the model 
-   application and defines the Ground Surface Elevation (GSE) and layer thicknesses. In IWFM, each layer is composed of two parts, an aquitard (denoted by 
-   the prefix 'A') and an aquifer (denoted by the prefix 'L'). GSE and thicknesses are defined at each GroundwaterNode.
+print(f"Grid: {grid.n_nodes} nodes, {grid.n_elements} elements")
+```
 
-7. **StreamNode**
+## Model I/O Example
 
-      
+```python
+from pathlib import Path
+from pyiwfm.io import load_complete_model, save_complete_model
 
-8. **StreamReach**
-   
+# Load a complete IWFM model from simulation main file
+model = load_complete_model("Simulation/Simulation.in")
 
+print(f"Loaded model with {model.grid.n_nodes} nodes")
+print(f"Groundwater wells: {len(model.groundwater.wells) if model.groundwater else 0}")
 
-9. **StreamSpecifications**
-   
+# Save model to new directory
+save_complete_model(model, Path("output_model"))
 
+# Write time series to HEC-DSS (requires bundled C library or HECDSS_LIB env var)
+from pyiwfm.io.dss import DSSTimeSeriesWriter, DSSPathnameTemplate, HAS_DSS_LIBRARY
 
-10. **Lake**
-    
-    Not implemented at this time.
+if HAS_DSS_LIBRARY:
+    template = DSSPathnameTemplate(a_part="IWFM", c_part="HEAD", e_part="1DAY")
+    with DSSTimeSeriesWriter("output.dss") as writer:
+        writer.write_timeseries(head_timeseries, template.make_pathname(location="WELL_1"))
+```
 
-11. **IWFMLakes**
-    
-    Not implemented at this time
+## Web Visualization
+
+pyiwfm includes an interactive web viewer built with FastAPI (backend) and React + vtk.js + deck.gl (frontend). Launch it with:
+
+```bash
+pyiwfm viewer-new /path/to/model --crs "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
+```
+
+The viewer provides three tabs:
+- **3D Mesh**: Interactive vtk.js 3D rendering with layer visibility, cross-section slicing, stream network overlay, and z-exaggeration
+- **Results Map**: deck.gl + MapLibre map showing head contours, hydrograph locations, and observation upload/comparison
+- **Budgets**: Plotly charts of water budget time series with location/column selection
+
+The frontend is pre-built into `src/pyiwfm/visualization/webapi/static/`. To rebuild from source:
+
+```bash
+cd frontend && npm install && npm run build
+```
+
+## Features
+
+- **Core Data Structures**: Node, Element, Face, AppGrid, Stratigraphy, TimeSeries
+- **Complete Model I/O**: Full roundtrip support for reading and writing IWFM models
+  - ASCII files (nodes, elements, stratigraphy, time series)
+  - Binary files (Fortran unformatted)
+  - HDF5 files (efficient large model storage)
+  - HEC-DSS 7 files (time series with optional library support)
+- **Component Writers**: Write complete IWFM input files
+  - Groundwater: wells, pumping, boundary conditions, aquifer parameters
+  - Streams: nodes, reaches, diversions, bypasses, rating curves
+  - Lakes: definitions, elements, rating curves, outflows
+  - Root Zone: crop types, soil parameters, land use
+  - Simulation: main control file
+- **PreProcessor Integration**: Load/save complete models from IWFM file structure
+- **Mesh Generation**: Triangle and Gmsh wrappers
+- **Visualization**: GIS export, VTK 3D export, interactive web viewer with budget charts, head maps, and hydrograph comparison
+- **Model Comparison**: Diff and comparison metrics
+
+## Documentation
+
+See the [examples](examples/) directory for more usage examples.
+
+## License
+
+GPL-2.0 - Same as IWFM

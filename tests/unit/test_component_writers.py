@@ -1,0 +1,697 @@
+"""Unit tests for IWFM component writers.
+
+Tests all component writers:
+- GWComponentWriter
+- StreamComponentWriter
+- LakeComponentWriter
+- RootZoneComponentWriter
+- SimulationMainWriter
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import numpy as np
+import pytest
+
+from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
+from pyiwfm.core.stratigraphy import Stratigraphy
+from pyiwfm.core.model import IWFMModel
+
+# Import writers and configs
+from pyiwfm.io.gw_writer import GWWriterConfig, GWComponentWriter, write_gw_component
+from pyiwfm.io.stream_writer import StreamWriterConfig, StreamComponentWriter, write_stream_component
+from pyiwfm.io.lake_writer import LakeWriterConfig, LakeComponentWriter, write_lake_component
+from pyiwfm.io.rootzone_writer import RootZoneWriterConfig, RootZoneComponentWriter, write_rootzone_component
+from pyiwfm.io.simulation_writer import SimulationMainConfig, SimulationMainWriter, write_simulation_main
+
+
+# =============================================================================
+# Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def simple_model(
+    small_grid_nodes: list[dict],
+    small_grid_elements: list[dict],
+    sample_stratigraphy_data: dict,
+) -> IWFMModel:
+    """Create a simple model for testing writers."""
+    # Create mesh
+    nodes = {d["id"]: Node(**d) for d in small_grid_nodes}
+    elements = {d["id"]: Element(**d) for d in small_grid_elements}
+    subregions = {
+        1: Subregion(id=1, name="Region A"),
+        2: Subregion(id=2, name="Region B"),
+    }
+    mesh = AppGrid(nodes=nodes, elements=elements, subregions=subregions)
+
+    # Create stratigraphy
+    strat = Stratigraphy(**sample_stratigraphy_data)
+
+    # Create model
+    model = IWFMModel(
+        name="Test Model",
+        mesh=mesh,
+        stratigraphy=strat,
+    )
+
+    return model
+
+
+# =============================================================================
+# Tests for GWWriterConfig
+# =============================================================================
+
+
+class TestGWWriterConfig:
+    """Tests for GWWriterConfig dataclass."""
+
+    def test_default_values(self, tmp_path: Path) -> None:
+        """Test config with default values."""
+        config = GWWriterConfig(output_dir=tmp_path)
+
+        assert config.output_dir == tmp_path
+        assert config.gw_subdir == "GW"
+        assert config.version == "4.0"
+        assert config.main_file == "GW_MAIN.dat"
+        assert config.length_unit == "ft."
+
+    def test_custom_values(self, tmp_path: Path) -> None:
+        """Test config with custom values."""
+        config = GWWriterConfig(
+            output_dir=tmp_path,
+            gw_subdir="Groundwater",
+            version="5.0",
+            main_file="Groundwater.dat",
+            length_factor=0.3048,
+            length_unit="m",
+        )
+
+        assert config.gw_subdir == "Groundwater"
+        assert config.version == "5.0"
+        assert config.main_file == "Groundwater.dat"
+        assert config.length_factor == pytest.approx(0.3048)
+        assert config.length_unit == "m"
+
+    def test_path_properties(self, tmp_path: Path) -> None:
+        """Test path property methods."""
+        config = GWWriterConfig(output_dir=tmp_path)
+
+        assert config.gw_dir == tmp_path / "GW"
+        assert config.main_path == tmp_path / "GW" / "GW_MAIN.dat"
+        assert config.bc_main_path == tmp_path / "GW" / "BC_MAIN.dat"
+        assert config.pump_main_path == tmp_path / "GW" / "Pump_MAIN.dat"
+
+
+# =============================================================================
+# Tests for GWComponentWriter
+# =============================================================================
+
+
+class TestGWComponentWriter:
+    """Tests for GWComponentWriter class."""
+
+    def test_writer_initialization(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writer initialization."""
+        config = GWWriterConfig(output_dir=tmp_path)
+        writer = GWComponentWriter(simple_model, config)
+
+        assert writer.model is simple_model
+        assert writer.config is config
+        assert writer.format == "iwfm_groundwater"
+
+    def test_write_main(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writing main groundwater file."""
+        config = GWWriterConfig(output_dir=tmp_path)
+        writer = GWComponentWriter(simple_model, config)
+
+        # Ensure directory exists
+        config.gw_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write main file
+        output_path = writer.write_main()
+
+        assert output_path.exists()
+        assert output_path == config.main_path
+
+        # Check file content
+        content = output_path.read_text()
+        assert "#4.0" in content  # Version line
+        assert "GROUNDWATER COMPONENT MAIN DATA FILE" in content
+        assert "Generated by pyiwfm" in content
+        assert "FACTLTOU" in content  # Length factor
+        assert "DAY" in content  # Time unit
+
+    def test_write_all(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writing all groundwater files."""
+        config = GWWriterConfig(output_dir=tmp_path)
+        writer = GWComponentWriter(simple_model, config)
+
+        results = writer.write_all()
+
+        assert "main" in results
+        assert results["main"].exists()
+
+    def test_write_defaults(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test write_all with write_defaults flag."""
+        config = GWWriterConfig(output_dir=tmp_path)
+        writer = GWComponentWriter(simple_model, config)
+
+        # With write_defaults=True
+        results = writer.write_all(write_defaults=True)
+        assert "main" in results
+
+    def test_write_function(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test the write_gw_component convenience function."""
+        results = write_gw_component(simple_model, tmp_path)
+
+        assert "main" in results
+        assert (tmp_path / "GW" / "GW_MAIN.dat").exists()
+
+    def test_aquifer_params_in_output(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test that aquifer parameters are written to output."""
+        config = GWWriterConfig(output_dir=tmp_path)
+        writer = GWComponentWriter(simple_model, config)
+        config.gw_dir.mkdir(parents=True, exist_ok=True)
+
+        output_path = writer.write_main()
+        content = output_path.read_text()
+
+        # Check for aquifer parameter headers
+        assert "Aquifer Parameter Data" in content
+        assert "FACTHK" in content  # Kh conversion factor
+        assert "Initial Groundwater Heads" in content
+        assert "FACTHINI" in content  # Initial head conversion factor
+
+
+# =============================================================================
+# Tests for StreamWriterConfig
+# =============================================================================
+
+
+class TestStreamWriterConfig:
+    """Tests for StreamWriterConfig dataclass."""
+
+    def test_default_values(self, tmp_path: Path) -> None:
+        """Test config with default values."""
+        config = StreamWriterConfig(output_dir=tmp_path)
+
+        assert config.output_dir == tmp_path
+        assert config.stream_subdir == "Stream"
+        assert config.version == "4.0"
+        assert config.main_file == "Stream_MAIN.dat"
+        assert config.flow_unit == "ac.ft./day"
+
+    def test_custom_values(self, tmp_path: Path) -> None:
+        """Test config with custom values."""
+        config = StreamWriterConfig(
+            output_dir=tmp_path,
+            stream_subdir="Streams",
+            version="5.0",
+            conductivity=20.0,
+            bed_thickness=2.0,
+        )
+
+        assert config.stream_subdir == "Streams"
+        assert config.version == "5.0"
+        assert config.conductivity == pytest.approx(20.0)
+        assert config.bed_thickness == pytest.approx(2.0)
+
+    def test_path_properties(self, tmp_path: Path) -> None:
+        """Test path property methods."""
+        config = StreamWriterConfig(output_dir=tmp_path)
+
+        assert config.stream_dir == tmp_path / "Stream"
+        assert config.main_path == tmp_path / "Stream" / "Stream_MAIN.dat"
+
+
+# =============================================================================
+# Tests for StreamComponentWriter
+# =============================================================================
+
+
+class TestStreamComponentWriter:
+    """Tests for StreamComponentWriter class."""
+
+    def test_writer_initialization(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writer initialization."""
+        config = StreamWriterConfig(output_dir=tmp_path)
+        writer = StreamComponentWriter(simple_model, config)
+
+        assert writer.model is simple_model
+        assert writer.config is config
+        assert writer.format == "iwfm_stream"
+
+    def test_write_main_no_streams(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writing main file when model has no streams."""
+        config = StreamWriterConfig(output_dir=tmp_path)
+        writer = StreamComponentWriter(simple_model, config)
+
+        results = writer.write_all(write_defaults=True)
+
+        assert "main" in results
+        assert results["main"].exists()
+
+        content = results["main"].read_text()
+        assert "#4.0" in content
+        assert "STREAM PARAMETERS DATA FILE" in content
+        assert "Stream Bed Parameters" in content
+
+    def test_write_function(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test the write_stream_component convenience function."""
+        results = write_stream_component(simple_model, tmp_path)
+
+        assert "main" in results
+        assert (tmp_path / "Stream" / "Stream_MAIN.dat").exists()
+
+
+# =============================================================================
+# Tests for LakeWriterConfig
+# =============================================================================
+
+
+class TestLakeWriterConfig:
+    """Tests for LakeWriterConfig dataclass."""
+
+    def test_default_values(self, tmp_path: Path) -> None:
+        """Test config with default values."""
+        config = LakeWriterConfig(output_dir=tmp_path)
+
+        assert config.output_dir == tmp_path
+        assert config.lake_subdir == "Lake"
+        assert config.version == "4.0"
+        assert config.main_file == "Lake_MAIN.dat"
+        assert config.bed_conductivity == pytest.approx(2.0)
+
+    def test_custom_values(self, tmp_path: Path) -> None:
+        """Test config with custom values."""
+        config = LakeWriterConfig(
+            output_dir=tmp_path,
+            lake_subdir="Lakes",
+            version="5.0",
+            bed_conductivity=5.0,
+            bed_thickness=2.0,
+        )
+
+        assert config.lake_subdir == "Lakes"
+        assert config.version == "5.0"
+        assert config.bed_conductivity == pytest.approx(5.0)
+        assert config.bed_thickness == pytest.approx(2.0)
+
+    def test_path_properties(self, tmp_path: Path) -> None:
+        """Test path property methods."""
+        config = LakeWriterConfig(output_dir=tmp_path)
+
+        assert config.lake_dir == tmp_path / "Lake"
+        assert config.main_path == tmp_path / "Lake" / "Lake_MAIN.dat"
+
+
+# =============================================================================
+# Tests for LakeComponentWriter
+# =============================================================================
+
+
+class TestLakeComponentWriter:
+    """Tests for LakeComponentWriter class."""
+
+    def test_writer_initialization(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writer initialization."""
+        config = LakeWriterConfig(output_dir=tmp_path)
+        writer = LakeComponentWriter(simple_model, config)
+
+        assert writer.model is simple_model
+        assert writer.config is config
+        assert writer.format == "iwfm_lake"
+
+    def test_write_main_no_lakes(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writing main file when model has no lakes."""
+        config = LakeWriterConfig(output_dir=tmp_path)
+        writer = LakeComponentWriter(simple_model, config)
+
+        results = writer.write_all(write_defaults=True)
+
+        assert "main" in results
+        assert results["main"].exists()
+
+        content = results["main"].read_text()
+        assert "#4.0" in content
+        assert "LAKE PARAMETERS DATA FILE" in content
+        assert "Lake Parameters" in content
+
+    def test_write_function(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test the write_lake_component convenience function."""
+        results = write_lake_component(simple_model, tmp_path)
+
+        assert "main" in results
+        assert (tmp_path / "Lake" / "Lake_MAIN.dat").exists()
+
+
+# =============================================================================
+# Tests for RootZoneWriterConfig
+# =============================================================================
+
+
+class TestRootZoneWriterConfig:
+    """Tests for RootZoneWriterConfig dataclass."""
+
+    def test_default_values(self, tmp_path: Path) -> None:
+        """Test config with default values."""
+        config = RootZoneWriterConfig(output_dir=tmp_path)
+
+        assert config.output_dir == tmp_path
+        assert config.rootzone_subdir == "RootZone"
+        assert config.version == "4.12"
+        assert config.main_file == "RootZone_MAIN.dat"
+        assert config.convergence == pytest.approx(0.001)
+        assert config.max_iterations == 150
+
+    def test_custom_values(self, tmp_path: Path) -> None:
+        """Test config with custom values."""
+        config = RootZoneWriterConfig(
+            output_dir=tmp_path,
+            rootzone_subdir="RZ",
+            version="5.0",
+            convergence=0.0001,
+            max_iterations=200,
+            wilting_point=0.1,
+            field_capacity=0.25,
+        )
+
+        assert config.rootzone_subdir == "RZ"
+        assert config.version == "5.0"
+        assert config.convergence == pytest.approx(0.0001)
+        assert config.max_iterations == 200
+        assert config.wilting_point == pytest.approx(0.1)
+        assert config.field_capacity == pytest.approx(0.25)
+
+    def test_path_properties(self, tmp_path: Path) -> None:
+        """Test path property methods."""
+        config = RootZoneWriterConfig(output_dir=tmp_path)
+
+        assert config.rootzone_dir == tmp_path / "RootZone"
+        assert config.main_path == tmp_path / "RootZone" / "RootZone_MAIN.dat"
+
+
+# =============================================================================
+# Tests for RootZoneComponentWriter
+# =============================================================================
+
+
+class TestRootZoneComponentWriter:
+    """Tests for RootZoneComponentWriter class."""
+
+    def test_writer_initialization(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writer initialization."""
+        config = RootZoneWriterConfig(output_dir=tmp_path)
+        writer = RootZoneComponentWriter(simple_model, config)
+
+        assert writer.model is simple_model
+        assert writer.config is config
+        assert writer.format == "iwfm_rootzone"
+
+    def test_write_main_no_rootzone(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writing main file when model has no root zone data."""
+        config = RootZoneWriterConfig(output_dir=tmp_path)
+        writer = RootZoneComponentWriter(simple_model, config)
+
+        results = writer.write_all(write_defaults=True)
+
+        assert "main" in results
+        assert results["main"].exists()
+
+        content = results["main"].read_text()
+        assert "#4.12" in content
+        assert "ROOT ZONE PARAMETERS DATA FILE" in content
+        assert "Soil, Precipitation and Runoff" in content
+
+    def test_soil_params_in_output(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test that soil parameters are written for each element."""
+        config = RootZoneWriterConfig(output_dir=tmp_path)
+        writer = RootZoneComponentWriter(simple_model, config)
+
+        results = writer.write_all()
+        content = results["main"].read_text()
+
+        # Check for soil parameter columns
+        assert "WP" in content  # Wilting point
+        assert "FC" in content  # Field capacity
+        assert "TN" in content  # Total porosity
+        assert "LAMBDA" in content  # Pore size index
+
+        # Check that all 4 elements are written
+        lines = content.split("\n")
+        data_lines = [l for l in lines if l.strip().startswith(("1", "2", "3", "4"))
+                      and "0.20" in l]  # Default field capacity
+        assert len(data_lines) >= 4  # At least 4 elements
+
+    def test_write_function(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test the write_rootzone_component convenience function."""
+        results = write_rootzone_component(simple_model, tmp_path)
+
+        assert "main" in results
+        assert (tmp_path / "RootZone" / "RootZone_MAIN.dat").exists()
+
+
+# =============================================================================
+# Tests for SimulationMainConfig
+# =============================================================================
+
+
+class TestSimulationMainConfig:
+    """Tests for SimulationMainConfig dataclass."""
+
+    def test_default_values(self, tmp_path: Path) -> None:
+        """Test config with default values."""
+        config = SimulationMainConfig(output_dir=tmp_path)
+
+        assert config.output_dir == tmp_path
+        assert config.main_file == "Simulation_MAIN.IN"
+        assert config.begin_date == "09/30/1990_24:00"
+        assert config.end_date == "09/30/2000_24:00"
+        assert config.time_step == "1DAY"
+        assert config.matrix_solver == 2
+        assert config.max_iterations == 1500
+
+    def test_custom_values(self, tmp_path: Path) -> None:
+        """Test config with custom values."""
+        config = SimulationMainConfig(
+            output_dir=tmp_path,
+            main_file="Main.IN",
+            begin_date="10/01/2000_00:00",
+            end_date="09/30/2010_24:00",
+            time_step="1MONTH",
+            matrix_solver=1,
+            max_iterations=2000,
+            convergence_head=0.00001,
+        )
+
+        assert config.main_file == "Main.IN"
+        assert config.begin_date == "10/01/2000_00:00"
+        assert config.end_date == "09/30/2010_24:00"
+        assert config.time_step == "1MONTH"
+        assert config.matrix_solver == 1
+        assert config.max_iterations == 2000
+        assert config.convergence_head == pytest.approx(0.00001)
+
+    def test_path_property(self, tmp_path: Path) -> None:
+        """Test main_path property."""
+        config = SimulationMainConfig(output_dir=tmp_path)
+
+        assert config.main_path == tmp_path / "Simulation_MAIN.IN"
+
+    def test_title_customization(self, tmp_path: Path) -> None:
+        """Test title customization."""
+        config = SimulationMainConfig(
+            output_dir=tmp_path,
+            title1="My Model",
+            title2="Version 1.0",
+            title3="Test Run",
+        )
+
+        assert config.title1 == "My Model"
+        assert config.title2 == "Version 1.0"
+        assert config.title3 == "Test Run"
+
+
+# =============================================================================
+# Tests for SimulationMainWriter
+# =============================================================================
+
+
+class TestSimulationMainWriter:
+    """Tests for SimulationMainWriter class."""
+
+    def test_writer_initialization(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writer initialization."""
+        config = SimulationMainConfig(output_dir=tmp_path)
+        writer = SimulationMainWriter(simple_model, config)
+
+        assert writer.model is simple_model
+        assert writer.config is config
+        assert writer.format == "iwfm_simulation"
+
+    def test_write_main(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writing simulation main file."""
+        config = SimulationMainConfig(output_dir=tmp_path)
+        writer = SimulationMainWriter(simple_model, config)
+
+        output_path = writer.write_main()
+
+        assert output_path.exists()
+        assert output_path == config.main_path
+
+        content = output_path.read_text()
+        assert "INTEGRATED WATER FLOW MODEL (IWFM)" in content
+        assert "MAIN INPUT FILE" in content
+        assert "Generated by pyiwfm" in content
+
+    def test_file_references(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test that component file references are correct."""
+        config = SimulationMainConfig(output_dir=tmp_path)
+        writer = SimulationMainWriter(simple_model, config)
+
+        output_path = writer.write_main()
+        content = output_path.read_text()
+
+        # Check file references
+        assert "PreProcessor.bin" in content
+        assert "GW\\GW_MAIN.dat" in content or "GW/GW_MAIN.dat" in content
+        assert "Stream\\Stream_MAIN.dat" in content or "Stream/Stream_MAIN.dat" in content
+        assert "Lake\\Lake_MAIN.dat" in content or "Lake/Lake_MAIN.dat" in content
+        assert "RootZone\\RootZone_MAIN.dat" in content or "RootZone/RootZone_MAIN.dat" in content
+
+    def test_simulation_period(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test that simulation period is written correctly."""
+        config = SimulationMainConfig(
+            output_dir=tmp_path,
+            begin_date="10/01/2000_00:00",
+            end_date="09/30/2010_24:00",
+            time_step="1MONTH",
+        )
+        writer = SimulationMainWriter(simple_model, config)
+
+        output_path = writer.write_main()
+        content = output_path.read_text()
+
+        assert "10/01/2000_00:00" in content
+        assert "09/30/2010_24:00" in content
+        assert "1MONTH" in content
+
+    def test_solution_scheme(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test that solution scheme parameters are written correctly."""
+        config = SimulationMainConfig(
+            output_dir=tmp_path,
+            matrix_solver=1,
+            relaxation=1.5,
+            max_iterations=2000,
+            convergence_head=0.00001,
+        )
+        writer = SimulationMainWriter(simple_model, config)
+
+        output_path = writer.write_main()
+        content = output_path.read_text()
+
+        assert "MSOLVE" in content
+        assert "RELAX" in content
+        assert "MXITER" in content
+        assert "STOPC" in content
+
+    def test_write_function(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test the write_simulation_main convenience function."""
+        output_path = write_simulation_main(simple_model, tmp_path)
+
+        assert output_path.exists()
+        assert output_path == tmp_path / "Simulation_MAIN.IN"
+
+    def test_titles_in_output(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test that custom titles appear in output."""
+        config = SimulationMainConfig(
+            output_dir=tmp_path,
+            title1="My Custom Model",
+            title2="Description Line",
+            title3="Additional Info",
+        )
+        writer = SimulationMainWriter(simple_model, config)
+
+        output_path = writer.write_main()
+        content = output_path.read_text()
+
+        assert "My Custom Model" in content
+        assert "Description Line" in content
+        assert "Additional Info" in content
+
+
+# =============================================================================
+# Integration Tests
+# =============================================================================
+
+
+class TestWriterIntegration:
+    """Integration tests for component writers working together."""
+
+    def test_write_all_components(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test writing all component files for a model."""
+        simulation_dir = tmp_path / "Simulation"
+        simulation_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write all components
+        gw_results = write_gw_component(simple_model, simulation_dir)
+        stream_results = write_stream_component(simple_model, simulation_dir)
+        lake_results = write_lake_component(simple_model, simulation_dir)
+        rz_results = write_rootzone_component(simple_model, simulation_dir)
+        sim_path = write_simulation_main(simple_model, simulation_dir)
+
+        # Verify all files exist
+        assert gw_results["main"].exists()
+        assert stream_results["main"].exists()
+        assert lake_results["main"].exists()
+        assert rz_results["main"].exists()
+        assert sim_path.exists()
+
+        # Verify directory structure
+        assert (simulation_dir / "GW").is_dir()
+        assert (simulation_dir / "Stream").is_dir()
+        assert (simulation_dir / "Lake").is_dir()
+        assert (simulation_dir / "RootZone").is_dir()
+
+    def test_consistent_version_headers(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test that version headers are consistent across files."""
+        # Write with same version
+        gw_config = GWWriterConfig(output_dir=tmp_path, version="4.0")
+        stream_config = StreamWriterConfig(output_dir=tmp_path, version="4.0")
+        lake_config = LakeWriterConfig(output_dir=tmp_path, version="4.0")
+
+        gw_writer = GWComponentWriter(simple_model, gw_config)
+        stream_writer = StreamComponentWriter(simple_model, stream_config)
+        lake_writer = LakeComponentWriter(simple_model, lake_config)
+
+        gw_results = gw_writer.write_all()
+        stream_results = stream_writer.write_all()
+        lake_results = lake_writer.write_all()
+
+        # Check version in each file
+        gw_content = gw_results["main"].read_text()
+        stream_content = stream_results["main"].read_text()
+        lake_content = lake_results["main"].read_text()
+
+        assert "#4.0" in gw_content
+        assert "#4.0" in stream_content
+        assert "#4.0" in lake_content
+
+    def test_output_directory_creation(self, simple_model: IWFMModel, tmp_path: Path) -> None:
+        """Test that output directories are created automatically."""
+        deep_path = tmp_path / "level1" / "level2" / "level3"
+
+        # Directories should not exist yet
+        assert not deep_path.exists()
+
+        # Write should create all necessary directories
+        write_gw_component(simple_model, deep_path)
+
+        # Now directories should exist
+        assert deep_path.exists()
+        assert (deep_path / "GW").exists()

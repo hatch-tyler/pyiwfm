@@ -1,0 +1,178 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyiwfm"
+version = "0.1.0"
+description = "Python package for reading, writing, visualizing, and comparing IWFM models"
+readme = "README.md"
+license = "GPL-2.0-only"
+requires-python = ">=3.10"
+authors = [
+    { name = "California Department of Water Resources", email = "IWFMtechsupport@water.ca.gov" }
+]
+keywords = ["iwfm", "hydrology", "groundwater", "water-resources", "modeling"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Hydrology",
+]
+dependencies = [
+    "numpy>=1.23",
+    "pandas>=1.5",
+    "h5py>=3.7",
+    "jinja2>=3.0",
+]
+
+[project.optional-dependencies]
+gis = [
+    "geopandas>=0.10",
+    "shapely>=2.0",
+]
+mesh = [
+    "triangle>=20220202",
+    "gmsh>=4.11",
+]
+viz = [
+    "vtk>=9.0",
+    "matplotlib>=3.5",
+]
+webapi = [
+    "fastapi>=0.104",
+    "uvicorn[standard]>=0.24",
+    "pydantic>=2.0",
+    "pyvista>=0.43",
+    "vtk>=9.0",
+    "pyproj>=3.4",
+    "python-multipart>=0.0.6",
+]
+dss = []
+pest = [
+    "scipy>=1.7",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "hypothesis>=6.0",
+    "mypy>=1.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.0",
+    "httpx>=0.24",
+]
+docs = [
+    "sphinx>=7.0",
+    "pydata-sphinx-theme>=0.14",
+    "sphinx-copybutton>=0.5",
+    "myst-parser>=2.0",
+    "numpydoc>=1.6",
+]
+all = [
+    "pyiwfm[gis,mesh,viz,webapi,dss,pest]",
+]
+
+[project.scripts]
+pyiwfm = "pyiwfm.cli:main"
+
+[project.urls]
+Homepage = "https://water.ca.gov/Library/Modeling-and-Analysis/Modeling-Platforms/Integrated-Water-Flow-Model"
+Documentation = "https://github.com/CA-DWR/pyiwfm"
+Repository = "https://github.com/CA-DWR/pyiwfm"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/pyiwfm/**",
+    "frontend/**",
+    "tests/**",
+    "pyproject.toml",
+    "README.md",
+    "LICENSE",
+    "CLAUDE.md",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyiwfm"]
+artifacts = [
+    "src/pyiwfm/templates/**/*.j2",
+    "src/pyiwfm/io/dss/lib/*",
+    "src/pyiwfm/visualization/webapi/static/**",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "property: marks tests as property-based tests",
+]
+
+[tool.coverage.run]
+source = ["src/pyiwfm"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+plugins = ["numpy.typing.mypy_plugin"]
+
+[[tool.mypy.overrides]]
+module = [
+    "h5py.*",
+    "geopandas.*",
+    "shapely.*",
+    "triangle.*",
+    "gmsh.*",
+    "vtk.*",
+    "pyvista.*",
+    "fastapi.*",
+    "uvicorn.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "NPY", # numpy-specific rules
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pyiwfm"]
+

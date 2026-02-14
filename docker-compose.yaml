@@ -1,0 +1,69 @@
+# Docker Compose configuration for pyiwfm web visualization
+#
+# Usage:
+#   docker-compose up --build
+#
+# Access the web viewer at http://localhost:8080
+
+services:
+  viewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pyiwfm-viewer
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount the sample model directory
+      - ../samplemodel_unix_test:/model:ro
+      # Mount output directory for exports
+      - ./output:/output
+    environment:
+      # Web server configuration
+      - PORT=8080
+      - TITLE=IWFM Sample Model Viewer
+    # Allow container to run Xvfb
+    privileged: false
+    # Resource limits (adjust based on model size)
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Restart policy
+    restart: unless-stopped
+
+  # Alternative: Interactive Python environment for development
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pyiwfm-dev
+    profiles:
+      - dev  # Only start with: docker-compose --profile dev up
+    ports:
+      - "8888:8888"  # Jupyter
+      - "8081:8080"  # Web viewer on different port
+    volumes:
+      - ../samplemodel_unix_test:/model:ro
+      - ./src:/app/src:ro  # Mount source for development
+    environment:
+      - PORT=8080
+      - DISPLAY=:99
+      - PYVISTA_OFF_SCREEN=true
+    command: >
+      bash -c "
+        Xvfb :99 -screen 0 1024x768x24 &
+        pip install jupyter &&
+        jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+      "
+    stdin_open: true
+    tty: true

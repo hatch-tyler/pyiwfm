@@ -1,0 +1,10 @@
+# Documentation dependencies
+sphinx>=7.0
+pydata-sphinx-theme>=0.14
+sphinx-copybutton>=0.5
+myst-parser>=2.0
+numpydoc>=1.6
+
+# For autodoc
+numpy>=1.21
+pandas>=1.3
