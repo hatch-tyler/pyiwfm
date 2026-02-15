@@ -135,6 +135,34 @@ def get_head_times() -> dict:
     }
 
 
+@router.get("/head-range")
+def get_head_range(
+    layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
+    max_frames: int = Query(
+        default=50, ge=0, description="Max frames to sample (0=all)"
+    ),
+) -> dict:
+    """Get the global head value range across all timesteps for a layer.
+
+    Returns 2nd–98th percentile range for stable color scale rendering.
+    """
+    loader = model_state.get_head_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No head data available")
+
+    lo, hi, n_scanned = loader.get_layer_range(
+        layer=layer, max_frames=max_frames
+    )
+
+    return {
+        "layer": layer,
+        "min": lo,
+        "max": hi,
+        "n_timesteps": loader.n_frames,
+        "n_frames_scanned": n_scanned,
+    }
+
+
 @router.get("/hydrograph-locations")
 def get_hydrograph_locations() -> dict:
     """Get all hydrograph locations with WGS84 coordinates."""

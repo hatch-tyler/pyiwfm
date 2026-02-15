@@ -273,6 +273,62 @@ class LazyHeadDataLoader:
             result[t] = self.get_frame(i)
         return result
 
+    def get_layer_range(
+        self,
+        layer: int,
+        percentile_lo: float = 2.0,
+        percentile_hi: float = 98.0,
+        max_frames: int = 0,
+    ) -> tuple[float, float, int]:
+        """Compute robust min/max head values across all (or sampled) timesteps.
+
+        Parameters
+        ----------
+        layer : int
+            1-based layer number.
+        percentile_lo, percentile_hi : float
+            Percentiles for robust range (default 2nd–98th).
+        max_frames : int
+            If > 0, sample at most this many evenly-spaced frames
+            instead of scanning all timesteps.
+
+        Returns
+        -------
+        tuple[float, float, int]
+            (min_value, max_value, n_frames_scanned)
+        """
+        layer_idx = layer - 1
+        total = self._n_frames
+        if total == 0:
+            return (0.0, 1.0, 0)
+
+        # Determine which frames to sample
+        if max_frames > 0 and max_frames < total:
+            indices = np.linspace(0, total - 1, max_frames, dtype=int)
+            indices = np.unique(indices)
+        else:
+            indices = np.arange(total)
+
+        # Collect valid head values
+        all_valid: list[float] = []
+        for idx in indices:
+            frame = self.get_frame(int(idx))
+            if layer_idx >= frame.shape[1]:
+                continue
+            col = frame[:, layer_idx]
+            valid = col[col > -9000]
+            if len(valid) > 0:
+                all_valid.extend(valid.tolist())
+
+        n_scanned = len(indices)
+        if not all_valid:
+            return (0.0, 1.0, n_scanned)
+
+        arr = np.array(all_valid)
+        lo = float(np.percentile(arr, percentile_lo))
+        hi = float(np.percentile(arr, percentile_hi))
+        return (round(lo, 3), round(hi, 3), n_scanned)
+
     def clear_cache(self) -> None:
         """Clear the frame cache."""
         self._cache.clear()

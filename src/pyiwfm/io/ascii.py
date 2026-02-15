@@ -7,6 +7,7 @@ including node coordinates, element definitions, and stratigraphy data.
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import TextIO
@@ -16,6 +17,8 @@ import numpy as np
 from pyiwfm.core.mesh import Node, Element
 from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.core.exceptions import FileFormatError
+
+logger = logging.getLogger(__name__)
 
 
 # IWFM comment characters - these must be in column 1 (first character of line)
@@ -247,6 +250,28 @@ def read_elements(
             value_str, desc = _parse_value_line(line)
             parts = value_str.split()
 
+            # If we've already read all subregion names, this must be
+            # element data — parse it and exit the subregion loop.
+            if subregion_names_read >= n_subregion:
+                if len(parts) >= 6:
+                    try:
+                        elem_id = int(parts[0])
+                        v1 = int(parts[1])
+                        v2 = int(parts[2])
+                        v3 = int(parts[3])
+                        v4 = int(parts[4])
+                        subregion = int(parts[5])
+                        if v4 == 0:
+                            vertices = (v1, v2, v3)
+                        else:
+                            vertices = (v1, v2, v3, v4)
+                        elements[elem_id] = Element(
+                            id=elem_id, vertices=vertices, subregion=subregion,
+                        )
+                    except ValueError:
+                        pass
+                break
+
             # Check if this looks like element data (6 integers)
             # or subregion name (text that doesn't parse as 6 integers)
             if len(parts) >= 6:
@@ -289,10 +314,6 @@ def read_elements(
                     except ValueError:
                         subregion_names[subregion_names_read] = value_str.strip()
 
-            # If we've read all subregion names, break
-            if subregion_names_read >= n_subregion:
-                break
-
         # Read remaining element data
         for line in f:
             line_num += 1
@@ -326,6 +347,14 @@ def read_elements(
                 vertices = (v1, v2, v3, v4)
 
             elements[elem_id] = Element(id=elem_id, vertices=vertices, subregion=subregion)
+
+    if len(elements) != n_elem:
+        logger.warning(
+            "Element file %s declares NELEM=%d but %d elements were read",
+            filepath,
+            n_elem,
+            len(elements),
+        )
 
     return elements, n_subregion, subregion_names
 

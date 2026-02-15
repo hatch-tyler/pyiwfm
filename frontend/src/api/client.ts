@@ -95,8 +95,12 @@ export interface LakeSummary {
 export interface RootZoneSummary {
   loaded: boolean;
   n_crop_types: number | null;
+  n_land_use_types: number | null;
   n_land_use_assignments: number | null;
   n_soil_parameter_sets: number | null;
+  n_land_use_elements: number | null;
+  n_missing_land_use: number | null;
+  land_use_coverage: string | null;
 }
 
 export interface SmallWatershedSummary {
@@ -334,6 +338,23 @@ export async function fetchHeads(timestep: number, layer: number = 1): Promise<H
   const response = await fetch(`${API_BASE}/results/heads?timestep=${timestep}&layer=${layer}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch heads: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// Head global range (for fixed color scale across animation)
+export interface HeadRangeData {
+  layer: number;
+  min: number;
+  max: number;
+  n_timesteps: number;
+  n_frames_scanned: number;
+}
+
+export async function fetchHeadRange(layer: number = 1, maxFrames: number = 50): Promise<HeadRangeData> {
+  const response = await fetch(`${API_BASE}/results/head-range?layer=${layer}&max_frames=${maxFrames}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch head range: ${response.statusText}`);
   }
   return response.json();
 }

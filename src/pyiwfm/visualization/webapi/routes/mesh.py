@@ -559,6 +559,43 @@ def get_element_detail(element_id: int) -> dict:
                     for lay in range(frame.shape[1])
                 ]
 
+    # Land use breakdown
+    land_use: dict | None = None
+    rz = model.rootzone if hasattr(model, "rootzone") else None
+    if rz is not None:
+        from pyiwfm.visualization.webapi.routes.rootzone import _ensure_land_use_loaded
+
+        _ensure_land_use_loaded()
+        land_uses = rz.get_landuse_for_element(element_id)
+        if land_uses:
+            fracs = {
+                "agricultural": 0.0,
+                "urban": 0.0,
+                "native_riparian": 0.0,
+                "water": 0.0,
+            }
+            for elu in land_uses:
+                fracs[elu.land_use_type.value] += elu.area
+            total = sum(fracs.values())
+            land_use = {
+                "fractions": {
+                    k: round(v / total, 4) if total > 0 else 0.0
+                    for k, v in fracs.items()
+                },
+                "total_area": round(total, 2),
+                "crops": [],
+            }
+            for elu in land_uses:
+                if elu.land_use_type.value == "agricultural":
+                    for crop_id, frac in elu.crop_fractions.items():
+                        ct = rz.crop_types.get(crop_id)
+                        land_use["crops"].append({
+                            "crop_id": crop_id,
+                            "name": ct.name if ct else f"Crop {crop_id}",
+                            "fraction": round(frac, 4),
+                            "area": round(elu.area * frac, 2),
+                        })
+
     return {
         "element_id": element_id,
         "subregion": subregion,
@@ -568,6 +605,7 @@ def get_element_detail(element_id: int) -> dict:
         "layer_properties": layer_properties,
         "wells": wells,
         "head_at_nodes": head_at_nodes,
+        "land_use": land_use,
     }
 
 

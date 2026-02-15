@@ -18,6 +18,7 @@ import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Plot from 'react-plotly.js';
 
 interface ElementDetailPanelProps {
   detail: Record<string, unknown> | null;
@@ -37,6 +38,11 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
   const wells = detail.wells as Array<{
     id: number; name: string; pump_rate: number; layers: number[];
   }>;
+  const landUse = detail.land_use as {
+    fractions: Record<string, number>;
+    total_area: number;
+    crops: Array<{ crop_id: number; name: string; fraction: number; area: number }>;
+  } | null;
 
   return (
     <Drawer
@@ -116,6 +122,78 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
                 ))}
               </TableBody>
             </Table>
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Land Use (always shown; displays data or diagnostic message) */}
+        <Accordion defaultExpanded={!!landUse} disableGutters elevation={0}
+          sx={{ '&:before': { display: 'none' } }}
+        >
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}
+            sx={{ bgcolor: 'grey.100', minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}
+          >
+            <Typography variant="subtitle2">Land Use</Typography>
+          </AccordionSummary>
+          <AccordionDetails sx={{ p: 1 }}>
+            {landUse ? (
+              <>
+                <Plot
+                  data={[{
+                    type: 'pie',
+                    labels: ['Agricultural', 'Urban', 'Native/Riparian', 'Water'],
+                    values: [
+                      landUse.fractions.agricultural,
+                      landUse.fractions.urban,
+                      landUse.fractions.native_riparian,
+                      landUse.fractions.water,
+                    ],
+                    marker: { colors: ['#4caf50', '#9e9e9e', '#8d6e63', '#2196f3'] },
+                    textinfo: 'label+percent',
+                    hoverinfo: 'label+percent+name',
+                    hole: 0.3,
+                  }]}
+                  layout={{
+                    width: 340,
+                    height: 240,
+                    margin: { t: 10, b: 10, l: 10, r: 10 },
+                    showlegend: false,
+                  }}
+                  config={{ displayModeBar: false }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                  Total area: {landUse.total_area.toLocaleString()} sq ft
+                </Typography>
+                {landUse.crops.length > 0 && (
+                  <Table size="small" sx={{
+                    mt: 1,
+                    '& td, & th': { px: 1, py: 0.25, fontSize: 11 },
+                    '& tbody tr:nth-of-type(even)': { bgcolor: 'grey.50' },
+                  }}>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: 'grey.200' }}>
+                        <TableCell sx={{ fontWeight: 700 }}>Crop</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>Fraction</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>Area (sq ft)</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {landUse.crops.map((c) => (
+                        <TableRow key={c.crop_id}>
+                          <TableCell>{c.name}</TableCell>
+                          <TableCell align="right">{(c.fraction * 100).toFixed(1)}%</TableCell>
+                          <TableCell align="right">{c.area.toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                No land use data available for this element. Check that root zone
+                area files are correctly parsed and wired.
+              </Typography>
+            )}
           </AccordionDetails>
         </Accordion>
 

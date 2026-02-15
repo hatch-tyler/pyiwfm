@@ -242,16 +242,34 @@ class _V4xReaderBase:
     def _read_element_table(
         self, buf: _LineBuffer, n_values: int
     ) -> list[ElementCropRow]:
-        """Read *n_elements* rows each with *element_id + n_values* cols."""
+        """Read *n_elements* rows each with *element_id + n_values* cols.
+
+        Handles the IWFM ``IE=0`` shorthand: when the first row has
+        ``element_id == 0``, a single row of values applies to every
+        element and only one data line is present in the file.
+        """
         rows: list[ElementCropRow] = []
-        count = 0
-        while count < self.n_elements:
+
+        # Read first row to check for IE=0 shorthand
+        line = buf.next_data()
+        parts = line.split()
+        elem_id = int(parts[0])
+        vals = [float(v) for v in parts[1 : 1 + n_values]]
+
+        if elem_id == 0:
+            # IE=0: single row applies to all elements
+            for eid in range(1, self.n_elements + 1):
+                rows.append(ElementCropRow(element_id=eid, values=list(vals)))
+            return rows
+
+        # Normal path: first row is element 1, read remaining
+        rows.append(ElementCropRow(element_id=elem_id, values=vals))
+        for _ in range(self.n_elements - 1):
             line = buf.next_data()
             parts = line.split()
             elem_id = int(parts[0])
             vals = [float(v) for v in parts[1 : 1 + n_values]]
             rows.append(ElementCropRow(element_id=elem_id, values=vals))
-            count += 1
         return rows
 
     def _read_ag_initial_conditions(
@@ -459,8 +477,9 @@ class PondedCropReaderV4x(_V4xReaderBase):
         # Ponding depth pointers
         cfg.ponding_depth_pointers = self._read_element_table(buf, nc)
 
-        # Decomposition water pointers
-        cfg.decomp_water_pointers = self._read_element_table(buf, nc)
+        # Decomp water pointers — Fortran reads 2 cols (elem_id + 1 value)
+        # when lReadNCrops=.FALSE. (the v4.1 default)
+        cfg.decomp_water_pointers = self._read_element_table(buf, 1)
 
         # Return flow pointers
         cfg.return_flow_pointers = self._read_element_table(buf, nc)

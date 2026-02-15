@@ -58,6 +58,10 @@ export interface ViewerState {
   showSubsidenceLocations: boolean;
   isAnimating: boolean;
 
+  // === Head global range (for fixed animation color scale) ===
+  headGlobalMin: number | null;
+  headGlobalMax: number | null;
+
   // === Map overlay toggles ===
   showSubregions: boolean;
   showStreamsOnMap: boolean;
@@ -163,6 +167,9 @@ export interface ViewerState {
   setShowStreamLocations: (show: boolean) => void;
   setShowSubsidenceLocations: (show: boolean) => void;
   setIsAnimating: (a: boolean) => void;
+
+  // Head global range
+  setHeadGlobalRange: (min: number | null, max: number | null) => void;
 
   // Map overlays
   setShowSubregions: (show: boolean) => void;
@@ -283,6 +290,10 @@ export const useViewerStore = create<ViewerState>((set) => ({
   showSubsidenceLocations: true,
   isAnimating: false,
 
+  // Head global range
+  headGlobalMin: null,
+  headGlobalMax: null,
+
   // Map overlays
   showSubregions: false,
   showStreamsOnMap: false,
@@ -400,6 +411,9 @@ export const useViewerStore = create<ViewerState>((set) => ({
   setShowStreamLocations: (show) => set({ showStreamLocations: show }),
   setShowSubsidenceLocations: (show) => set({ showSubsidenceLocations: show }),
   setIsAnimating: (a) => set({ isAnimating: a }),
+
+  // Head global range
+  setHeadGlobalRange: (min, max) => set({ headGlobalMin: min, headGlobalMax: max }),
 
   // Map overlays
   setShowSubregions: (show) => set({ showSubregions: show }),

@@ -33,13 +33,28 @@ def _ensure_land_use_loaded() -> None:
     if rz.element_landuse:
         return  # already populated
 
+    # Log which area files were wired
+    for label, af in [
+        ("nonponded", getattr(rz, "nonponded_area_file", None)),
+        ("ponded", getattr(rz, "ponded_area_file", None)),
+        ("urban", getattr(rz, "urban_area_file", None)),
+        ("native", getattr(rz, "native_area_file", None)),
+    ]:
+        if af is not None:
+            logger.info("  %s area file: %s (exists=%s)", label, af, af.exists())
+        else:
+            logger.info("  %s area file: NOT WIRED", label)
+
     # Try loading from area files
     try:
         rz.load_land_use_snapshot(timestep=0)
-        logger.info(
-            "Loaded %d land use entries from area files",
-            len(rz.element_landuse),
-        )
+        n_loaded = len(rz.element_landuse)
+        logger.info("Loaded %d land use entries from area files", n_loaded)
+        if n_loaded == 0:
+            logger.warning(
+                "No land use data loaded! Check that area file paths are "
+                "correctly wired from sub-file configs."
+            )
     except Exception as exc:
         logger.warning("Could not load land use from area files: %s", exc)
 

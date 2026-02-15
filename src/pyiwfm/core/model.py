@@ -1515,65 +1515,107 @@ class IWFMModel:
                                 n_elements - n_soil,
                             )
 
-                        # Read sub-files — dispatch on version
+                        # Read sub-files — dispatch on version.
+                        # Each reader in its own try/except so one failure
+                        # doesn't cascade to the others.
                         _use_v5 = version_ge(rz_config.version, (5, 0))
-                        try:
-                            if _use_v5:
-                                from pyiwfm.io.rootzone_native import (
-                                    NativeRiparianReader,
-                                )
-                                from pyiwfm.io.rootzone_nonponded import (
-                                    NonPondedCropReader,
-                                )
-                                from pyiwfm.io.rootzone_ponded import (
-                                    PondedCropReader,
-                                )
 
-                                if (
-                                    rz_config.nonponded_crop_file
-                                    and rz_config.nonponded_crop_file.exists()
-                                ):
+                        if _use_v5:
+                            from pyiwfm.io.rootzone_native import (
+                                NativeRiparianReader,
+                            )
+                            from pyiwfm.io.rootzone_nonponded import (
+                                NonPondedCropReader,
+                            )
+                            from pyiwfm.io.rootzone_ponded import (
+                                PondedCropReader,
+                            )
+
+                            if (
+                                rz_config.nonponded_crop_file
+                                and rz_config.nonponded_crop_file.exists()
+                            ):
+                                try:
                                     rootzone.nonponded_config = (
                                         NonPondedCropReader().read(
                                             rz_config.nonponded_crop_file,
                                             base_dir,
                                         )
                                     )
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to read nonponded sub-file (v5): %s",
+                                        exc,
+                                    )
 
-                                if (
-                                    rz_config.ponded_crop_file
-                                    and rz_config.ponded_crop_file.exists()
-                                ):
+                            if (
+                                rz_config.ponded_crop_file
+                                and rz_config.ponded_crop_file.exists()
+                            ):
+                                try:
                                     rootzone.ponded_config = (
                                         PondedCropReader().read(
                                             rz_config.ponded_crop_file,
                                             base_dir,
                                         )
                                     )
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to read ponded sub-file (v5): %s",
+                                        exc,
+                                    )
 
-                                if (
-                                    rz_config.native_veg_file
-                                    and rz_config.native_veg_file.exists()
-                                ):
+                            if (
+                                rz_config.urban_file
+                                and rz_config.urban_file.exists()
+                            ):
+                                try:
+                                    from pyiwfm.io.rootzone_urban import (
+                                        UrbanLandUseReader,
+                                    )
+
+                                    rootzone.urban_config = (
+                                        UrbanLandUseReader().read(
+                                            rz_config.urban_file,
+                                            base_dir,
+                                        )
+                                    )
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to read urban sub-file (v5): %s",
+                                        exc,
+                                    )
+
+                            if (
+                                rz_config.native_veg_file
+                                and rz_config.native_veg_file.exists()
+                            ):
+                                try:
                                     rootzone.native_riparian_config = (
                                         NativeRiparianReader().read(
                                             rz_config.native_veg_file,
                                             base_dir,
                                         )
                                     )
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to read native/riparian sub-file (v5): %s",
+                                        exc,
+                                    )
 
-                            else:
-                                from pyiwfm.io.rootzone_v4x import (
-                                    NativeRiparianReaderV4x,
-                                    NonPondedCropReaderV4x,
-                                    PondedCropReaderV4x,
-                                    UrbanReaderV4x,
-                                )
+                        else:
+                            from pyiwfm.io.rootzone_v4x import (
+                                NativeRiparianReaderV4x,
+                                NonPondedCropReaderV4x,
+                                PondedCropReaderV4x,
+                                UrbanReaderV4x,
+                            )
 
-                                if (
-                                    rz_config.nonponded_crop_file
-                                    and rz_config.nonponded_crop_file.exists()
-                                ):
+                            if (
+                                rz_config.nonponded_crop_file
+                                and rz_config.nonponded_crop_file.exists()
+                            ):
+                                try:
                                     reader = NonPondedCropReaderV4x(
                                         n_elements=n_elements
                                     )
@@ -1581,33 +1623,51 @@ class IWFMModel:
                                         rz_config.nonponded_crop_file,
                                         base_dir,
                                     )
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to read nonponded sub-file: %s",
+                                        exc,
+                                    )
 
-                                if (
-                                    rz_config.ponded_crop_file
-                                    and rz_config.ponded_crop_file.exists()
-                                ):
+                            if (
+                                rz_config.ponded_crop_file
+                                and rz_config.ponded_crop_file.exists()
+                            ):
+                                try:
                                     reader = PondedCropReaderV4x(
                                         n_elements=n_elements
                                     )
                                     rootzone.ponded_config = reader.read(
                                         rz_config.ponded_crop_file, base_dir
                                     )
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to read ponded sub-file: %s",
+                                        exc,
+                                    )
 
-                                if (
-                                    rz_config.urban_file
-                                    and rz_config.urban_file.exists()
-                                ):
+                            if (
+                                rz_config.urban_file
+                                and rz_config.urban_file.exists()
+                            ):
+                                try:
                                     reader = UrbanReaderV4x(
                                         n_elements=n_elements
                                     )
                                     rootzone.urban_config = reader.read(
                                         rz_config.urban_file, base_dir
                                     )
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to read urban sub-file: %s",
+                                        exc,
+                                    )
 
-                                if (
-                                    rz_config.native_veg_file
-                                    and rz_config.native_veg_file.exists()
-                                ):
+                            if (
+                                rz_config.native_veg_file
+                                and rz_config.native_veg_file.exists()
+                            ):
+                                try:
                                     reader = NativeRiparianReaderV4x(
                                         n_elements=n_elements
                                     )
@@ -1617,8 +1677,11 @@ class IWFMModel:
                                             base_dir,
                                         )
                                     )
-                        except Exception:
-                            pass  # sub-file reading is best-effort
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to read native/riparian sub-file: %s",
+                                        exc,
+                                    )
 
                         # Extract crop types from v4.x sub-file configs
                         crop_id_offset = 0
@@ -1655,10 +1718,14 @@ class IWFMModel:
                                     )
                                 )
 
-                        # Wire area data file paths for lazy loading
+                        # Wire area data file paths for lazy loading.
+                        # v5+ configs use "elemental_area_file" while v4x
+                        # use "area_data_file"; try both with fallback.
                         if rootzone.nonponded_config is not None:
                             af = getattr(
                                 rootzone.nonponded_config, "area_data_file", None
+                            ) or getattr(
+                                rootzone.nonponded_config, "elemental_area_file", None
                             )
                             if af is not None:
                                 rootzone.nonponded_area_file = (
@@ -1667,6 +1734,8 @@ class IWFMModel:
                         if rootzone.ponded_config is not None:
                             af = getattr(
                                 rootzone.ponded_config, "area_data_file", None
+                            ) or getattr(
+                                rootzone.ponded_config, "elemental_area_file", None
                             )
                             if af is not None:
                                 rootzone.ponded_area_file = (

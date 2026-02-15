@@ -29,7 +29,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { useViewerStore } from '../../stores/viewerStore';
 import {
-  fetchMeshGeoJSON, fetchHeadsByElement, fetchHeadTimes,
+  fetchMeshGeoJSON, fetchHeadsByElement, fetchHeadTimes, fetchHeadRange,
   fetchHydrographLocations, fetchHydrograph,
   fetchSubregions, fetchStreamGeoJSON, fetchWells,
   fetchPropertyMap, fetchElementDetail,
@@ -94,6 +94,8 @@ export function ResultsMapView() {
     selectedDiversionId, diversionDetail, diversionListOpen,
     isAnimating,
     selectedBasemap,
+    headGlobalMin, headGlobalMax,
+    setHeadGlobalRange,
     setHeadTimes, setSelectedLocation, setSelectedHydrograph,
     setSelectedElement, setElementDetail,
     setSelectedWatershedId, setSelectedWatershedDetail,
@@ -248,10 +250,20 @@ export function ResultsMapView() {
       .catch(() => setComparisonSeries([]));
   }, [compareMode, comparedLocationIds]);
 
-  // Clear head cache when layer changes
+  // Clear head cache and fetch global range when layer changes
   useEffect(() => {
     headCacheRef.current = {};
-  }, [headLayer]);
+    setHeadGlobalRange(null, null);
+    if (hasHeads) {
+      fetchHeadRange(headLayer, 50)
+        .then(range => {
+          setHeadGlobalRange(range.min, range.max);
+        })
+        .catch(() => {
+          setHeadGlobalRange(null, null);
+        });
+    }
+  }, [headLayer, hasHeads, setHeadGlobalRange]);
 
   // Load per-element head values when timestep changes — only when coloring by head.
   // Uses fetchHeadsByElement (vertex-averaged) so values align 1:1 with GeoJSON features.
@@ -472,8 +484,10 @@ export function ResultsMapView() {
     const usePropertyColor = !colorByHead && !colorByDiff && propertyValues !== null;
     const useDiffColor = colorByDiff && diffValues !== null;
     const activeValues = useDiffColor ? (diffValues as number[]) : usePropertyColor ? propertyValues : headValues;
-    const activeMin = useDiffColor ? diffMin : usePropertyColor ? propertyMin : headMin;
-    const activeMax = useDiffColor ? diffMax : usePropertyColor ? propertyMax : headMax;
+    // Use global range when available (fixed scale across animation);
+    // fall back to per-frame range.
+    const activeMin = useDiffColor ? diffMin : usePropertyColor ? propertyMin : (headGlobalMin ?? headMin);
+    const activeMax = useDiffColor ? diffMax : usePropertyColor ? propertyMax : (headGlobalMax ?? headMax);
     const isLogScale = usePropertyColor && propertyMeta?.log_scale;
 
     // Symmetric range for diverging scale
@@ -1037,7 +1051,7 @@ export function ResultsMapView() {
 
     return result;
   }, [
-    geojson, headValues, headMin, headMax,
+    geojson, headValues, headMin, headMax, headGlobalMin, headGlobalMax,
     propertyValues, propertyMin, propertyMax, propertyMeta,
     colorByHead, colorByDiff, mapColorProperty,
     diffValues, diffMin, diffMax,
@@ -1063,8 +1077,8 @@ export function ResultsMapView() {
     : colorByHead
       ? 'Head (ft)'
       : `${propertyMeta?.name ?? mapColorProperty} ${propertyMeta?.units ? `(${propertyMeta.units})` : ''}`;
-  const legendMin = colorByDiff ? -Math.max(Math.abs(diffMin), Math.abs(diffMax)) : colorByHead ? headMin : propertyMin;
-  const legendMax = colorByDiff ? Math.max(Math.abs(diffMin), Math.abs(diffMax)) : colorByHead ? headMax : propertyMax;
+  const legendMin = colorByDiff ? -Math.max(Math.abs(diffMin), Math.abs(diffMax)) : colorByHead ? (headGlobalMin ?? headMin) : propertyMin;
+  const legendMax = colorByDiff ? Math.max(Math.abs(diffMin), Math.abs(diffMax)) : colorByHead ? (headGlobalMax ?? headMax) : propertyMax;
   const showLegend = colorByDiff ? !!diffValues : colorByHead ? !!headValues : !!propertyValues;
   const isDivergingLegend = colorByDiff;
 

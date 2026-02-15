@@ -763,7 +763,8 @@ class RootZoneMainFileReader:
                 if rz_zb_path:
                     config.rz_zone_budget_file = self._resolve_path(base_dir, rz_zb_path)
 
-                # LU area scaling output (optional in v4.11)
+            # LU area scaling output (v4.12+ only)
+            if is_v412_plus:
                 lu_scale_path = self._next_data_or_empty(f)
                 if lu_scale_path:
                     config.lu_area_scale_file = self._resolve_path(base_dir, lu_scale_path)
