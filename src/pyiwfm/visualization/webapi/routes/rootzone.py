@@ -19,21 +19,27 @@ _land_use_loaded = False
 
 
 def _ensure_land_use_loaded() -> None:
-    """Lazy-load land use data on first request if element_landuse is empty."""
+    """Lazy-load land use data on first request if element_landuse is empty.
+
+    Prefers the HDF5-backed AreaDataManager for fast access.
+    Falls back to the text-based ``load_land_use_snapshot()`` method.
+    """
     global _land_use_loaded
     if _land_use_loaded:
         return
-    _land_use_loaded = True
 
     model = model_state.model
     if model is None or model.rootzone is None:
+        _land_use_loaded = True
         return
 
     rz = model.rootzone
     if rz.element_landuse:
+        _land_use_loaded = True
         return  # already populated
 
     # Log which area files were wired
+    has_any_file = False
     for label, af in [
         ("nonponded", getattr(rz, "nonponded_area_file", None)),
         ("ponded", getattr(rz, "ponded_area_file", None)),
@@ -41,22 +47,122 @@ def _ensure_land_use_loaded() -> None:
         ("native", getattr(rz, "native_area_file", None)),
     ]:
         if af is not None:
-            logger.info("  %s area file: %s (exists=%s)", label, af, af.exists())
+            exists = af.exists()
+            logger.info("  %s area file: %s (exists=%s)", label, af, exists)
+            if exists:
+                has_any_file = True
         else:
             logger.info("  %s area file: NOT WIRED", label)
 
-    # Try loading from area files
+    if not has_any_file:
+        logger.warning(
+            "No area files wired or found on disk. "
+            "Land use data will not be available. "
+            "Check that root zone sub-files are parsed correctly."
+        )
+        _land_use_loaded = True
+        return
+
+    # Try HDF5 area manager first (triggers conversion if needed)
+    mgr = model_state.get_area_manager()
+    if mgr is not None and mgr.n_timesteps > 0:
+        logger.info(
+            "Area data available via HDF5 manager (%d timesteps)",
+            mgr.n_timesteps,
+        )
+        # Populate element_landuse from first timestep for backward compat
+        try:
+            snapshot = mgr.get_snapshot(0)
+            rz.load_land_use_from_arrays(snapshot)
+            logger.info(
+                "Loaded %d land use entries from HDF5 area cache",
+                len(rz.element_landuse),
+            )
+            _land_use_loaded = True
+            return
+        except Exception as exc:
+            logger.warning(
+                "HDF5 area snapshot failed, falling back to text: %s", exc,
+                exc_info=True,
+            )
+
+    # Fallback: text-based loading
     try:
+        logger.info("Attempting text-based land use loading...")
         rz.load_land_use_snapshot(timestep=0)
         n_loaded = len(rz.element_landuse)
-        logger.info("Loaded %d land use entries from area files", n_loaded)
-        if n_loaded == 0:
+        if n_loaded > 0:
+            logger.info("Loaded %d land use entries from area files", n_loaded)
+            _land_use_loaded = True
+        else:
             logger.warning(
-                "No land use data loaded! Check that area file paths are "
-                "correctly wired from sub-file configs."
+                "No land use data loaded from text files! "
+                "Area files exist but produced no data rows."
             )
     except Exception as exc:
-        logger.warning("Could not load land use from area files: %s", exc)
+        logger.warning(
+            "Could not load land use from area files: %s", exc,
+            exc_info=True,
+        )
+
+
+@router.get("/status")
+def get_rootzone_status() -> dict:
+    """Diagnostic endpoint showing land-use loading status."""
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    model = model_state.model
+    if model.rootzone is None:
+        return {"loaded": False, "reason": "No rootzone component in model"}
+
+    rz = model.rootzone
+
+    area_files: dict[str, dict] = {}
+    for label, attr in [
+        ("nonponded", "nonponded_area_file"),
+        ("ponded", "ponded_area_file"),
+        ("urban", "urban_area_file"),
+        ("native", "native_area_file"),
+    ]:
+        af = getattr(rz, attr, None)
+        if af is not None:
+            area_files[label] = {
+                "path": str(af),
+                "exists": af.exists(),
+                "size_bytes": af.stat().st_size if af.exists() else None,
+            }
+        else:
+            area_files[label] = {"path": None, "exists": False}
+
+    configs: dict[str, bool] = {
+        "nonponded_config": rz.nonponded_config is not None,
+        "ponded_config": rz.ponded_config is not None,
+        "urban_config": rz.urban_config is not None,
+        "native_riparian_config": rz.native_riparian_config is not None,
+    }
+
+    mgr = model_state.get_area_manager()
+    mgr_info = None
+    if mgr is not None:
+        mgr_info = {
+            "n_timesteps": mgr.n_timesteps,
+            "loaders": {
+                lbl: {"n_frames": l.n_frames, "n_elements": l.n_elements, "n_cols": l.n_cols}
+                for lbl, l in mgr._loaders()
+            },
+        }
+
+    return {
+        "loaded": True,
+        "land_use_loaded": _land_use_loaded,
+        "n_element_landuse": len(rz.element_landuse),
+        "n_crop_types": len(rz.crop_types),
+        "area_files": area_files,
+        "configs_loaded": configs,
+        "area_manager": mgr_info,
+        "rootzone_version": model.metadata.get("rootzone_version"),
+    }
 
 
 @router.get("/land-use")
@@ -66,9 +172,8 @@ def get_land_use(
     """
     Get per-element land use fractions and dominant type.
 
-    Returns a dict with element_id keys mapping to fractions of each
-    land use type (agricultural, urban, native_riparian, water) and the
-    dominant type for choropleth coloring.
+    Uses the HDF5 area manager for fast O(1) timestep access when available,
+    falling back to text reader.
     """
     if not model_state.is_loaded:
         raise HTTPException(status_code=404, detail="No model loaded")
@@ -82,7 +187,23 @@ def get_land_use(
     # Lazy-load on first request
     _ensure_land_use_loaded()
 
-    # If a non-zero timestep was requested, reload
+    # Try HDF5 manager for fast access
+    mgr = model_state.get_area_manager()
+    if mgr is not None and mgr.n_timesteps > 0:
+        if timestep >= mgr.n_timesteps:
+            timestep = mgr.n_timesteps - 1
+        snapshot = mgr.get_snapshot(timestep)
+        elements: list[dict] = []
+        for eid, data in snapshot.items():
+            elements.append({
+                "element_id": eid,
+                "fractions": data["fractions"],
+                "dominant": data["dominant"],
+                "total_area": data["total_area"],
+            })
+        return {"n_elements": len(elements), "elements": elements}
+
+    # Fallback: text-based loading
     if timestep > 0 and (
         rz.nonponded_area_file
         or rz.ponded_area_file
@@ -109,7 +230,7 @@ def get_land_use(
         elem_data[eid][elu.land_use_type.value] += elu.area
 
     # Build response with fractions and dominant type
-    elements: list[dict] = []
+    elements = []
     for eid, areas in elem_data.items():
         total = sum(areas.values())
         fractions = {
@@ -128,6 +249,60 @@ def get_land_use(
         "n_elements": len(elements),
         "elements": elements,
     }
+
+
+@router.get("/timesteps")
+def get_land_use_timesteps() -> dict:
+    """
+    Get available timestep dates for land-use area data.
+    """
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    model = model_state.model
+    if model.rootzone is None:
+        raise HTTPException(status_code=404, detail="No root zone data in model")
+
+    mgr = model_state.get_area_manager()
+    if mgr is None or mgr.n_timesteps == 0:
+        return {"n_timesteps": 0, "dates": []}
+
+    dates = mgr.get_dates()
+    return {"n_timesteps": len(dates), "dates": dates}
+
+
+@router.get("/land-use/{element_id}/timeseries")
+def get_element_land_use_timeseries(
+    element_id: int = Path(description="Element ID"),
+) -> dict:
+    """
+    Get full timeseries of land-use areas for a single element.
+
+    Returns per-category area arrays across all timesteps, suitable
+    for plotting as a stacked area chart.
+    """
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    model = model_state.model
+    if model.rootzone is None:
+        raise HTTPException(status_code=404, detail="No root zone data in model")
+
+    mgr = model_state.get_area_manager()
+    if mgr is None or mgr.n_timesteps == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="No area data available for timeseries",
+        )
+
+    result = mgr.get_element_timeseries(element_id)
+    if len(result) <= 2:  # only element_id + dates, no actual data
+        raise HTTPException(
+            status_code=404,
+            detail=f"No area data for element {element_id}",
+        )
+
+    return result
 
 
 @router.get("/land-use/{element_id}/crops")

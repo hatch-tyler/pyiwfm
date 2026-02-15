@@ -252,6 +252,12 @@ def _reset_model_state():
     model_state._budget_readers = {}
     model_state._observations = {}
     model_state._results_dir = None
+    # Restore any monkey-patched methods back to the class originals
+    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
+                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
+                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+        if attr in model_state.__dict__:
+            del model_state.__dict__[attr]
 
 
 @pytest.fixture()
@@ -1215,25 +1221,23 @@ class TestStreamRoutesFull:
         with patch.object(model_state, "get_stream_reach_boundaries", return_value=boundaries):
             app = create_app()
             client = TestClient(app)
-            try:
-                resp = client.get("/api/streams")
-                assert resp.status_code == 200
-                data = resp.json()
-                # Should have 2 separate reaches, not 1 giant line
-                assert data["n_reaches"] == 2
-                assert data["n_nodes"] == 4  # nodes 1-4 valid
-                assert len(data["reaches"]) == 2
-                # Reach 1 should contain nodes [1, 2], reach 2 should contain [3, 4]
-                assert data["reaches"][0] == [1, 2]
-                assert data["reaches"][1] == [3, 4]
-                # Nodes should have correct reach_ids assigned
-                for node in data["nodes"]:
-                    if node["id"] in [1, 2]:
-                        assert node["reach_id"] == 1
-                    elif node["id"] in [3, 4]:
-                        assert node["reach_id"] == 2
-            finally:
-                _reset_model_state()
+            resp = client.get("/api/streams")
+            assert resp.status_code == 200
+            data = resp.json()
+            # Should have 2 separate reaches, not 1 giant line
+            assert data["n_reaches"] == 2
+            assert data["n_nodes"] == 4  # nodes 1-4 valid
+            assert len(data["reaches"]) == 2
+            # Reach 1 should contain nodes [1, 2], reach 2 should contain [3, 4]
+            assert data["reaches"][0] == [1, 2]
+            assert data["reaches"][1] == [3, 4]
+            # Nodes should have correct reach_ids assigned
+            for node in data["nodes"]:
+                if node["id"] in [1, 2]:
+                    assert node["reach_id"] == 1
+                elif node["id"] in [3, 4]:
+                    assert node["reach_id"] == 2
+        _reset_model_state()
 
     def test_streams_preprocessor_geojson_fallback(self):
         """GeoJSON endpoint also uses preprocessor binary fallback."""
@@ -1267,17 +1271,15 @@ class TestStreamRoutesFull:
         with patch.object(model_state, "get_stream_reach_boundaries", return_value=boundaries):
             app = create_app()
             client = TestClient(app)
-            try:
-                resp = client.get("/api/streams/geojson")
-                assert resp.status_code == 200
-                data = resp.json()
-                assert data["type"] == "FeatureCollection"
-                assert len(data["features"]) == 2
-                for feat in data["features"]:
-                    assert feat["geometry"]["type"] == "LineString"
-                    assert len(feat["geometry"]["coordinates"]) == 2
-            finally:
-                _reset_model_state()
+            resp = client.get("/api/streams/geojson")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["type"] == "FeatureCollection"
+            assert len(data["features"]) == 2
+            for feat in data["features"]:
+                assert feat["geometry"]["type"] == "LineString"
+                assert len(feat["geometry"]["coordinates"]) == 2
+        _reset_model_state()
 
 
 class TestStreamReachesWithIntNodes:
@@ -2849,7 +2851,7 @@ class TestModelSummary:
                 data = resp.json()
                 assert data["rootzone"]["n_crop_types"] == 20
                 # land use is None when element_landuse is empty (no fallback)
-                assert data["rootzone"]["n_land_use_assignments"] is None
+                assert data["rootzone"]["n_land_use_elements"] is None
                 assert data["rootzone"]["n_soil_parameter_sets"] == 100
         finally:
             _reset_model_state()
@@ -2902,26 +2904,24 @@ class TestStreamStrategyPriorityAndLogging:
         with patch.object(model_state, "get_stream_reach_boundaries", return_value=boundaries):
             app = create_app()
             client = TestClient(app)
-            try:
-                with patch(
-                    "pyiwfm.visualization.webapi.routes.streams.logger"
-                ) as mock_logger:
-                    resp = client.get("/api/streams")
-                    assert resp.status_code == 200
-                    data = resp.json()
-                    assert data["n_reaches"] == 2
-                    # Should log strategy 2 (preprocessor binary), NOT strategy 3
-                    info_calls = [
-                        str(c) for c in mock_logger.info.call_args_list
-                    ]
-                    assert any("strategy 2" in c for c in info_calls), (
-                        f"Expected 'strategy 2' in log calls, got: {info_calls}"
-                    )
-                    assert not any("strategy 3" in c for c in info_calls), (
-                        "Strategy 3 should not have been reached"
-                    )
-            finally:
-                _reset_model_state()
+            with patch(
+                "pyiwfm.visualization.webapi.routes.streams.logger"
+            ) as mock_logger:
+                resp = client.get("/api/streams")
+                assert resp.status_code == 200
+                data = resp.json()
+                assert data["n_reaches"] == 2
+                # Should log strategy 2 (preprocessor binary), NOT strategy 3
+                info_calls = [
+                    str(c) for c in mock_logger.info.call_args_list
+                ]
+                assert any("strategy 2" in c for c in info_calls), (
+                    f"Expected 'strategy 2' in log calls, got: {info_calls}"
+                )
+                assert not any("strategy 3" in c for c in info_calls), (
+                    "Strategy 3 should not have been reached"
+                )
+        _reset_model_state()
 
     def test_single_reach_fallback_emits_warning(self):
         """Strategy 5 (single-reach fallback) should emit a WARNING log."""
@@ -2951,23 +2951,21 @@ class TestStreamStrategyPriorityAndLogging:
         with patch.object(model_state, "get_stream_reach_boundaries", return_value=[]):
             app = create_app()
             client = TestClient(app)
-            try:
-                with patch(
-                    "pyiwfm.visualization.webapi.routes.streams.logger"
-                ) as mock_logger:
-                    resp = client.get("/api/streams")
-                    assert resp.status_code == 200
-                    data = resp.json()
-                    # Single-reach fallback
-                    assert data["n_reaches"] == 1
-                    # Should have a WARNING log
-                    assert mock_logger.warning.called, (
-                        "Expected WARNING log for single-reach fallback"
-                    )
-                    warn_msg = str(mock_logger.warning.call_args)
-                    assert "strategy 5" in warn_msg or "single-reach" in warn_msg
-            finally:
-                _reset_model_state()
+            with patch(
+                "pyiwfm.visualization.webapi.routes.streams.logger"
+            ) as mock_logger:
+                resp = client.get("/api/streams")
+                assert resp.status_code == 200
+                data = resp.json()
+                # Single-reach fallback
+                assert data["n_reaches"] == 1
+                # Should have a WARNING log
+                assert mock_logger.warning.called, (
+                    "Expected WARNING log for single-reach fallback"
+                )
+                warn_msg = str(mock_logger.warning.call_args)
+                assert "strategy 5" in warn_msg or "single-reach" in warn_msg
+        _reset_model_state()
 
     def test_populated_reaches_logs_strategy_1(self):
         """Strategy 1 (populated reaches) should emit INFO log."""

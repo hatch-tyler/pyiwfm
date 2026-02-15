@@ -439,7 +439,7 @@ class TestCheckDSS:
         import pyiwfm.io.writer_base as wb
 
         monkeypatch.setattr(wb, "HAS_DSS", False)
-        with pytest.raises(ImportError, match="DSS support requires heclib"):
+        with pytest.raises(ImportError, match="DSS support requires the bundled HEC-DSS library"):
             wb._check_dss()
 
     def test_check_dss_passes_when_available(self, monkeypatch) -> None:
@@ -556,7 +556,7 @@ class TestTimeSeriesWriterAdditional:
             values=[10.0],
         )
 
-        with pytest.raises(ImportError, match="DSS support requires heclib"):
+        with pytest.raises(ImportError, match="DSS support requires the bundled HEC-DSS library"):
             writer.write_timeseries(spec)
 
     def test_write_timeseries_both_format_requires_text_file(
@@ -597,7 +597,7 @@ class TestTimeSeriesWriterAdditional:
             units="cfs",
         )
 
-        with pytest.raises(ImportError, match="DSS support requires heclib"):
+        with pytest.raises(ImportError, match="DSS support requires the bundled HEC-DSS library"):
             writer.write_timeseries(spec, text_file="output.dat")
 
         # Text file should have been written before the DSS error

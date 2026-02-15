@@ -127,12 +127,13 @@ class RootZoneSummary(BaseModel):
     loaded: bool
     n_crop_types: int | None = None
     n_land_use_types: int | None = None
-    n_land_use_assignments: int | None = None
+    land_use_type_names: list[str] | None = None
     n_soil_parameter_sets: int | None = None
     missing_soil_param_elements: list[int] | None = None
     n_land_use_elements: int | None = None
     n_missing_land_use: int | None = None
     land_use_coverage: str | None = None
+    n_area_timesteps: int | None = None
 
 
 class SmallWatershedSummary(BaseModel):
@@ -333,26 +334,17 @@ def get_model_summary() -> ModelSummary:
             if count > 0:
                 n_crops = count
 
-        n_land_use = (
-            len(rz.element_landuse) if hasattr(rz, "element_landuse") else 0
-        )
-
-        # Count distinct land use types present in model
-        n_lu_types = 0
-        if hasattr(rz, "element_landuse") and rz.element_landuse:
-            lu_types = {elu.land_use_type.value for elu in rz.element_landuse}
-            n_lu_types = len(lu_types)
-        else:
-            count = 0
-            if getattr(rz, "nonponded_config", None) is not None or getattr(
-                rz, "ponded_config", None
-            ) is not None:
-                count += 1  # agricultural
-            if getattr(rz, "urban_config", None) is not None:
-                count += 1  # urban
-            if getattr(rz, "native_riparian_config", None) is not None:
-                count += 1  # native_riparian
-            n_lu_types = count
+        # Determine land use types from configs
+        lu_type_names: list[str] = []
+        if getattr(rz, "nonponded_config", None) is not None:
+            lu_type_names.append("Non-ponded Agricultural")
+        if getattr(rz, "ponded_config", None) is not None:
+            lu_type_names.append("Ponded Agricultural")
+        if getattr(rz, "urban_config", None) is not None:
+            lu_type_names.append("Urban")
+        if getattr(rz, "native_riparian_config", None) is not None:
+            lu_type_names.append("Native/Riparian")
+        n_lu_types = len(lu_type_names)
 
         n_soil = len(rz.soil_params) if hasattr(rz, "soil_params") else 0
 
@@ -369,6 +361,7 @@ def get_model_summary() -> ModelSummary:
         n_lu_elements: int | None = None
         n_missing_lu: int | None = None
         lu_coverage: str | None = None
+        n_area_ts: int | None = None
 
         # Trigger lazy loading if needed
         if not rz.element_landuse and (
@@ -378,28 +371,60 @@ def get_model_summary() -> ModelSummary:
             or getattr(rz, "native_area_file", None)
         ):
             try:
-                rz.load_land_use_snapshot(timestep=0)
-            except Exception:
-                pass
+                from pyiwfm.visualization.webapi.routes.rootzone import (
+                    _ensure_land_use_loaded,
+                )
+
+                _ensure_land_use_loaded()
+            except Exception as exc:
+                logger.warning(
+                    "Summary: land use lazy-load failed: %s", exc,
+                )
 
         if hasattr(rz, "element_landuse") and rz.element_landuse:
             covered_ids = {elu.element_id for elu in rz.element_landuse}
             n_lu_elements = len(covered_ids)
             n_missing_lu = max(0, model.n_elements - n_lu_elements)
             lu_coverage = f"{n_lu_elements}/{model.n_elements}"
-            # Update land use count after lazy load
-            n_land_use = len(rz.element_landuse)
+
+        # Fallback: compute coverage directly from HDF5 area manager
+        if n_lu_elements is None:
+            try:
+                mgr = model_state.get_area_manager()
+                if mgr is not None and mgr.n_timesteps > 0:
+                    snapshot = mgr.get_snapshot(0)
+                    if snapshot:
+                        n_lu_elements = len(snapshot)
+                        n_missing_lu = max(
+                            0, model.n_elements - n_lu_elements
+                        )
+                        lu_coverage = (
+                            f"{n_lu_elements}/{model.n_elements}"
+                        )
+            except Exception as exc:
+                logger.warning(
+                    "Summary: HDF5 area manager stats failed: %s", exc,
+                )
+
+        # Get area timestep count from HDF5 manager
+        try:
+            mgr = model_state.get_area_manager()
+            if mgr is not None and mgr.n_timesteps > 0:
+                n_area_ts = mgr.n_timesteps
+        except Exception:
+            pass
 
         rootzone = RootZoneSummary(
             loaded=True,
             n_crop_types=n_crops or None,
             n_land_use_types=n_lu_types or None,
-            n_land_use_assignments=n_land_use or None,
+            land_use_type_names=lu_type_names or None,
             n_soil_parameter_sets=n_soil or None,
             missing_soil_param_elements=missing_elems,
             n_land_use_elements=n_lu_elements,
             n_missing_land_use=n_missing_lu,
             land_use_coverage=lu_coverage,
+            n_area_timesteps=n_area_ts,
         )
     else:
         rootzone = RootZoneSummary(loaded=False)

@@ -96,11 +96,12 @@ export interface RootZoneSummary {
   loaded: boolean;
   n_crop_types: number | null;
   n_land_use_types: number | null;
-  n_land_use_assignments: number | null;
+  land_use_type_names: string[] | null;
   n_soil_parameter_sets: number | null;
   n_land_use_elements: number | null;
   n_missing_land_use: number | null;
   land_use_coverage: string | null;
+  n_area_timesteps: number | null;
 }
 
 export interface SmallWatershedSummary {
@@ -559,8 +560,9 @@ export async function fetchWells(): Promise<WellsResponse> {
 // Element Detail API
 // ===================================================================
 
-export async function fetchElementDetail(elementId: number): Promise<Record<string, unknown>> {
-  const response = await fetch(`${API_BASE}/mesh/element/${elementId}`);
+export async function fetchElementDetail(elementId: number, timestep?: number): Promise<Record<string, unknown>> {
+  const params = timestep !== undefined ? `?timestep=${timestep}` : '';
+  const response = await fetch(`${API_BASE}/mesh/element/${elementId}${params}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch element detail: ${response.statusText}`);
   }
@@ -688,22 +690,61 @@ export async function fetchCrossSectionJSON(
 // Root Zone / Land Use API
 // ===================================================================
 
-export interface LandUseData {
-  n_elements: number;
-  elements: Array<{
-    element_id: number;
-    agricultural: number;
-    urban: number;
-    native_riparian: number;
-    water: number;
-    dominant: string;
-  }>;
+export interface LandUseElement {
+  element_id: number;
+  fractions: { agricultural: number; urban: number; native_riparian: number; water: number };
+  dominant: string;
+  total_area: number;
 }
 
-export async function fetchLandUse(): Promise<LandUseData> {
-  const response = await fetch(`${API_BASE}/rootzone/land-use`);
+export interface LandUseData {
+  n_elements: number;
+  elements: LandUseElement[];
+}
+
+export interface LandUseTimesteps {
+  n_timesteps: number;
+  dates: string[];
+}
+
+export interface LandUseAreaSeries {
+  n_cols: number;
+  areas: number[][];
+}
+
+export interface ElementLandUseTimeseries {
+  element_id: number;
+  dates: string[];
+  nonponded?: LandUseAreaSeries;
+  ponded?: LandUseAreaSeries;
+  urban?: LandUseAreaSeries;
+  native?: LandUseAreaSeries;
+}
+
+export async function fetchLandUse(timestep = 0): Promise<LandUseData> {
+  const response = await fetch(`${API_BASE}/rootzone/land-use?timestep=${timestep}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch land use: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchLandUseTimesteps(): Promise<LandUseTimesteps> {
+  const response = await fetch(`${API_BASE}/rootzone/timesteps`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch land use timesteps: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchLandUseDates(): Promise<LandUseTimesteps> {
+  return fetchLandUseTimesteps();
+}
+
+export async function fetchElementLandUseTimeseries(elementId: number): Promise<ElementLandUseTimeseries> {
+  const response = await fetch(`${API_BASE}/rootzone/land-use/${elementId}/timeseries`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch element land use timeseries: ${response.statusText}`);
   }
   return response.json();
 }
@@ -852,7 +893,7 @@ export interface ObservationData {
   units: string;
 }
 
-export async function uploadObservation(file: File): Promise<{
+export async function uploadObservation(file: File, type: string = 'gw'): Promise<{
   observation_id: string;
   n_records: number;
   filename: string;
@@ -861,7 +902,7 @@ export async function uploadObservation(file: File): Promise<{
 }> {
   const formData = new FormData();
   formData.append('file', file);
-  const response = await fetch(`${API_BASE}/observations/upload`, {
+  const response = await fetch(`${API_BASE}/observations/upload?type=${encodeURIComponent(type)}`, {
     method: 'POST',
     body: formData,
   });

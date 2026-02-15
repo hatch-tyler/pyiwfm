@@ -243,6 +243,53 @@ class RootZone:
                 seen.add(elu.element_id)
                 yield elu.element_id
 
+    def load_land_use_from_arrays(
+        self,
+        snapshot: dict[int, dict],
+    ) -> None:
+        """Populate ``element_landuse`` from pre-aggregated snapshot data.
+
+        This is used by the web viewer when the HDF5 area manager has
+        already loaded and aggregated the area data.
+
+        Args:
+            snapshot: Dict mapping element_id to a dict with keys
+                ``fractions`` (dict of land-use type -> fraction),
+                ``total_area`` (float), and ``dominant`` (str).
+        """
+        self.element_landuse.clear()
+        for eid, data in snapshot.items():
+            fracs = data.get("fractions", {})
+            total = data.get("total_area", 0.0)
+            ag_area = fracs.get("agricultural", 0.0) * total
+            urban_area = fracs.get("urban", 0.0) * total
+            native_area = fracs.get("native_riparian", 0.0) * total
+
+            if ag_area > 0:
+                self.element_landuse.append(
+                    ElementLandUse(
+                        element_id=eid,
+                        land_use_type=LandUseType.AGRICULTURAL,
+                        area=ag_area,
+                    )
+                )
+            if urban_area > 0:
+                self.element_landuse.append(
+                    ElementLandUse(
+                        element_id=eid,
+                        land_use_type=LandUseType.URBAN,
+                        area=urban_area,
+                    )
+                )
+            if native_area > 0:
+                self.element_landuse.append(
+                    ElementLandUse(
+                        element_id=eid,
+                        land_use_type=LandUseType.NATIVE_RIPARIAN,
+                        area=native_area,
+                    )
+                )
+
     def load_land_use_snapshot(self, timestep: int = 0) -> None:
         """Read land use areas for a single timestep from area data files.
 

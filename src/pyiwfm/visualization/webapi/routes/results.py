@@ -281,10 +281,59 @@ def get_hydrograph(
         return result
 
     elif type == "subsidence":
-        raise HTTPException(
-            status_code=404,
-            detail="No subsidence hydrograph data available for this model",
-        )
+        reader = model_state.get_subsidence_reader()
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="No subsidence hydrograph data available",
+            )
+
+        # location_id matches the 1-based hydrograph spec index
+        # Try column index first, then node ID lookup
+        col_idx: int | None = None
+
+        # Check subsidence hydrograph specs for matching ID
+        subs_config = None
+        if model and model.groundwater:
+            subs_config = getattr(model.groundwater, "subsidence_config", None)
+        specs = getattr(subs_config, "hydrograph_specs", []) if subs_config else []
+
+        # Match by spec ID (1-based)
+        for i, spec in enumerate(specs):
+            if spec.id == location_id:
+                col_idx = i
+                break
+
+        # Fallback: try as 1-based column index
+        if col_idx is None:
+            candidate = location_id - 1
+            if 0 <= candidate < reader.n_columns:
+                col_idx = candidate
+
+        if col_idx is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Subsidence location {location_id} not found in hydrograph data",
+            )
+
+        times, values = reader.get_time_series(col_idx)
+
+        name = f"Subsidence Obs {location_id}"
+        layer = 1
+        if col_idx < len(specs):
+            spec = specs[col_idx]
+            name = spec.name or name
+            layer = spec.layer
+
+        return {
+            "location_id": location_id,
+            "name": name,
+            "type": "subsidence",
+            "layer": layer,
+            "times": times,
+            "values": _sanitize_values(values),
+            "units": "ft",
+        }
 
     else:
         raise HTTPException(

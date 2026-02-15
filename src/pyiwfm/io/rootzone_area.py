@@ -8,20 +8,43 @@ each crop/category.  The format is::
     FACTARL                                / unit conversion factor
     DSSFL                                  / DSS file (blank = none)
     MM/DD/YYYY_HH:MM  IE  A1  A2  ...  AN
-    MM/DD/YYYY_HH:MM  IE  A1  A2  ...  AN
+                       IE  A1  A2  ...  AN
     ...
 
-Each timestep block has one row per element, with the date repeated on
-every row.
+Each timestep block has one row per element.  The date appears only on
+the **first** row of each block; subsequent rows in the same block
+contain just the element ID and values (continuation rows).
 """
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 # IWFM comment characters (column 1)
 _COMMENT_CHARS = ("C", "c", "*")
+
+
+def _is_comment(line: str) -> bool:
+    """Check if a line is an IWFM comment.
+
+    IWFM comments start with ``C``, ``c``, or ``*`` in column 1.
+    However, ``C:`` is a Windows drive letter (e.g. ``C:\\model\\area.dss``),
+    not a comment.
+    """
+    stripped = line.lstrip()
+    if not stripped:
+        return True
+    ch = stripped[0]
+    if ch not in _COMMENT_CHARS:
+        return False
+    # "C:" or "c:" is a Windows drive letter, not a comment
+    if len(stripped) > 1 and stripped[1] == ":":
+        return False
+    return True
 
 
 @dataclass
@@ -44,8 +67,13 @@ def _strip_description(line: str) -> str:
     return line.strip()
 
 
+def _has_date(token: str) -> bool:
+    """Return True if *token* looks like an IWFM date (contains '/')."""
+    return "/" in token
+
+
 def _read_lines(filepath: Path) -> list[str]:
-    with open(filepath, "r") as fh:
+    with open(filepath) as fh:
         return fh.readlines()
 
 
@@ -55,12 +83,53 @@ def _iter_data_lines(lines: list[str]) -> list[str]:
     for line in lines:
         if not line or not line.strip():
             continue
-        if line[0] in _COMMENT_CHARS:
+        if _is_comment(line):
             continue
         val = _strip_description(line)
         # Keep even empty values (blank DSS file lines)
         result.append(val)
     return result
+
+
+def _parse_data_row(parts: list[str]) -> tuple[str | None, int, list[str]]:
+    """Parse a data row, handling both date-bearing and continuation rows.
+
+    Returns ``(date_or_none, element_id, value_tokens)``.
+
+    - Date-bearing row: ``[date, elem_id, v1, v2, ...]``
+    - Continuation row:  ``[elem_id, v1, v2, ...]``
+    """
+    if _has_date(parts[0]):
+        return parts[0], int(parts[1]), parts[2:]
+    return None, int(parts[0]), parts[1:]
+
+
+def _detect_n_cols(data_lines: list[str], header_n_cols: int) -> int:
+    """Detect the actual number of area columns from data rows.
+
+    Some IWFM versions put a single ``NDATA`` integer on the first header
+    line instead of per-column pointers.  In that case ``header_n_cols``
+    would be 1, which is wrong.  We validate against the first actual
+    data row and use whichever is larger.
+    """
+    for line in data_lines[3:]:
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        date, _eid, vals = _parse_data_row(parts)
+        row_n_cols = len(vals)
+        if row_n_cols == 0:
+            continue
+        if row_n_cols != header_n_cols:
+            logger.debug(
+                "Header n_cols=%d but data row has %d area values; using %d",
+                header_n_cols,
+                row_n_cols,
+                row_n_cols,
+            )
+            return row_n_cols
+        return header_n_cols
+    return header_n_cols
 
 
 def read_area_metadata(filepath: Path | str) -> AreaFileMetadata:
@@ -77,7 +146,7 @@ def read_area_metadata(filepath: Path | str) -> AreaFileMetadata:
         return meta
 
     # First data line: column pointer integers (count = n_columns)
-    meta.n_columns = len(data_lines[0].split())
+    header_n_cols = len(data_lines[0].split())
 
     # Second data line: unit conversion factor
     try:
@@ -88,6 +157,9 @@ def read_area_metadata(filepath: Path | str) -> AreaFileMetadata:
     # Third data line: DSS file path (blank = none)
     meta.dss_file = data_lines[2] if data_lines[2] else ""
 
+    # Validate n_cols against actual data rows
+    meta.n_columns = _detect_n_cols(data_lines, header_n_cols)
+
     return meta
 
 
@@ -96,6 +168,9 @@ def read_area_timestep(
     timestep_index: int = 0,
 ) -> dict[int, list[float]]:
     """Read area data for a single timestep from an IWFM area file.
+
+    Handles both formats: date on every row, or date only on the
+    first row of each timestep block (continuation rows).
 
     Args:
         filepath: Path to the IWFM area time-series file.
@@ -111,12 +186,14 @@ def read_area_timestep(
         return {}
 
     # Header: column pointers, factor, DSS file
-    n_cols = len(data_lines[0].split())
+    header_n_cols = len(data_lines[0].split())
 
     try:
         factor = float(data_lines[1])
     except ValueError:
         factor = 1.0
+
+    n_cols = _detect_n_cols(data_lines, header_n_cols)
 
     # Data rows start at index 3
     current_ts = -1
@@ -128,23 +205,23 @@ def read_area_timestep(
         if len(parts) < 2:
             continue
 
-        # First token should be a date (MM/DD/YYYY_HH:MM)
-        date_str = parts[0]
-        if "/" not in date_str:
-            continue
+        date, elem_id, val_tokens = _parse_data_row(parts)
 
-        elem_id = int(parts[1])
-        areas = [float(v) * factor for v in parts[2 : 2 + n_cols]]
-
-        if current_date is None or date_str != current_date:
+        # A new date means a new timestep
+        if date is not None and (current_date is None or date != current_date):
             current_ts += 1
-            current_date = date_str
+            current_date = date
             if current_ts > timestep_index:
                 break
             if current_ts == timestep_index:
                 result = {}
 
+        # Skip rows before we've seen our first date
+        if current_date is None:
+            continue
+
         if current_ts == timestep_index:
+            areas = [float(v) * factor for v in val_tokens[:n_cols]]
             result[elem_id] = areas
 
     return result
@@ -155,6 +232,9 @@ def read_all_timesteps(
 ) -> list[tuple[str, dict[int, list[float]]]]:
     """Read all timesteps from an IWFM area time-series file.
 
+    Handles both formats: date on every row, or date only on the
+    first row of each timestep block (continuation rows).
+
     Returns:
         List of (date_string, {element_id: [areas]}) tuples.
     """
@@ -164,7 +244,8 @@ def read_all_timesteps(
     if len(data_lines) < 3:
         return []
 
-    n_cols = len(data_lines[0].split())
+    header_n_cols = len(data_lines[0].split())
+    n_cols = _detect_n_cols(data_lines, header_n_cols)
 
     try:
         factor = float(data_lines[1])
@@ -180,21 +261,20 @@ def read_all_timesteps(
         if len(parts) < 2:
             continue
 
-        date_str = parts[0]
-        if "/" not in date_str:
+        date, elem_id, val_tokens = _parse_data_row(parts)
+
+        if date is not None and (current_date is None or date != current_date):
+            # Flush previous block
+            if current_date is not None and current_block:
+                timesteps.append((current_date, current_block))
+            current_date = date
+            current_block = {}
+
+        # Skip rows before we've seen our first date
+        if current_date is None:
             continue
 
-        elem_id = int(parts[1])
-        areas = [float(v) * factor for v in parts[2 : 2 + n_cols]]
-
-        if current_date is None:
-            current_date = date_str
-            current_block = {}
-        elif date_str != current_date:
-            timesteps.append((current_date, current_block))
-            current_date = date_str
-            current_block = {}
-
+        areas = [float(v) * factor for v in val_tokens[:n_cols]]
         current_block[elem_id] = areas
 
     if current_date is not None and current_block:

@@ -190,9 +190,13 @@ export function ModelOverview() {
               {summary.rootzone.loaded ? (
                 <>
                   <StatLine label="Crop Types" value={summary.rootzone.n_crop_types} />
-                  <StatLine label="Land Use Types" value={summary.rootzone.n_land_use_types} />
-                  <StatLine label="Land Use Assignments" value={summary.rootzone.n_land_use_assignments} />
+                  <StatLine label="Land Use Types" value={
+                    summary.rootzone.land_use_type_names
+                      ? `${summary.rootzone.n_land_use_types} (${summary.rootzone.land_use_type_names.join(', ')})`
+                      : summary.rootzone.n_land_use_types
+                  } />
                   <StatLine label="Land Use Coverage" value={summary.rootzone.land_use_coverage} />
+                  <StatLine label="Area Timesteps" value={summary.rootzone.n_area_timesteps} />
                   <StatLine label="Soil Parameter Sets" value={summary.rootzone.n_soil_parameter_sets} />
                   {summary.rootzone.n_missing_land_use != null && summary.rootzone.n_missing_land_use > 0 && (
                     <Typography variant="body2" color="warning.main" sx={{ mt: 0.5 }}>

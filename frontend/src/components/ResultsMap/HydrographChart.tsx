@@ -3,8 +3,9 @@
  * Shows simulated line and optional observed scatter overlay.
  *
  * Features:
- * - Stream hydrograph Flow / Stage / Both toggle (Issue 4)
- * - GW hydrograph all-layers selector (Issue 3)
+ * - Stream hydrograph Flow / Stage / Both toggle
+ * - GW hydrograph all-layers selector + "Show all layers" toggle
+ * - Subsidence Y-axis label support
  */
 
 import { useState, useEffect } from 'react';
@@ -16,12 +17,20 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
 import CloseIcon from '@mui/icons-material/Close';
 import Plot from 'react-plotly.js';
 import type { HydrographData, ObservationData, GWAllLayersData } from '../../api/client';
 import { fetchGWHydrographAllLayers } from '../../api/client';
 
 type StreamViewMode = 'flow' | 'stage' | 'both';
+
+// Distinct colors for multi-layer display
+const LAYER_COLORS = [
+  '#1976d2', '#d32f2f', '#2e7d32', '#f57c00', '#7b1fa2',
+  '#00838f', '#c62828', '#558b2f', '#e65100', '#4a148c',
+];
 
 interface HydrographChartProps {
   data: HydrographData;
@@ -32,6 +41,7 @@ interface HydrographChartProps {
 export function HydrographChart({ data, observation, onClose }: HydrographChartProps) {
   const hasStreamDualAxis = data.type === 'stream' && data.flow_values && data.stage_values;
   const isGW = data.type === 'gw';
+  const isSubsidence = data.type === 'subsidence';
 
   // Stream view mode: flow | stage | both
   const [streamView, setStreamView] = useState<StreamViewMode>('flow');
@@ -39,6 +49,7 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
   // GW all-layers state
   const [allLayersData, setAllLayersData] = useState<GWAllLayersData | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<number>(data.layer ?? 1);
+  const [showAllLayers, setShowAllLayers] = useState(false);
   const [loadingLayers, setLoadingLayers] = useState(false);
 
   // Fetch all-layers data when a GW hydrograph is opened
@@ -88,20 +99,35 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
       });
     }
   } else if (isGW && allLayersData) {
-    // Use data for the selected layer from all-layers response
-    const layerEntry = allLayersData.layers.find(l => l.layer === selectedLayer);
-    if (layerEntry) {
-      traces.push({
-        x: allLayersData.times,
-        y: layerEntry.values,
-        type: 'scatter',
-        mode: 'lines',
-        name: `Layer ${selectedLayer}`,
-        line: { color: '#1976d2', width: 2 },
-      });
+    if (showAllLayers) {
+      // Plot ALL layer traces simultaneously
+      for (const layerEntry of allLayersData.layers) {
+        const colorIdx = (layerEntry.layer - 1) % LAYER_COLORS.length;
+        traces.push({
+          x: allLayersData.times,
+          y: layerEntry.values,
+          type: 'scatter',
+          mode: 'lines',
+          name: `Layer ${layerEntry.layer}`,
+          line: { color: LAYER_COLORS[colorIdx], width: 2 },
+        });
+      }
+    } else {
+      // Single layer mode
+      const layerEntry = allLayersData.layers.find(l => l.layer === selectedLayer);
+      if (layerEntry) {
+        traces.push({
+          x: allLayersData.times,
+          y: layerEntry.values,
+          type: 'scatter',
+          mode: 'lines',
+          name: `Layer ${selectedLayer}`,
+          line: { color: '#1976d2', width: 2 },
+        });
+      }
     }
   } else {
-    // Single axis fallback (GW head or stream flow-only)
+    // Single axis fallback (GW head, stream flow-only, or subsidence)
     traces.push({
       x: data.times,
       y: data.values,
@@ -125,10 +151,14 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
 
   // Determine y-axis label
   let yLabel = data.units || 'Value';
-  if (hasStreamDualAxis) {
+  if (isSubsidence) {
+    yLabel = 'Subsidence (ft)';
+  } else if (hasStreamDualAxis) {
     if (streamView === 'flow') yLabel = data.flow_units || 'cfs';
     else if (streamView === 'stage') yLabel = data.stage_units || 'ft';
     else yLabel = data.flow_units || 'cfs';
+  } else if (isGW) {
+    yLabel = 'Head (ft)';
   }
 
   const showDualAxis = hasStreamDualAxis && streamView === 'both';
@@ -138,6 +168,7 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
     xaxis: { title: { text: 'Date' }, type: 'date' },
     yaxis: { title: { text: yLabel } },
     legend: { orientation: 'h', y: 1.02, x: 0 },
+    showlegend: showAllLayers || showDualAxis || !!(observation && observation.times.length > 0),
     autosize: true,
   };
 
@@ -150,8 +181,10 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
   }
 
   // Title text
-  const displayLayer = isGW && allLayersData ? selectedLayer : data.layer;
-  const titleText = `${data.name} — ${data.type.toUpperCase()} Hydrograph${displayLayer ? ` (Layer ${displayLayer})` : ''}`;
+  const typeLabel = isSubsidence ? 'SUBSIDENCE' : data.type.toUpperCase();
+  const displayLayer = isGW && allLayersData && !showAllLayers ? selectedLayer : data.layer;
+  const layerSuffix = isGW && showAllLayers ? ' (All Layers)' : displayLayer ? ` (Layer ${displayLayer})` : '';
+  const titleText = `${data.name} — ${typeLabel} Hydrograph${layerSuffix}`;
 
   return (
     <Box
@@ -170,22 +203,38 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
           {loadingLayers && ' (loading layers...)'}
         </Typography>
 
-        {/* GW layer selector */}
+        {/* GW: Show all layers toggle + layer selector */}
         {isGW && allLayersData && allLayersData.n_layers > 1 && (
-          <FormControl size="small" sx={{ minWidth: 90 }}>
-            <Select
-              value={selectedLayer}
-              onChange={(e) => setSelectedLayer(e.target.value as number)}
-              size="small"
-              sx={{ fontSize: 12, height: 28 }}
-            >
-              {allLayersData.layers.map((l) => (
-                <MenuItem key={l.layer} value={l.layer} sx={{ fontSize: 12 }}>
-                  Layer {l.layer}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={showAllLayers}
+                  onChange={(_, c) => setShowAllLayers(c)}
+                  sx={{ py: 0 }}
+                />
+              }
+              label={<Typography variant="caption">All layers</Typography>}
+              sx={{ mr: 0, ml: 0 }}
+            />
+            {!showAllLayers && (
+              <FormControl size="small" sx={{ minWidth: 90 }}>
+                <Select
+                  value={selectedLayer}
+                  onChange={(e) => setSelectedLayer(e.target.value as number)}
+                  size="small"
+                  sx={{ fontSize: 12, height: 28 }}
+                >
+                  {allLayersData.layers.map((l) => (
+                    <MenuItem key={l.layer} value={l.layer} sx={{ fontSize: 12 }}>
+                      Layer {l.layer}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+          </>
         )}
 
         {/* Stream Flow/Stage/Both toggle */}

@@ -439,7 +439,10 @@ def get_property_map(
 
 
 @router.get("/element/{element_id}")
-def get_element_detail(element_id: int) -> dict:
+def get_element_detail(
+    element_id: int,
+    timestep: int = Query(default=-1, description="Land-use timestep (-1=last available)"),
+) -> dict:
     """
     Get detailed information for a single mesh element.
 
@@ -559,42 +562,105 @@ def get_element_detail(element_id: int) -> dict:
                     for lay in range(frame.shape[1])
                 ]
 
-    # Land use breakdown
+    # Land use breakdown — use HDF5 area manager for per-column detail
     land_use: dict | None = None
     rz = model.rootzone if hasattr(model, "rootzone") else None
     if rz is not None:
-        from pyiwfm.visualization.webapi.routes.rootzone import _ensure_land_use_loaded
+        mgr = model_state.get_area_manager()
+        if mgr is not None and mgr.n_timesteps > 0:
+            try:
+                ts = timestep if timestep >= 0 else mgr.n_timesteps - 1
+                if ts >= mgr.n_timesteps:
+                    ts = mgr.n_timesteps - 1
+                breakdown = mgr.get_element_breakdown(element_id, timestep=ts)
+                if breakdown:
+                    # Build per-crop categories from HDF5 column data
+                    categories: list[dict] = []
+                    total_area = 0.0
 
-        _ensure_land_use_loaded()
-        land_uses = rz.get_landuse_for_element(element_id)
-        if land_uses:
-            fracs = {
-                "agricultural": 0.0,
-                "urban": 0.0,
-                "native_riparian": 0.0,
-                "water": 0.0,
-            }
-            for elu in land_uses:
-                fracs[elu.land_use_type.value] += elu.area
-            total = sum(fracs.values())
-            land_use = {
-                "fractions": {
-                    k: round(v / total, 4) if total > 0 else 0.0
-                    for k, v in fracs.items()
-                },
-                "total_area": round(total, 2),
-                "crops": [],
-            }
-            for elu in land_uses:
-                if elu.land_use_type.value == "agricultural":
-                    for crop_id, frac in elu.crop_fractions.items():
-                        ct = rz.crop_types.get(crop_id)
-                        land_use["crops"].append({
-                            "crop_id": crop_id,
-                            "name": ct.name if ct else f"Crop {crop_id}",
-                            "fraction": round(frac, 4),
-                            "area": round(elu.area * frac, 2),
+                    n_nonponded = 0
+                    if rz.nonponded_config is not None:
+                        n_nonponded = getattr(rz.nonponded_config, "n_crops", 0)
+
+                    if "nonponded" in breakdown:
+                        for i, val in enumerate(breakdown["nonponded"]):
+                            crop_id = i + 1
+                            ct = rz.crop_types.get(crop_id)
+                            name = ct.name if ct else f"Crop {crop_id}"
+                            categories.append({
+                                "category": "nonponded",
+                                "name": name,
+                                "area": val,
+                                "crop_id": crop_id,
+                            })
+                            total_area += val
+
+                    if "ponded" in breakdown:
+                        for i, val in enumerate(breakdown["ponded"]):
+                            crop_id = n_nonponded + i + 1
+                            ct = rz.crop_types.get(crop_id)
+                            name = ct.name if ct else f"Ponded {i + 1}"
+                            categories.append({
+                                "category": "ponded",
+                                "name": name,
+                                "area": val,
+                                "crop_id": crop_id,
+                            })
+                            total_area += val
+
+                    if "urban" in breakdown:
+                        urban_total = sum(breakdown["urban"])
+                        categories.append({
+                            "category": "urban",
+                            "name": "Urban",
+                            "area": urban_total,
                         })
+                        total_area += urban_total
+
+                    if "native" in breakdown:
+                        cols = breakdown["native"]
+                        if len(cols) >= 1:
+                            categories.append({
+                                "category": "native",
+                                "name": "Native Vegetation",
+                                "area": cols[0],
+                            })
+                            total_area += cols[0]
+                        if len(cols) >= 2:
+                            categories.append({
+                                "category": "native",
+                                "name": "Riparian Vegetation",
+                                "area": cols[1],
+                            })
+                            total_area += cols[1]
+
+                    # Also compute aggregated fractions for backward compat
+                    ag = sum(
+                        c["area"] for c in categories
+                        if c["category"] in ("nonponded", "ponded")
+                    )
+                    urb = sum(
+                        c["area"] for c in categories if c["category"] == "urban"
+                    )
+                    nrv = sum(
+                        c["area"] for c in categories if c["category"] == "native"
+                    )
+                    land_use = {
+                        "fractions": {
+                            "agricultural": round(ag / total_area, 4) if total_area > 0 else 0.0,
+                            "urban": round(urb / total_area, 4) if total_area > 0 else 0.0,
+                            "native_riparian": round(nrv / total_area, 4) if total_area > 0 else 0.0,
+                            "water": 0.0,
+                        },
+                        "total_area": round(total_area, 2),
+                        "categories": categories,
+                        "units": "acres",
+                    }
+            except Exception as exc:
+                logger.warning(
+                    "Failed to get land use breakdown for element %d: %s",
+                    element_id, exc,
+                )
 
     return {
         "element_id": element_id,

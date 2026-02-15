@@ -1046,28 +1046,23 @@ class TestComputeSurfaceJsonBody:
 
 
 class TestGetTransformerImportError:
-    """Cover lines 326-328: _get_transformer ImportError branch."""
+    """Cover _get_transformer ImportError branch."""
 
     def test_returns_none_when_pyproj_not_available(self):
         """When pyproj cannot be imported, returns None and logs warning."""
         state = ModelState()
         state._transformer = None  # Ensure not cached
 
-        with patch(
-            "pyiwfm.visualization.webapi.config.ModelState._get_transformer",
-            wraps=state._get_transformer,
-        ):
-            # Simulate ImportError for pyproj
-            import builtins
-            real_import = builtins.__import__
+        import builtins
+        real_import = builtins.__import__
 
-            def mock_import(name, *args, **kwargs):
-                if name == "pyproj":
-                    raise ImportError("No module named 'pyproj'")
-                return real_import(name, *args, **kwargs)
+        def mock_import(name, *args, **kwargs):
+            if name == "pyproj":
+                raise ImportError("No module named 'pyproj'")
+            return real_import(name, *args, **kwargs)
 
-            with patch("builtins.__import__", side_effect=mock_import):
-                result = state._get_transformer()
+        with patch("builtins.__import__", side_effect=mock_import):
+            result = state._get_transformer()
 
         assert result is None
 

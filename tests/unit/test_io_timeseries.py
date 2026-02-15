@@ -393,14 +393,12 @@ class TestDssTimeSeriesAdapter:
 class TestHdf5TimeSeriesAdapter:
     """Tests for Hdf5TimeSeriesAdapter."""
 
-    def test_read_raises_import_error_when_h5py_missing(self) -> None:
+    def test_read_raises_on_missing_file(self) -> None:
         adapter = Hdf5TimeSeriesAdapter()
-        with patch.dict("sys.modules", {"h5py": None}):
-            with pytest.raises(ImportError, match="h5py"):
-                adapter.read("test.h5")
+        with pytest.raises(FileNotFoundError):
+            adapter.read("nonexistent_file.h5")
 
     def test_read_with_both_datasets_present(self) -> None:
-        mock_h5py = MagicMock()
         fake_time_data = np.array([0, 86400], dtype=np.int64)
         fake_value_data = np.array([[1.0, 2.0], [3.0, 4.0]])
 
@@ -425,10 +423,9 @@ class TestHdf5TimeSeriesAdapter:
             raise KeyError(key)
 
         mock_file.__getitem__ = getitem
-        mock_h5py.File.return_value = mock_file
 
         adapter = Hdf5TimeSeriesAdapter()
-        with patch.dict("sys.modules", {"h5py": mock_h5py}):
+        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
             times, values, metadata = adapter.read("test.h5")
 
         assert metadata.file_type == TimeSeriesFileType.HDF5
@@ -437,7 +434,6 @@ class TestHdf5TimeSeriesAdapter:
         assert values.shape == (2, 2)
 
     def test_read_missing_time_dataset_returns_empty_times(self) -> None:
-        mock_h5py = MagicMock()
         fake_value_data = np.array([[10.0], [20.0]])
 
         mock_file = MagicMock()
@@ -455,17 +451,15 @@ class TestHdf5TimeSeriesAdapter:
             raise KeyError(key)
 
         mock_file.__getitem__ = getitem
-        mock_h5py.File.return_value = mock_file
 
         adapter = Hdf5TimeSeriesAdapter()
-        with patch.dict("sys.modules", {"h5py": mock_h5py}):
+        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
             times, values, metadata = adapter.read("test.h5")
 
         assert len(times) == 0
         assert times.dtype == np.dtype("datetime64[s]")
 
     def test_read_missing_data_dataset_returns_empty_values(self) -> None:
-        mock_h5py = MagicMock()
         fake_time_data = np.array([0, 86400], dtype=np.int64)
 
         mock_file = MagicMock()
@@ -483,25 +477,21 @@ class TestHdf5TimeSeriesAdapter:
             raise KeyError(key)
 
         mock_file.__getitem__ = getitem
-        mock_h5py.File.return_value = mock_file
 
         adapter = Hdf5TimeSeriesAdapter()
-        with patch.dict("sys.modules", {"h5py": mock_h5py}):
+        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
             times, values, metadata = adapter.read("test.h5")
 
         assert len(values) == 0
         # With empty values, n_columns should be 1 (1D fallback)
         assert metadata.n_columns == 1
 
-    def test_read_metadata_raises_import_error_when_h5py_missing(self) -> None:
+    def test_read_metadata_raises_on_missing_file(self) -> None:
         adapter = Hdf5TimeSeriesAdapter()
-        with patch.dict("sys.modules", {"h5py": None}):
-            with pytest.raises(ImportError, match="h5py"):
-                adapter.read_metadata("test.h5")
+        with pytest.raises(FileNotFoundError):
+            adapter.read_metadata("nonexistent_file.h5")
 
     def test_read_metadata_returns_shape_info(self) -> None:
-        mock_h5py = MagicMock()
-
         mock_file = MagicMock()
         mock_file.__enter__ = MagicMock(return_value=mock_file)
         mock_file.__exit__ = MagicMock(return_value=False)
@@ -516,10 +506,9 @@ class TestHdf5TimeSeriesAdapter:
             raise KeyError(key)
 
         mock_file.__getitem__ = getitem
-        mock_h5py.File.return_value = mock_file
 
         adapter = Hdf5TimeSeriesAdapter()
-        with patch.dict("sys.modules", {"h5py": mock_h5py}):
+        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
             meta = adapter.read_metadata("test.h5")
 
         assert meta.file_type == TimeSeriesFileType.HDF5
@@ -527,17 +516,13 @@ class TestHdf5TimeSeriesAdapter:
         assert meta.n_timesteps == 100
 
     def test_read_metadata_missing_dataset_returns_zeros(self) -> None:
-        mock_h5py = MagicMock()
-
         mock_file = MagicMock()
         mock_file.__enter__ = MagicMock(return_value=mock_file)
         mock_file.__exit__ = MagicMock(return_value=False)
         mock_file.__contains__ = lambda s, key: False
 
-        mock_h5py.File.return_value = mock_file
-
         adapter = Hdf5TimeSeriesAdapter()
-        with patch.dict("sys.modules", {"h5py": mock_h5py}):
+        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
             meta = adapter.read_metadata("test.h5")
 
         assert meta.n_columns == 0

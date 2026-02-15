@@ -1718,48 +1718,6 @@ class IWFMModel:
                                     )
                                 )
 
-                        # Wire area data file paths for lazy loading.
-                        # v5+ configs use "elemental_area_file" while v4x
-                        # use "area_data_file"; try both with fallback.
-                        if rootzone.nonponded_config is not None:
-                            af = getattr(
-                                rootzone.nonponded_config, "area_data_file", None
-                            ) or getattr(
-                                rootzone.nonponded_config, "elemental_area_file", None
-                            )
-                            if af is not None:
-                                rootzone.nonponded_area_file = (
-                                    af if af.is_absolute() else base_dir / af
-                                )
-                        if rootzone.ponded_config is not None:
-                            af = getattr(
-                                rootzone.ponded_config, "area_data_file", None
-                            ) or getattr(
-                                rootzone.ponded_config, "elemental_area_file", None
-                            )
-                            if af is not None:
-                                rootzone.ponded_area_file = (
-                                    af if af.is_absolute() else base_dir / af
-                                )
-                        if rootzone.urban_config is not None:
-                            af = getattr(
-                                rootzone.urban_config, "area_data_file", None
-                            )
-                            if af is not None:
-                                rootzone.urban_area_file = (
-                                    af if af.is_absolute() else base_dir / af
-                                )
-                        if rootzone.native_riparian_config is not None:
-                            af = getattr(
-                                rootzone.native_riparian_config,
-                                "area_data_file",
-                                None,
-                            )
-                            if af is not None:
-                                rootzone.native_area_file = (
-                                    af if af.is_absolute() else base_dir / af
-                                )
-
                     except Exception:
                         # Fall back to treating file as crop types file
                         try:
@@ -1769,6 +1727,39 @@ class IWFMModel:
                                 rootzone.add_crop_type(crop)
                         except Exception:
                             pass
+
+                    # Wire area data file paths for lazy loading.
+                    # This runs OUTSIDE the big try/except above so that
+                    # area files are wired even if crop type extraction
+                    # or other secondary parsing fails.
+                    # v5+ configs use "elemental_area_file" while v4x
+                    # use "area_data_file"; try both with fallback.
+                    try:
+                        for cfg_attr, rz_attr in [
+                            ("nonponded_config", "nonponded_area_file"),
+                            ("ponded_config", "ponded_area_file"),
+                            ("urban_config", "urban_area_file"),
+                            ("native_riparian_config", "native_area_file"),
+                        ]:
+                            cfg = getattr(rootzone, cfg_attr, None)
+                            if cfg is None:
+                                continue
+                            af = getattr(
+                                cfg, "area_data_file", None
+                            ) or getattr(
+                                cfg, "elemental_area_file", None
+                            )
+                            if af is not None:
+                                resolved = af if af.is_absolute() else base_dir / af
+                                setattr(rootzone, rz_attr, resolved)
+                                logger.debug(
+                                    "Wired %s -> %s (exists=%s)",
+                                    rz_attr, resolved, resolved.exists(),
+                                )
+                    except Exception as exc:
+                        logger.warning(
+                            "Failed to wire area data file paths: %s", exc
+                        )
 
                     model.rootzone = rootzone
                 except Exception as e:

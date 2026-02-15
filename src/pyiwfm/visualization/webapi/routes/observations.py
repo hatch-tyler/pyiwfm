@@ -9,7 +9,7 @@ import io
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 
 from pyiwfm.visualization.webapi.config import model_state
 
@@ -17,7 +17,10 @@ router = APIRouter(prefix="/api/observations", tags=["observations"])
 
 
 @router.post("/upload")
-async def upload_observation(file: UploadFile = File(...)) -> dict:
+async def upload_observation(
+    file: UploadFile = File(...),
+    type: str = Query(default="gw", description="Observation type: gw, stream, or subsidence"),
+) -> dict:
     """Upload an observation file (CSV: datetime,value)."""
     if not model_state.is_loaded:
         raise HTTPException(status_code=404, detail="No model loaded")
@@ -81,10 +84,12 @@ async def upload_observation(file: UploadFile = File(...)) -> dict:
     obs_id = str(uuid.uuid4())[:8]
     filename = file.filename or "upload.csv"
 
+    obs_type = type if type in ("gw", "stream", "subsidence") else "gw"
+
     model_state.add_observation(obs_id, {
         "filename": filename,
         "location_id": None,
-        "type": "gw",
+        "type": obs_type,
         "n_records": len(times),
         "times": times,
         "values": values,

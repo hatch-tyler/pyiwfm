@@ -279,10 +279,29 @@ export function ResultsMapView() {
       setHeadValues(cached.values);
       setHeadMin(cached.min);
       setHeadMax(cached.max);
+    } else if (isAnimating) {
+      // During animation: fetch immediately (no debounce) to avoid timer
+      // cleanup race conditions between rapid timestep changes
+      const ts = headTimestep;
+      const ly = headLayer;
+      fetchHeadsByElement(ts, ly).then(data => {
+        const vals = data.values as number[];
+        const lo = data.min;
+        const hi = data.max;
+        const cache = headCacheRef.current;
+        const keys = Object.keys(cache);
+        if (keys.length >= HEAD_CACHE_LIMIT) {
+          delete cache[keys[0]];
+        }
+        const key = `${ts}:${ly}`;
+        cache[key] = { values: vals, min: lo, max: hi };
+        setHeadValues(vals);
+        setHeadMin(lo);
+        setHeadMax(hi);
+      }).catch(() => {});
     } else {
-      // Fetch with short debounce (50ms during animation, 200ms for scrubbing)
+      // Manual slider scrubbing: debounce to avoid rapid fetches
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      const delay = isAnimating ? 50 : 200;
       debounceRef.current = setTimeout(async () => {
         try {
           const data = await fetchHeadsByElement(headTimestep, headLayer);
@@ -306,7 +325,7 @@ export function ResultsMapView() {
         } catch {
           // Head data not available for this timestep
         }
-      }, delay);
+      }, 200);
     }
 
     // Prefetch next timestep when animating

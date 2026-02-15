@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
     from pyiwfm.io.budget import BudgetReader
+    from pyiwfm.visualization.webapi.area_loader import AreaDataManager
     from pyiwfm.visualization.webapi.head_loader import LazyHeadDataLoader
     from pyiwfm.visualization.webapi.hydrograph_reader import IWFMHydrographReader
 
@@ -66,8 +67,10 @@ class ModelState:
         self._head_loader: LazyHeadDataLoader | None = None
         self._gw_hydrograph_reader: IWFMHydrographReader | None = None
         self._stream_hydrograph_reader: IWFMHydrographReader | None = None
+        self._subsidence_reader: IWFMHydrographReader | None = None
         self._budget_readers: dict[str, BudgetReader] = {}
         self._results_dir: Path | None = None
+        self._area_manager: AreaDataManager | None = None
         self._observations: dict[str, dict] = {}  # id -> observation data
 
     @property
@@ -100,7 +103,9 @@ class ModelState:
         self._head_loader = None
         self._gw_hydrograph_reader = None
         self._stream_hydrograph_reader = None
+        self._subsidence_reader = None
         self._budget_readers = {}
+        self._area_manager = None
         self._observations = {}
         self._stream_reach_boundaries = None
         self._diversion_ts_data = None
@@ -480,7 +485,11 @@ class ModelState:
     def _get_transformer(self) -> Any:
         """Get or create the pyproj Transformer for CRS reprojection."""
         if self._transformer is None:
-            from pyproj import Transformer
+            try:
+                from pyproj import Transformer
+            except ImportError:
+                logger.warning("pyproj not installed; coordinates will not be reprojected")
+                return None
 
             self._transformer = Transformer.from_crs(
                 self._crs, "EPSG:4326", always_xy=True
@@ -593,6 +602,45 @@ class ModelState:
         return self._head_loader
 
     # ------------------------------------------------------------------
+    # Area data access (land-use area HDF5)
+    # ------------------------------------------------------------------
+
+    def get_area_manager(self) -> AreaDataManager | None:
+        """Get the area data manager, initializing and converting if needed."""
+        if self._area_manager is not None:
+            return self._area_manager
+
+        if self._model is None or self._model.rootzone is None:
+            return None
+
+        rz = self._model.rootzone
+        has_any = any(
+            getattr(rz, a, None) is not None
+            for a in (
+                "nonponded_area_file",
+                "ponded_area_file",
+                "urban_area_file",
+                "native_area_file",
+            )
+        )
+        if not has_any:
+            return None
+
+        try:
+            from pyiwfm.visualization.webapi.area_loader import AreaDataManager
+
+            mgr = AreaDataManager()
+            cache_dir = self._results_dir or Path(".")
+            mgr.load_from_rootzone(rz, cache_dir)
+            self._area_manager = mgr
+            logger.info("Area manager initialized: %d timesteps", mgr.n_timesteps)
+        except Exception as e:
+            logger.error("Failed to initialize area manager: %s", e)
+            return None
+
+        return self._area_manager
+
+    # ------------------------------------------------------------------
     # Hydrograph readers (IWFM text output files)
     # ------------------------------------------------------------------
 
@@ -663,6 +711,63 @@ class ModelState:
             return None
 
         return self._stream_hydrograph_reader
+
+    def get_subsidence_reader(self) -> IWFMHydrographReader | None:
+        """Get or create the subsidence hydrograph reader from the output file."""
+        if self._subsidence_reader is not None:
+            return self._subsidence_reader
+
+        if self._model is None:
+            return None
+
+        # Check subsidence_config for hydrograph_output_file
+        subs_config = None
+        if self._model.groundwater:
+            subs_config = getattr(self._model.groundwater, "subsidence_config", None)
+
+        if subs_config is not None:
+            output_file = getattr(subs_config, "hydrograph_output_file", None)
+            if output_file:
+                p = Path(output_file)
+                if not p.is_absolute() and self._results_dir:
+                    p = self._results_dir / p
+                if p.exists():
+                    try:
+                        from pyiwfm.visualization.webapi.hydrograph_reader import (
+                            IWFMHydrographReader,
+                        )
+
+                        self._subsidence_reader = IWFMHydrographReader(p)
+                        logger.info(
+                            "Subsidence hydrograph reader: %d columns, %d timesteps",
+                            self._subsidence_reader.n_columns,
+                            self._subsidence_reader.n_timesteps,
+                        )
+                        return self._subsidence_reader
+                    except Exception as e:
+                        logger.error("Failed to load subsidence hydrograph file: %s", e)
+
+        # Fallback: scan model directory for *Subsidence*.out
+        if self._results_dir:
+            for pattern in ("*Subsidence*.out", "*_Subsidence.out", "*subsidence*.out"):
+                matches = list(self._results_dir.glob(pattern))
+                if matches:
+                    try:
+                        from pyiwfm.visualization.webapi.hydrograph_reader import (
+                            IWFMHydrographReader,
+                        )
+
+                        self._subsidence_reader = IWFMHydrographReader(matches[0])
+                        logger.info(
+                            "Subsidence hydrograph reader (scanned): %s, %d columns",
+                            matches[0].name,
+                            self._subsidence_reader.n_columns,
+                        )
+                        return self._subsidence_reader
+                    except Exception as e:
+                        logger.debug("Could not read %s as subsidence: %s", matches[0], e)
+
+        return None
 
     # ------------------------------------------------------------------
     # Hydrograph locations

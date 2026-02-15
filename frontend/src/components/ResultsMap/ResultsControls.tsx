@@ -4,7 +4,7 @@
  * basemap selector, head diff mode, cross-section tool, upload button.
  */
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -70,6 +70,7 @@ export function ResultsControls({ nLayers, onUploadComplete }: ResultsControlsPr
   } = useViewerStore();
 
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [obsType, setObsType] = useState<string>('gw');
 
   const nTimesteps = headTimes.length;
   const currentTime = headTimes[headTimestep] || '';
@@ -134,7 +135,7 @@ export function ResultsControls({ nLayers, onUploadComplete }: ResultsControlsPr
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      await uploadObservation(file);
+      await uploadObservation(file, obsType);
       const obs = await fetchObservations();
       setObservations(obs);
       onUploadComplete?.();
@@ -460,16 +461,28 @@ export function ResultsControls({ nLayers, onUploadComplete }: ResultsControlsPr
 
       <Divider sx={{ my: 1 }} />
 
-      {/* Upload button */}
-      <Box>
+      {/* Observation type + upload */}
+      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'stretch' }}>
+        <FormControl size="small" sx={{ minWidth: 90 }}>
+          <Select
+            value={obsType}
+            onChange={(e) => setObsType(e.target.value as string)}
+            size="small"
+            sx={{ fontSize: 11, height: 32 }}
+          >
+            <MenuItem value="gw" sx={{ fontSize: 11 }}>GW Levels</MenuItem>
+            <MenuItem value="stream" sx={{ fontSize: 11 }}>Stream Gages</MenuItem>
+            <MenuItem value="subsidence" sx={{ fontSize: 11 }}>Subsidence</MenuItem>
+          </Select>
+        </FormControl>
         <Button
           variant="outlined"
           size="small"
           startIcon={<UploadFileIcon />}
           component="label"
-          fullWidth
+          sx={{ flex: 1, textTransform: 'none', fontSize: 11 }}
         >
-          Upload Observation
+          Upload
           <input type="file" accept=".csv,.txt" hidden onChange={handleUpload} />
         </Button>
       </Box>
