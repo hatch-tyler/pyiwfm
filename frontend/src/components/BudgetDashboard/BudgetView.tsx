@@ -4,7 +4,7 @@
  * applies source-unit-aware conversions and time aggregation.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useViewerStore } from '../../stores/viewerStore';
@@ -22,7 +22,14 @@ import {
   convertAreaValues,
   getYAxisLabel,
   getXAxisLabel,
+  sourceVolumeToDisplayDefault,
+  sourceAreaToDisplayDefault,
+  sourceLengthToDisplayDefault,
 } from './budgetUnits';
+import { MonthlyPatternChart } from './MonthlyPatternChart';
+import { ComponentRatioChart } from './ComponentRatioChart';
+import { CumulativeDepartureChart } from './CumulativeDepartureChart';
+import { ExceedanceChart } from './ExceedanceChart';
 
 interface ConvertedChart {
   data: BudgetData;
@@ -111,12 +118,38 @@ export function BudgetView() {
     activeBudgetType, activeBudgetLocation, budgetChartType,
     showBudgetSankey,
     budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
+    budgetAnalysisMode,
+    setBudgetVolumeUnit, setBudgetAreaUnit, setBudgetLengthUnit,
   } = useViewerStore();
 
   const [budgetTypes, setBudgetTypes] = useState<string[]>([]);
   const [budgetData, setBudgetData] = useState<BudgetData | null>(null);
   const [unitsMeta, setUnitsMeta] = useState<BudgetUnitsMetadata | undefined>(undefined);
   const [loading, setLoading] = useState(false);
+  const unitsSynced = useRef(false);
+
+  // Reset unit sync flag when budget type or location changes
+  useEffect(() => {
+    unitsSynced.current = false;
+  }, [activeBudgetType, activeBudgetLocation]);
+
+  // Auto-sync display units from source metadata
+  useEffect(() => {
+    if (unitsSynced.current || !unitsMeta) return;
+    if (unitsMeta.source_volume_unit) {
+      const defaultVol = sourceVolumeToDisplayDefault(unitsMeta.source_volume_unit);
+      if (defaultVol) setBudgetVolumeUnit(defaultVol);
+    }
+    if (unitsMeta.source_area_unit) {
+      const defaultArea = sourceAreaToDisplayDefault(unitsMeta.source_area_unit);
+      if (defaultArea) setBudgetAreaUnit(defaultArea);
+    }
+    if (unitsMeta.source_length_unit) {
+      const defaultLen = sourceLengthToDisplayDefault(unitsMeta.source_length_unit);
+      if (defaultLen) setBudgetLengthUnit(defaultLen);
+    }
+    unitsSynced.current = true;
+  }, [unitsMeta, setBudgetVolumeUnit, setBudgetAreaUnit, setBudgetLengthUnit]);
 
   // Load available budget types
   useEffect(() => {
@@ -198,6 +231,8 @@ export function BudgetView() {
     );
   }
 
+  const showMap = !!(activeBudgetType && activeBudgetLocation && !showBudgetSankey);
+
   return (
     <Box sx={{ display: 'flex', height: '100%' }}>
       {/* Left sidebar controls */}
@@ -209,9 +244,37 @@ export function BudgetView() {
       />
 
       {/* Main chart area */}
-      <Box sx={{ flexGrow: 1, overflow: 'hidden', position: 'relative' }}>
+      <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
         {showBudgetSankey ? (
           <WaterBalanceSankey />
+        ) : budgetAnalysisMode !== 'timeseries' && budgetData && classified ? (
+          budgetAnalysisMode === 'monthly_pattern' ? (
+            <MonthlyPatternChart
+              classified={classified}
+              unitsMeta={unitsMeta}
+              volumeUnit={budgetVolumeUnit}
+              areaUnit={budgetAreaUnit}
+            />
+          ) : budgetAnalysisMode === 'component_ratios' ? (
+            <ComponentRatioChart
+              budgetData={budgetData}
+              classified={classified}
+              unitsMeta={unitsMeta}
+              budgetType={activeBudgetType}
+            />
+          ) : budgetAnalysisMode === 'cumulative_departure' ? (
+            <CumulativeDepartureChart
+              classified={classified}
+              unitsMeta={unitsMeta}
+              volumeUnit={budgetVolumeUnit}
+            />
+          ) : budgetAnalysisMode === 'exceedance' ? (
+            <ExceedanceChart
+              classified={classified}
+              unitsMeta={unitsMeta}
+              volumeUnit={budgetVolumeUnit}
+            />
+          ) : null
         ) : convertedCharts.length > 1 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
             {convertedCharts.map((chart, i) => {
@@ -276,17 +339,25 @@ export function BudgetView() {
             loading={loading}
           />
         )}
+      </Box>
 
-        {/* Location context mini-map */}
-        {activeBudgetType && activeBudgetLocation && !showBudgetSankey && (
-          <Box sx={{
-            position: 'absolute', top: 8, right: 8, width: 300, height: 250,
-            zIndex: 10, borderRadius: 1, overflow: 'hidden', boxShadow: 3,
-          }}>
+      {/* Right-side location map column */}
+      {showMap && (
+        <Box sx={{
+          width: 280, flexShrink: 0, borderLeft: 1, borderColor: 'divider',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <Box sx={{ width: '100%', height: 280, overflow: 'hidden' }}>
             <BudgetLocationMap budgetType={activeBudgetType} locationName={activeBudgetLocation} />
           </Box>
-        )}
-      </Box>
+          <Typography
+            variant="caption"
+            sx={{ px: 1, py: 0.5, textAlign: 'center', color: 'text.secondary' }}
+          >
+            {activeBudgetLocation}
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 }

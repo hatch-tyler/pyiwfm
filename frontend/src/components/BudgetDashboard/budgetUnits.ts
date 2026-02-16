@@ -135,10 +135,10 @@ export const RATE_UNITS: RateOption[] = [
  * Handles case variations and common aliases.
  */
 export function resolveSourceUnit(iwfmString: string): string {
-  const s = iwfmString.trim().toLowerCase().replace(/[_\-\s]+/g, ' ');
+  const s = iwfmString.trim().toLowerCase().replace(/[_\-\s.]+/g, ' ').trim();
   // Volume aliases
   if (s === 'taf' || s === 'thousand acre feet' || s === 'thousand acre ft') return 'taf';
-  if (s === 'af' || s === 'acre feet' || s === 'acre ft' || s === 'acre-feet') return 'af';
+  if (s === 'af' || s === 'acre feet' || s === 'acre ft' || s === 'ac ft' || s === 'acre-feet') return 'af';
   if (s === 'ft3' || s === 'ft^3' || s === 'cubic feet' || s === 'cu ft') return 'ft3';
   if (s === 'm3' || s === 'cubic meters' || s === 'cu m') return 'm3';
   // Area aliases
@@ -150,6 +150,36 @@ export function resolveSourceUnit(iwfmString: string): string {
   if (s === 'meters' || s === 'm') return 'meters';
   // Fallback: return as-is
   return s;
+}
+
+/**
+ * Map a source volume unit string to the best matching display unit id,
+ * or null if unrecognized.
+ */
+export function sourceVolumeToDisplayDefault(sourceUnit: string): string | null {
+  const canonical = resolveSourceUnit(sourceUnit);
+  const match = VOLUME_UNITS.find((u) => u.id === canonical);
+  return match ? match.id : null;
+}
+
+/**
+ * Map a source area unit string to the best matching display unit id,
+ * or null if unrecognized.
+ */
+export function sourceAreaToDisplayDefault(sourceUnit: string): string | null {
+  const canonical = resolveSourceUnit(sourceUnit);
+  const match = AREA_UNITS.find((u) => u.id === canonical);
+  return match ? match.id : null;
+}
+
+/**
+ * Map a source length unit string to the best matching display unit id,
+ * or null if unrecognized.
+ */
+export function sourceLengthToDisplayDefault(sourceUnit: string): string | null {
+  const canonical = resolveSourceUnit(sourceUnit);
+  const match = LENGTH_UNITS.find((u) => u.id === canonical);
+  return match ? match.id : null;
 }
 
 // ---------------------------------------------------------------------------

@@ -58,11 +58,14 @@ export function BudgetControls({
     activeBudgetType, activeBudgetLocation, budgetChartType,
     showBudgetSankey, showBudgetGlossary,
     budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
+    budgetAnalysisMode,
     setActiveBudgetType, setActiveBudgetLocation, setBudgetChartType,
     setShowBudgetSankey, setShowBudgetGlossary,
     setBudgetVolumeUnit, setBudgetRateUnit, setBudgetAreaUnit, setBudgetLengthUnit, setBudgetTimeAgg,
+    setBudgetAnalysisMode,
   } = useViewerStore();
 
+  const isAnalysisMode = budgetAnalysisMode !== 'timeseries';
   const [locations, setLocations] = useState<BudgetLocation[]>([]);
 
   // Load locations when budget type changes
@@ -148,6 +151,7 @@ export function BudgetControls({
             onChange={(_, val) => { if (val) setBudgetChartType(val); }}
             size="small"
             fullWidth
+            disabled={isAnalysisMode}
           >
             <ToggleButton value="area">
               <StackedLineChartIcon fontSize="small" sx={{ mr: 0.5 }} />
@@ -236,7 +240,7 @@ export function BudgetControls({
         )}
 
         {/* Time Aggregation */}
-        <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+        <FormControl fullWidth size="small" sx={{ mb: 1.5 }} disabled={isAnalysisMode}>
           <InputLabel>Time Aggregation</InputLabel>
           <Select
             value={budgetTimeAgg}
@@ -246,6 +250,22 @@ export function BudgetControls({
             {TIME_AGGS.map((a) => (
               <MenuItem key={a.id} value={a.id}>{a.label}</MenuItem>
             ))}
+          </Select>
+        </FormControl>
+
+        {/* Analysis View selector */}
+        <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+          <InputLabel>View</InputLabel>
+          <Select
+            value={budgetAnalysisMode}
+            label="View"
+            onChange={(e) => setBudgetAnalysisMode(e.target.value as typeof budgetAnalysisMode)}
+          >
+            <MenuItem value="timeseries">Time Series</MenuItem>
+            <MenuItem value="monthly_pattern">Monthly Pattern</MenuItem>
+            <MenuItem value="component_ratios">Component Ratios</MenuItem>
+            <MenuItem value="cumulative_departure">Cumulative Departure</MenuItem>
+            <MenuItem value="exceedance">Exceedance Probability</MenuItem>
           </Select>
         </FormControl>
 

@@ -127,37 +127,43 @@ export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMa
     return 'unknown';
   }
 
-  function fitToFeature(geo: BudgetLocationGeometry) {
-    const idx = geo.location_index;
+  function fitToFeature(_geo: BudgetLocationGeometry) {
+    const idx = _geo.location_index;
 
-    // If geometry is a point (stream_node), center on it
-    if (geo.geometry && geo.geometry.type === 'Point') {
-      const [lng, lat] = geo.geometry.coordinates;
-      setViewState({ ...DEFAULT_VIEW, longitude: lng, latitude: lat, zoom: 10 });
+    // If only a point geometry (stream_node) and no context yet, center on it
+    if (_geo.geometry && _geo.geometry.type === 'Point' && !contextData) {
+      const [lng, lat] = _geo.geometry.coordinates;
+      setViewState({ ...DEFAULT_VIEW, longitude: lng, latitude: lat, zoom: 8 });
       return;
     }
 
-    // For polygon/line features, try to get bounds from context data
-    if (contextData && contextData.features.length > idx) {
-      const feature = contextData.features[idx];
-      if (feature) {
-        const bounds = getFeatureBounds(feature);
-        if (bounds) {
-          const [minLng, minLat, maxLng, maxLat] = bounds;
-          const cLng = (minLng + maxLng) / 2;
-          const cLat = (minLat + maxLat) / 2;
-          const span = Math.max(maxLng - minLng, maxLat - minLat);
-          const zoom = span > 0 ? Math.min(12, Math.max(6, -Math.log2(span / 360) + 1)) : 8;
-          setViewState({ ...DEFAULT_VIEW, longitude: cLng, latitude: cLat, zoom });
-          return;
-        }
+    // For GeoJSON context: zoom to the SELECTED feature
+    if (contextData && contextData.features.length > 0 && idx < contextData.features.length) {
+      const bounds = getFeatureBounds(contextData.features[idx]);
+      if (bounds) {
+        const [minLng, minLat, maxLng, maxLat] = bounds;
+        const cLng = (minLng + maxLng) / 2;
+        const cLat = (minLat + maxLat) / 2;
+        const span = Math.max(maxLng - minLng, maxLat - minLat);
+        const zoom = span > 0
+          ? Math.min(13, Math.max(6, -Math.log2(span / 360) + 1)) - 0.3
+          : 10;
+        setViewState({ ...DEFAULT_VIEW, longitude: cLng, latitude: cLat, zoom });
+        return;
       }
     }
 
-    // For point data (small_watershed, diversion)
-    if (pointData && idx < pointData.length) {
+    // For point data (small_watershed, diversion): center on SELECTED point
+    if (pointData && pointData.length > 0 && idx < pointData.length) {
       const pt = pointData[idx];
       setViewState({ ...DEFAULT_VIEW, longitude: pt.lng, latitude: pt.lat, zoom: 10 });
+      return;
+    }
+
+    // Last resort: point geometry (stream_node with context loaded but empty)
+    if (_geo.geometry && _geo.geometry.type === 'Point') {
+      const [lng, lat] = _geo.geometry.coordinates;
+      setViewState({ ...DEFAULT_VIEW, longitude: lng, latitude: lat, zoom: 8 });
     }
   }
 
