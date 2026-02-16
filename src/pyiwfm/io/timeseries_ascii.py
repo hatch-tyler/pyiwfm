@@ -18,15 +18,17 @@ from numpy.typing import NDArray
 
 from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.io.iwfm_reader import (
+    COMMENT_CHARS,
+    is_comment_line as _is_comment_line,
+    strip_inline_comment as _parse_value_line,
+)
 
 
 # IWFM timestamp format: MM/DD/YYYY_HH:MM (16 characters)
 # IWFM uses 24:00 for midnight (end of day) instead of 00:00 (start of next day).
 IWFM_TIMESTAMP_FORMAT = "%m/%d/%Y_%H:%M"
 IWFM_TIMESTAMP_LENGTH = 16
-
-# IWFM comment characters — must appear in column 1 (first character of line)
-COMMENT_CHARS = ("C", "c", "*")
 
 # Reference epoch for numpy datetime64 → Python datetime conversion.
 # Using timedelta arithmetic instead of datetime.utcfromtimestamp() because
@@ -102,20 +104,6 @@ def parse_iwfm_timestamp(ts_str: str) -> datetime:
     return dt
 
 
-def _is_comment_line(line: str) -> bool:
-    """Check if a line is a comment line.
-
-    In IWFM Fortran format, a comment line has the comment character
-    in column 1 (the very first character of the line), not after
-    leading whitespace.
-    """
-    if not line or not line.strip():
-        return True
-    if line[0] in COMMENT_CHARS:
-        return True
-    return False
-
-
 def _strip_inline_comment(line: str) -> str:
     """Strip inline comment from a data line.
 
@@ -123,9 +111,8 @@ def _strip_inline_comment(line: str) -> str:
 
     Returns the value portion of the line with whitespace stripped.
     """
-    if "/" in line:
-        return line.split("/")[0].strip()
-    return line.strip()
+    value, _ = _parse_value_line(line)
+    return value
 
 
 @dataclass

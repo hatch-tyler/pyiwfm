@@ -19,45 +19,11 @@ from numpy.typing import NDArray
 
 from pyiwfm.core.timeseries import TimeUnit, SimulationPeriod
 from pyiwfm.core.exceptions import FileFormatError
-
-
-# IWFM comment characters — must appear in column 1 (first character of line)
-COMMENT_CHARS = ("C", "c", "*")
-
-
-def _is_comment_line(line: str) -> bool:
-    """Check if a line is a comment line.
-
-    In IWFM Fortran format, a comment line has the comment character
-    in column 1 (the very first character of the line), not after
-    leading whitespace.  Lines starting with whitespace followed by
-    data are data lines.  A ``#`` as the first non-whitespace character
-    also denotes a comment / empty-value line.
-    """
-    if not line or not line.strip():
-        return True
-    # C, c, * must be in column 1 (position 0 of the raw line)
-    if line[0] in COMMENT_CHARS:
-        return True
-    return False
-
-
-def _parse_value_line(line: str) -> tuple[str, str]:
-    """Parse an IWFM value line with optional description.
-
-    IWFM uses ``/`` or ``#`` as inline comment delimiters.  The
-    separator is always preceded by whitespace so we look for
-    ``whitespace + # …`` or ``whitespace + / …`` to avoid splitting
-    on ``/`` inside dates (``MM/DD/YYYY``) or ``#`` inside values.
-    """
-    import re
-
-    # Find the first occurrence of whitespace followed by '#' or '/'
-    m = re.search(r"\s+[#/]", line)
-    if m:
-        return line[: m.start()].strip(), line[m.end() :].strip()
-
-    return line.strip(), ""
+from pyiwfm.io.iwfm_reader import (
+    COMMENT_CHARS,
+    is_comment_line as _is_comment_line,
+    strip_inline_comment as _parse_value_line,
+)
 
 
 def _format_iwfm_datetime(dt: datetime) -> str:

@@ -24,47 +24,11 @@ from pyiwfm.io.ascii import (
     write_elements,
     write_stratigraphy,
 )
-
-
-# IWFM comment characters - these must be in column 1 (first character)
-COMMENT_CHARS = ("C", "c", "*")
-
-
-def _is_comment_line(line: str) -> bool:
-    """
-    Check if a line is a comment line.
-
-    In IWFM Fortran format, a comment line has the comment character
-    in column 1 (the very first character of the line), not after
-    leading whitespace. Lines starting with whitespace followed by
-    data are data lines.
-    """
-    # Empty or whitespace-only lines are treated as comments
-    if not line.strip():
-        return True
-    # Check first character of the original line (column 1)
-    # Note: lines starting with whitespace followed by data are NOT comments
-    return line[0] in COMMENT_CHARS
-
-
-def _parse_value_line(line: str) -> tuple[str, str]:
-    """
-    Parse an IWFM value line with optional description.
-
-    Format: VALUE / DESCRIPTION  or just VALUE
-
-    Uses "/" as the inline comment delimiter.  The separator is
-    always preceded by whitespace so we look for ``whitespace + /``
-    to avoid splitting on ``/`` inside dates.
-    """
-    import re
-
-    # Find the first occurrence of whitespace followed by '/'
-    m = re.search(r"\s+/", line)
-    if m:
-        return line[: m.start()].strip(), line[m.end() :].strip()
-
-    return line.strip(), ""
+from pyiwfm.io.iwfm_reader import (
+    COMMENT_CHARS,
+    is_comment_line as _is_comment_line,
+    strip_inline_comment as _parse_value_line,
+)
 
 
 def _resolve_path(base_dir: Path, filepath: str) -> Path:

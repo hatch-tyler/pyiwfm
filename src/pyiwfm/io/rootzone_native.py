@@ -17,11 +17,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.rootzone_nonponded import (
-    _LineBuffer,
-    _is_comment_line,
-    _parse_value_line,
+from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
+    LineBuffer as _LineBuffer,
+    is_comment_line as _is_comment_line,
+    strip_inline_comment as _parse_value_line,
 )
 
 

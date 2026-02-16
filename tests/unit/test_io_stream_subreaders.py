@@ -61,8 +61,8 @@ class TestInflowReader:
         content = (
             "C Stream Inflow File\n"
             "C\n"
-            "    1.0                            # Conversion factor\n"
-            "    1DAY                           # Time unit\n"
+            "    1.0                            / Conversion factor\n"
+            "    1DAY                           / Time unit\n"
             "    3                              / NInflow\n"
             "    1    5\n"
             "    2    10\n"
@@ -83,8 +83,8 @@ class TestInflowReader:
     def test_read_single_column_format(self, tmp_path: Path) -> None:
         """Read inflow file with single-column format (node ID only)."""
         content = (
-            "    1.0                            # Conversion factor\n"
-            "    1MON                           # Time unit\n"
+            "    1.0                            / Conversion factor\n"
+            "    1MON                           / Time unit\n"
             "    2                              / NInflow\n"
             "    5\n"
             "    10\n"
@@ -101,8 +101,8 @@ class TestInflowReader:
     def test_read_with_conversion_factor(self, tmp_path: Path) -> None:
         """Read inflow file with non-unit conversion factor."""
         content = (
-            "    0.0283168                      # CFS to CMS\n"
-            "    1DAY                           # Time unit\n"
+            "    0.0283168                      / CFS to CMS\n"
+            "    1DAY                           / Time unit\n"
             "    1                              / NInflow\n"
             "    1    5\n"
         )
@@ -114,8 +114,8 @@ class TestInflowReader:
     def test_read_zero_inflows(self, tmp_path: Path) -> None:
         """Read inflow file with zero inflows."""
         content = (
-            "    1.0                            # Conversion factor\n"
-            "    1DAY                           # Time unit\n"
+            "    1.0                            / Conversion factor\n"
+            "    1DAY                           / Time unit\n"
             "    0                              / NInflow\n"
         )
         filepath = self._write_inflow_file(tmp_path, content)
@@ -137,8 +137,8 @@ class TestInflowReader:
     def test_convenience_function(self, tmp_path: Path) -> None:
         """Test read_stream_inflow convenience function."""
         content = (
-            "    1.0                            # Conversion factor\n"
-            "    1DAY                           # Time unit\n"
+            "    1.0                            / Conversion factor\n"
+            "    1DAY                           / Time unit\n"
             "    1                              / NInflow\n"
             "    1    5\n"
         )
@@ -152,9 +152,9 @@ class TestInflowReader:
             "C Header\n"
             "c lowercase\n"
             "* asterisk\n"
-            "    1.0                            # Conversion factor\n"
+            "    1.0                            / Conversion factor\n"
             "C  comment in the middle\n"
-            "    1DAY                           # Time unit\n"
+            "    1DAY                           / Time unit\n"
             "    2                              / NInflow\n"
             "C  comment before data\n"
             "    1    5\n"
@@ -185,10 +185,10 @@ class TestBypassSpecReader:
         content = (
             "C Bypass Specification File\n"
             "    2                              / NBypass\n"
-            "    1.0                            # FlowFactor\n"
-            "    1DAY                           # FlowTimeUnit\n"
-            "    1.0                            # BypassFactor\n"
-            "    1DAY                           # BypassTimeUnit\n"
+            "    1.0                            / FlowFactor\n"
+            "    1DAY                           / FlowTimeUnit\n"
+            "    1.0                            / BypassFactor\n"
+            "    1DAY                           / BypassTimeUnit\n"
             "    1    5    1    10    0    0.1    0.05    BYP1\n"
             "    2    8    2    3     0    0.2    0.10    BYP2\n"
             "C Seepage zones\n"
@@ -221,10 +221,10 @@ class TestBypassSpecReader:
         """Read bypass with inline rating table (negative rating_table_col)."""
         content = (
             "    1                              / NBypass\n"
-            "    1.0                            # FlowFactor\n"
-            "    1DAY                           # FlowTimeUnit\n"
-            "    1.0                            # BypassFactor\n"
-            "    1DAY                           # BypassTimeUnit\n"
+            "    1.0                            / FlowFactor\n"
+            "    1DAY                           / FlowTimeUnit\n"
+            "    1.0                            / BypassFactor\n"
+            "    1DAY                           / BypassTimeUnit\n"
             "    1    5    1    10    -3    0.1    0.05    RATED\n"
             "    0.0     0.0\n"
             "    100.0   0.5\n"
@@ -260,10 +260,10 @@ class TestBypassSpecReader:
         """Read bypass with seepage zone having elements."""
         content = (
             "    1                              / NBypass\n"
-            "    1.0                            # FlowFactor\n"
-            "    1DAY                           # FlowTimeUnit\n"
-            "    1.0                            # BypassFactor\n"
-            "    1DAY                           # BypassTimeUnit\n"
+            "    1.0                            / FlowFactor\n"
+            "    1DAY                           / FlowTimeUnit\n"
+            "    1.0                            / BypassFactor\n"
+            "    1DAY                           / BypassTimeUnit\n"
             "    1    5    1    10    0    0.1    0.05\n"
             "C Seepage zones\n"
             "    1    2    100    0.6\n"

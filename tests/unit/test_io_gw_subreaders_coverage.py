@@ -80,9 +80,10 @@ class TestPumpingHelpers:
     def test_is_comment_line_data(self) -> None:
         assert _is_comment_line("    10    / NCOLADJ") is False
 
-    def test_parse_value_line_with_hash(self) -> None:
+    def test_parse_value_line_hash_not_delimiter(self) -> None:
+        """'#' is NOT a comment delimiter in IWFM — only '/' is."""
         val, desc = _parse_value_line("    10    # comment")
-        assert val == "10"
+        assert val == "10    # comment"
 
     def test_parse_value_line_with_slash(self) -> None:
         val, desc = _parse_value_line("    10    / comment")

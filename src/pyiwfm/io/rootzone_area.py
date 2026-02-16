@@ -22,29 +22,13 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from pyiwfm.io.iwfm_reader import (
+    COMMENT_CHARS as _COMMENT_CHARS,
+    is_comment_line as _is_comment,
+    strip_inline_comment,
+)
+
 logger = logging.getLogger(__name__)
-
-# IWFM comment characters (column 1)
-_COMMENT_CHARS = ("C", "c", "*")
-
-
-def _is_comment(line: str) -> bool:
-    """Check if a line is an IWFM comment.
-
-    IWFM comments start with ``C``, ``c``, or ``*`` in column 1.
-    However, ``C:`` is a Windows drive letter (e.g. ``C:\\model\\area.dss``),
-    not a comment.
-    """
-    stripped = line.lstrip()
-    if not stripped:
-        return True
-    ch = stripped[0]
-    if ch not in _COMMENT_CHARS:
-        return False
-    # "C:" or "c:" is a Windows drive letter, not a comment
-    if len(stripped) > 1 and stripped[1] == ":":
-        return False
-    return True
 
 
 @dataclass
@@ -58,13 +42,9 @@ class AreaFileMetadata:
 
 
 def _strip_description(line: str) -> str:
-    """Strip inline ``/`` or ``#`` description from an IWFM data line."""
-    import re
-
-    m = re.search(r"\s+[/#]", line)
-    if m:
-        return line[: m.start()].strip()
-    return line.strip()
+    """Strip inline ``/`` description from an IWFM data line."""
+    value, _ = strip_inline_comment(line)
+    return value
 
 
 def _has_date(token: str) -> bool:

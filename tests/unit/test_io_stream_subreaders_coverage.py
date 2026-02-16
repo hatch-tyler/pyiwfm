@@ -69,9 +69,10 @@ class TestInflowHelpers:
     def test_is_comment_data_line(self) -> None:
         assert inflow_is_comment("    42") is False
 
-    def test_parse_value_with_hash(self) -> None:
+    def test_parse_value_hash_not_delimiter(self) -> None:
+        """'#' is NOT a comment delimiter in IWFM — only '/' is."""
         val, _ = inflow_parse_value("    1.0    # factor")
-        assert val == "1.0"
+        assert val == "1.0    # factor"
 
     def test_parse_value_plain(self) -> None:
         val, desc = inflow_parse_value("   hello")
@@ -142,8 +143,8 @@ class TestInflowReaderExtended:
     def test_negative_inflows_returns_empty(self, tmp_path: Path) -> None:
         """Negative inflow count treated as zero."""
         content = (
-            "    1.0                            # factor\n"
-            "    1DAY                           # time\n"
+            "    1.0                            / factor\n"
+            "    1DAY                           / time\n"
             "    -1                             / NInflow\n"
         )
         filepath = self._write(tmp_path, content)
@@ -154,8 +155,8 @@ class TestInflowReaderExtended:
     def test_many_inflows(self, tmp_path: Path) -> None:
         """Read file with many inflow points."""
         lines = [
-            "    1.0                            # factor\n",
-            "    1DAY                           # time\n",
+            "    1.0                            / factor\n",
+            "    1DAY                           / time\n",
             "    10                             / NInflow\n",
         ]
         for i in range(1, 11):
@@ -408,10 +409,10 @@ class TestBypassReaderExtended:
         """Flow factor should multiply inline rating table flow values."""
         content = (
             "    1                              / NBypass\n"
-            "    2.0                            # FlowFactor\n"
-            "    1DAY                           # FlowTimeUnit\n"
-            "    1.0                            # BypassFactor\n"
-            "    1DAY                           # BypassTimeUnit\n"
+            "    2.0                            / FlowFactor\n"
+            "    1DAY                           / FlowTimeUnit\n"
+            "    1.0                            / BypassFactor\n"
+            "    1DAY                           / BypassTimeUnit\n"
             "    1    5    1    10    -2    0.1    0.05\n"
             "    100.0   0.5\n"
             "    200.0   1.0\n"
@@ -430,9 +431,9 @@ class TestBypassReaderExtended:
         """Read bypass with lake destination type."""
         content = (
             "    1                              / NBypass\n"
-            "    1.0                            # FlowFactor\n"
+            "    1.0                            / FlowFactor\n"
             "    1DAY\n"
-            "    1.0                            # BypassFactor\n"
+            "    1.0                            / BypassFactor\n"
             "    1DAY\n"
             "    1    5    2    3    0    0.0    0.0    LAKE_BYP\n"
             "    1    0    0    0.0\n"

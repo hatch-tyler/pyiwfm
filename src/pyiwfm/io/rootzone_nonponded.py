@@ -18,93 +18,12 @@ from pathlib import Path
 from typing import TextIO
 
 from pyiwfm.core.exceptions import FileFormatError
-
-
-# ── IWFM comment / value helpers ──────────────────────────────────────
-COMMENT_CHARS = ("C", "c", "*")
-
-
-def _is_comment_line(line: str) -> bool:
-    """Check if *line* is an IWFM comment or blank line."""
-    if not line or not line.strip():
-        return True
-    if line[0] in COMMENT_CHARS:
-        return True
-    return False
-
-
-def _parse_value_line(line: str) -> tuple[str, str]:
-    """Return ``(value, description)`` from an IWFM data line."""
-    import re
-
-    m = re.search(r"\s+[#/]", line)
-    if m:
-        return line[: m.start()].strip(), line[m.end() :].strip()
-    return line.strip(), ""
-
-
-# ── Line buffer ───────────────────────────────────────────────────────
-
-
-class _LineBuffer:
-    """Read-ahead buffer for positional-sequential IWFM files.
-
-    Supports pushing a line back so that a tabular reader can stop at
-    a boundary and leave the next line available for the caller.
-    """
-
-    __slots__ = ("_lines", "_pos")
-
-    def __init__(self, lines: list[str]) -> None:
-        self._lines = lines
-        self._pos = 0
-
-    @property
-    def line_num(self) -> int:
-        return self._pos
-
-    def next_line(self) -> str | None:
-        """Return the next raw line, or ``None`` at EOF."""
-        if self._pos >= len(self._lines):
-            return None
-        line = self._lines[self._pos]
-        self._pos += 1
-        return line
-
-    def pushback(self) -> None:
-        """Push the last-read line back (decrement position)."""
-        if self._pos > 0:
-            self._pos -= 1
-
-    def next_data(self) -> str:
-        """Return the next non-comment data value.  Raises on EOF."""
-        while self._pos < len(self._lines):
-            line = self._lines[self._pos]
-            self._pos += 1
-            if _is_comment_line(line):
-                continue
-            value, _ = _parse_value_line(line)
-            if value:
-                return value
-        raise FileFormatError(
-            "Unexpected end of file", line_number=self._pos
-        )
-
-    def next_data_or_empty(self) -> str:
-        """Return next data value, or ``""`` at EOF.
-
-        Skips comment lines that start with ``C``/``c``/``*`` but
-        stops at (and returns) the first non-comment line even if it
-        is blank.
-        """
-        while self._pos < len(self._lines):
-            line = self._lines[self._pos]
-            self._pos += 1
-            if line and line[0] in COMMENT_CHARS:
-                continue
-            value, _ = _parse_value_line(line)
-            return value
-        return ""
+from pyiwfm.io.iwfm_reader import (
+    COMMENT_CHARS,
+    LineBuffer as _LineBuffer,
+    is_comment_line as _is_comment_line,
+    strip_inline_comment as _parse_value_line,
+)
 
 
 # ── Data classes ──────────────────────────────────────────────────────

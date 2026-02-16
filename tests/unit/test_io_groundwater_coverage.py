@@ -69,10 +69,11 @@ class TestParseValueLine:
         assert value == "100"
         assert desc == "NWELLS"
 
-    def test_hash_delimiter(self) -> None:
+    def test_hash_not_delimiter(self) -> None:
+        """'#' is NOT a comment delimiter in IWFM — only '/' is."""
         value, desc = _parse_value_line("4.0 # version")
-        assert value == "4.0"
-        assert desc == "version"
+        assert value == "4.0 # version"
+        assert desc == ""
 
     def test_no_description(self) -> None:
         value, desc = _parse_value_line("42")

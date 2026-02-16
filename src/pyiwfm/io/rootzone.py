@@ -20,11 +20,14 @@ from pyiwfm.components.rootzone import (
     SoilParameters,
 )
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.io.iwfm_reader import (
+    COMMENT_CHARS,
+    is_comment_line as _is_comment_line,
+    next_data_line,
+    strip_inline_comment as _parse_value_line,
+)
 
 logger = logging.getLogger(__name__)
-
-# IWFM comment characters — must appear in column 1 (first character of line)
-COMMENT_CHARS = ("C", "c", "*")
 
 
 # ── Version utilities ────────────────────────────────────────────────
@@ -80,34 +83,6 @@ class ElementSoilParamRow:
     dest_urban_out: int = 0
     dest_nvrv: int = 0
 
-
-def _is_comment_line(line: str) -> bool:
-    """Check if a line is a comment line.
-
-    In IWFM Fortran format, a comment line has the comment character
-    in column 1 (the very first character of the line), not after
-    leading whitespace.
-    """
-    if not line or not line.strip():
-        return True
-    if line[0] in COMMENT_CHARS:
-        return True
-    return False
-
-
-def _parse_value_line(line: str) -> tuple[str, str]:
-    """Parse an IWFM value line with optional description.
-
-    Looks for ``whitespace + #`` or ``whitespace + /`` to avoid splitting
-    on ``/`` inside dates or ``#`` inside values.
-    """
-    import re
-
-    m = re.search(r"\s+[#/]", line)
-    if m:
-        return line[: m.start()].strip(), line[m.end() :].strip()
-
-    return line.strip(), ""
 
 
 @dataclass
@@ -904,18 +879,23 @@ class RootZoneMainFileReader:
         blank_count = 0
         max_blanks = 3  # tolerate up to 3 consecutive blank lines
         target = n_elements if n_elements > 0 else 0
+        line_counter = [self._line_num]
         while True:
             if target > 0 and len(rows) >= target:
                 break
-            line_val = self._next_data_or_empty(f)
-            if not line_val:
+            # Use raw line reader — matches Fortran's free-format READ
+            # which reads exactly N values and ignores the rest of the
+            # line (including inline '/ description' comments).
+            raw_line = next_data_line(f, line_counter=line_counter)
+            self._line_num = line_counter[0]
+            if not raw_line:
                 # Tolerate blank lines within the section
                 blank_count += 1
                 if blank_count > max_blanks:
                     break
                 continue
             blank_count = 0
-            parts = line_val.split()
+            parts = raw_line.split()
             if len(parts) < min_cols:
                 if target > 0 and len(rows) < target:
                     # When we know the expected count, skip short
@@ -932,6 +912,10 @@ class RootZoneMainFileReader:
                     )
                     continue
                 break
+            # Take only the first min_cols tokens — Fortran reads
+            # exactly N values and ignores the rest (inline comments,
+            # descriptions).
+            parts = parts[:min_cols]
             try:
                 row = self._parse_soil_param_row(parts, config)
                 rows.append(row)

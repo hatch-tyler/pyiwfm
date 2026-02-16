@@ -83,9 +83,9 @@ class TestLakeMainFileReaderV40:
             "                                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
         )
         filepath = self._write_lake_main(tmp_path, content)
         config = LakeMainFileReader().read(filepath)
@@ -100,9 +100,9 @@ class TestLakeMainFileReaderV40:
             "                                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    0.5                            # FactK\n"
-            "    1MON                           # TimeUnit\n"
-            "    2.0                            # FactL\n"
+            "    0.5                            / FactK\n"
+            "    1MON                           / TimeUnit\n"
+            "    2.0                            / FactL\n"
         )
         filepath = self._write_lake_main(tmp_path, content)
         config = LakeMainFileReader().read(filepath)
@@ -120,12 +120,12 @@ class TestLakeMainFileReaderV40:
         content = (
             "#4.0\n"
             "C *** DO NOT DELETE ABOVE LINE ***\n"
-            "    max_elev.dat                   # MaxElevFile\n"
-            "    budget.dat                     # BudgetFile\n"
+            "    max_elev.dat                   / MaxElevFile\n"
+            "    budget.dat                     / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
         )
         filepath = self._write_lake_main(tmp_path, content)
         config = LakeMainFileReader().read(filepath)
@@ -144,9 +144,9 @@ class TestLakeMainFileReaderV40:
             "                                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
             "    1    0.001    10.0    1    1    1    Clear Lake\n"
             "    2    0.002    15.0    2    2    2    Folsom Lake\n"
         )
@@ -175,9 +175,9 @@ class TestLakeMainFileReaderV40:
             "                                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
         )
         filepath = self._write_lake_main(tmp_path, content)
         config = LakeMainFileReader().read(filepath)
@@ -207,9 +207,9 @@ class TestLakeMainFileReaderV50:
             "                                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
         )
         filepath = self._write_lake_main(tmp_path, content)
         config = LakeMainFileReader().read(filepath)
@@ -223,13 +223,13 @@ class TestLakeMainFileReaderV50:
             "                                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
             "    1    0.001    10.0    1    1    1    TestLake\n"
-            "    1.0                            # ElevFactor\n"
-            "    1.0                            # OutflowFactor\n"
-            "    1DAY                           # OutflowTimeUnit\n"
+            "    1.0                            / ElevFactor\n"
+            "    1.0                            / OutflowFactor\n"
+            "    1DAY                           / OutflowTimeUnit\n"
             "    1    3    100.0    0.0\n"
             "    110.0   50.0\n"
             "    120.0   200.0\n"
@@ -259,13 +259,13 @@ class TestLakeMainFileReaderV50:
             "                                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
             "    1    0.001    10.0    1    1    1\n"
-            "    0.3048                         # ElevFactor (ft to m)\n"
-            "    0.0283168                      # OutflowFactor (cfs to cms)\n"
-            "    1DAY                           # OutflowTimeUnit\n"
+            "    0.3048                         / ElevFactor (ft to m)\n"
+            "    0.0283168                      / OutflowFactor (cfs to cms)\n"
+            "    1DAY                           / OutflowTimeUnit\n"
             "    1    2    100.0    500.0\n"
             "    200.0   1000.0\n"
         )
@@ -286,14 +286,14 @@ class TestLakeMainFileReaderV50:
             "                                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
             "    1    0.001    10.0    1    1    1\n"
             "    2    0.002    20.0    2    2    2\n"
-            "    1.0                            # ElevFactor\n"
-            "    1.0                            # OutflowFactor\n"
-            "    1DAY                           # OutflowTimeUnit\n"
+            "    1.0                            / ElevFactor\n"
+            "    1.0                            / OutflowFactor\n"
+            "    1DAY                           / OutflowTimeUnit\n"
             "    1    2    100.0    0.0\n"
             "    110.0   50.0\n"
             "    2    2    200.0    0.0\n"
@@ -324,9 +324,9 @@ class TestReadLakeMainFile:
             "                                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
         )
         filepath = tmp_path / "lake.dat"
         filepath.write_text(content)
@@ -342,12 +342,12 @@ class TestReadLakeMainFile:
         content = (
             "#4.0\n"
             "C *** DO NOT DELETE ABOVE LINE ***\n"
-            "    max_elev.dat                   # MaxElevFile\n"
+            "    max_elev.dat                   / MaxElevFile\n"
             "                                   / BudgetFile\n"
             "                                   / FinalElevFile\n"
-            "    1.0                            # FactK\n"
-            "    1DAY                           # TimeUnit\n"
-            "    1.0                            # FactL\n"
+            "    1.0                            / FactK\n"
+            "    1DAY                           / TimeUnit\n"
+            "    1.0                            / FactL\n"
         )
         filepath = tmp_path / "lake.dat"
         filepath.write_text(content)

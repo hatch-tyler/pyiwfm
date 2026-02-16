@@ -94,10 +94,10 @@ class TestIsComment:
         assert not _is_comment("C:\\model\\area.dss")
         assert not _is_comment("c:\\data\\file.dat")
 
-    def test_leading_whitespace_comment(self):
-        """Comments with leading whitespace are detected."""
-        assert _is_comment("   C  This is a comment")
-        assert _is_comment("  *  asterisk comment")
+    def test_leading_whitespace_not_comment(self):
+        """Column-1 rule: indented C/c/* is NOT a comment."""
+        assert not _is_comment("   C  This is a comment")
+        assert not _is_comment("  *  asterisk comment")
 
     def test_leading_whitespace_windows_path(self):
         """Indented Windows paths are not comments."""

@@ -111,11 +111,11 @@ class TestHelpers:
         assert value == "100.0"
         assert desc == "Output factor"
 
-    def test_parse_value_line_with_hash(self) -> None:
-        """Value followed by ' # comment' is split correctly."""
+    def test_parse_value_line_hash_not_delimiter(self) -> None:
+        """'#' is NOT a comment delimiter in IWFM — only '/' is."""
         value, desc = _parse_value_line("4.0 # version")
-        assert value == "4.0"
-        assert desc == "version"
+        assert value == "4.0 # version"
+        assert desc == ""
 
     def test_parse_value_line_no_description(self) -> None:
         """Line with no delimiter returns empty description."""

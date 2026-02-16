@@ -23,31 +23,16 @@ import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.io.iwfm_reader import (
+    COMMENT_CHARS,
+    is_comment_line as _is_comment_line,
+    strip_inline_comment as _parse_value_line,
+)
 
-
-COMMENT_CHARS = ("C", "c", "*")
 
 # Bypass destination types
 BYPASS_DEST_STREAM = 1
 BYPASS_DEST_LAKE = 2
-
-
-def _is_comment_line(line: str) -> bool:
-    """Check if a line is a comment line."""
-    if not line or not line.strip():
-        return True
-    if line[0] in COMMENT_CHARS:
-        return True
-    return False
-
-
-def _parse_value_line(line: str) -> tuple[str, str]:
-    """Parse an IWFM value line with optional description."""
-    import re
-    m = re.search(r"\s+[#/]", line)
-    if m:
-        return line[:m.start()].strip(), line[m.end():].strip()
-    return line.strip(), ""
 
 
 @dataclass
