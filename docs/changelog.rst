@@ -11,6 +11,31 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 
 Supplemental Package Support and Web Viewer Enhancements
 
+Fixed
+~~~~~
+
+**Root Zone Version-Dependent Parsing Bugs**
+
+- Fixed ARSCLFL (land use area scaling) version guard: only read for v4.12+, not v4.11+
+- Fixed FinalMoistureOutFile (FMFL) read: skip for v4.12+ where it was removed
+- Fixed root zone soil parameter table parsing when ``n_elements`` is known
+
+Changed
+~~~~~~~
+
+**I/O Reader Deduplication** (``pyiwfm.io.iwfm_reader``)
+
+- Centralized ``resolve_path()``, ``next_data_or_empty()``, ``parse_version()``,
+  and ``version_ge()`` into ``iwfm_reader.py`` — the canonical module for all
+  IWFM file-reading utilities
+- Replaced 14 identical ``_next_data_or_empty`` method copies across reader modules
+  with thin wrappers delegating to the central function
+- Replaced 11 identical ``_resolve_path`` copies (10 methods + 1 module-level function
+  in ``preprocessor.py``) with delegations to ``iwfm_reader.resolve_path()``
+- Unified version parsing: ``rootzone.parse_version`` and ``streams.parse_stream_version``
+  merged into ``iwfm_reader.parse_version()`` (handles both ``.`` and ``-`` separators)
+- Net reduction of ~42 lines across 16 files with no behavior changes
+
 Added
 ~~~~~
 

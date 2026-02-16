@@ -474,6 +474,18 @@ Complete model writer that orchestrates all component writers.
 Infrastructure
 --------------
 
+IWFM Reader Utilities
+~~~~~~~~~~~~~~~~~~~~~
+
+Central module for IWFM file line-reading, comment handling, version parsing,
+and path resolution.  All ``io/`` reader modules import helpers from here
+rather than defining their own copies.
+
+.. automodule:: pyiwfm.io.iwfm_reader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Comment Extractor
 ~~~~~~~~~~~~~~~~~
 

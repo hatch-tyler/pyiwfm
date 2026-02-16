@@ -88,6 +88,7 @@ frontend/              # React + TypeScript + vtk.js + deck.gl (builds to webapi
 
 ### I/O System
 The `io/` module handles 50+ IWFM file formats. Key patterns:
+- **`iwfm_reader.py`** is the central module for all IWFM line-reading utilities. It provides: `COMMENT_CHARS`, `is_comment_line()`, `strip_inline_comment()`, `next_data_value()`, `next_data_line()`, `next_data_or_empty()`, `resolve_path()`, `parse_version()`, `version_ge()`, and `LineBuffer`. All 19+ io/ readers import from this module — never duplicate these helpers.
 - Readers parse IWFM ASCII/binary files into Python objects
 - Writers use Jinja2 templates via `templates/engine.py` (hybrid Jinja2 headers + NumPy array output)
 - Comment preservation during roundtrip (read → write) via `comment_extractor.py` and `comment_writer.py`

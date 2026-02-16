@@ -59,6 +59,7 @@ output/
 # OS files
 .DS_Store
 Thumbs.db
+NUL
 
 # Environment / secrets
 .env
