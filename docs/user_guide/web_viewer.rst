@@ -1,5 +1,5 @@
 Interactive Web Viewer
-=====================
+======================
 
 pyiwfm includes a browser-based interactive viewer for exploring IWFM
 models. The viewer is built with `FastAPI <https://fastapi.tiangolo.com/>`_

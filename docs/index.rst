@@ -110,47 +110,24 @@ Contents
    :caption: User Guide
 
    user_guide/index
-   user_guide/installation
-   user_guide/quickstart
-   user_guide/mesh
-   user_guide/stratigraphy
-   user_guide/io
-   user_guide/web_viewer
-   user_guide/pest
 
 .. toctree::
    :maxdepth: 2
    :caption: Tutorials
 
    tutorials/index
-   tutorials/mesh_generation
-   tutorials/visualization
-   tutorials/model_comparison
 
 .. toctree::
    :maxdepth: 2
    :caption: Gallery
 
    gallery/index
-   gallery/mesh_visualization
-   gallery/scalar_fields
-   gallery/stream_networks
-   gallery/stratigraphy
-   gallery/timeseries
-   gallery/budget_plots
 
 .. toctree::
    :maxdepth: 2
    :caption: API Reference
 
    api/index
-   api/core
-   api/components
-   api/io
-   api/mesh_generation
-   api/visualization
-   api/comparison
-   api/runner
 
 .. toctree::
    :maxdepth: 1

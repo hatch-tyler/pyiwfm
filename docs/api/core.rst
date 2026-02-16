@@ -7,41 +7,10 @@ IWFM models, including meshes, stratigraphy, and time series data.
 Mesh Module
 -----------
 
-The mesh module contains classes for representing finite element meshes.
+The mesh module contains classes for representing finite element meshes,
+including ``Node``, ``Element``, ``Face``, and ``AppGrid``.
 
 .. automodule:: pyiwfm.core.mesh
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Node
-~~~~
-
-.. autoclass:: pyiwfm.core.mesh.Node
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Element
-~~~~~~~
-
-.. autoclass:: pyiwfm.core.mesh.Element
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Face
-~~~~
-
-.. autoclass:: pyiwfm.core.mesh.Face
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-AppGrid
-~~~~~~~
-
-.. autoclass:: pyiwfm.core.mesh.AppGrid
    :members:
    :undoc-members:
    :show-inheritance:
@@ -72,19 +41,8 @@ The time series module provides classes for working with temporal data.
 Model Module
 ------------
 
-The model module provides the central IWFMModel class that orchestrates all
+The model module provides the central ``IWFMModel`` class that orchestrates all
 model components.
-
-.. automodule:: pyiwfm.core.model
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-IWFMModel
-~~~~~~~~~
-
-The IWFMModel class is the main container for IWFM models, providing methods
-for loading models from various sources and saving to different formats.
 
 **Loading Models:**
 
@@ -101,7 +59,7 @@ for loading models from various sources and saving to different formats.
 - ``model.to_hdf5(output_file)`` - Save to HDF5 format
 - ``model.to_binary(output_file)`` - Save mesh/stratigraphy to binary
 
-.. autoclass:: pyiwfm.core.model.IWFMModel
+.. automodule:: pyiwfm.core.model
    :members:
    :undoc-members:
    :show-inheritance:
@@ -118,22 +76,6 @@ The zones module provides data structures for defining spatial zones
    :undoc-members:
    :show-inheritance:
 
-Zone
-~~~~
-
-.. autoclass:: pyiwfm.core.zones.Zone
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ZoneDefinition
-~~~~~~~~~~~~~~
-
-.. autoclass:: pyiwfm.core.zones.ZoneDefinition
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 
 Aggregation Module
 ------------------
@@ -146,14 +88,6 @@ values to zone-level statistics using configurable methods.
    :undoc-members:
    :show-inheritance:
 
-DataAggregator
-~~~~~~~~~~~~~~
-
-.. autoclass:: pyiwfm.core.aggregation.DataAggregator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 
 Query Module
 ------------
@@ -162,14 +96,6 @@ The query module provides a high-level API for accessing model data at
 multiple spatial scales with aggregation and export capabilities.
 
 .. automodule:: pyiwfm.core.query
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ModelQueryAPI
-~~~~~~~~~~~~~
-
-.. autoclass:: pyiwfm.core.query.ModelQueryAPI
    :members:
    :undoc-members:
    :show-inheritance:

@@ -241,24 +241,22 @@ def read_geojson_zones(
 
     Notes
     -----
-    Expected GeoJSON structure:
+    Expected GeoJSON structure::
 
-    ```json
-    {
-      "type": "FeatureCollection",
-      "features": [
         {
-          "type": "Feature",
-          "properties": {
-            "id": 1,
-            "name": "Zone A",
-            "element_id": [1, 2, 3, 4]
-          },
-          "geometry": {...}
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "properties": {
+                "id": 1,
+                "name": "Zone A",
+                "element_id": [1, 2, 3, 4]
+              },
+              "geometry": { ... }
+            }
+          ]
         }
-      ]
-    }
-    ```
     """
     filepath = Path(filepath)
 

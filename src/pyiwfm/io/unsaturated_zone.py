@@ -42,9 +42,9 @@ logger = logging.getLogger(__name__)
 class UnsatZoneElementData:
     """Per-element unsaturated zone parameters for all layers.
 
-    Fortran format per line: ElemID, [ThickMax_L1, Porosity_L1, Lambda_L1,
-                              HydCond_L1, KMethod_L1, ...(repeat per layer)]
-    Total values per line: 1 + 5 * n_layers
+    Fortran format per line: ``ElemID, [ThickMax_L1, Porosity_L1, Lambda_L1,
+    HydCond_L1, KMethod_L1, ...(repeat per layer)]``.
+    Total values per line: ``1 + 5 * n_layers``.
 
     Attributes:
         element_id: 1-based element ID.

@@ -672,12 +672,9 @@ C------------------------------------------------------------------------------
         """
         Write the diversion specifications file.
 
-        IWFM format (14-column, no spills):
-        - NDIVER
-        - Per diversion: ID, IRDV, ICDVMAX, FDVMAX, ICOLRL, FRACRL,
-          ICOLNL, FRACNL, TYPDSTDL, DSTDL, ICOLDL, FRACDL, ICFSIRIG, ICADJ, NAME
-        - NGRP + element groups
-        - Recharge zones (one per diversion)
+        Writes IWFM 14-column (no spills) diversion specification format
+        including NDIVER, per-diversion parameters, element groups, and
+        recharge zones.
 
         Returns
         -------

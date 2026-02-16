@@ -60,7 +60,7 @@ napoleon_include_special_with_doc = True
 napoleon_use_admonition_for_examples = True
 napoleon_use_admonition_for_notes = True
 napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
+napoleon_use_ivar = True
 napoleon_use_param = True
 napoleon_use_rtype = True
 napoleon_preprocess_types = True
@@ -82,6 +82,10 @@ autodoc_default_options = {
 autodoc_typehints = "description"
 autodoc_typehints_description_target = "documented"
 
+# Suppress docutils formatting warnings from autodoc type rendering
+# (e.g., np.bool_ trailing underscore treated as RST reference marker)
+suppress_warnings = ["docutils"]
+
 # Intersphinx mapping
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -93,7 +97,13 @@ intersphinx_mapping = {
 
 # Templates path
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "PEST_INTERFACE_DESIGN.md",
+    "PLAN_Complete_IO_Implementation.md",
+]
 
 # Source suffix
 source_suffix = {

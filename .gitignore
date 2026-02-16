@@ -45,6 +45,7 @@ frontend/dist/
 
 # Documentation build
 docs/_build/
+docs/api/generated/
 
 # CMake build artifacts
 cmake/build/

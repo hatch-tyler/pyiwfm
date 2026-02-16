@@ -5,11 +5,9 @@ This module provides the LazyHeadDataLoader class for loading
 time-varying head data from HDF5 or binary files without
 reading all timesteps into memory at once.
 
-Supports two HDF5 formats:
-- pyiwfm format: dataset ``head`` with shape ``(n_timesteps, n_nodes, n_layers)``
-  and a ``times`` dataset with ISO datetime strings.
-- IWFM native format: dataset ``/GWHeadAtAllNodes`` with shape
-  ``(n_timesteps, n_nodes * n_layers)`` written directly by the Fortran simulation.
+Supports two HDF5 formats: pyiwfm format (dataset ``head`` with shape
+``(n_timesteps, n_nodes, n_layers)``) and IWFM native format (dataset
+``/GWHeadAtAllNodes`` with shape ``(n_timesteps, n_nodes * n_layers)``).
 """
 
 from __future__ import annotations

@@ -1,15 +1,12 @@
 """
 Stream Diversion Specification Reader for IWFM.
 
-This module reads the IWFM diversion specification file, which defines:
-1. Diversion definitions with source nodes, delivery destinations,
-   and column references for time-series data
-2. Element groups (sets of elements for delivery)
-3. Recharge zone destinations for recoverable losses
+This module reads the IWFM diversion specification file, which defines
+diversion definitions with source nodes, delivery destinations,
+element groups, and recharge zone destinations for recoverable losses.
 
-The file format supports two variants:
-- 14-column format (legacy, without spill fields)
-- 16-column format (with spill column and fraction)
+The file format supports two variants: 14-column (legacy, without spill
+fields) and 16-column (with spill column and fraction).
 
 Reference: Class_Diversion.f90 - Diversion_New()
 """

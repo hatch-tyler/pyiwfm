@@ -58,7 +58,7 @@ class IWFMFileSection:
     """Represents a section of an IWFM input file.
 
     IWFM files typically have structured sections with:
-    - Comment lines (starting with C or *)
+    - Comment lines (starting with C or ``*``)
     - Data lines with fixed-format columns
     - Section delimiters
 

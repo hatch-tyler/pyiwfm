@@ -1,14 +1,10 @@
 """
 Stream Bypass Specification Reader for IWFM.
 
-This module reads the IWFM bypass specification file, which defines:
-1. Conversion factors for flow and bypass values
-2. Bypass definitions with source/destination nodes, rating tables,
-   and recoverable/non-recoverable loss fractions
-
-Bypass destination types:
-- 1 = Stream node
-- 2 = Lake
+This module reads the IWFM bypass specification file, which defines
+conversion factors for flow and bypass values, bypass definitions with
+source/destination nodes, rating tables, and recoverable/non-recoverable
+loss fractions. Bypass destination types are 1 (stream node) or 2 (lake).
 
 Reference: Class_Bypass.f90 - Bypass_New()
 """
@@ -57,10 +53,10 @@ class BypassSpec:
         export_stream_node: Stream node where bypass originates (0=outside model)
         dest_type: Destination type (1=stream node, 2=lake)
         dest_id: Destination stream node ID or lake ID
-        rating_table_col: Column in diversions file for rating
-            > 0: uses pre-defined rating from diversions file
-            < 0: |col| = number of inline rating table points
-            = 0: no rating table
+        rating_table_col: Column in diversions file for rating.
+            Positive means pre-defined rating from diversions file,
+            negative means ``abs(col)`` inline rating table points,
+            zero means no rating table.
         frac_recoverable: Fraction of bypass that is recoverable loss
         frac_non_recoverable: Fraction of bypass that is non-recoverable loss
         name: Bypass name (up to 20 chars)
