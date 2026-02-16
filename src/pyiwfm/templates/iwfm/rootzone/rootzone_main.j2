@@ -37,6 +37,8 @@ C
 {% if is_v411 %}
           {{ lwu_zbudget_file | pad_right(45) }}/ ZLWUBUDFL
           {{ rz_zbudget_file | pad_right(45) }}/ ZRZBUDFL
+{% endif %}
+{% if is_v412 %}
           {{ area_scale_file | pad_right(45) }}/ ARSCLFL
 {% endif %}
 {% if not is_v412 %}

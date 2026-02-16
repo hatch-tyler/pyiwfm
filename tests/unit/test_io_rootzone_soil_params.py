@@ -201,7 +201,8 @@ def _v411_main_file(n_elements: int = 3) -> str:
     """Build a minimal v4.11 rootzone main file (with FMFL line).
 
     v4.11 read order after zone budget files:
-      LU area scaling → FinalMoistureOutFile → FACTK → FACTEXDTH → TUNITK → Soil params
+      FinalMoistureOutFile → FACTK → FACTEXDTH → TUNITK → Soil params
+    (No ARSCLFL in v4.11 — that was introduced in v4.12.)
     """
     lines = [
         "#4.11",
@@ -223,7 +224,6 @@ def _v411_main_file(n_elements: int = 3) -> str:
         "                                               / RZBUDFL",
         "                                               / ZLWUBUDFL",
         "                                               / ZRZBUDFL",
-        "                                               / ARSCLFL",
         "  FinalMoisture.bin                            / FMFL",
         "  1.0                                          / FACTK",
         "  1.0                                          / FACTEXDTH",

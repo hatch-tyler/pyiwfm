@@ -178,7 +178,11 @@ def _write_main_file_v40(path: Path, n_elements: int = 3) -> None:
 
 
 def _write_main_file_v411(path: Path, n_elements: int = 3) -> None:
-    """Write a minimal v4.11 main file (v4.11+ has GWUPTK and zone budgets)."""
+    """Write a minimal v4.11 main file.
+
+    v4.11 has GWUPTK, zone budgets (ZLWUBUDFL/ZRZBUDFL), and FMFL.
+    v4.11 does NOT have ARSCLFL (introduced in v4.12).
+    """
     lines = [
         "#4.11",
         "C  test file",
@@ -199,7 +203,6 @@ def _write_main_file_v411(path: Path, n_elements: int = 3) -> None:
         "                                               / RZBUDFL",
         "                                               / ZLWUBUDFL",
         "                                               / ZRZBUDFL",
-        "                                               / ARSCLFL",
         "                                               / FMFL",
         "C  Soil parameters section",
         "   0.03281                                     / FACTK",
