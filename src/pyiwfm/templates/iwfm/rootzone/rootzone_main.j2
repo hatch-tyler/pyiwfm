@@ -39,7 +39,9 @@ C
           {{ rz_zbudget_file | pad_right(45) }}/ ZRZBUDFL
           {{ area_scale_file | pad_right(45) }}/ ARSCLFL
 {% endif %}
+{% if not is_v412 %}
           {{ final_moisture_file | pad_right(45) }}/ FMFL
+{% endif %}
 C*******************************************************************************
 C             Parameters for Soil, Precipitation and Runoff Destination
 C

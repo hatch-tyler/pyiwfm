@@ -215,7 +215,12 @@ def _write_main_file_v411(path: Path, n_elements: int = 3) -> None:
 
 
 def _write_main_file_v412(path: Path, n_elements: int = 3) -> None:
-    """Write a minimal v4.12 main file."""
+    """Write a minimal v4.12 main file.
+
+    NOTE: v4.12 does NOT have a FinalMoistureOutFile (FMFL) line.
+    That field was removed in v4.12 and replaced by surface flow
+    destinations (DESTFL).
+    """
     lines = [
         "#4.12",
         "C  test file",
@@ -237,7 +242,6 @@ def _write_main_file_v412(path: Path, n_elements: int = 3) -> None:
         "                                               / ZLWUBUDFL",
         "                                               / ZRZBUDFL",
         "                                               / ARSCLFL",
-        "                                               / FMFL",
         "C  Soil parameters section",
         "   0.03281                                     / FACTK",
         "   1.0                                         / FACTEXDTH",

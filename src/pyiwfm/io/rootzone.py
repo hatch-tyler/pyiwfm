@@ -744,10 +744,12 @@ class RootZoneMainFileReader:
                 if lu_scale_path:
                     config.lu_area_scale_file = self._resolve_path(base_dir, lu_scale_path)
 
-            # Final moisture output file
-            final_path = self._next_data_or_empty(f)
-            if final_path:
-                config.final_moisture_file = self._resolve_path(base_dir, final_path)
+            # Final moisture output file (v4.0–v4.11 only;
+            # removed in v4.12, replaced by surface flow destinations)
+            if not is_v412_plus:
+                final_path = self._next_data_or_empty(f)
+                if final_path:
+                    config.final_moisture_file = self._resolve_path(base_dir, final_path)
 
             # ── Soil parameter section ────────────────────────────
 
