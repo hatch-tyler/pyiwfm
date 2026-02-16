@@ -22,6 +22,8 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+    next_data_or_empty as _next_data_or_empty_f,
+    resolve_path as _resolve_path_f,
     strip_inline_comment as _parse_value_line,
 )
 
@@ -751,20 +753,15 @@ class IWFMSimulationReader:
 
     def _next_data_or_empty(self, f: TextIO) -> str:
         """Return next data value, or empty string at EOF."""
-        for line in f:
-            self._line_num += 1
-            if _is_comment_line(line):
-                continue
-            value, _ = _parse_value_line(line)
-            return value
-        return ""
+        lc = [self._line_num]
+        val = _next_data_or_empty_f(f, lc)
+        self._line_num = lc[0]
+        return val
 
-    def _resolve_path(self, base_dir: Path, filepath: str) -> Path:
+    @staticmethod
+    def _resolve_path(base_dir: Path, filepath: str) -> Path:
         """Resolve a file path relative to base directory."""
-        path = Path(filepath.strip())
-        if path.is_absolute():
-            return path
-        return base_dir / path
+        return _resolve_path_f(base_dir, filepath)
 
     @staticmethod
     def _looks_like_datetime(value: str) -> bool:

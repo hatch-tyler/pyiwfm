@@ -18,6 +18,7 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+    next_data_or_empty as _next_data_or_empty_f,
     strip_inline_comment as _parse_value_line,
 )
 
@@ -212,13 +213,10 @@ class TileDrainReader:
             val = self._pushed_back
             self._pushed_back = None
             return val
-        for line in f:
-            self._line_num += 1
-            if line and line[0] in COMMENT_CHARS:
-                continue
-            value, _ = _parse_value_line(line)
-            return value
-        return ""
+        lc = [self._line_num]
+        val = _next_data_or_empty_f(f, lc)
+        self._line_num = lc[0]
+        return val
 
     def _next_data_line(self, f: TextIO) -> str:
         """Return the next non-comment data line."""

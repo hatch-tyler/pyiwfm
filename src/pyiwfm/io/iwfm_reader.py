@@ -10,6 +10,7 @@ defining its own copy.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TextIO
 
 from pyiwfm.core.exceptions import FileFormatError
@@ -97,6 +98,58 @@ def next_data_line(f: TextIO, line_counter: list[int] | None = None) -> str:
             continue
         return line.strip()
     return ""
+
+
+def next_data_or_empty(
+    f: TextIO, line_counter: list[int] | None = None
+) -> str:
+    """Read next non-comment data value, or ``""`` at EOF.
+
+    Like :func:`next_data_value` but returns ``""`` instead of raising
+    on EOF, and returns ``""`` for blank lines.  Useful for optional
+    file paths that may be represented by blank lines.
+    """
+    for line in f:
+        if line_counter is not None:
+            line_counter[0] += 1
+        if line and line[0] in COMMENT_CHARS:
+            continue
+        value, _ = strip_inline_comment(line)
+        return value
+    return ""
+
+
+def resolve_path(base_dir: Path, filepath: str) -> Path:
+    """Resolve a file path relative to *base_dir*.
+
+    IWFM paths can be absolute or relative (relative to the main
+    input file's directory).
+    """
+    path = Path(filepath.strip())
+    if path.is_absolute():
+        return path
+    return base_dir / path
+
+
+def parse_version(version: str) -> tuple[int, int]:
+    """Parse a version string like ``'4.12'`` or ``'4-12'`` into ``(4, 12)``.
+
+    Handles both ``.`` and ``-`` as separators so the same function
+    works for root zone versions (``4.12``) and stream versions
+    (``4-21``).
+    """
+    try:
+        parts = version.replace("-", ".").split(".")
+        major = int(parts[0]) if parts else 0
+        minor = int(parts[1]) if len(parts) > 1 else 0
+        return (major, minor)
+    except (ValueError, IndexError):
+        return (0, 0)
+
+
+def version_ge(version: str, target: tuple[int, int]) -> bool:
+    """Return ``True`` if *version* >= *target*."""
+    return parse_version(version) >= target
 
 
 class LineBuffer:

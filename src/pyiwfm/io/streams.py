@@ -31,31 +31,13 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+    next_data_or_empty as _next_data_or_empty_f,
+    parse_version as parse_stream_version,
+    resolve_path as _resolve_path_f,
     strip_inline_comment as _parse_value_line,
+    version_ge as stream_version_ge,
 )
 from pyiwfm.io.timeseries_ascii import TimeSeriesWriter
-
-
-def parse_stream_version(version: str) -> tuple[int, int]:
-    """Parse a version string like '4.21' into a (major, minor) tuple.
-
-    Examples:
-        >>> parse_stream_version("4.0")
-        (4, 0)
-        >>> parse_stream_version("4.21")
-        (4, 21)
-        >>> parse_stream_version("5.0")
-        (5, 0)
-    """
-    parts = version.replace("-", ".").split(".")
-    major = int(parts[0]) if parts else 4
-    minor = int(parts[1]) if len(parts) > 1 else 0
-    return (major, minor)
-
-
-def stream_version_ge(version: str, target: tuple[int, int]) -> bool:
-    """Check if a version string is >= a target (major, minor) tuple."""
-    return parse_stream_version(version) >= target
 
 
 # =============================================================================
@@ -1108,13 +1090,10 @@ class StreamMainFileReader:
 
     def _next_data_or_empty(self, f: TextIO) -> str:
         """Return next data value, or empty string for blank lines."""
-        for line in f:
-            self._line_num += 1
-            if line and line[0] in COMMENT_CHARS:
-                continue
-            value, _ = _parse_value_line(line)
-            return value
-        return ""
+        lc = [self._line_num]
+        val = _next_data_or_empty_f(f, lc)
+        self._line_num = lc[0]
+        return val
 
     def _read_hydrograph_specs(
         self, f: TextIO, n_hydrographs: int
@@ -1159,12 +1138,10 @@ class StreamMainFileReader:
 
         return specs
 
-    def _resolve_path(self, base_dir: Path, filepath: str) -> Path:
+    @staticmethod
+    def _resolve_path(base_dir: Path, filepath: str) -> Path:
         """Resolve a file path relative to base directory."""
-        path = Path(filepath.strip())
-        if path.is_absolute():
-            return path
-        return base_dir / path
+        return _resolve_path_f(base_dir, filepath)
 
 
 # =============================================================================

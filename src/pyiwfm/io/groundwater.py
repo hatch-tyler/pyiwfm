@@ -31,6 +31,8 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+    next_data_or_empty as _next_data_or_empty_f,
+    resolve_path as _resolve_path_f,
     strip_inline_comment as _parse_value_line,
 )
 from pyiwfm.io.timeseries_ascii import TimeSeriesWriter, format_iwfm_timestamp
@@ -1110,21 +1112,11 @@ class GWMainFileReader:
         return ""
 
     def _next_data_or_empty(self, f: TextIO) -> str:
-        """
-        Return next data value, or empty string for blank/comment-only lines.
-
-        This handles the IWFM file format where optional file paths may be
-        represented by blank lines.
-        """
-        for line in f:
-            self._line_num += 1
-            # Check for comment line (comment char in column 1)
-            if line and line[0] in COMMENT_CHARS:
-                continue
-            # Parse the value
-            value, _ = _parse_value_line(line)
-            return value
-        return ""
+        """Return next data value, or empty string for blank lines."""
+        lc = [self._line_num]
+        val = _next_data_or_empty_f(f, lc)
+        self._line_num = lc[0]
+        return val
 
     def _read_hydrograph_data(
         self, f: TextIO, n_hydrographs: int, coord_factor: float
@@ -1195,12 +1187,10 @@ class GWMainFileReader:
 
         return locations
 
-    def _resolve_path(self, base_dir: Path, filepath: str) -> Path:
+    @staticmethod
+    def _resolve_path(base_dir: Path, filepath: str) -> Path:
         """Resolve a file path relative to base directory."""
-        path = Path(filepath.strip())
-        if path.is_absolute():
-            return path
-        return base_dir / path
+        return _resolve_path_f(base_dir, filepath)
 
     def _skip_data_lines(self, f: TextIO, count: int) -> None:
         """Skip *count* non-comment data lines."""

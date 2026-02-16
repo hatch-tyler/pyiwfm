@@ -24,29 +24,14 @@ from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
     next_data_line,
+    next_data_or_empty as _next_data_or_empty_f,
+    parse_version,
+    resolve_path as _resolve_path_f,
     strip_inline_comment as _parse_value_line,
+    version_ge,
 )
 
 logger = logging.getLogger(__name__)
-
-
-# ── Version utilities ────────────────────────────────────────────────
-
-
-def parse_version(version: str) -> tuple[int, int]:
-    """Parse a version string like ``'4.12'`` into ``(4, 12)``."""
-    try:
-        parts = version.split(".")
-        major = int(parts[0])
-        minor = int(parts[1]) if len(parts) > 1 else 0
-        return (major, minor)
-    except (ValueError, IndexError):
-        return (0, 0)
-
-
-def version_ge(version: str, target: tuple[int, int]) -> bool:
-    """Return True if *version* >= *target*."""
-    return parse_version(version) >= target
 
 
 # ── Per-element soil parameter row ───────────────────────────────────
@@ -821,20 +806,15 @@ class RootZoneMainFileReader:
 
     def _next_data_or_empty(self, f: TextIO) -> str:
         """Return next data value, or empty string for blank lines."""
-        for line in f:
-            self._line_num += 1
-            if line and line[0] in COMMENT_CHARS:
-                continue
-            value, _ = _parse_value_line(line)
-            return value
-        return ""
+        lc = [self._line_num]
+        val = _next_data_or_empty_f(f, lc)
+        self._line_num = lc[0]
+        return val
 
-    def _resolve_path(self, base_dir: Path, filepath: str) -> Path:
+    @staticmethod
+    def _resolve_path(base_dir: Path, filepath: str) -> Path:
         """Resolve a file path relative to base directory."""
-        path = Path(filepath.strip())
-        if path.is_absolute():
-            return path
-        return base_dir / path
+        return _resolve_path_f(base_dir, filepath)
 
     def _read_element_soil_params(
         self,

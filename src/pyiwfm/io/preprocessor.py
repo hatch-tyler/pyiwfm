@@ -27,22 +27,9 @@ from pyiwfm.io.ascii import (
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+    resolve_path as _resolve_path,
     strip_inline_comment as _parse_value_line,
 )
-
-
-def _resolve_path(base_dir: Path, filepath: str) -> Path:
-    """
-    Resolve a file path relative to a base directory.
-
-    IWFM paths can be:
-    - Absolute paths
-    - Relative paths (relative to the main input file)
-    """
-    path = Path(filepath.strip())
-    if path.is_absolute():
-        return path
-    return base_dir / path
 
 
 @dataclass

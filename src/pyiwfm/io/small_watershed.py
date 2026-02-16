@@ -22,6 +22,8 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+    next_data_or_empty as _next_data_or_empty_f,
+    resolve_path as _resolve_path_f,
     strip_inline_comment as _parse_value_line,
 )
 
@@ -440,13 +442,10 @@ class SmallWatershedMainReader:
 
     def _next_data_or_empty(self, f: TextIO) -> str:
         """Return next data value, or empty string."""
-        for line in f:
-            self._line_num += 1
-            if line and line[0] in COMMENT_CHARS:
-                continue
-            value, _ = _parse_value_line(line)
-            return value
-        return ""
+        lc = [self._line_num]
+        val = _next_data_or_empty_f(f, lc)
+        self._line_num = lc[0]
+        return val
 
     def _next_data_line(self, f: TextIO) -> str:
         """Return the next non-comment data line."""
@@ -457,12 +456,10 @@ class SmallWatershedMainReader:
             return line.strip()
         raise FileFormatError("Unexpected end of file", line_number=self._line_num)
 
-    def _resolve_path(self, base_dir: Path, filepath: str) -> Path:
+    @staticmethod
+    def _resolve_path(base_dir: Path, filepath: str) -> Path:
         """Resolve a file path relative to base directory."""
-        path = Path(filepath.strip())
-        if path.is_absolute():
-            return path
-        return base_dir / path
+        return _resolve_path_f(base_dir, filepath)
 
 
 def read_small_watershed_main(
