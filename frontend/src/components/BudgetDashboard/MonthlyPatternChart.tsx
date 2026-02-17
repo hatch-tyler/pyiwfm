@@ -34,6 +34,8 @@ interface MonthlyPatternChartProps {
   unitsMeta: BudgetUnitsMetadata | undefined;
   volumeUnit: string;
   areaUnit: string;
+  contextPrefix?: string;
+  budgetLabel?: string;
 }
 
 export function MonthlyPatternChart({
@@ -41,6 +43,8 @@ export function MonthlyPatternChart({
   unitsMeta,
   volumeUnit,
   areaUnit,
+  contextPrefix,
+  budgetLabel,
 }: MonthlyPatternChartProps) {
   // Build converted columns for the first flow chart group
   const flowGroup = classified.charts.find((g) => g.chartKind === 'flow');
@@ -109,7 +113,10 @@ export function MonthlyPatternChart({
   const unitLabel = isArea
     ? (AREA_UNITS.find((u) => u.id === areaUnit)?.label ?? areaUnit)
     : (VOLUME_UNITS.find((u) => u.id === volumeUnit)?.label ?? volumeUnit);
-  const yLabel = isArea ? unitLabel : `${unitLabel} / month`;
+  const yLabel = isArea ? `Area (${unitLabel})` : `Volume (${unitLabel} / month)`;
+
+  const titlePrefix = (contextPrefix || '') + (budgetLabel ? `${budgetLabel} ` : '');
+  const chartTitle = `${titlePrefix}Monthly Pattern (Climatology)`;
 
   return (
     <Box sx={{ height: '100%', p: 1 }}>
@@ -117,7 +124,7 @@ export function MonthlyPatternChart({
         data={traces}
         layout={{
           margin: { l: 70, r: 30, t: 40, b: 50 },
-          title: { text: 'Monthly Pattern (Climatology)', font: { size: 14 } },
+          title: { text: chartTitle, font: { size: 14 } },
           xaxis: { title: { text: 'Month' }, type: 'category' },
           yaxis: { title: { text: yLabel } },
           legend: { orientation: 'h', y: -0.15 },

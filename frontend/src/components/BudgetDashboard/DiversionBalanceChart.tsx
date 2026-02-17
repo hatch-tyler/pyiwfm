@@ -8,6 +8,8 @@
 
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import Plot from 'react-plotly.js';
 import type { BudgetData } from '../../api/client';
 
@@ -29,6 +31,7 @@ interface DiversionBalanceChartProps {
   xAxisLabel?: string;
   title?: string;
   partialYearNote?: string;
+  onExpand?: () => void;
 }
 
 /** Find a column by partial name match (case-insensitive). */
@@ -37,7 +40,7 @@ function findCol(data: BudgetData, pattern: string): { name: string; values: num
   return col ? { name: col.name, values: col.values } : null;
 }
 
-export function DiversionBalanceChart({ data, yAxisLabel, xAxisLabel, title, partialYearNote }: DiversionBalanceChartProps) {
+export function DiversionBalanceChart({ data, yAxisLabel, xAxisLabel, title, partialYearNote, onExpand }: DiversionBalanceChartProps) {
   const delivery = findCol(data, 'delivery');
   const recoverable = findCol(data, 'recoverable loss');
   const nonRecoverable = findCol(data, 'non-recoverable loss');
@@ -104,7 +107,17 @@ export function DiversionBalanceChart({ data, yAxisLabel, xAxisLabel, title, par
   }
 
   return (
-    <Box sx={{ height: '100%', p: 1 }}>
+    <Box sx={{ height: '100%', p: 1, position: 'relative' }}>
+      {onExpand && (
+        <IconButton
+          size="small"
+          onClick={onExpand}
+          title="Expand chart"
+          sx={{ position: 'absolute', top: 4, right: 4, zIndex: 5, opacity: 0.6, '&:hover': { opacity: 1 } }}
+        >
+          <OpenInFullIcon fontSize="small" />
+        </IconButton>
+      )}
       {traces.length === 0 ? (
         <Typography color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
           No diversion balance columns found.

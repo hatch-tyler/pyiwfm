@@ -127,6 +127,7 @@ export interface ViewerState {
   budgetTimeAgg: string;
   showBudgetGlossary: boolean;
   budgetAnalysisMode: 'timeseries' | 'monthly_pattern' | 'component_ratios' | 'cumulative_departure' | 'exceedance';
+  expandedChartIndex: number | null;
 
   // === Observation state ===
   observations: ObservationFile[];
@@ -239,6 +240,7 @@ export interface ViewerState {
   setBudgetTimeAgg: (a: string) => void;
   setShowBudgetGlossary: (show: boolean) => void;
   setBudgetAnalysisMode: (mode: 'timeseries' | 'monthly_pattern' | 'component_ratios' | 'cumulative_departure' | 'exceedance') => void;
+  setExpandedChartIndex: (index: number | null) => void;
 
   // Observations
   setObservations: (obs: ObservationFile[]) => void;
@@ -361,6 +363,7 @@ export const useViewerStore = create<ViewerState>((set) => ({
   budgetTimeAgg: 'monthly',
   showBudgetGlossary: false,
   budgetAnalysisMode: 'timeseries',
+  expandedChartIndex: null,
 
   // Observations
   observations: [],
@@ -509,6 +512,7 @@ export const useViewerStore = create<ViewerState>((set) => ({
   setBudgetTimeAgg: (a) => set({ budgetTimeAgg: a }),
   setShowBudgetGlossary: (show) => set({ showBudgetGlossary: show }),
   setBudgetAnalysisMode: (mode) => set({ budgetAnalysisMode: mode }),
+  setExpandedChartIndex: (index) => set({ expandedChartIndex: index }),
 
   // Observations
   setObservations: (obs) => set({ observations: obs }),

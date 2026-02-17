@@ -9,6 +9,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { Map } from 'react-map-gl/maplibre';
 import DeckGL from '@deck.gl/react';
+import { WebMercatorViewport } from '@deck.gl/core';
 import { GeoJsonLayer, ScatterplotLayer } from '@deck.gl/layers';
 import type { MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -137,18 +138,29 @@ export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMa
       return;
     }
 
-    // For GeoJSON context: zoom to the SELECTED feature
+    // For GeoJSON context: zoom to the SELECTED feature using fitBounds
     if (contextData && contextData.features.length > 0 && idx < contextData.features.length) {
       const bounds = getFeatureBounds(contextData.features[idx]);
       if (bounds) {
         const [minLng, minLat, maxLng, maxLat] = bounds;
-        const cLng = (minLng + maxLng) / 2;
-        const cLat = (minLat + maxLat) / 2;
-        const span = Math.max(maxLng - minLng, maxLat - minLat);
-        const zoom = span > 0
-          ? Math.min(13, Math.max(6, -Math.log2(span / 360) + 1)) - 0.3
-          : 10;
-        setViewState({ ...DEFAULT_VIEW, longitude: cLng, latitude: cLat, zoom });
+        try {
+          const vp = new WebMercatorViewport({ width: 280, height: 280 });
+          const fitted = vp.fitBounds(
+            [[minLng, minLat], [maxLng, maxLat]],
+            { padding: 30 },
+          );
+          setViewState({
+            ...DEFAULT_VIEW,
+            longitude: fitted.longitude,
+            latitude: fitted.latitude,
+            zoom: Math.min(13, fitted.zoom),
+          });
+        } catch {
+          // Fallback: center on bounds
+          const cLng = (minLng + maxLng) / 2;
+          const cLat = (minLat + maxLat) / 2;
+          setViewState({ ...DEFAULT_VIEW, longitude: cLng, latitude: cLat, zoom: 9 });
+        }
         return;
       }
     }

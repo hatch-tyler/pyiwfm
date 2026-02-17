@@ -6,6 +6,8 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
+import IconButton from '@mui/material/IconButton';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import Plot from 'react-plotly.js';
 import type { BudgetData } from '../../api/client';
 
@@ -18,6 +20,7 @@ interface BudgetChartProps {
   yAxisLabel?: string;
   xAxisLabel?: string;
   partialYearNote?: string;
+  onExpand?: () => void;
 }
 
 /**
@@ -41,7 +44,7 @@ const COLORS = [
   '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5',
 ];
 
-export function BudgetChart({ data, chartType, loading, title, dualAxis, yAxisLabel, xAxisLabel, partialYearNote }: BudgetChartProps) {
+export function BudgetChart({ data, chartType, loading, title, dualAxis, yAxisLabel, xAxisLabel, partialYearNote, onExpand }: BudgetChartProps) {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -124,7 +127,17 @@ export function BudgetChart({ data, chartType, loading, title, dualAxis, yAxisLa
   }
 
   return (
-    <Box sx={{ height: '100%', p: 1 }}>
+    <Box sx={{ height: '100%', p: 1, position: 'relative' }}>
+      {onExpand && (
+        <IconButton
+          size="small"
+          onClick={onExpand}
+          title="Expand chart"
+          sx={{ position: 'absolute', top: 4, right: 4, zIndex: 5, opacity: 0.6, '&:hover': { opacity: 1 } }}
+        >
+          <OpenInFullIcon fontSize="small" />
+        </IconButton>
+      )}
       <Plot
         data={traces}
         layout={{

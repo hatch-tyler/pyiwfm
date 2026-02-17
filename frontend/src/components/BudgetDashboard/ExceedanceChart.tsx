@@ -25,12 +25,16 @@ interface ExceedanceChartProps {
   classified: ClassifiedBudget;
   unitsMeta: BudgetUnitsMetadata | undefined;
   volumeUnit: string;
+  contextPrefix?: string;
+  budgetLabel?: string;
 }
 
 export function ExceedanceChart({
   classified,
   unitsMeta,
   volumeUnit,
+  contextPrefix,
+  budgetLabel,
 }: ExceedanceChartProps) {
   const flowGroups = classified.charts.filter((g) => g.chartKind === 'flow');
   if (flowGroups.length === 0) {
@@ -67,6 +71,9 @@ export function ExceedanceChart({
 
   const volLabel = VOLUME_UNITS.find((u) => u.id === volumeUnit)?.label ?? volumeUnit;
 
+  const titlePrefix = (contextPrefix || '') + (budgetLabel ? `${budgetLabel} ` : '');
+  const chartTitle = `${titlePrefix}Exceedance Probability`;
+
   // Reference annotations for common exceedance points
   const annotations = [
     { x: 10, text: '10% (wet)' },
@@ -100,9 +107,9 @@ export function ExceedanceChart({
         data={traces}
         layout={{
           margin: { l: 70, r: 30, t: 50, b: 50 },
-          title: { text: 'Exceedance Probability', font: { size: 14 } },
+          title: { text: chartTitle, font: { size: 14 } },
           xaxis: { title: { text: 'Exceedance Probability (%)' }, range: [0, 100] },
-          yaxis: { title: { text: `${volLabel} / month` } },
+          yaxis: { title: { text: `Volume (${volLabel} / month)` } },
           shapes,
           annotations,
           legend: { orientation: 'h', y: -0.15 },

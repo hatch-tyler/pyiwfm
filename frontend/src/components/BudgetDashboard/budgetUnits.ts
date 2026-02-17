@@ -484,26 +484,32 @@ export function getYAxisLabel(
   timeAggId: string,
 ): string {
   if (chartKind === 'area') {
-    return findUnitLabel(AREA_UNITS, areaUnitId);
+    return `Area (${findUnitLabel(AREA_UNITS, areaUnitId)})`;
   }
 
-  // Volume-based kinds: flow, storage, cumulative_subsidence, diversion_balance
+  if (chartKind === 'subsidence' || chartKind === 'cumulative_subsidence') {
+    const lengthLabel = findUnitLabel(LENGTH_UNITS, _lengthUnitId);
+    return `Subsidence (${lengthLabel})`;
+  }
+
+  // Volume-based kinds: flow, storage, diversion_balance
   const volLabel = findUnitLabel(VOLUME_UNITS, volumeUnitId);
+  const prefix = chartKind === 'storage' ? 'Storage Change' : 'Volume';
 
   // For rate-based display units, show the rate label directly
   if (['cfs', 'cfd', 'm3_day', 'm3_yr'].includes(rateUnitId)) {
     const rateOpt = RATE_UNITS.find((r) => r.id === rateUnitId);
-    return rateOpt ? rateOpt.label : volLabel;
+    return `${prefix} (${rateOpt ? rateOpt.label : volLabel})`;
   }
 
   // For yearly aggregation, show "volume / year"
   if (timeAggId !== 'monthly') {
-    return `${volLabel} / year`;
+    return `${prefix} (${volLabel} / year)`;
   }
 
   // Monthly + per_month or per_year
   if (rateUnitId === 'per_year') {
-    return `${volLabel} / year`;
+    return `${prefix} (${volLabel} / year)`;
   }
-  return `${volLabel} / month`;
+  return `${prefix} (${volLabel} / month)`;
 }

@@ -71,12 +71,16 @@ interface ComponentRatioChartProps {
   classified: ClassifiedBudget;
   unitsMeta: BudgetUnitsMetadata | undefined;
   budgetType: string;
+  contextPrefix?: string;
+  budgetLabel?: string;
 }
 
 export function ComponentRatioChart({
   budgetData,
   classified,
   budgetType,
+  contextPrefix,
+  budgetLabel,
 }: ComponentRatioChartProps) {
   const category = detectCategory(budgetType);
   const defs = RATIO_DEFS[category];
@@ -147,7 +151,7 @@ export function ComponentRatioChart({
         data={traces}
         layout={{
           margin: { l: 70, r: 30, t: 40, b: 50 },
-          title: { text: 'Component Ratios', font: { size: 14 } },
+          title: { text: `${(contextPrefix || '') + (budgetLabel ? `${budgetLabel} ` : '')}Component Ratios`, font: { size: 14 } },
           xaxis: { title: { text: 'Date' }, type: 'date' },
           yaxis: { title: { text: 'Ratio (%)' }, range: [0, 100] },
           legend: { orientation: 'h', y: -0.15 },

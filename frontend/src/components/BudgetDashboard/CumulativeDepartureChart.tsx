@@ -25,12 +25,16 @@ interface CumulativeDepartureChartProps {
   classified: ClassifiedBudget;
   unitsMeta: BudgetUnitsMetadata | undefined;
   volumeUnit: string;
+  contextPrefix?: string;
+  budgetLabel?: string;
 }
 
 export function CumulativeDepartureChart({
   classified,
   unitsMeta,
   volumeUnit,
+  contextPrefix,
+  budgetLabel,
 }: CumulativeDepartureChartProps) {
   // Collect flow columns from all chart groups (skip area, storage, subsidence)
   const flowGroups = classified.charts.filter((g) => g.chartKind === 'flow');
@@ -69,13 +73,16 @@ export function CumulativeDepartureChart({
 
   const volLabel = VOLUME_UNITS.find((u) => u.id === volumeUnit)?.label ?? volumeUnit;
 
+  const titlePrefix = (contextPrefix || '') + (budgetLabel ? `${budgetLabel} ` : '');
+  const chartTitle = `${titlePrefix}Cumulative Departure from Mean`;
+
   return (
     <Box sx={{ height: '100%', p: 1 }}>
       <Plot
         data={traces}
         layout={{
           margin: { l: 70, r: 30, t: 40, b: 50 },
-          title: { text: 'Cumulative Departure from Mean', font: { size: 14 } },
+          title: { text: chartTitle, font: { size: 14 } },
           xaxis: { title: { text: 'Date' }, type: 'date' },
           yaxis: { title: { text: `Cumulative Departure (${volLabel})` } },
           shapes: [

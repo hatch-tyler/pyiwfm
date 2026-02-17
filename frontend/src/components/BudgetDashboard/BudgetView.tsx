@@ -7,10 +7,14 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 import { useViewerStore } from '../../stores/viewerStore';
 import { fetchBudgetTypes, fetchBudgetData } from '../../api/client';
 import type { BudgetData, BudgetUnitsMetadata } from '../../api/client';
-import { BudgetControls } from './BudgetControls';
+import { BudgetControls, BUDGET_LABELS } from './BudgetControls';
 import { BudgetChart } from './BudgetChart';
 import { DiversionBalanceChart } from './DiversionBalanceChart';
 import { WaterBalanceSankey } from './WaterBalanceSankey';
@@ -119,6 +123,7 @@ export function BudgetView() {
     showBudgetSankey,
     budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
     budgetAnalysisMode,
+    expandedChartIndex, setExpandedChartIndex,
     setBudgetVolumeUnit, setBudgetAreaUnit, setBudgetLengthUnit,
   } = useViewerStore();
 
@@ -210,11 +215,21 @@ export function BudgetView() {
     return classified.charts.map((g) => g.chartKind);
   }, [classified]);
 
-  // Keep track of titles
+  // Build contextual titles: "{location} — {budgetType}: {splitterTitle}"
+  const budgetLabel = BUDGET_LABELS[activeBudgetType] || activeBudgetType;
+  const contextPrefix = activeBudgetLocation ? `${activeBudgetLocation} \u2014 ` : '';
+
   const chartTitles = useMemo(() => {
     if (!classified) return [];
-    return classified.charts.map((g) => g.title);
-  }, [classified]);
+    return classified.charts.map((g) => {
+      const base = g.title;
+      // If splitter title already contains the location, just append budget label
+      if (activeBudgetLocation && base.includes(activeBudgetLocation)) {
+        return `${base} \u2014 ${budgetLabel}`;
+      }
+      return `${contextPrefix}${budgetLabel}: ${base}`;
+    });
+  }, [classified, activeBudgetLocation, budgetLabel, contextPrefix]);
 
   // Compute has*Columns from units metadata
   const hasVolumeColumns = unitsMeta?.has_volume_columns ?? true;
@@ -241,6 +256,7 @@ export function BudgetView() {
         hasVolumeColumns={hasVolumeColumns}
         hasAreaColumns={hasAreaColumns}
         hasLengthColumns={hasLengthColumns}
+        unitsMeta={unitsMeta}
       />
 
       {/* Main chart area */}
@@ -254,6 +270,8 @@ export function BudgetView() {
               unitsMeta={unitsMeta}
               volumeUnit={budgetVolumeUnit}
               areaUnit={budgetAreaUnit}
+              contextPrefix={contextPrefix}
+              budgetLabel={budgetLabel}
             />
           ) : budgetAnalysisMode === 'component_ratios' ? (
             <ComponentRatioChart
@@ -261,18 +279,24 @@ export function BudgetView() {
               classified={classified}
               unitsMeta={unitsMeta}
               budgetType={activeBudgetType}
+              contextPrefix={contextPrefix}
+              budgetLabel={budgetLabel}
             />
           ) : budgetAnalysisMode === 'cumulative_departure' ? (
             <CumulativeDepartureChart
               classified={classified}
               unitsMeta={unitsMeta}
               volumeUnit={budgetVolumeUnit}
+              contextPrefix={contextPrefix}
+              budgetLabel={budgetLabel}
             />
           ) : budgetAnalysisMode === 'exceedance' ? (
             <ExceedanceChart
               classified={classified}
               unitsMeta={unitsMeta}
               volumeUnit={budgetVolumeUnit}
+              contextPrefix={contextPrefix}
+              budgetLabel={budgetLabel}
             />
           ) : null
         ) : convertedCharts.length > 1 ? (
@@ -295,6 +319,7 @@ export function BudgetView() {
                       xAxisLabel={chart.xAxisLabel}
                       title={chartTitles[i]}
                       partialYearNote={chart.partialYearNote}
+                      onExpand={() => setExpandedChartIndex(i)}
                     />
                   ) : (
                     <BudgetChart
@@ -306,6 +331,7 @@ export function BudgetView() {
                       yAxisLabel={chart.yAxisLabel}
                       xAxisLabel={chart.xAxisLabel}
                       partialYearNote={chart.partialYearNote}
+                      onExpand={() => setExpandedChartIndex(i)}
                     />
                   )}
                 </Box>
@@ -320,6 +346,7 @@ export function BudgetView() {
               xAxisLabel={convertedCharts[0].xAxisLabel}
               title={chartTitles[0]}
               partialYearNote={convertedCharts[0].partialYearNote}
+              onExpand={() => setExpandedChartIndex(0)}
             />
           ) : (
             <BudgetChart
@@ -330,6 +357,7 @@ export function BudgetView() {
               yAxisLabel={convertedCharts[0].yAxisLabel}
               xAxisLabel={convertedCharts[0].xAxisLabel}
               partialYearNote={convertedCharts[0].partialYearNote}
+              onExpand={() => setExpandedChartIndex(0)}
             />
           )
         ) : (
@@ -358,6 +386,44 @@ export function BudgetView() {
           </Typography>
         </Box>
       )}
+
+      {/* Fullscreen chart dialog */}
+      <Dialog
+        fullScreen
+        open={expandedChartIndex !== null}
+        onClose={() => setExpandedChartIndex(null)}
+      >
+        <DialogContent sx={{ p: 0, position: 'relative', height: '100vh' }}>
+          <IconButton
+            onClick={() => setExpandedChartIndex(null)}
+            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}
+          >
+            <CloseIcon />
+          </IconButton>
+          {expandedChartIndex !== null && expandedChartIndex < convertedCharts.length && (
+            chartKinds[expandedChartIndex] === 'diversion_balance' ? (
+              <DiversionBalanceChart
+                data={convertedCharts[expandedChartIndex].data}
+                yAxisLabel={convertedCharts[expandedChartIndex].yAxisLabel}
+                xAxisLabel={convertedCharts[expandedChartIndex].xAxisLabel}
+                title={chartTitles[expandedChartIndex]}
+                partialYearNote={convertedCharts[expandedChartIndex].partialYearNote}
+              />
+            ) : (
+              <BudgetChart
+                data={convertedCharts[expandedChartIndex].data}
+                chartType={getChartTypeForKind(chartKinds[expandedChartIndex], budgetChartType)}
+                loading={false}
+                title={chartTitles[expandedChartIndex]}
+                dualAxis={chartKinds[expandedChartIndex] === 'storage'}
+                yAxisLabel={convertedCharts[expandedChartIndex].yAxisLabel}
+                xAxisLabel={convertedCharts[expandedChartIndex].xAxisLabel}
+                partialYearNote={convertedCharts[expandedChartIndex].partialYearNote}
+              />
+            )
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

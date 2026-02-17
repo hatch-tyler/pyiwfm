@@ -15,6 +15,7 @@ import FormControl from '@mui/material/FormControl';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import ToggleButton from '@mui/material/ToggleButton';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
@@ -25,11 +26,11 @@ import DownloadIcon from '@mui/icons-material/Download';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useViewerStore } from '../../stores/viewerStore';
 import { fetchBudgetLocations, getExportBudgetCsvUrl } from '../../api/client';
-import type { BudgetLocation } from '../../api/client';
+import type { BudgetLocation, BudgetUnitsMetadata } from '../../api/client';
 import { VOLUME_UNITS, AREA_UNITS, LENGTH_UNITS, RATE_UNITS, TIME_AGGS } from './budgetUnits';
 import { BudgetGlossary } from './BudgetGlossary';
 
-const BUDGET_LABELS: Record<string, string> = {
+export const BUDGET_LABELS: Record<string, string> = {
   gw: 'Groundwater',
   stream: 'Stream',
   stream_node: 'Stream Node',
@@ -46,6 +47,7 @@ interface BudgetControlsProps {
   hasVolumeColumns?: boolean;
   hasAreaColumns?: boolean;
   hasLengthColumns?: boolean;
+  unitsMeta?: BudgetUnitsMetadata;
 }
 
 export function BudgetControls({
@@ -53,6 +55,7 @@ export function BudgetControls({
   hasVolumeColumns = true,
   hasAreaColumns = false,
   hasLengthColumns = false,
+  unitsMeta,
 }: BudgetControlsProps) {
   const {
     activeBudgetType, activeBudgetLocation, budgetChartType,
@@ -170,10 +173,50 @@ export function BudgetControls({
 
         <Divider sx={{ my: 1 }} />
 
-        {/* Unit conversion section */}
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-          Units
+        {/* Settings section */}
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+          Settings
         </Typography>
+
+        {/* Model native units chip */}
+        {unitsMeta && (
+          <Chip
+            label={`Model: ${unitsMeta.source_volume_unit || '?'}, ${unitsMeta.source_area_unit || '?'} (${unitsMeta.timestep_unit || '?'})`}
+            size="small"
+            variant="outlined"
+            sx={{ mb: 1, fontSize: '0.7rem', height: 22 }}
+          />
+        )}
+
+        {/* Time Aggregation — grouped with settings */}
+        <FormControl fullWidth size="small" sx={{ mb: 1.5 }} disabled={isAnalysisMode}>
+          <InputLabel>Time Aggregation</InputLabel>
+          <Select
+            value={budgetTimeAgg}
+            label="Time Aggregation"
+            onChange={(e) => setBudgetTimeAgg(e.target.value)}
+          >
+            {TIME_AGGS.map((a) => (
+              <MenuItem key={a.id} value={a.id}>{a.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Analysis View selector */}
+        <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+          <InputLabel>View</InputLabel>
+          <Select
+            value={budgetAnalysisMode}
+            label="View"
+            onChange={(e) => setBudgetAnalysisMode(e.target.value as typeof budgetAnalysisMode)}
+          >
+            <MenuItem value="timeseries">Time Series</MenuItem>
+            <MenuItem value="monthly_pattern">Monthly Pattern</MenuItem>
+            <MenuItem value="component_ratios">Component Ratios</MenuItem>
+            <MenuItem value="cumulative_departure">Cumulative Departure</MenuItem>
+            <MenuItem value="exceedance">Exceedance Probability</MenuItem>
+          </Select>
+        </FormControl>
 
         {/* Volume Unit — only when volume columns exist */}
         {hasVolumeColumns && (
@@ -238,36 +281,6 @@ export function BudgetControls({
             </Select>
           </FormControl>
         )}
-
-        {/* Time Aggregation */}
-        <FormControl fullWidth size="small" sx={{ mb: 1.5 }} disabled={isAnalysisMode}>
-          <InputLabel>Time Aggregation</InputLabel>
-          <Select
-            value={budgetTimeAgg}
-            label="Time Aggregation"
-            onChange={(e) => setBudgetTimeAgg(e.target.value)}
-          >
-            {TIME_AGGS.map((a) => (
-              <MenuItem key={a.id} value={a.id}>{a.label}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* Analysis View selector */}
-        <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-          <InputLabel>View</InputLabel>
-          <Select
-            value={budgetAnalysisMode}
-            label="View"
-            onChange={(e) => setBudgetAnalysisMode(e.target.value as typeof budgetAnalysisMode)}
-          >
-            <MenuItem value="timeseries">Time Series</MenuItem>
-            <MenuItem value="monthly_pattern">Monthly Pattern</MenuItem>
-            <MenuItem value="component_ratios">Component Ratios</MenuItem>
-            <MenuItem value="cumulative_departure">Cumulative Departure</MenuItem>
-            <MenuItem value="exceedance">Exceedance Probability</MenuItem>
-          </Select>
-        </FormControl>
 
         <Divider sx={{ my: 1 }} />
 
