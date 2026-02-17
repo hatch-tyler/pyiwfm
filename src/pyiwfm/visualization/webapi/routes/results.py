@@ -187,37 +187,64 @@ def get_hydrograph(
     model = model_state.model
 
     if type == "gw":
-        reader = model_state.get_gw_hydrograph_reader()
-        if reader is None or reader.n_timesteps == 0:
-            raise HTTPException(status_code=404, detail="No GW hydrograph data available")
-
-        # location_id is 1-based hydrograph index → column_index is 0-based
-        column_index = location_id - 1
-        if column_index < 0 or column_index >= reader.n_columns:
-            raise HTTPException(
-                status_code=404,
-                detail=f"GW hydrograph {location_id} out of range [1, {reader.n_columns}]",
-            )
-
-        times, values = reader.get_time_series(column_index)
-
-        # Get name and layer from hydrograph locations if available
+        # Get name and layer from hydrograph locations
         name = f"GW Hydrograph {location_id}"
         layer = 1
+        column_index = location_id - 1
+        node_id = 0
         if model and model.groundwater:
             locs = model.groundwater.hydrograph_locations
             if 0 <= column_index < len(locs):
                 loc = locs[column_index]
                 name = loc.name or name
                 layer = loc.layer
+                node_id = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
+
+        # Prefer HEAD HDF5 data (has all layers at all nodes)
+        loader = model_state.get_head_loader()
+        if loader is not None and loader.n_frames > 0 and node_id > 0:
+            node_id_to_idx = model_state.get_node_id_to_idx()
+            node_idx = node_id_to_idx.get(node_id)
+            if node_idx is not None:
+                layer_idx = layer - 1
+                n_layers = loader.get_frame(0).shape[1]
+                if 0 <= layer_idx < n_layers:
+                    times_iso = [t.isoformat() for t in loader.times]
+                    values: list[float | None] = []
+                    for ts in range(loader.n_frames):
+                        frame = loader.get_frame(ts)
+                        v = float(frame[node_idx, layer_idx])
+                        values.append(None if v < -9000 else round(v, 3))
+                    return {
+                        "location_id": location_id,
+                        "name": name,
+                        "type": "gw",
+                        "layer": layer,
+                        "times": times_iso,
+                        "values": _sanitize_values(values),
+                        "units": "ft",
+                    }
+
+        # Fall back to hydrograph reader
+        reader = model_state.get_gw_hydrograph_reader()
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(status_code=404, detail="No GW hydrograph data available")
+
+        if column_index < 0 or column_index >= reader.n_columns:
+            raise HTTPException(
+                status_code=404,
+                detail=f"GW hydrograph {location_id} out of range [1, {reader.n_columns}]",
+            )
+
+        times_raw, values_raw = reader.get_time_series(column_index)
 
         return {
             "location_id": location_id,
             "name": name,
             "type": "gw",
             "layer": layer,
-            "times": times,
-            "values": _sanitize_values(values),
+            "times": times_raw,
+            "values": _sanitize_values(values_raw),
             "units": "ft",
         }
 
@@ -451,37 +478,68 @@ def get_hydrographs_multi(
     results: list[dict] = []
 
     if type == "gw":
+        # Prefer HEAD HDF5 data (has all layers at all nodes)
+        loader = model_state.get_head_loader()
+        node_id_to_idx = model_state.get_node_id_to_idx() if loader else {}
+
         reader = model_state.get_gw_hydrograph_reader()
-        if reader is None or reader.n_timesteps == 0:
-            raise HTTPException(
-                status_code=404, detail="No GW hydrograph data available"
-            )
 
         for loc_id in id_list:
             column_index = loc_id - 1
-            if column_index < 0 or column_index >= reader.n_columns:
-                continue
-
-            times, values = reader.get_time_series(column_index)
 
             name = f"GW Hydrograph {loc_id}"
             layer = 1
+            node_id = 0
             if model and model.groundwater:
                 locs = model.groundwater.hydrograph_locations
                 if 0 <= column_index < len(locs):
                     loc = locs[column_index]
                     name = loc.name or name
                     layer = loc.layer
+                    node_id = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
 
-            results.append({
-                "location_id": loc_id,
-                "name": name,
-                "type": "gw",
-                "layer": layer,
-                "times": times,
-                "values": _sanitize_values(values),
-                "units": "ft",
-            })
+            # Try HEAD HDF5 first
+            if loader is not None and loader.n_frames > 0 and node_id > 0:
+                node_idx = node_id_to_idx.get(node_id)
+                if node_idx is not None:
+                    layer_idx = layer - 1
+                    n_layers = loader.get_frame(0).shape[1]
+                    if 0 <= layer_idx < n_layers:
+                        times_iso = [t.isoformat() for t in loader.times]
+                        values: list[float | None] = []
+                        for ts in range(loader.n_frames):
+                            frame = loader.get_frame(ts)
+                            v = float(frame[node_idx, layer_idx])
+                            values.append(None if v < -9000 else round(v, 3))
+                        results.append({
+                            "location_id": loc_id,
+                            "name": name,
+                            "type": "gw",
+                            "layer": layer,
+                            "times": times_iso,
+                            "values": _sanitize_values(values),
+                            "units": "ft",
+                        })
+                        continue
+
+            # Fall back to hydrograph reader
+            if reader is not None and reader.n_timesteps > 0:
+                if 0 <= column_index < reader.n_columns:
+                    times_raw, values_raw = reader.get_time_series(column_index)
+                    results.append({
+                        "location_id": loc_id,
+                        "name": name,
+                        "type": "gw",
+                        "layer": layer,
+                        "times": times_raw,
+                        "values": _sanitize_values(values_raw),
+                        "units": "ft",
+                    })
+
+        if not results and reader is None:
+            raise HTTPException(
+                status_code=404, detail="No GW hydrograph data available"
+            )
 
     elif type == "stream":
         reader = model_state.get_stream_hydrograph_reader()

@@ -282,6 +282,109 @@ def get_cross_section_json(
     }
 
 
+@router.get("/cross-section/heads")
+def get_cross_section_heads(
+    start_lng: float = Query(..., description="Start longitude (WGS84)"),
+    start_lat: float = Query(..., description="Start latitude (WGS84)"),
+    end_lng: float = Query(..., description="End longitude (WGS84)"),
+    end_lat: float = Query(..., description="End latitude (WGS84)"),
+    timestep: int = Query(default=0, ge=0, description="Timestep index"),
+    n_samples: int = Query(default=100, ge=10, le=500, description="Sample points"),
+) -> dict:
+    """
+    Get interpolated groundwater head levels along a cross-section.
+
+    Returns per-layer head elevations clipped to layer geometry, with
+    NaN where layers are dry or outside the mesh.
+    """
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    model = model_state.model
+    if model is None or model.stratigraphy is None:
+        raise HTTPException(
+            status_code=400, detail="Stratigraphy required for cross-sections"
+        )
+
+    loader = model_state.get_head_loader()
+    if loader is None or loader.n_frames == 0:
+        raise HTTPException(status_code=404, detail="No head data available")
+
+    if timestep >= loader.n_frames:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Timestep {timestep} out of range [0, {loader.n_frames})",
+        )
+
+    # Convert WGS84 → model CRS
+    try:
+        from pyproj import Transformer
+
+        transformer = Transformer.from_crs(
+            "EPSG:4326", model_state._crs, always_xy=True,
+        )
+        start_x, start_y = transformer.transform(start_lng, start_lat)
+        end_x, end_y = transformer.transform(end_lng, end_lat)
+    except ImportError:
+        start_x, start_y = start_lng, start_lat
+        end_x, end_y = end_lng, end_lat
+
+    from pyiwfm.core.cross_section import CrossSectionExtractor
+
+    extractor = CrossSectionExtractor(model.grid, model.stratigraphy)
+    xs = extractor.extract(
+        start=(start_x, start_y), end=(end_x, end_y), n_samples=n_samples,
+    )
+
+    # Get head frame: shape (n_nodes, n_layers)
+    frame = loader.get_frame(timestep)
+
+    # Interpolate head onto cross-section sample points
+    head_interp = extractor.interpolate_layer_property(xs, frame, "head")
+    # head_interp shape: (n_samples, n_layers)
+
+    n_layers = xs.n_layers
+    dt = loader.times[timestep] if timestep < len(loader.times) else None
+
+    layers_out: list[dict] = []
+    for layer_idx in range(n_layers):
+        top_vals = xs.top_elev[:, layer_idx].copy()
+        bot_vals = xs.bottom_elev[:, layer_idx].copy()
+        head_vals = head_interp[:, layer_idx].copy()
+
+        # Clip head: NaN where dry (head < bottom) or IWFM dry marker
+        for j in range(len(head_vals)):
+            if not xs.mask[j]:
+                head_vals[j] = np.nan
+            elif head_vals[j] < -9000:
+                head_vals[j] = np.nan
+            elif head_vals[j] < bot_vals[j]:
+                head_vals[j] = np.nan
+            elif head_vals[j] > top_vals[j]:
+                # Confine head to layer top for display
+                head_vals[j] = min(head_vals[j], top_vals[j])
+
+        layers_out.append({
+            "layer": layer_idx + 1,
+            "top": [round(float(v), 2) if not np.isnan(v) else None for v in top_vals],
+            "bottom": [round(float(v), 2) if not np.isnan(v) else None for v in bot_vals],
+            "head": [round(float(v), 2) if not np.isnan(v) else None for v in head_vals],
+        })
+
+    return {
+        "n_samples": n_samples,
+        "n_layers": n_layers,
+        "distance": [round(float(d), 2) for d in xs.distance],
+        "timestep": timestep,
+        "datetime": dt.isoformat() if dt else None,
+        "layers": layers_out,
+        "gs_elev": [
+            round(float(v), 2) if not np.isnan(v) else None for v in xs.gs_elev
+        ],
+        "mask": xs.mask.tolist(),
+    }
+
+
 @router.get("/info", response_model=SliceInfo)
 def get_slice_info(
     axis: Literal["x", "y", "z"] = Query(default="x"),

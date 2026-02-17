@@ -253,24 +253,20 @@ def _get_budget_units_metadata(budget_type: str, reader: object) -> dict:
     meta = model.metadata if model else {}
     category = _detect_budget_category(budget_type)
 
-    # Resolve source units based on budget type
-    if category == "gw":
-        source_volume = meta.get("gw_volume_output_unit", meta.get("volume_unit", "AF"))
-        source_length = meta.get("gw_length_output_unit", meta.get("length_unit", "FEET"))
-        source_area = meta.get("area_unit", "ACRES")
+    # HDF budget files store values in simulation units (not output units).
+    # IWFM has no direct volume unit field — derive from the length unit:
+    #   FT → FT3, M → M3.  The metadata fields like gw_volume_output_unit
+    # (UNITVLOU) and volume_unit are post-processing output units and must
+    # NOT be used as the source unit for raw HDF data.
+    length_unit = meta.get("length_unit", "FT").upper().strip()
+    if length_unit in ("FT", "FEET", "FOOT"):
+        source_volume = "FT3"
+    elif length_unit in ("M", "METERS", "METER"):
+        source_volume = "M3"
     else:
-        source_volume = meta.get("volume_unit", "AF")
-        source_area = meta.get("area_unit", "ACRES")
-        source_length = meta.get("length_unit", "FEET")
-
-    # Secondary fallback: parse header titles
-    title_units = _parse_title_units(reader)
-    if not source_volume or source_volume == "AF":
-        source_volume = title_units.get("volume", source_volume)
-    if not source_area or source_area == "ACRES":
-        source_area = title_units.get("area", source_area)
-    if not source_length or source_length == "FEET":
-        source_length = title_units.get("length", source_length)
+        source_volume = "FT3"  # safe default for US models
+    source_area = meta.get("area_unit", "SQ.FT.")
+    source_length = meta.get("length_unit", "FT")
 
     # Determine timestep unit
     ts = reader.header.timestep

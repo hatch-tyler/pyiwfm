@@ -31,17 +31,17 @@ import ListItemText from '@mui/material/ListItemText';
 import ListIcon from '@mui/icons-material/List';
 import { useViewerStore } from '../../stores/viewerStore';
 import {
-  uploadObservation, fetchObservations, deleteObservation,
+  fetchObservations, deleteObservation,
   getExportHeadsCsvUrl, getExportMeshGeoJsonUrl,
 } from '../../api/client';
 import { BASEMAPS } from './mapStyles';
+import { UploadWizard } from '../Observations/UploadWizard';
 
 interface ResultsControlsProps {
   nLayers: number;
-  onUploadComplete?: () => void;
 }
 
-export function ResultsControls({ nLayers, onUploadComplete }: ResultsControlsProps) {
+export function ResultsControls({ nLayers }: ResultsControlsProps) {
   const {
     headTimestep, headTimes, headLayer,
     showGWLocations, showStreamLocations, showSubsidenceLocations,
@@ -70,7 +70,7 @@ export function ResultsControls({ nLayers, onUploadComplete }: ResultsControlsPr
   } = useViewerStore();
 
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [obsType, setObsType] = useState<string>('gw');
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const nTimesteps = headTimes.length;
   const currentTime = headTimes[headTimestep] || '';
@@ -129,21 +129,6 @@ export function ResultsControls({ nLayers, onUploadComplete }: ResultsControlsPr
       if (animRef.current) clearInterval(animRef.current);
     };
   }, []);
-
-  // File upload handler
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      await uploadObservation(file, obsType);
-      const obs = await fetchObservations();
-      setObservations(obs);
-      onUploadComplete?.();
-    } catch (err) {
-      console.error('Upload failed:', err);
-    }
-    e.target.value = '';
-  };
 
   const layerOptions = Array.from({ length: nLayers }, (_, i) => i + 1);
 
@@ -426,6 +411,18 @@ export function ResultsControls({ nLayers, onUploadComplete }: ResultsControlsPr
           : 'Compare Hydrographs'}
       </Button>
 
+      {/* Upload observations wizard */}
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<UploadFileIcon />}
+        onClick={() => setWizardOpen(true)}
+        fullWidth
+        sx={{ mb: 1, textTransform: 'none' }}
+      >
+        Upload Observations
+      </Button>
+
       <Divider sx={{ my: 1 }} />
 
       {/* Export buttons */}
@@ -458,34 +455,6 @@ export function ResultsControls({ nLayers, onUploadComplete }: ResultsControlsPr
       >
         Mesh GeoJSON
       </Button>
-
-      <Divider sx={{ my: 1 }} />
-
-      {/* Observation type + upload */}
-      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'stretch' }}>
-        <FormControl size="small" sx={{ minWidth: 90 }}>
-          <Select
-            value={obsType}
-            onChange={(e) => setObsType(e.target.value as string)}
-            size="small"
-            sx={{ fontSize: 11, height: 32 }}
-          >
-            <MenuItem value="gw" sx={{ fontSize: 11 }}>GW Levels</MenuItem>
-            <MenuItem value="stream" sx={{ fontSize: 11 }}>Stream Gages</MenuItem>
-            <MenuItem value="subsidence" sx={{ fontSize: 11 }}>Subsidence</MenuItem>
-          </Select>
-        </FormControl>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<UploadFileIcon />}
-          component="label"
-          sx={{ flex: 1, textTransform: 'none', fontSize: 11 }}
-        >
-          Upload
-          <input type="file" accept=".csv,.txt" hidden onChange={handleUpload} />
-        </Button>
-      </Box>
 
       {/* Observation list */}
       {observations.length > 0 && (
@@ -527,6 +496,8 @@ export function ResultsControls({ nLayers, onUploadComplete }: ResultsControlsPr
           </List>
         </Box>
       )}
+
+      <UploadWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
     </Paper>
   );
 }

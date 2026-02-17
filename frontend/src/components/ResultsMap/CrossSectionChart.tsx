@@ -10,21 +10,28 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import Plot from 'react-plotly.js';
-import type { CrossSectionData } from '../../api/client';
+import type { CrossSectionData, CrossSectionHeadData } from '../../api/client';
 
 interface CrossSectionChartProps {
   data: CrossSectionData;
+  headData?: CrossSectionHeadData | null;
   onClose: () => void;
 }
 
-/** Distinct colors for each layer */
+/** Distinct colors for each layer (geology polygons) */
 const LAYER_COLORS = [
   '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728',
   '#9467bd', '#8c564b', '#e377c2', '#7f7f7f',
   '#bcbd22', '#17becf',
 ];
 
-export function CrossSectionChart({ data, onClose }: CrossSectionChartProps) {
+/** Distinct colors for head level lines per layer */
+const HEAD_LINE_COLORS = [
+  '#0d47a1', '#b71c1c', '#1b5e20', '#e65100',
+  '#4a148c', '#004d40', '#880e4f', '#263238',
+];
+
+export function CrossSectionChart({ data, headData, onClose }: CrossSectionChartProps) {
   const traces = useMemo(() => {
     if (data.n_cells === 0) return [];
 
@@ -84,8 +91,38 @@ export function CrossSectionChart({ data, onClose }: CrossSectionChartProps) {
       });
     }
 
+    // Add head level lines per layer if head data is available
+    if (headData && headData.layers.length > 0) {
+      for (const layerData of headData.layers) {
+        const xHead: (number | null)[] = [];
+        const yHead: (number | null)[] = [];
+        for (let j = 0; j < headData.distance.length; j++) {
+          const hv = layerData.head[j];
+          if (hv === null || hv === undefined) {
+            xHead.push(null);
+            yHead.push(null);
+          } else {
+            xHead.push(headData.distance[j]);
+            yHead.push(hv);
+          }
+        }
+        result.push({
+          x: xHead,
+          y: yHead,
+          type: 'scatter',
+          mode: 'lines',
+          name: `Head L${layerData.layer}`,
+          connectgaps: false,
+          line: {
+            color: HEAD_LINE_COLORS[(layerData.layer - 1) % HEAD_LINE_COLORS.length],
+            width: 2.5,
+          },
+        });
+      }
+    }
+
     return result;
-  }, [data]);
+  }, [data, headData]);
 
   return (
     <Paper

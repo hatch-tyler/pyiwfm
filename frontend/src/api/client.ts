@@ -671,6 +671,41 @@ export interface CrossSectionData {
   total_distance: number;
 }
 
+export interface CrossSectionHeadLayer {
+  layer: number;
+  top: (number | null)[];
+  bottom: (number | null)[];
+  head: (number | null)[];
+}
+
+export interface CrossSectionHeadData {
+  n_samples: number;
+  n_layers: number;
+  distance: number[];
+  timestep: number;
+  datetime: string | null;
+  layers: CrossSectionHeadLayer[];
+  gs_elev: (number | null)[];
+  mask: boolean[];
+}
+
+export async function fetchCrossSectionHeads(
+  startLng: number,
+  startLat: number,
+  endLng: number,
+  endLat: number,
+  timestep: number = 0,
+  nSamples: number = 100,
+): Promise<CrossSectionHeadData> {
+  const response = await fetch(
+    `${API_BASE}/slice/cross-section/heads?start_lng=${startLng}&start_lat=${startLat}&end_lng=${endLng}&end_lat=${endLat}&timestep=${timestep}&n_samples=${nSamples}`
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to fetch cross-section heads: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 export async function fetchCrossSectionJSON(
   startLng: number,
   startLat: number,
@@ -893,16 +928,51 @@ export interface ObservationData {
   units: string;
 }
 
-export async function uploadObservation(file: File, type: string = 'gw'): Promise<{
-  observation_id: string;
+export interface ObservationPreview {
+  headers: string[];
+  sample_rows: string[][];
+  n_rows: number;
+}
+
+export interface UploadResult {
+  n_observations: number;
   n_records: number;
-  filename: string;
-  start_time: string | null;
-  end_time: string | null;
-}> {
+  observations: Array<{
+    observation_id: string;
+    filename: string;
+    n_records: number;
+    location_id: number | null;
+    start_time: string | null;
+    end_time: string | null;
+  }>;
+  unmatched_locations: string[];
+}
+
+/** Client-side CSV preview: reads headers and first sample rows. */
+export async function previewObservationFile(file: File): Promise<ObservationPreview> {
+  const text = await file.text();
+  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length === 0) throw new Error('File is empty');
+  const headers = lines[0].split(',').map((h) => h.trim());
+  const dataLines = lines.slice(1);
+  const sampleRows = dataLines.slice(0, 10).map((l) => l.split(',').map((c) => c.trim()));
+  return { headers, sample_rows: sampleRows, n_rows: dataLines.length };
+}
+
+export async function uploadObservation(
+  file: File,
+  type: string = 'gw',
+  dateCol?: number,
+  valueCol?: number,
+  locationCol?: number,
+): Promise<UploadResult> {
   const formData = new FormData();
   formData.append('file', file);
-  const response = await fetch(`${API_BASE}/observations/upload?type=${encodeURIComponent(type)}`, {
+  const params = new URLSearchParams({ type });
+  if (dateCol !== undefined) params.set('date_col', String(dateCol));
+  if (valueCol !== undefined) params.set('value_col', String(valueCol));
+  if (locationCol !== undefined && locationCol >= 0) params.set('location_col', String(locationCol));
+  const response = await fetch(`${API_BASE}/observations/upload?${params}`, {
     method: 'POST',
     body: formData,
   });

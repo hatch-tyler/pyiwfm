@@ -31,7 +31,7 @@ export function UploadDialog({ open, onClose }: UploadDialogProps) {
     setResult(null);
     try {
       const res = await uploadObservation(file);
-      setResult(`Uploaded ${res.n_records} records from ${res.filename}`);
+      setResult(`Uploaded ${res.n_records} records from ${res.observations[0]?.filename ?? file.name}`);
       const obs = await fetchObservations();
       setObservations(obs);
     } catch (err) {

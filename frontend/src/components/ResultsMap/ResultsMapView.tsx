@@ -35,7 +35,7 @@ import {
   fetchPropertyMap, fetchElementDetail,
   fetchBoundaryConditions, fetchHeadDiff,
   fetchLakesGeoJSON, fetchLakeRating,
-  fetchCrossSectionJSON,
+  fetchCrossSectionJSON, fetchCrossSectionHeads,
   fetchSmallWatersheds, fetchDiversions, fetchDiversionDetail,
   fetchReachProfile, fetchHydrographsMulti,
   fetchMeshNodes,
@@ -43,7 +43,7 @@ import {
 import type {
   HydrographLocation, HydrographData, WellInfo,
   BCNodeInfo, SmallWatershedData, SmallWatershed, SmallWatershedGWNode,
-  DiversionArc, MeshNodeInfo,
+  DiversionArc, MeshNodeInfo, CrossSectionHeadData,
 } from '../../api/client';
 import {
   interpolateColor, interpolateDivergingColor,
@@ -137,6 +137,7 @@ export function ResultsMapView() {
   const [watershedData, setWatershedData] = useState<SmallWatershedData | null>(null);
   const [diversionData, setDiversionData] = useState<DiversionArc[]>([]);
   const [comparisonSeries, setComparisonSeries] = useState<HydrographData[]>([]);
+  const [crossSectionHeadData, setCrossSectionHeadData] = useState<CrossSectionHeadData | null>(null);
 
   // Property map data (for non-head coloring)
   const [propertyValues, setPropertyValues] = useState<number[] | null>(null);
@@ -405,6 +406,21 @@ export function ResultsMapView() {
     loadDiff();
   }, [headDiffMode, headDiffTimestepA, headDiffTimestepB, headLayer, hasHeads]);
 
+  // Re-fetch cross-section head data when timestep changes
+  useEffect(() => {
+    if (!crossSectionData || !hasHeads || crossSectionPoints.length < 2) {
+      return;
+    }
+    const pts = crossSectionPoints;
+    fetchCrossSectionHeads(
+      pts[0].lng, pts[0].lat,
+      pts[1].lng, pts[1].lat,
+      headTimestep,
+    )
+      .then(setCrossSectionHeadData)
+      .catch(() => setCrossSectionHeadData(null));
+  }, [headTimestep, crossSectionData, crossSectionPoints, hasHeads]);
+
   // Click handler for hydrograph locations
   const handleLocationClick = useCallback(async (loc: HydrographLocation, type: string) => {
     setSelectedLocation({ id: loc.id, type: type as 'gw' | 'stream' | 'subsidence' });
@@ -477,7 +493,7 @@ export function ResultsMapView() {
     const pts = [...crossSectionPoints, { lng, lat }];
 
     if (pts.length >= 2) {
-      // We have two points — fetch cross-section
+      // We have two points — fetch cross-section geometry and head data
       setCrossSectionPoints(pts.slice(0, 2));
       try {
         const data = await fetchCrossSectionJSON(
@@ -485,15 +501,31 @@ export function ResultsMapView() {
           pts[1].lng, pts[1].lat,
         );
         setCrossSectionData(data);
+
+        // Also fetch head data at current timestep
+        if (hasHeads) {
+          try {
+            const heads = await fetchCrossSectionHeads(
+              pts[0].lng, pts[0].lat,
+              pts[1].lng, pts[1].lat,
+              headTimestep,
+            );
+            setCrossSectionHeadData(heads);
+          } catch {
+            setCrossSectionHeadData(null);
+          }
+        }
       } catch (err) {
         console.error('Failed to load cross-section:', err);
         setCrossSectionData(null);
+        setCrossSectionHeadData(null);
       }
     } else {
       setCrossSectionPoints(pts);
       setCrossSectionData(null);
+      setCrossSectionHeadData(null);
     }
-  }, [crossSectionMode, crossSectionPoints, setCrossSectionPoints, setCrossSectionData]);
+  }, [crossSectionMode, crossSectionPoints, setCrossSectionPoints, setCrossSectionData, hasHeads, headTimestep]);
 
   // Build deck.gl layers
   const layers = useMemo(() => {
@@ -1202,7 +1234,11 @@ export function ResultsMapView() {
         {crossSectionData && crossSectionData.n_cells > 0 && (
           <CrossSectionChart
             data={crossSectionData}
-            onClose={() => setCrossSectionData(null)}
+            headData={crossSectionHeadData}
+            onClose={() => {
+              setCrossSectionData(null);
+              setCrossSectionHeadData(null);
+            }}
           />
         )}
 

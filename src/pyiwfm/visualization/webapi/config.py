@@ -644,6 +644,82 @@ class ModelState:
     # Hydrograph readers (IWFM text output files)
     # ------------------------------------------------------------------
 
+    def _get_or_convert_hydrograph(
+        self, path: Path
+    ) -> IWFMHydrographReader | None:
+        """Load a hydrograph file, auto-converting text to HDF5 cache.
+
+        Mirrors the head loader auto-conversion pattern:
+        - HDF5 files → ``LazyHydrographDataLoader`` directly
+        - Text files → convert to ``{name}.hydrograph_cache.hdf``, then lazy-load
+        - Falls back to ``IWFMHydrographReader`` if conversion fails
+        """
+        suffix = path.suffix.lower()
+
+        if suffix in (".hdf", ".h5", ".he5", ".hdf5"):
+            try:
+                from pyiwfm.visualization.webapi.hydrograph_loader import (
+                    LazyHydrographDataLoader,
+                )
+
+                loader = LazyHydrographDataLoader(path)
+                if loader.n_timesteps > 0:
+                    logger.info(
+                        "Hydrograph HDF5 loaded: %d columns, %d timesteps from %s",
+                        loader.n_columns, loader.n_timesteps, path.name,
+                    )
+                    return loader  # type: ignore[return-value]
+            except Exception as e:
+                logger.warning("Failed to load hydrograph HDF5 %s: %s", path, e)
+
+        if suffix in (".out", ".txt", ".dat"):
+            # Try auto-converting to HDF5 cache
+            hdf_cache = path.parent / (path.name + ".hydrograph_cache.hdf")
+            try:
+                if (
+                    not hdf_cache.exists()
+                    or hdf_cache.stat().st_mtime < path.stat().st_mtime
+                ):
+                    from pyiwfm.io.hydrograph_converter import (
+                        convert_hydrograph_to_hdf,
+                    )
+
+                    convert_hydrograph_to_hdf(path, hdf_cache)
+
+                from pyiwfm.visualization.webapi.hydrograph_loader import (
+                    LazyHydrographDataLoader,
+                )
+
+                loader = LazyHydrographDataLoader(hdf_cache)
+                if loader.n_timesteps > 0:
+                    logger.info(
+                        "Hydrograph auto-converted: %d columns, %d timesteps from %s",
+                        loader.n_columns, loader.n_timesteps, path.name,
+                    )
+                    return loader  # type: ignore[return-value]
+            except Exception as e:
+                logger.warning(
+                    "HDF5 auto-conversion failed for %s, falling back to text reader: %s",
+                    path.name, e,
+                )
+
+            # Fallback: load text file directly
+            try:
+                from pyiwfm.visualization.webapi.hydrograph_reader import (
+                    IWFMHydrographReader,
+                )
+
+                reader = IWFMHydrographReader(path)
+                logger.info(
+                    "Hydrograph text reader: %d columns, %d timesteps from %s",
+                    reader.n_columns, reader.n_timesteps, path.name,
+                )
+                return reader
+            except Exception as e:
+                logger.error("Failed to load hydrograph text file %s: %s", path, e)
+
+        return None
+
     def get_gw_hydrograph_reader(self) -> IWFMHydrographReader | None:
         """Get or create the GW hydrograph reader from the output file."""
         if self._gw_hydrograph_reader is not None:
@@ -663,19 +739,7 @@ class ModelState:
             logger.warning("GW hydrograph file not found: %s", p)
             return None
 
-        try:
-            from pyiwfm.visualization.webapi.hydrograph_reader import IWFMHydrographReader
-
-            self._gw_hydrograph_reader = IWFMHydrographReader(p)
-            logger.info(
-                "GW hydrograph reader: %d columns, %d timesteps",
-                self._gw_hydrograph_reader.n_columns,
-                self._gw_hydrograph_reader.n_timesteps,
-            )
-        except Exception as e:
-            logger.error("Failed to load GW hydrograph file: %s", e)
-            return None
-
+        self._gw_hydrograph_reader = self._get_or_convert_hydrograph(p)
         return self._gw_hydrograph_reader
 
     def get_stream_hydrograph_reader(self) -> IWFMHydrographReader | None:
@@ -697,19 +761,7 @@ class ModelState:
             logger.warning("Stream hydrograph file not found: %s", p)
             return None
 
-        try:
-            from pyiwfm.visualization.webapi.hydrograph_reader import IWFMHydrographReader
-
-            self._stream_hydrograph_reader = IWFMHydrographReader(p)
-            logger.info(
-                "Stream hydrograph reader: %d columns, %d timesteps",
-                self._stream_hydrograph_reader.n_columns,
-                self._stream_hydrograph_reader.n_timesteps,
-            )
-        except Exception as e:
-            logger.error("Failed to load stream hydrograph file: %s", e)
-            return None
-
+        self._stream_hydrograph_reader = self._get_or_convert_hydrograph(p)
         return self._stream_hydrograph_reader
 
     def get_subsidence_reader(self) -> IWFMHydrographReader | None:
@@ -732,40 +784,18 @@ class ModelState:
                 if not p.is_absolute() and self._results_dir:
                     p = self._results_dir / p
                 if p.exists():
-                    try:
-                        from pyiwfm.visualization.webapi.hydrograph_reader import (
-                            IWFMHydrographReader,
-                        )
-
-                        self._subsidence_reader = IWFMHydrographReader(p)
-                        logger.info(
-                            "Subsidence hydrograph reader: %d columns, %d timesteps",
-                            self._subsidence_reader.n_columns,
-                            self._subsidence_reader.n_timesteps,
-                        )
+                    self._subsidence_reader = self._get_or_convert_hydrograph(p)
+                    if self._subsidence_reader is not None:
                         return self._subsidence_reader
-                    except Exception as e:
-                        logger.error("Failed to load subsidence hydrograph file: %s", e)
 
         # Fallback: scan model directory for *Subsidence*.out
         if self._results_dir:
             for pattern in ("*Subsidence*.out", "*_Subsidence.out", "*subsidence*.out"):
                 matches = list(self._results_dir.glob(pattern))
                 if matches:
-                    try:
-                        from pyiwfm.visualization.webapi.hydrograph_reader import (
-                            IWFMHydrographReader,
-                        )
-
-                        self._subsidence_reader = IWFMHydrographReader(matches[0])
-                        logger.info(
-                            "Subsidence hydrograph reader (scanned): %s, %d columns",
-                            matches[0].name,
-                            self._subsidence_reader.n_columns,
-                        )
+                    self._subsidence_reader = self._get_or_convert_hydrograph(matches[0])
+                    if self._subsidence_reader is not None:
                         return self._subsidence_reader
-                    except Exception as e:
-                        logger.debug("Could not read %s as subsidence: %s", matches[0], e)
 
         return None
 
