@@ -18,6 +18,7 @@ interface BudgetChartProps {
   title?: string;
   dualAxis?: boolean;
   yAxisLabel?: string;
+  xAxisLabel?: string;
   partialYearNote?: string;
   onExpand?: () => void;
 }
@@ -43,7 +44,7 @@ const COLORS = [
   '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5',
 ];
 
-export function BudgetChart({ data, chartType, loading, title, dualAxis, yAxisLabel, partialYearNote, onExpand }: BudgetChartProps) {
+export function BudgetChart({ data, chartType, loading, title, dualAxis, yAxisLabel, xAxisLabel, partialYearNote, onExpand }: BudgetChartProps) {
   if (loading) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -100,6 +101,7 @@ export function BudgetChart({ data, chartType, loading, title, dualAxis, yAxisLa
 
   const chartTitle = title ?? `${data.location} Budget`;
   const xAxisType = detectXAxisType(data.times);
+  const xTitle = xAxisLabel ?? (xAxisType === 'date' ? 'Date' : 'Year');
   const layoutExtra: Record<string, unknown> = {};
   if (dualAxis && data.columns.length >= 2) {
     layoutExtra.yaxis2 = {
@@ -107,7 +109,7 @@ export function BudgetChart({ data, chartType, loading, title, dualAxis, yAxisLa
       overlaying: 'y',
       side: 'right',
     };
-    layoutExtra.margin = { l: 70, r: 70, t: 40, b: 50 };
+    layoutExtra.margin = { l: 70, r: 70, t: 40, b: 80 };
   }
 
   if (partialYearNote) {
@@ -139,12 +141,12 @@ export function BudgetChart({ data, chartType, loading, title, dualAxis, yAxisLa
       <Plot
         data={traces}
         layout={{
-          margin: { l: 70, r: 30, t: 40, b: 40 },
+          margin: { l: 70, r: 30, t: 40, b: 80 },
           title: { text: chartTitle, font: { size: 14 } },
-          xaxis: { type: xAxisType },
+          xaxis: { title: { text: xTitle }, type: xAxisType },
           yaxis: { title: { text: yAxisLabel ?? data.columns[0]?.name ?? 'Value' } },
           barmode: chartType === 'bar' ? 'group' : undefined,
-          legend: { orientation: 'h', y: -0.12, xanchor: 'center', x: 0.5 },
+          legend: { orientation: 'h', y: -0.22, xanchor: 'center', x: 0.5 },
           autosize: true,
           ...layoutExtra,
         }}

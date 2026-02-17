@@ -123,11 +123,11 @@ export function MonthlyPatternChart({
       <Plot
         data={traces}
         layout={{
-          margin: { l: 70, r: 30, t: 40, b: 50 },
+          margin: { l: 70, r: 30, t: 40, b: 80 },
           title: { text: chartTitle, font: { size: 14 } },
           xaxis: { title: { text: 'Month' }, type: 'category' },
           yaxis: { title: { text: yLabel } },
-          legend: { orientation: 'h', y: -0.15 },
+          legend: { orientation: 'h', y: -0.25, xanchor: 'center', x: 0.5 },
           autosize: true,
         }}
         config={{ responsive: true, displaylogo: false }}

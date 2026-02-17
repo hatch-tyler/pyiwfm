@@ -81,7 +81,7 @@ export function CumulativeDepartureChart({
       <Plot
         data={traces}
         layout={{
-          margin: { l: 70, r: 30, t: 40, b: 50 },
+          margin: { l: 70, r: 30, t: 40, b: 80 },
           title: { text: chartTitle, font: { size: 14 } },
           xaxis: { title: { text: 'Date' }, type: 'date' },
           yaxis: { title: { text: `Cumulative Departure (${volLabel})` } },
@@ -97,7 +97,7 @@ export function CumulativeDepartureChart({
               line: { color: '#888', width: 1, dash: 'dash' },
             },
           ],
-          legend: { orientation: 'h', y: -0.15 },
+          legend: { orientation: 'h', y: -0.25, xanchor: 'center', x: 0.5 },
           autosize: true,
         }}
         config={{ responsive: true, displaylogo: false }}

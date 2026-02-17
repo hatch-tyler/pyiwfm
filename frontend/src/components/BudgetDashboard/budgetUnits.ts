@@ -576,6 +576,20 @@ export function convertLengthValues(
 }
 
 // ---------------------------------------------------------------------------
+// X-axis label builder
+// ---------------------------------------------------------------------------
+
+/**
+ * Build an x-axis title string from the current time aggregation setting.
+ */
+export function getXAxisLabel(timeAggId: string): string {
+  if (timeAggId === 'seasonal') return 'Season';
+  if (timeAggId === 'water_year') return 'Water Year';
+  if (timeAggId === 'calendar_year') return 'Calendar Year';
+  return 'Date';
+}
+
+// ---------------------------------------------------------------------------
 // Y-axis label builder
 // ---------------------------------------------------------------------------
 

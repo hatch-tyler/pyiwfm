@@ -106,13 +106,13 @@ export function ExceedanceChart({
       <Plot
         data={traces}
         layout={{
-          margin: { l: 70, r: 30, t: 50, b: 50 },
+          margin: { l: 70, r: 30, t: 50, b: 80 },
           title: { text: chartTitle, font: { size: 14 } },
           xaxis: { title: { text: 'Exceedance Probability (%)' }, range: [0, 100] },
           yaxis: { title: { text: `Volume (${volLabel} / month)` } },
           shapes,
           annotations,
-          legend: { orientation: 'h', y: -0.15 },
+          legend: { orientation: 'h', y: -0.25, xanchor: 'center', x: 0.5 },
           autosize: true,
         }}
         config={{ responsive: true, displaylogo: false }}
