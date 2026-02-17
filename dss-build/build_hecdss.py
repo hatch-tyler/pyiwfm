@@ -43,7 +43,7 @@ def find_heclib_source() -> Path | None:
     # Check common locations relative to this script
     script_dir = Path(__file__).parent
     possible_paths = [
-        # pyiwfm/cmake/ -> pyiwfm/ -> repo root -> src/build/...
+        # pyiwfm/dss-build/ -> pyiwfm/ -> repo root -> src/build/...
         script_dir.parent.parent / "src" / "build" / "_deps" / "heclib-src" / "heclib" / "heclib_c",
         # Keep old patterns as fallbacks
         script_dir.parent.parent / "build" / "_deps" / "heclib-src" / "heclib" / "heclib_c",

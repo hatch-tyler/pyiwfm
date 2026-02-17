@@ -58,7 +58,7 @@ cd frontend && npm run lint                   # ESLint check
 ```bash
 docker-compose up --build               # Build and start web viewer
 docker run -p 8080:8080 -v /path/to/model:/model pyiwfm  # Run with model mounted
-docker build -f Dockerfile.full -t pyiwfm-full .          # Full image with HEC-DSS support
+docker build -f dss-build/Dockerfile -t pyiwfm-dss .      # Full image with HEC-DSS support
 docker-compose --profile dss up --build viewer-dss        # Compose with HEC-DSS
 ```
 See `DOCKER.md` for full configuration (env vars: PORT, TITLE, MODE, MODEL_PATH).
@@ -174,5 +174,5 @@ Many modules have optional imports. Handle ImportError gracefully:
 - `mesh`: triangle, gmsh
 - `viz`: vtk, matplotlib
 - `webapi`: fastapi, uvicorn, pydantic, pyvista, vtk, pyproj, python-multipart
-- `dss`: bundled HEC-DSS 7 C library (`io/dss/lib/hecdss.dll`) with ctypes wrapper; no external Python package needed. Set `HECDSS_LIB` env var to override library path.
+- `dss`: bundled HEC-DSS 7 C library (`io/dss/lib/hecdss.dll`) with ctypes wrapper; no extra install needed. On Linux, build `libhecdss.so` from source via `dss-build/` (see `dss-build/build_hecdss.py`). Set `HECDSS_LIB` env var to override library path.
 - `pest`: scipy

@@ -23,21 +23,21 @@ docker build -t pyiwfm .
 docker run -p 8080:8080 -v /path/to/your/model:/model pyiwfm
 ```
 
-## HEC-DSS Support (Dockerfile.full)
+## HEC-DSS Support (dss-build/)
 
-The standard `Dockerfile` does not include HEC-DSS support because the bundled library is Windows-only. `Dockerfile.full` compiles `libhecdss.so` from source using the project's `cmake/` build system.
+The standard `Dockerfile` does not include HEC-DSS support because the bundled library is Windows-only. The `dss-build/` directory contains the CMake build system and Dockerfile that compile `libhecdss.so` from source for Linux.
 
 ### Build
 
 ```bash
 # Build the full image (fetches hec-dss source from GitHub, ~5-10 min first time)
-docker build -f Dockerfile.full -t pyiwfm-full .
+docker build -f dss-build/Dockerfile -t pyiwfm-dss .
 ```
 
 ### Run
 
 ```bash
-docker run -p 8080:8080 -v /path/to/your/model:/model pyiwfm-full
+docker run -p 8080:8080 -v /path/to/your/model:/model pyiwfm-dss
 ```
 
 ### Using Docker Compose
@@ -49,7 +49,7 @@ docker-compose --profile dss up --build viewer-dss
 ### Verify HEC-DSS is working
 
 ```bash
-docker run --rm pyiwfm-full python -c \
+docker run --rm pyiwfm-dss python -c \
   "from pyiwfm.io.dss import HAS_DSS_LIBRARY; assert HAS_DSS_LIBRARY; print('HEC-DSS OK')"
 ```
 

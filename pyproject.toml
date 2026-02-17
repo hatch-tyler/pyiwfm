@@ -55,7 +55,6 @@ webapi = [
     "pyproj>=3.4",
     "python-multipart>=0.0.6",
 ]
-dss = []  # Intentionally empty: HEC-DSS uses bundled C library via ctypes, no Python deps needed
 pest = [
     "scipy>=1.7",
 ]
@@ -78,7 +77,7 @@ docs = [
     "matplotlib>=3.5",
 ]
 all = [
-    "pyiwfm[gis,mesh,viz,webapi,dss,pest]",
+    "pyiwfm[gis,mesh,viz,webapi,pest]",
 ]
 
 [project.scripts]

@@ -45,7 +45,7 @@ services:
   viewer-dss:
     build:
       context: .
-      dockerfile: Dockerfile.full
+      dockerfile: dss-build/Dockerfile
     container_name: pyiwfm-viewer-dss
     profiles:
       - dss  # Only start with: docker-compose --profile dss up viewer-dss

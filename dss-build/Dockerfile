@@ -1,10 +1,13 @@
-# Dockerfile.full - pyiwfm with HEC-DSS support (Linux)
+# Dockerfile - Build libhecdss.so from source for Linux
 #
-# This multi-stage build compiles libhecdss.so from source using the cmake/
-# infrastructure, then produces a runtime image with full DSS support.
+# This multi-stage build compiles the HEC-DSS shared library from source,
+# then produces a pyiwfm runtime image with full DSS support.
 #
-# Build: docker build -f Dockerfile.full -t pyiwfm-full .
-# Run:   docker run -p 8080:8080 -v /path/to/model:/model pyiwfm-full
+# Build (from project root):
+#   docker build -f dss-build/Dockerfile -t pyiwfm-dss .
+#
+# Run:
+#   docker run -p 8080:8080 -v /path/to/model:/model pyiwfm-dss
 #
 # Build time: ~5-10 minutes (fetches hec-dss source from GitHub)
 
@@ -22,7 +25,7 @@ WORKDIR /app
 COPY . /app/
 
 # Build libhecdss.so and install it into the package lib directory
-RUN python cmake/build_hecdss.py --install
+RUN python dss-build/build_hecdss.py --install
 
 # Verify the shared library was built
 RUN test -f src/pyiwfm/io/dss/lib/libhecdss.so \
@@ -34,7 +37,6 @@ FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
