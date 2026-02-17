@@ -6,9 +6,17 @@ Tests are skipped if paths are not available.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
+
+# ---------------------------------------------------------------------------
+# Default paths (fallbacks when env vars not set)
+# ---------------------------------------------------------------------------
+
+_DEFAULT_SAMPLE_MODEL = r"C:\Users\hatch\OneDrive\Desktop\iwfm-2025.0.1747\samplemodel"
+_DEFAULT_C2VSIMFG = r"C:\Users\hatch\OneDrive\Desktop\c2vsimfg"
 
 
 # ---------------------------------------------------------------------------
@@ -20,9 +28,10 @@ import pytest
 def sample_model_path() -> Path:
     """Return path to the IWFM Sample Model directory.
 
+    Reads from IWFM_SAMPLE_MODEL_DIR env var, falling back to default.
     Skips the test if the directory does not exist.
     """
-    path = Path(r"C:\Users\hatch\OneDrive\Desktop\iwfm-2025.0.1747\samplemodel")
+    path = Path(os.environ.get("IWFM_SAMPLE_MODEL_DIR", _DEFAULT_SAMPLE_MODEL))
     if not path.exists():
         pytest.skip(f"Sample model directory not found: {path}")
     return path
@@ -32,9 +41,10 @@ def sample_model_path() -> Path:
 def c2vsimfg_path() -> Path:
     """Return path to the C2VSimFG model directory.
 
+    Reads from C2VSIMFG_DIR env var, falling back to default.
     Skips the test if the directory does not exist.
     """
-    path = Path(r"C:\Users\hatch\OneDrive\Desktop\c2vsimfg")
+    path = Path(os.environ.get("C2VSIMFG_DIR", _DEFAULT_C2VSIMFG))
     if not path.exists():
         pytest.skip(f"C2VSimFG model directory not found: {path}")
     return path

@@ -30,6 +30,10 @@ from pyiwfm.comparison.report import (
     ReportGenerator,
     TextReport,
 )
+from pyiwfm.comparison.results_differ import (
+    ResultsDiffer,
+    ResultsComparison,
+)
 
 __all__ = [
     # Differ
@@ -57,4 +61,7 @@ __all__ = [
     "JsonReport",
     "ReportGenerator",
     "TextReport",
+    # Results differ
+    "ResultsDiffer",
+    "ResultsComparison",
 ]

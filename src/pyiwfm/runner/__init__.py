@@ -12,6 +12,10 @@ from pyiwfm.runner.runner import (
     find_iwfm_executables,
 )
 
+from pyiwfm.runner.executables import (
+    IWFMExecutableManager,
+)
+
 from pyiwfm.runner.results import (
     RunResult,
     PreprocessorResult,
@@ -110,6 +114,8 @@ __all__ = [
     "IWFMRunner",
     "IWFMExecutables",
     "find_iwfm_executables",
+    # Executable manager
+    "IWFMExecutableManager",
     # Results
     "RunResult",
     "PreprocessorResult",
