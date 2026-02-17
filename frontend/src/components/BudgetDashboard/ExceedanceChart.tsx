@@ -53,7 +53,7 @@ export function ExceedanceChart({
   for (const group of flowGroups) {
     for (const col of group.data.columns) {
       const converted = convertVolumeValues(
-        col.values, group.data.times, sourceVolume, volumeUnit, 'per_month', 'monthly',
+        col.values, group.data.times, sourceVolume, 'volume', volumeUnit, 'cfs', 'monthly',
       );
       const exc = computeExceedance(converted.values, col.name);
 

@@ -120,6 +120,7 @@ export interface ViewerState {
   activeBudgetType: string;
   activeBudgetLocation: string;
   budgetChartType: 'area' | 'bar' | 'line';
+  budgetDisplayMode: 'volume' | 'rate';
   budgetVolumeUnit: string;
   budgetRateUnit: string;
   budgetAreaUnit: string;
@@ -233,6 +234,7 @@ export interface ViewerState {
   setActiveBudgetType: (t: string) => void;
   setActiveBudgetLocation: (l: string) => void;
   setBudgetChartType: (t: 'area' | 'bar' | 'line') => void;
+  setBudgetDisplayMode: (m: 'volume' | 'rate') => void;
   setBudgetVolumeUnit: (u: string) => void;
   setBudgetRateUnit: (u: string) => void;
   setBudgetAreaUnit: (u: string) => void;
@@ -356,8 +358,9 @@ export const useViewerStore = create<ViewerState>((set) => ({
   activeBudgetType: '',
   activeBudgetLocation: '',
   budgetChartType: 'area',
+  budgetDisplayMode: 'volume',
   budgetVolumeUnit: 'af',
-  budgetRateUnit: 'per_month',
+  budgetRateUnit: 'cfs',
   budgetAreaUnit: 'acres',
   budgetLengthUnit: 'feet',
   budgetTimeAgg: 'monthly',
@@ -505,6 +508,7 @@ export const useViewerStore = create<ViewerState>((set) => ({
   setActiveBudgetType: (t) => set({ activeBudgetType: t }),
   setActiveBudgetLocation: (l) => set({ activeBudgetLocation: l }),
   setBudgetChartType: (t) => set({ budgetChartType: t }),
+  setBudgetDisplayMode: (m) => set({ budgetDisplayMode: m }),
   setBudgetVolumeUnit: (u) => set({ budgetVolumeUnit: u }),
   setBudgetRateUnit: (u) => set({ budgetRateUnit: u }),
   setBudgetAreaUnit: (u) => set({ budgetAreaUnit: u }),

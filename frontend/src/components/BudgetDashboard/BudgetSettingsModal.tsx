@@ -13,6 +13,8 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import ToggleButton from '@mui/material/ToggleButton';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -37,9 +39,9 @@ export function BudgetSettingsModal({
   hasLengthColumns,
 }: BudgetSettingsModalProps) {
   const {
-    budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
+    budgetDisplayMode, budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
     budgetAnalysisMode,
-    setBudgetVolumeUnit, setBudgetRateUnit, setBudgetAreaUnit, setBudgetLengthUnit, setBudgetTimeAgg,
+    setBudgetDisplayMode, setBudgetVolumeUnit, setBudgetRateUnit, setBudgetAreaUnit, setBudgetLengthUnit, setBudgetTimeAgg,
   } = useViewerStore();
 
   const isAnalysisMode = budgetAnalysisMode !== 'timeseries';
@@ -81,25 +83,58 @@ export function BudgetSettingsModal({
 
         <Divider sx={{ my: 2 }} />
 
-        {/* Section 2: Display Units
-             Volume and Rate are always shown (virtually all budgets use them).
-             Area and Length are conditional on column presence. */}
+        {/* Section 2: Display Mode & Units */}
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+          Display Mode
+        </Typography>
+        <ToggleButtonGroup
+          value={budgetDisplayMode}
+          exclusive
+          onChange={(_, val) => { if (val) setBudgetDisplayMode(val); }}
+          size="small"
+          fullWidth
+          sx={{ mb: 2 }}
+        >
+          <ToggleButton value="volume">Volume</ToggleButton>
+          <ToggleButton value="rate">Rate</ToggleButton>
+        </ToggleButtonGroup>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+          {budgetDisplayMode === 'volume'
+            ? 'Values represent total volumes per timestep. Yearly aggregation sums monthly values.'
+            : 'Values represent flow rates. Yearly aggregation averages monthly rates.'}
+        </Typography>
+
         <Typography variant="subtitle2" sx={{ mb: 1 }}>
           Display Units
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Volume Unit</InputLabel>
-            <Select
-              value={budgetVolumeUnit}
-              label="Volume Unit"
-              onChange={(e) => setBudgetVolumeUnit(e.target.value)}
-            >
-              {VOLUME_UNITS.map((u) => (
-                <MenuItem key={u.id} value={u.id}>{u.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {budgetDisplayMode === 'volume' ? (
+            <FormControl fullWidth size="small">
+              <InputLabel>Volume Unit</InputLabel>
+              <Select
+                value={budgetVolumeUnit}
+                label="Volume Unit"
+                onChange={(e) => setBudgetVolumeUnit(e.target.value)}
+              >
+                {VOLUME_UNITS.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>{u.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : (
+            <FormControl fullWidth size="small">
+              <InputLabel>Rate Unit</InputLabel>
+              <Select
+                value={budgetRateUnit}
+                label="Rate Unit"
+                onChange={(e) => setBudgetRateUnit(e.target.value)}
+              >
+                {RATE_UNITS.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>{u.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
 
           <FormControl fullWidth size="small">
             <InputLabel>Area Unit</InputLabel>
@@ -128,19 +163,6 @@ export function BudgetSettingsModal({
               </Select>
             </FormControl>
           )}
-
-          <FormControl fullWidth size="small">
-            <InputLabel>Rate Display</InputLabel>
-            <Select
-              value={budgetRateUnit}
-              label="Rate Display"
-              onChange={(e) => setBudgetRateUnit(e.target.value)}
-            >
-              {RATE_UNITS.map((u) => (
-                <MenuItem key={u.id} value={u.id}>{u.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
         </Box>
 
         <Divider sx={{ my: 2 }} />

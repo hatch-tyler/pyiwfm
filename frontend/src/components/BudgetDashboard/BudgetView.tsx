@@ -46,6 +46,7 @@ interface ConvertedChart {
 /** Apply unit conversion to a single chart group's data. */
 function convertChartData(
   group: ChartGroup,
+  displayMode: 'volume' | 'rate',
   volumeUnit: string,
   rateUnit: string,
   areaUnit: string,
@@ -67,7 +68,7 @@ function convertChartData(
       return { name: col.name, values: result.values, units: col.units };
     } else {
       const result = convertVolumeValues(
-        col.values, group.data.times, sourceVolume, volumeUnit, rateUnit, timeAgg,
+        col.values, group.data.times, sourceVolume, displayMode, volumeUnit, rateUnit, timeAgg,
       );
       if (!firstPartialNote && result.partialYearNote) firstPartialNote = result.partialYearNote;
       return { name: col.name, values: result.values, units: col.units };
@@ -84,13 +85,13 @@ function convertChartData(
       convertedTimes = result.times;
     } else {
       const result = convertVolumeValues(
-        group.data.columns[0].values, group.data.times, sourceVolume, volumeUnit, rateUnit, timeAgg,
+        group.data.columns[0].values, group.data.times, sourceVolume, displayMode, volumeUnit, rateUnit, timeAgg,
       );
       convertedTimes = result.times;
     }
   }
 
-  const yAxisLabel = getYAxisLabel(group.chartKind, volumeUnit, rateUnit, areaUnit, lengthUnit, timeAgg);
+  const yAxisLabel = getYAxisLabel(group.chartKind, displayMode, volumeUnit, rateUnit, areaUnit, lengthUnit);
 
   return {
     data: {
@@ -120,7 +121,7 @@ export function BudgetView() {
     resultsInfo,
     activeBudgetType, activeBudgetLocation, budgetChartType,
     showBudgetSankey,
-    budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
+    budgetDisplayMode, budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
     budgetAnalysisMode,
     expandedChartIndex, setExpandedChartIndex,
     setBudgetVolumeUnit, setBudgetAreaUnit, setBudgetLengthUnit,
@@ -203,11 +204,11 @@ export function BudgetView() {
     if (!classified) return [];
     return classified.charts.map((group) =>
       convertChartData(
-        group, budgetVolumeUnit, budgetRateUnit, budgetAreaUnit,
+        group, budgetDisplayMode, budgetVolumeUnit, budgetRateUnit, budgetAreaUnit,
         budgetLengthUnit, budgetTimeAgg, unitsMeta,
       ),
     );
-  }, [classified, budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg, unitsMeta]);
+  }, [classified, budgetDisplayMode, budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg, unitsMeta]);
 
   // Keep track of chart kinds for determining chart type
   const chartKinds = useMemo(() => {

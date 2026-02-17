@@ -66,7 +66,7 @@ export function MonthlyPatternChart({
       const result = convertAreaValues(col.values, flowGroup.data.times, sourceArea, areaUnit, 'monthly');
       return { name: col.name, values: result.values };
     } else {
-      const result = convertVolumeValues(col.values, flowGroup.data.times, sourceVolume, volumeUnit, 'per_month', 'monthly');
+      const result = convertVolumeValues(col.values, flowGroup.data.times, sourceVolume, 'volume', volumeUnit, 'cfs', 'monthly');
       return { name: col.name, values: result.values };
     }
   });

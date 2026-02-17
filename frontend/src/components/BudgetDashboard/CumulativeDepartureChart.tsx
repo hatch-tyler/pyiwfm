@@ -55,7 +55,7 @@ export function CumulativeDepartureChart({
     for (const col of group.data.columns) {
       // Convert to display units
       const converted = convertVolumeValues(
-        col.values, group.data.times, sourceVolume, volumeUnit, 'per_month', 'monthly',
+        col.values, group.data.times, sourceVolume, 'volume', volumeUnit, 'cfs', 'monthly',
       );
       const departure = computeCumulativeDeparture(converted.times, converted.values, col.name);
 

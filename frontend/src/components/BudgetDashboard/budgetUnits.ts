@@ -119,10 +119,10 @@ export interface RateOption {
 }
 
 export const RATE_UNITS: RateOption[] = [
-  { id: 'per_month', label: '/month' },
-  { id: 'per_year', label: '/year' },
   { id: 'cfs', label: 'ft\u00B3/s (cfs)' },
   { id: 'cfd', label: 'ft\u00B3/day' },
+  { id: 'af_month', label: 'AF/month' },
+  { id: 'af_year', label: 'AF/year' },
   { id: 'm3_day', label: 'm\u00B3/day' },
   { id: 'm3_yr', label: 'm\u00B3/yr' },
 ];
@@ -428,8 +428,7 @@ function aggregateAreaToYear(
 // ---------------------------------------------------------------------------
 
 /**
- * Convert monthly volume values to a rate.
- * Input values are in ft3 (cubic feet) for rate-based units.
+ * Convert monthly volume values (in ft³) to a flow rate.
  */
 function applyRate(
   ft3Values: number[],
@@ -449,6 +448,14 @@ function applyRate(
         const { year, month } = parseYearMonth(times[i]);
         return v / daysInMonth(year, month);
       });
+    }
+    case 'af_month': {
+      // ft³ → AF (monthly rate in AF/month is just the monthly volume in AF)
+      return ft3Values.map((v) => v / 43560);
+    }
+    case 'af_year': {
+      // ft³ → AF, annualized (monthly volume × 12 ÷ ft³/AF)
+      return ft3Values.map((v) => (v / 43560) * 12);
     }
     case 'm3_day': {
       const ft3ToM3 = 1 / 35.3147;
@@ -474,44 +481,42 @@ function applyRate(
  * Convert raw monthly volume values to the user's selected units and
  * time aggregation. Source-unit-aware: uses the actual source unit from
  * the model's metadata rather than assuming ft³.
+ *
+ * In volume mode, values are summed during time aggregation.
+ * In rate mode, values are averaged during time aggregation.
  */
 export function convertVolumeValues(
   rawValues: number[],
   times: string[],
   sourceUnit: string,
-  displayUnitId: string,
+  displayMode: 'volume' | 'rate',
+  volumeUnitId: string,
   rateUnitId: string,
   timeAggId: string,
 ): AggregatedResult {
   const srcKey = resolveSourceUnit(sourceUnit);
   const srcToAF = VOLUME_TO_AF[srcKey] ?? 1;
 
-  // For rate-based units (cfs, cfd, m3_day, m3_yr), convert to ft3 first
-  if (['cfs', 'cfd', 'm3_day', 'm3_yr'].includes(rateUnitId)) {
+  if (displayMode === 'rate') {
+    // Rate mode: convert source → ft³ → rate, aggregate by averaging
     const ft3Values = rawValues.map((v) => v * srcToAF * 43560);
     const rateValues = applyRate(ft3Values, times, rateUnitId);
 
     if (timeAggId === 'seasonal') {
-      return aggregateToSeason(rateValues, times);
+      return aggregateAreaToSeason(rateValues, times); // average, not sum
     } else if (timeAggId === 'water_year') {
-      return aggregateToYear(rateValues, times, 'water');
+      return aggregateAreaToYear(rateValues, times, 'water'); // average, not sum
     } else if (timeAggId === 'calendar_year') {
-      return aggregateToYear(rateValues, times, 'calendar');
+      return aggregateAreaToYear(rateValues, times, 'calendar'); // average, not sum
     }
     return { values: rateValues, times };
   }
 
-  // For volume display units, convert source -> AF -> display
-  const afToDisplay = AF_TO_DISPLAY[displayUnitId] ?? 1;
+  // Volume mode: convert source → AF → display unit, aggregate by summing
+  const afToDisplay = AF_TO_DISPLAY[volumeUnitId] ?? 1;
   const conversionFactor = srcToAF * afToDisplay;
-  let converted = rawValues.map((v) => v * conversionFactor);
+  const converted = rawValues.map((v) => v * conversionFactor);
 
-  // Apply per_year rate
-  if (rateUnitId === 'per_year') {
-    converted = converted.map((v) => v * 12);
-  }
-
-  // Time aggregation
   if (timeAggId === 'seasonal') {
     return aggregateToSeason(converted, times);
   } else if (timeAggId === 'water_year') {
@@ -594,44 +599,31 @@ export function getXAxisLabel(timeAggId: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Build a y-axis label from the chart kind and selected units.
+ * Build a y-axis label from the chart kind, display mode, and selected units.
  */
 export function getYAxisLabel(
   chartKind: 'flow' | 'area' | 'storage' | 'cumulative_subsidence' | 'diversion_balance',
+  displayMode: 'volume' | 'rate',
   volumeUnitId: string,
   rateUnitId: string,
   areaUnitId: string,
   _lengthUnitId: string,
-  timeAggId: string,
 ): string {
   if (chartKind === 'area') {
     return `Area (${findUnitLabel(AREA_UNITS, areaUnitId)})`;
   }
 
-  // Cumulative subsidence is volumetric — use volume label with a subsidence prefix
-  if (chartKind === 'cumulative_subsidence') {
-    const volLabel = findUnitLabel(VOLUME_UNITS, volumeUnitId);
-    return `Cumulative Subsidence (${volLabel})`;
-  }
+  const prefix = chartKind === 'storage' ? 'Storage Change'
+    : chartKind === 'cumulative_subsidence' ? 'Cumulative Subsidence'
+    : chartKind === 'diversion_balance' ? 'Diversion'
+    : 'Volume';
 
-  // Volume-based kinds: flow, storage, diversion_balance
-  const volLabel = findUnitLabel(VOLUME_UNITS, volumeUnitId);
-  const prefix = chartKind === 'storage' ? 'Storage Change' : 'Volume';
-
-  // For rate-based display units, show the rate label directly
-  if (['cfs', 'cfd', 'm3_day', 'm3_yr'].includes(rateUnitId)) {
+  if (displayMode === 'rate') {
     const rateOpt = RATE_UNITS.find((r) => r.id === rateUnitId);
-    return `${prefix} (${rateOpt ? rateOpt.label : volLabel})`;
+    return `${prefix} (${rateOpt ? rateOpt.label : rateUnitId})`;
   }
 
-  // For yearly aggregation, show "volume / year"
-  if (timeAggId !== 'monthly') {
-    return `${prefix} (${volLabel} / year)`;
-  }
-
-  // Monthly + per_month or per_year
-  if (rateUnitId === 'per_year') {
-    return `${prefix} (${volLabel} / year)`;
-  }
-  return `${prefix} (${volLabel} / month)`;
+  // Volume mode
+  const volLabel = findUnitLabel(VOLUME_UNITS, volumeUnitId);
+  return `${prefix} (${volLabel})`;
 }
