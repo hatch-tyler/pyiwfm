@@ -580,16 +580,6 @@ export function convertLengthValues(
 // ---------------------------------------------------------------------------
 
 /**
- * Build the x-axis label based on time aggregation mode.
- */
-export function getXAxisLabel(timeAggId: string): string {
-  if (timeAggId === 'seasonal') return 'Season';
-  if (timeAggId === 'water_year') return 'Water Year';
-  if (timeAggId === 'calendar_year') return 'Calendar Year';
-  return 'Date';
-}
-
-/**
  * Build a y-axis label from the chart kind and selected units.
  */
 export function getYAxisLabel(

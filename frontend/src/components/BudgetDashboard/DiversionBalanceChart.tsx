@@ -28,7 +28,6 @@ function detectXAxisType(times: string[]): 'date' | 'category' {
 interface DiversionBalanceChartProps {
   data: BudgetData;
   yAxisLabel: string;
-  xAxisLabel?: string;
   title?: string;
   partialYearNote?: string;
   onExpand?: () => void;
@@ -40,7 +39,7 @@ function findCol(data: BudgetData, pattern: string): { name: string; values: num
   return col ? { name: col.name, values: col.values } : null;
 }
 
-export function DiversionBalanceChart({ data, yAxisLabel, xAxisLabel, title, partialYearNote, onExpand }: DiversionBalanceChartProps) {
+export function DiversionBalanceChart({ data, yAxisLabel, title, partialYearNote, onExpand }: DiversionBalanceChartProps) {
   const delivery = findCol(data, 'delivery');
   const recoverable = findCol(data, 'recoverable loss');
   const nonRecoverable = findCol(data, 'non-recoverable loss');
@@ -91,7 +90,6 @@ export function DiversionBalanceChart({ data, yAxisLabel, xAxisLabel, title, par
 
   const chartTitle = title ?? 'Diversion Balance';
   const xAxisType = detectXAxisType(data.times);
-  const xAxisTitle = xAxisLabel ?? (xAxisType === 'date' ? 'Date' : 'Year');
 
   const annotations: Plotly.Layout['annotations'] = [];
   if (partialYearNote) {
@@ -126,12 +124,12 @@ export function DiversionBalanceChart({ data, yAxisLabel, xAxisLabel, title, par
         <Plot
           data={traces}
           layout={{
-            margin: { l: 70, r: 30, t: 50, b: 50 },
+            margin: { l: 70, r: 30, t: 50, b: 40 },
             title: { text: chartTitle, font: { size: 14 } },
-            xaxis: { title: { text: xAxisTitle }, type: xAxisType },
+            xaxis: { type: xAxisType },
             yaxis: { title: { text: yAxisLabel } },
             barmode: 'stack',
-            legend: { orientation: 'h', y: -0.15 },
+            legend: { orientation: 'h', y: -0.12, xanchor: 'center', x: 0.5 },
             autosize: true,
             annotations,
           }}

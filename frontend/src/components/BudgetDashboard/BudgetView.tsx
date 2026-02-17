@@ -27,7 +27,6 @@ import {
   convertVolumeValues,
   convertAreaValues,
   getYAxisLabel,
-  getXAxisLabel,
   sourceVolumeToDisplayDefault,
   sourceAreaToDisplayDefault,
   sourceLengthToDisplayDefault,
@@ -40,7 +39,6 @@ import { ExceedanceChart } from './ExceedanceChart';
 interface ConvertedChart {
   data: BudgetData;
   yAxisLabel: string;
-  xAxisLabel: string;
   partialYearNote?: string;
 }
 
@@ -92,7 +90,6 @@ function convertChartData(
   }
 
   const yAxisLabel = getYAxisLabel(group.chartKind, volumeUnit, rateUnit, areaUnit, lengthUnit, timeAgg);
-  const xAxisLabel = getXAxisLabel(timeAgg);
 
   return {
     data: {
@@ -101,7 +98,6 @@ function convertChartData(
       columns: convertedColumns,
     },
     yAxisLabel,
-    xAxisLabel,
     partialYearNote: firstPartialNote,
   };
 }
@@ -333,7 +329,7 @@ export function BudgetView() {
                     <DiversionBalanceChart
                       data={chart.data}
                       yAxisLabel={chart.yAxisLabel}
-                      xAxisLabel={chart.xAxisLabel}
+
                       title={chartTitles[i]}
                       partialYearNote={chart.partialYearNote}
                       onExpand={() => setExpandedChartIndex(i)}
@@ -346,7 +342,7 @@ export function BudgetView() {
                       title={chartTitles[i]}
                       dualAxis={isStorage}
                       yAxisLabel={chart.yAxisLabel}
-                      xAxisLabel={chart.xAxisLabel}
+
                       partialYearNote={chart.partialYearNote}
                       onExpand={() => setExpandedChartIndex(i)}
                     />
@@ -360,7 +356,6 @@ export function BudgetView() {
             <DiversionBalanceChart
               data={convertedCharts[0].data}
               yAxisLabel={convertedCharts[0].yAxisLabel}
-              xAxisLabel={convertedCharts[0].xAxisLabel}
               title={chartTitles[0]}
               partialYearNote={convertedCharts[0].partialYearNote}
               onExpand={() => setExpandedChartIndex(0)}
@@ -372,7 +367,6 @@ export function BudgetView() {
               loading={loading}
               title={chartTitles[0]}
               yAxisLabel={convertedCharts[0].yAxisLabel}
-              xAxisLabel={convertedCharts[0].xAxisLabel}
               partialYearNote={convertedCharts[0].partialYearNote}
               onExpand={() => setExpandedChartIndex(0)}
             />
@@ -423,7 +417,6 @@ export function BudgetView() {
               <DiversionBalanceChart
                 data={convertedCharts[expandedChartIndex].data}
                 yAxisLabel={convertedCharts[expandedChartIndex].yAxisLabel}
-                xAxisLabel={convertedCharts[expandedChartIndex].xAxisLabel}
                 title={chartTitles[expandedChartIndex]}
                 partialYearNote={convertedCharts[expandedChartIndex].partialYearNote}
               />
@@ -435,7 +428,6 @@ export function BudgetView() {
                 title={chartTitles[expandedChartIndex]}
                 dualAxis={chartKinds[expandedChartIndex] === 'storage'}
                 yAxisLabel={convertedCharts[expandedChartIndex].yAxisLabel}
-                xAxisLabel={convertedCharts[expandedChartIndex].xAxisLabel}
                 partialYearNote={convertedCharts[expandedChartIndex].partialYearNote}
               />
             )
