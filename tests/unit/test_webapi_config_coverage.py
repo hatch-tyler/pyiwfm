@@ -411,6 +411,8 @@ class TestHeadLoader:
 
         mock_loader = MagicMock()
         mock_loader.n_frames = 10
+        # shape must match model's n_layers to avoid triggering re-conversion
+        mock_loader.shape = (100, 2)
         with patch(
             "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
             return_value=mock_loader,

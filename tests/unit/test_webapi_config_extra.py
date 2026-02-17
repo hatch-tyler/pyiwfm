@@ -1074,7 +1074,8 @@ class TestHeadLoaderBranches:
         head_file = tmp_path / "head.out"
         head_file.write_text("fake data")
         model.metadata["gw_head_all_file"] = str(head_file)
-        model.metadata["n_gw_layers"] = 3
+        # n_layers comes from model.n_layers (stratigraphy) — set it to 3
+        model.n_layers = 3
 
         mock_loader = MagicMock()
         mock_loader.n_frames = 10
@@ -1093,8 +1094,8 @@ class TestHeadLoaderBranches:
         assert result is mock_loader
         mock_convert.assert_called_once()
         # Check n_layers=3 was passed
-        call_kwargs = mock_convert.call_args
-        assert call_kwargs[1]["n_layers"] == 3 or call_kwargs[0][2] == 3 if len(call_kwargs[0]) > 2 else call_kwargs[1].get("n_layers") == 3
+        call_args = mock_convert.call_args
+        assert call_args[1].get("n_layers") == 3 or (len(call_args[0]) > 2 and call_args[0][2] == 3)
 
     def test_text_file_with_existing_cache(self, tmp_path):
         """When HDF cache exists and is newer, skips conversion."""
@@ -1170,13 +1171,13 @@ class TestHeadLoaderBranches:
 
         assert result is mock_loader
 
-    def test_text_file_no_n_gw_layers_defaults_to_1(self, tmp_path):
-        """When n_gw_layers not in metadata, defaults to 1."""
+    def test_text_file_uses_stratigraphy_layers(self, tmp_path):
+        """Layer count comes from model.n_layers (stratigraphy), not metadata."""
         state, model = _state_with_model()
         head_file = tmp_path / "head.out"
         head_file.write_text("fake data")
         model.metadata["gw_head_all_file"] = str(head_file)
-        # No n_gw_layers in metadata
+        # Mock model has stratigraphy.n_layers=2, so n_layers should be 2
 
         mock_loader = MagicMock()
         mock_loader.n_frames = 10
@@ -1192,10 +1193,10 @@ class TestHeadLoaderBranches:
             result = state.get_head_loader()
 
         assert result is mock_loader
-        # n_layers should default to 1
+        # n_layers should come from model stratigraphy (2 layers)
         call_kwargs = mock_convert.call_args
         if call_kwargs[1]:
-            assert call_kwargs[1].get("n_layers") == 1
+            assert call_kwargs[1].get("n_layers") == 2
         else:
             assert call_kwargs[0][2] == 1
 

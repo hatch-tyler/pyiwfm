@@ -128,8 +128,29 @@ export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMa
     return 'unknown';
   }
 
-  function fitToFeature(_geo: BudgetLocationGeometry) {
+  /** Find the GeoJSON feature matching the budget location by name property,
+   *  falling back to array index if no name match is found. */
+  function findMatchingFeature(
+    features: GeoJSON.Feature[],
+    _geo: BudgetLocationGeometry,
+  ): GeoJSON.Feature | null {
+    const locName = _geo.location_name;
+    if (locName) {
+      // Match by "name" property in the GeoJSON feature
+      const byName = features.find((f) => {
+        const n = f.properties?.name;
+        return n && (n === locName || n.toLowerCase() === locName.toLowerCase());
+      });
+      if (byName) return byName;
+    }
+    // Fallback to array index
     const idx = _geo.location_index;
+    if (idx < features.length) return features[idx];
+    return null;
+  }
+
+  function fitToFeature(_geo: BudgetLocationGeometry) {
+    const isEntireModel = _geo.spatial_type === 'entire_model';
 
     // If only a point geometry (stream_node) and no context yet, center on it
     if (_geo.geometry && _geo.geometry.type === 'Point' && !contextData) {
@@ -138,9 +159,43 @@ export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMa
       return;
     }
 
+    // For "entire model", fit to ALL features
+    if (isEntireModel && contextData && contextData.features.length > 0) {
+      const allCoords: number[][] = [];
+      for (const f of contextData.features) {
+        extractCoords(f.geometry, allCoords);
+      }
+      if (allCoords.length > 0) {
+        let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+        for (const c of allCoords) {
+          if (c[0] < minLng) minLng = c[0];
+          if (c[1] < minLat) minLat = c[1];
+          if (c[0] > maxLng) maxLng = c[0];
+          if (c[1] > maxLat) maxLat = c[1];
+        }
+        try {
+          const vp = new WebMercatorViewport({ width: 280, height: 280 });
+          const fitted = vp.fitBounds(
+            [[minLng, minLat], [maxLng, maxLat]],
+            { padding: 20 },
+          );
+          setViewState({
+            ...DEFAULT_VIEW,
+            longitude: fitted.longitude,
+            latitude: fitted.latitude,
+            zoom: Math.min(13, fitted.zoom),
+          });
+        } catch {
+          setViewState({ ...DEFAULT_VIEW, longitude: (minLng + maxLng) / 2, latitude: (minLat + maxLat) / 2, zoom: 6 });
+        }
+      }
+      return;
+    }
+
     // For GeoJSON context: zoom to the SELECTED feature using fitBounds
-    if (contextData && contextData.features.length > 0 && idx < contextData.features.length) {
-      const bounds = getFeatureBounds(contextData.features[idx]);
+    const matchedFeature = contextData ? findMatchingFeature(contextData.features, _geo) : null;
+    if (matchedFeature) {
+      const bounds = getFeatureBounds(matchedFeature);
       if (bounds) {
         const [minLng, minLat, maxLng, maxLat] = bounds;
         try {
@@ -166,6 +221,7 @@ export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMa
     }
 
     // For point data (small_watershed, diversion): center on SELECTED point
+    const idx = _geo.location_index;
     if (pointData && pointData.length > 0 && idx < pointData.length) {
       const pt = pointData[idx];
       setViewState({ ...DEFAULT_VIEW, longitude: pt.lng, latitude: pt.lat, zoom: 10 });
@@ -221,24 +277,28 @@ export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMa
 
     // GeoJSON-based context (subregions, reaches, lakes)
     if (contextData) {
-      // Context layer (all features dimmed)
+      const isEntireModel = spatialType === 'entire_model';
+
+      // Context layer (all features dimmed — or all highlighted for entire model)
       result.push(new GeoJsonLayer({
         id: 'budget-context',
         data: contextData,
         filled: spatialType !== 'reach',
         stroked: true,
-        getFillColor: CONTEXT_FILL,
-        getLineColor: CONTEXT_LINE,
+        getFillColor: isEntireModel ? HIGHLIGHT_FILL : CONTEXT_FILL,
+        getLineColor: isEntireModel ? HIGHLIGHT_LINE : CONTEXT_LINE,
         getLineWidth: spatialType === 'reach' ? 2 : 1,
         lineWidthUnits: 'pixels' as const,
         pickable: false,
       }));
 
-      // Highlight layer (selected feature)
-      if (idx < contextData.features.length) {
+      // Highlight layer (selected feature) — skip for entire_model (all already highlighted)
+      // Match by name property instead of array index to handle non-contiguous subregion IDs
+      const matchedFeature = !isEntireModel ? findMatchingFeature(contextData.features, locationGeo) : null;
+      if (matchedFeature) {
         const highlighted: GeoJSON.FeatureCollection = {
           type: 'FeatureCollection',
-          features: [contextData.features[idx]],
+          features: [matchedFeature],
         };
         result.push(new GeoJsonLayer({
           id: 'budget-highlight',

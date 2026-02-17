@@ -261,11 +261,13 @@ def _get_budget_units_metadata(budget_type: str, reader: object) -> dict:
     length_unit = meta.get("length_unit", "FT").upper().strip()
     if length_unit in ("FT", "FEET", "FOOT"):
         source_volume = "FT3"
+        source_area = "SQ.FT."
     elif length_unit in ("M", "METERS", "METER"):
         source_volume = "M3"
+        source_area = "M2"
     else:
         source_volume = "FT3"  # safe default for US models
-    source_area = meta.get("area_unit", "SQ.FT.")
+        source_area = "SQ.FT."
     source_length = meta.get("length_unit", "FT")
 
     # Determine timestep unit
@@ -278,13 +280,32 @@ def _get_budget_units_metadata(budget_type: str, reader: object) -> dict:
     has_length = False
     try:
         loc_data = reader.header.location_data[0]
-        for ct in loc_data.column_types:
-            if ct in _VOLUME_TYPE_CODES:
-                has_volume = True
-            elif ct in _AREA_TYPE_CODES:
-                has_area = True
-            elif ct in _LENGTH_TYPE_CODES:
-                has_length = True
+        if loc_data.column_types:
+            # Use explicit type codes when available
+            for ct in loc_data.column_types:
+                if ct in _VOLUME_TYPE_CODES:
+                    has_volume = True
+                elif ct in _AREA_TYPE_CODES:
+                    has_area = True
+                elif ct in _LENGTH_TYPE_CODES:
+                    has_length = True
+        elif loc_data.column_headers:
+            # Infer from column names when type codes are missing (common in
+            # HDF5 files that lack the iDataColumnTypes attribute).
+            for hdr in loc_data.column_headers:
+                upper = hdr.upper()
+                if "AREA" in upper and (
+                    upper.endswith("AREA") or upper.endswith("_AREA")
+                    or "AREA)" in upper
+                ):
+                    has_area = True
+                elif "SUBSID" in upper or "CUM_SUBSID" in upper:
+                    has_volume = True  # subsidence in GW budgets is volumetric
+                else:
+                    has_volume = True
+        else:
+            # No column info at all — assume volume
+            has_volume = True
     except (AttributeError, IndexError):
         # Default: assume volume columns exist
         has_volume = True
@@ -292,6 +313,7 @@ def _get_budget_units_metadata(budget_type: str, reader: object) -> dict:
     return {
         "source_volume_unit": source_volume or "AF",
         "source_area_unit": source_area or "ACRES",
+        "source_area_output_unit": meta.get("area_unit", "ACRES"),
         "source_length_unit": source_length or "FEET",
         "timestep_unit": timestep_unit,
         "has_volume_columns": has_volume,
@@ -599,9 +621,18 @@ def get_budget_location_geometry(
         "small_watershed": "small_watershed",
     }
 
+    # Detect "ENTIRE MODEL AREA" or similar whole-model location
+    loc_name = ""
+    if loc_idx < len(reader.locations):
+        loc_name = reader.locations[loc_idx]
+    is_entire_model = any(
+        kw in loc_name.upper() for kw in ("ENTIRE MODEL", "ENTIRE AREA", "TOTAL MODEL")
+    )
+
     result: dict = {
-        "spatial_type": spatial_type_map.get(category, "unknown"),
+        "spatial_type": "entire_model" if is_entire_model else spatial_type_map.get(category, "unknown"),
         "location_index": loc_idx,
+        "location_name": loc_name,
         "geometry": None,
     }
 

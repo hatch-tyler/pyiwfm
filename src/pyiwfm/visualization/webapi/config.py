@@ -554,6 +554,18 @@ class ModelState:
     # Head data access
     # ------------------------------------------------------------------
 
+    def _get_n_gw_layers(self) -> int:
+        """Get the number of groundwater layers from the loaded model."""
+        if self._model is None:
+            return 1
+        # model.n_layers reads from stratigraphy (authoritative)
+        n = getattr(self._model, "n_layers", 0)
+        if n and n > 0:
+            return n
+        # Fallback to metadata set by GW reader
+        n = self._model.metadata.get("gw_aquifer_n_layers", 1)
+        return n if n and n > 0 else 1
+
     def get_head_loader(self) -> LazyHeadDataLoader | None:
         """Get the lazy head data loader, initializing if needed."""
         if self._head_loader is not None:
@@ -573,33 +585,82 @@ class ModelState:
             logger.warning("Head file not found: %s", head_path)
             return None
 
+        n_layers = self._get_n_gw_layers()
+
         try:
             from pyiwfm.visualization.webapi.head_loader import LazyHeadDataLoader
 
             suffix = head_path.suffix.lower()
             if suffix in (".hdf", ".h5", ".he5", ".hdf5"):
-                # Direct HDF load (auto-detects IWFM native vs pyiwfm format)
-                self._head_loader = LazyHeadDataLoader(head_path)
+                loader = LazyHeadDataLoader(head_path)
+                # Validate layer count — a pyiwfm-converted file may have been
+                # created with the wrong n_layers (e.g. 1 instead of 4).  If so,
+                # look for the companion .out text file and re-convert.
+                if loader.n_frames > 0 and loader.shape[1] != n_layers:
+                    logger.warning(
+                        "HDF head file has %d layer(s) but model has %d; "
+                        "attempting re-conversion from text source",
+                        loader.shape[1], n_layers,
+                    )
+                    loader = self._reconvert_head_hdf(head_path, n_layers)
+                self._head_loader = loader
             elif suffix in (".out", ".txt", ".dat"):
                 # Convert text file to HDF on-the-fly, cache alongside the original
                 hdf_cache = head_path.with_suffix(".head_cache.hdf")
                 if not hdf_cache.exists() or hdf_cache.stat().st_mtime < head_path.stat().st_mtime:
                     from pyiwfm.io.head_all_converter import convert_headall_to_hdf
-                    n_layers = 1
-                    if self._model is not None:
-                        n_layers = self._model.metadata.get("n_gw_layers", 1)
                     convert_headall_to_hdf(head_path, hdf_cache, n_layers=n_layers)
                 self._head_loader = LazyHeadDataLoader(hdf_cache)
             else:
                 # Unknown format, try loading directly as HDF
                 self._head_loader = LazyHeadDataLoader(head_path)
 
-            logger.info("Head loader initialized: %d timesteps", self._head_loader.n_frames)
+            if self._head_loader is not None:
+                logger.info(
+                    "Head loader initialized: %d timesteps, %d nodes, %d layers",
+                    self._head_loader.n_frames,
+                    self._head_loader.shape[0],
+                    self._head_loader.shape[1],
+                )
         except Exception as e:
             logger.error("Failed to initialize head loader: %s", e)
             return None
 
         return self._head_loader
+
+    def _reconvert_head_hdf(
+        self, hdf_path: Path, n_layers: int
+    ) -> LazyHeadDataLoader:
+        """Re-convert a head HDF that has the wrong layer count.
+
+        Looks for a companion ``.out`` text file (same stem) and converts it
+        with the correct ``n_layers``, overwriting the bad HDF.  Falls back
+        to the existing file if no text source is found.
+        """
+        from pyiwfm.visualization.webapi.head_loader import LazyHeadDataLoader
+
+        # Look for companion text file
+        text_candidates = [
+            hdf_path.with_suffix(".out"),
+            hdf_path.with_suffix(".dat"),
+            hdf_path.with_suffix(".txt"),
+        ]
+        text_source = next((p for p in text_candidates if p.exists()), None)
+
+        if text_source is None:
+            logger.warning(
+                "No text source found for re-conversion; using existing HDF as-is"
+            )
+            return LazyHeadDataLoader(hdf_path)
+
+        from pyiwfm.io.head_all_converter import convert_headall_to_hdf
+
+        logger.info(
+            "Re-converting %s -> %s with n_layers=%d",
+            text_source.name, hdf_path.name, n_layers,
+        )
+        convert_headall_to_hdf(text_source, hdf_path, n_layers=n_layers)
+        return LazyHeadDataLoader(hdf_path)
 
     # ------------------------------------------------------------------
     # Area data access (land-use area HDF5)

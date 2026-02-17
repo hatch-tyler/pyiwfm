@@ -816,6 +816,7 @@ export interface BudgetColumnData {
 export interface BudgetUnitsMetadata {
   source_volume_unit: string;
   source_area_unit: string;
+  source_area_output_unit?: string;
   source_length_unit: string;
   timestep_unit: string;
   has_volume_columns: boolean;
@@ -874,6 +875,7 @@ export async function fetchBudgetData(budgetType: string, location: string, colu
 export interface BudgetLocationGeometry {
   spatial_type: string;
   location_index: number;
+  location_name?: string;
   geometry: GeoJSON.Point | null;
 }
 

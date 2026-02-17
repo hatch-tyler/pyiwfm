@@ -13,7 +13,7 @@
 
 import type { BudgetData, BudgetColumnData } from '../../api/client';
 
-export type ChartKind = 'flow' | 'area' | 'storage' | 'subsidence' | 'cumulative_subsidence' | 'diversion_balance';
+export type ChartKind = 'flow' | 'area' | 'storage' | 'cumulative_subsidence' | 'diversion_balance';
 
 export interface ChartGroup {
   title: string;
@@ -39,9 +39,13 @@ function isStorageColumn(name: string): boolean {
   );
 }
 
-/** True if column name matches "cumulative subsidence" specifically. */
+/** True if column represents cumulative subsidence (full word or CUM abbreviation). */
 function isCumulativeSubsidenceColumn(name: string): boolean {
-  return name.toLowerCase().includes('cumulative') && name.toLowerCase().includes('subsidence');
+  const l = name.toLowerCase();
+  return (
+    (l.includes('cumulative') && l.includes('subsidence')) ||
+    (l.includes('cum') && l.includes('subsid'))
+  );
 }
 
 /** True if column name ends with _AREA (case-insensitive). */
@@ -82,22 +86,24 @@ function detectCategory(budgetType: string): string {
 
 function classifyGW(data: BudgetData): ClassifiedBudget {
   const storageCols: BudgetColumnData[] = [];
-  const subsidenceCols: BudgetColumnData[] = [];
+  const cumSubsidenceCols: BudgetColumnData[] = [];
   const flowCols: BudgetColumnData[] = [];
 
   for (const col of data.columns) {
     if (isStorageColumn(col.name)) {
       storageCols.push(col);
     } else if (isCumulativeSubsidenceColumn(col.name)) {
-      subsidenceCols.push(col);
+      cumSubsidenceCols.push(col);
     } else {
+      // Per-timestep subsidence stays in flow — it is a budget component
+      // representing permanent storage loss due to subsidence.
       flowCols.push(col);
     }
   }
 
   const charts: ChartGroup[] = [];
 
-  // Flow chart
+  // Flow chart (includes per-timestep subsidence)
   if (flowCols.length > 0) {
     charts.push({
       title: 'Flow Components',
@@ -144,11 +150,11 @@ function classifyGW(data: BudgetData): ClassifiedBudget {
     }
   }
 
-  // Cumulative Subsidence chart
-  if (subsidenceCols.length > 0) {
+  // Cumulative Subsidence chart (volumetric, shown as line)
+  if (cumSubsidenceCols.length > 0) {
     charts.push({
       title: 'Cumulative Subsidence',
-      data: { location: data.location, times: data.times, columns: subsidenceCols },
+      data: { location: data.location, times: data.times, columns: cumSubsidenceCols },
       chartKind: 'cumulative_subsidence',
     });
   }

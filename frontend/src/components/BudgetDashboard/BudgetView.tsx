@@ -10,6 +10,8 @@ import Typography from '@mui/material/Typography';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import IconButton from '@mui/material/IconButton';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import CloseIcon from '@mui/icons-material/Close';
 import { useViewerStore } from '../../stores/viewerStore';
 import { fetchBudgetTypes, fetchBudgetData } from '../../api/client';
@@ -125,6 +127,7 @@ export function BudgetView() {
     budgetAnalysisMode,
     expandedChartIndex, setExpandedChartIndex,
     setBudgetVolumeUnit, setBudgetAreaUnit, setBudgetLengthUnit,
+    setBudgetAnalysisMode,
   } = useViewerStore();
 
   const [budgetTypes, setBudgetTypes] = useState<string[]>([]);
@@ -231,9 +234,7 @@ export function BudgetView() {
     });
   }, [classified, activeBudgetLocation, budgetLabel, contextPrefix]);
 
-  // Compute has*Columns from units metadata
-  const hasVolumeColumns = unitsMeta?.has_volume_columns ?? true;
-  const hasAreaColumns = unitsMeta?.has_area_columns ?? false;
+  // Compute hasLengthColumns from units metadata (for subsidence length unit selector)
   const hasLengthColumns = unitsMeta?.has_length_columns ?? false;
 
   if (budgetTypes.length === 0) {
@@ -253,14 +254,30 @@ export function BudgetView() {
       {/* Left sidebar controls */}
       <BudgetControls
         budgetTypes={budgetTypes}
-        hasVolumeColumns={hasVolumeColumns}
-        hasAreaColumns={hasAreaColumns}
         hasLengthColumns={hasLengthColumns}
         unitsMeta={unitsMeta}
       />
 
       {/* Main chart area */}
-      <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+      <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/* Analysis mode tabs */}
+        {!showBudgetSankey && (
+          <Tabs
+            value={budgetAnalysisMode}
+            onChange={(_, val) => setBudgetAnalysisMode(val)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}
+          >
+            <Tab label="Time Series" value="timeseries" />
+            <Tab label="Monthly Pattern" value="monthly_pattern" />
+            <Tab label="Component Ratios" value="component_ratios" />
+            <Tab label="Cumulative Departure" value="cumulative_departure" />
+            <Tab label="Exceedance" value="exceedance" />
+          </Tabs>
+        )}
+
+        <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
         {showBudgetSankey ? (
           <WaterBalanceSankey />
         ) : budgetAnalysisMode !== 'timeseries' && budgetData && classified ? (
@@ -367,6 +384,7 @@ export function BudgetView() {
             loading={loading}
           />
         )}
+        </Box>
       </Box>
 
       {/* Right-side location map column */}

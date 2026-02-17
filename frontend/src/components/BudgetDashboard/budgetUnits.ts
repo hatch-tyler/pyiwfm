@@ -105,6 +105,7 @@ export interface TimeAggOption {
 
 export const TIME_AGGS: TimeAggOption[] = [
   { id: 'monthly', label: 'Monthly' },
+  { id: 'seasonal', label: 'Seasonal' },
   { id: 'water_year', label: 'Water Year' },
   { id: 'calendar_year', label: 'Calendar Year' },
 ];
@@ -276,6 +277,113 @@ export function aggregateToYear(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Seasonal aggregation
+// ---------------------------------------------------------------------------
+
+/** Season name from month: DJF=Winter, MAM=Spring, JJA=Summer, SON=Fall. */
+function seasonOfMonth(month: number): string {
+  if (month === 12 || month <= 2) return 'Winter';
+  if (month <= 5) return 'Spring';
+  if (month <= 8) return 'Summer';
+  return 'Fall';
+}
+
+/** Season key for grouping: "YYYY Season" using the calendar year of the
+ *  season's majority months.  Winter (DJF): Dec of prev year groups with
+ *  Jan/Feb of current year → keyed by Jan's year. */
+function seasonKey(year: number, month: number): string {
+  const season = seasonOfMonth(month);
+  const keyYear = (month === 12) ? year + 1 : year;
+  return `${keyYear} ${season}`;
+}
+
+/**
+ * Aggregate monthly values into seasonal sums.
+ * Seasons: Winter (DJF), Spring (MAM), Summer (JJA), Fall (SON).
+ * Partial seasons (< 3 months) are excluded.
+ */
+export function aggregateToSeason(
+  values: number[],
+  times: string[],
+): AggregatedResult {
+  const buckets: Record<string, { sum: number; count: number }> = {};
+  for (let i = 0; i < values.length; i++) {
+    const { year, month } = parseYearMonth(times[i]);
+    const key = seasonKey(year, month);
+    if (!buckets[key]) buckets[key] = { sum: 0, count: 0 };
+    buckets[key].sum += values[i];
+    buckets[key].count += 1;
+  }
+
+  // Sort by year then season order
+  const seasonOrder: Record<string, number> = { Winter: 0, Spring: 1, Summer: 2, Fall: 3 };
+  const sortedKeys = Object.keys(buckets).sort((a, b) => {
+    const [ya, sa] = [parseInt(a), a.split(' ')[1]];
+    const [yb, sb] = [parseInt(b), b.split(' ')[1]];
+    if (ya !== yb) return ya - yb;
+    return (seasonOrder[sa] ?? 0) - (seasonOrder[sb] ?? 0);
+  });
+
+  const notes: string[] = [];
+  const fullKeys = sortedKeys.filter((key) => {
+    const b = buckets[key];
+    if (b.count < 3) {
+      notes.push(`${key} excluded (${b.count}/3 months)`);
+      return false;
+    }
+    return true;
+  });
+
+  return {
+    times: fullKeys,
+    values: fullKeys.map((k) => buckets[k].sum),
+    partialYearNote: notes.length > 0 ? notes.join('; ') : undefined,
+  };
+}
+
+/**
+ * Aggregate area values into seasonal averages.
+ * Same season logic but averages instead of sums.
+ */
+function aggregateAreaToSeason(
+  values: number[],
+  times: string[],
+): AggregatedResult {
+  const buckets: Record<string, { sum: number; count: number }> = {};
+  for (let i = 0; i < values.length; i++) {
+    const { year, month } = parseYearMonth(times[i]);
+    const key = seasonKey(year, month);
+    if (!buckets[key]) buckets[key] = { sum: 0, count: 0 };
+    buckets[key].sum += values[i];
+    buckets[key].count += 1;
+  }
+
+  const seasonOrder: Record<string, number> = { Winter: 0, Spring: 1, Summer: 2, Fall: 3 };
+  const sortedKeys = Object.keys(buckets).sort((a, b) => {
+    const [ya, sa] = [parseInt(a), a.split(' ')[1]];
+    const [yb, sb] = [parseInt(b), b.split(' ')[1]];
+    if (ya !== yb) return ya - yb;
+    return (seasonOrder[sa] ?? 0) - (seasonOrder[sb] ?? 0);
+  });
+
+  const notes: string[] = [];
+  const fullKeys = sortedKeys.filter((key) => {
+    const b = buckets[key];
+    if (b.count < 3) {
+      notes.push(`${key} excluded (${b.count}/3 months)`);
+      return false;
+    }
+    return true;
+  });
+
+  return {
+    times: fullKeys,
+    values: fullKeys.map((k) => buckets[k].sum / buckets[k].count),
+    partialYearNote: notes.length > 0 ? notes.join('; ') : undefined,
+  };
+}
+
 /**
  * Aggregate area values into yearly averages with partial year filtering.
  * Same water year / calendar year logic as aggregateToYear, but averages
@@ -383,7 +491,9 @@ export function convertVolumeValues(
     const ft3Values = rawValues.map((v) => v * srcToAF * 43560);
     const rateValues = applyRate(ft3Values, times, rateUnitId);
 
-    if (timeAggId === 'water_year') {
+    if (timeAggId === 'seasonal') {
+      return aggregateToSeason(rateValues, times);
+    } else if (timeAggId === 'water_year') {
       return aggregateToYear(rateValues, times, 'water');
     } else if (timeAggId === 'calendar_year') {
       return aggregateToYear(rateValues, times, 'calendar');
@@ -402,7 +512,9 @@ export function convertVolumeValues(
   }
 
   // Time aggregation
-  if (timeAggId === 'water_year') {
+  if (timeAggId === 'seasonal') {
+    return aggregateToSeason(converted, times);
+  } else if (timeAggId === 'water_year') {
     return aggregateToYear(converted, times, 'water');
   } else if (timeAggId === 'calendar_year') {
     return aggregateToYear(converted, times, 'calendar');
@@ -427,8 +539,10 @@ export function convertAreaValues(
   const factor = srcToAcres * acresToDisplay;
   const converted = rawValues.map((v) => v * factor);
 
-  // For area, yearly aggregation takes the average (not sum)
-  if (timeAggId === 'water_year' || timeAggId === 'calendar_year') {
+  // For area, yearly/seasonal aggregation takes the average (not sum)
+  if (timeAggId === 'seasonal') {
+    return aggregateAreaToSeason(converted, times);
+  } else if (timeAggId === 'water_year' || timeAggId === 'calendar_year') {
     const type = timeAggId === 'water_year' ? 'water' : 'calendar';
     return aggregateAreaToYear(converted, times, type);
   }
@@ -451,8 +565,10 @@ export function convertLengthValues(
   const factor = srcToFeet * feetToDisplay;
   const converted = rawValues.map((v) => v * factor);
 
-  // For length (subsidence), yearly aggregation takes the average
-  if (timeAggId === 'water_year' || timeAggId === 'calendar_year') {
+  // For length (subsidence), yearly/seasonal aggregation takes the average
+  if (timeAggId === 'seasonal') {
+    return aggregateAreaToSeason(converted, times);
+  } else if (timeAggId === 'water_year' || timeAggId === 'calendar_year') {
     const type = timeAggId === 'water_year' ? 'water' : 'calendar';
     return aggregateAreaToYear(converted, times, type);
   }
@@ -467,6 +583,7 @@ export function convertLengthValues(
  * Build the x-axis label based on time aggregation mode.
  */
 export function getXAxisLabel(timeAggId: string): string {
+  if (timeAggId === 'seasonal') return 'Season';
   if (timeAggId === 'water_year') return 'Water Year';
   if (timeAggId === 'calendar_year') return 'Calendar Year';
   return 'Date';
@@ -476,7 +593,7 @@ export function getXAxisLabel(timeAggId: string): string {
  * Build a y-axis label from the chart kind and selected units.
  */
 export function getYAxisLabel(
-  chartKind: 'flow' | 'area' | 'storage' | 'subsidence' | 'cumulative_subsidence' | 'diversion_balance',
+  chartKind: 'flow' | 'area' | 'storage' | 'cumulative_subsidence' | 'diversion_balance',
   volumeUnitId: string,
   rateUnitId: string,
   areaUnitId: string,
@@ -487,9 +604,10 @@ export function getYAxisLabel(
     return `Area (${findUnitLabel(AREA_UNITS, areaUnitId)})`;
   }
 
-  if (chartKind === 'subsidence' || chartKind === 'cumulative_subsidence') {
-    const lengthLabel = findUnitLabel(LENGTH_UNITS, _lengthUnitId);
-    return `Subsidence (${lengthLabel})`;
+  // Cumulative subsidence is volumetric — use volume label with a subsidence prefix
+  if (chartKind === 'cumulative_subsidence') {
+    const volLabel = findUnitLabel(VOLUME_UNITS, volumeUnitId);
+    return `Cumulative Subsidence (${volLabel})`;
   }
 
   // Volume-based kinds: flow, storage, diversion_balance

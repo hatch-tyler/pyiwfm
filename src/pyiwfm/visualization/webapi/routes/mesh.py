@@ -244,7 +244,7 @@ def get_subregions() -> dict:
 
     features: list[dict] = []
 
-    for sub_id, elem_ids in elements_by_sub.items():
+    for sub_id, elem_ids in sorted(elements_by_sub.items()):
         sub_info = grid.subregions.get(sub_id)
         sub_name = sub_info.name if sub_info else f"Subregion {sub_id}"
 

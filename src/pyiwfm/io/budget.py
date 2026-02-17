@@ -449,7 +449,12 @@ class BudgetReader:
 
                 header.location_data.append(loc_data)
 
-            # Fallback: derive column headers from DSS path names if still empty
+            # Fallback: derive column headers from DSS path names if still empty.
+            # Extract column names (parts[5]) from the first group of DSS paths
+            # that share the same location part (parts[1]).  This is location-
+            # agnostic — it does NOT require the DSS path location to match
+            # cLocationNames[0], which fixes small watershed budgets where the
+            # HDF location is "WATERSHED 1" but the DSS path uses "WSHED_1".
             if (
                 header.location_data
                 and not header.location_data[0].column_headers
@@ -457,13 +462,19 @@ class BudgetReader:
             ):
                 val = _get(attrs_group, "DSSOutput%cPathNames")
                 if val is not None:
-                    first_loc = header.location_names[0].upper()
+                    first_loc_part: str | None = None
                     col_names: list[str] = []
                     for p in val:
                         s = p.decode().strip() if isinstance(p, bytes) else str(p).strip()
                         parts = s.strip("/").split("/")
-                        if len(parts) >= 6 and parts[1].upper() == first_loc:
-                            col_names.append(parts[5])
+                        if len(parts) >= 6:
+                            loc_part = parts[1].upper()
+                            if first_loc_part is None:
+                                first_loc_part = loc_part
+                            if loc_part == first_loc_part:
+                                col_names.append(parts[5])
+                            else:
+                                break  # moved to next location's paths
                     if col_names:
                         header.location_data[0].column_headers = col_names
                         if header.location_data[0].n_columns == 0:

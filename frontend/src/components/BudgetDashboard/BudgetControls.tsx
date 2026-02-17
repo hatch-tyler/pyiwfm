@@ -1,7 +1,7 @@
 /**
  * Left sidebar controls for the Budget Dashboard.
  * Budget type selector, location dropdown, chart type toggle,
- * unit conversion dropdowns (conditional), and time aggregation.
+ * settings button (opens modal), and action buttons.
  */
 
 import { useState, useEffect } from 'react';
@@ -15,7 +15,6 @@ import FormControl from '@mui/material/FormControl';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import ToggleButton from '@mui/material/ToggleButton';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
@@ -23,12 +22,13 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import StackedLineChartIcon from '@mui/icons-material/StackedLineChart';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import DownloadIcon from '@mui/icons-material/Download';
+import SettingsIcon from '@mui/icons-material/Settings';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useViewerStore } from '../../stores/viewerStore';
 import { fetchBudgetLocations, getExportBudgetCsvUrl } from '../../api/client';
 import type { BudgetLocation, BudgetUnitsMetadata } from '../../api/client';
-import { VOLUME_UNITS, AREA_UNITS, LENGTH_UNITS, RATE_UNITS, TIME_AGGS } from './budgetUnits';
 import { BudgetGlossary } from './BudgetGlossary';
+import { BudgetSettingsModal } from './BudgetSettingsModal';
 
 export const BUDGET_LABELS: Record<string, string> = {
   gw: 'Groundwater',
@@ -44,32 +44,26 @@ export const BUDGET_LABELS: Record<string, string> = {
 
 interface BudgetControlsProps {
   budgetTypes: string[];
-  hasVolumeColumns?: boolean;
-  hasAreaColumns?: boolean;
   hasLengthColumns?: boolean;
   unitsMeta?: BudgetUnitsMetadata;
 }
 
 export function BudgetControls({
   budgetTypes,
-  hasVolumeColumns = true,
-  hasAreaColumns = false,
   hasLengthColumns = false,
   unitsMeta,
 }: BudgetControlsProps) {
   const {
     activeBudgetType, activeBudgetLocation, budgetChartType,
     showBudgetSankey, showBudgetGlossary,
-    budgetVolumeUnit, budgetRateUnit, budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
     budgetAnalysisMode,
     setActiveBudgetType, setActiveBudgetLocation, setBudgetChartType,
     setShowBudgetSankey, setShowBudgetGlossary,
-    setBudgetVolumeUnit, setBudgetRateUnit, setBudgetAreaUnit, setBudgetLengthUnit, setBudgetTimeAgg,
-    setBudgetAnalysisMode,
   } = useViewerStore();
 
   const isAnalysisMode = budgetAnalysisMode !== 'timeseries';
   const [locations, setLocations] = useState<BudgetLocation[]>([]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Load locations when budget type changes
   useEffect(() => {
@@ -173,114 +167,17 @@ export function BudgetControls({
 
         <Divider sx={{ my: 1 }} />
 
-        {/* Settings section */}
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+        {/* Settings button — opens modal */}
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<SettingsIcon />}
+          onClick={() => setSettingsOpen(true)}
+          fullWidth
+          sx={{ mb: 1, textTransform: 'none' }}
+        >
           Settings
-        </Typography>
-
-        {/* Model native units chip */}
-        {unitsMeta && (
-          <Chip
-            label={`Model: ${unitsMeta.source_volume_unit || '?'}, ${unitsMeta.source_area_unit || '?'} (${unitsMeta.timestep_unit || '?'})`}
-            size="small"
-            variant="outlined"
-            sx={{ mb: 1, fontSize: '0.7rem', height: 22 }}
-          />
-        )}
-
-        {/* Time Aggregation — grouped with settings */}
-        <FormControl fullWidth size="small" sx={{ mb: 1.5 }} disabled={isAnalysisMode}>
-          <InputLabel>Time Aggregation</InputLabel>
-          <Select
-            value={budgetTimeAgg}
-            label="Time Aggregation"
-            onChange={(e) => setBudgetTimeAgg(e.target.value)}
-          >
-            {TIME_AGGS.map((a) => (
-              <MenuItem key={a.id} value={a.id}>{a.label}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* Analysis View selector */}
-        <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-          <InputLabel>View</InputLabel>
-          <Select
-            value={budgetAnalysisMode}
-            label="View"
-            onChange={(e) => setBudgetAnalysisMode(e.target.value as typeof budgetAnalysisMode)}
-          >
-            <MenuItem value="timeseries">Time Series</MenuItem>
-            <MenuItem value="monthly_pattern">Monthly Pattern</MenuItem>
-            <MenuItem value="component_ratios">Component Ratios</MenuItem>
-            <MenuItem value="cumulative_departure">Cumulative Departure</MenuItem>
-            <MenuItem value="exceedance">Exceedance Probability</MenuItem>
-          </Select>
-        </FormControl>
-
-        {/* Volume Unit — only when volume columns exist */}
-        {hasVolumeColumns && (
-          <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-            <InputLabel>Volume Unit</InputLabel>
-            <Select
-              value={budgetVolumeUnit}
-              label="Volume Unit"
-              onChange={(e) => setBudgetVolumeUnit(e.target.value)}
-            >
-              {VOLUME_UNITS.map((u) => (
-                <MenuItem key={u.id} value={u.id}>{u.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-
-        {/* Rate Unit — only when volume columns exist */}
-        {hasVolumeColumns && (
-          <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-            <InputLabel>Rate Display</InputLabel>
-            <Select
-              value={budgetRateUnit}
-              label="Rate Display"
-              onChange={(e) => setBudgetRateUnit(e.target.value)}
-            >
-              {RATE_UNITS.map((u) => (
-                <MenuItem key={u.id} value={u.id}>{u.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-
-        {/* Area Unit — only when area columns exist */}
-        {hasAreaColumns && (
-          <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-            <InputLabel>Area Unit</InputLabel>
-            <Select
-              value={budgetAreaUnit}
-              label="Area Unit"
-              onChange={(e) => setBudgetAreaUnit(e.target.value)}
-            >
-              {AREA_UNITS.map((u) => (
-                <MenuItem key={u.id} value={u.id}>{u.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-
-        {/* Length Unit — only when length columns exist (subsidence) */}
-        {hasLengthColumns && (
-          <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-            <InputLabel>Length Unit</InputLabel>
-            <Select
-              value={budgetLengthUnit}
-              label="Length Unit"
-              onChange={(e) => setBudgetLengthUnit(e.target.value)}
-            >
-              {LENGTH_UNITS.map((u) => (
-                <MenuItem key={u.id} value={u.id}>{u.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
+        </Button>
 
         <Divider sx={{ my: 1 }} />
 
@@ -318,6 +215,14 @@ export function BudgetControls({
         open={showBudgetGlossary}
         onClose={() => setShowBudgetGlossary(false)}
         budgetType={activeBudgetType}
+      />
+
+      {/* Settings modal */}
+      <BudgetSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        unitsMeta={unitsMeta}
+        hasLengthColumns={hasLengthColumns}
       />
     </>
   );

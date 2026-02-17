@@ -398,10 +398,11 @@ class TestGetBudgetUnitsMetadata:
         reader = _make_mock_reader(column_types=[1, 4, 5])
 
         result = _get_budget_units_metadata("gw", reader)
-        # source_volume is derived from length_unit, not from gw_volume_output_unit
+        # source_volume and source_area are derived from length_unit
         assert result["source_volume_unit"] == "FT3"
         assert result["source_length_unit"] == "FT"
-        assert result["source_area_unit"] == "SQ_MI"
+        assert result["source_area_unit"] == "SQ.FT."
+        assert result["source_area_output_unit"] == "SQ_MI"
         assert result["has_volume_columns"] is True
         assert result["has_area_columns"] is True
         assert result["has_length_columns"] is True
@@ -417,9 +418,10 @@ class TestGetBudgetUnitsMetadata:
         reader = _make_mock_reader(column_types=[1, 1, 1])
 
         result = _get_budget_units_metadata("stream", reader)
-        # source_volume derived from length_unit "M" → "M3"
+        # source_volume and source_area derived from length_unit "M" → "M3", "M2"
         assert result["source_volume_unit"] == "M3"
-        assert result["source_area_unit"] == "HA"
+        assert result["source_area_unit"] == "M2"
+        assert result["source_area_output_unit"] == "HA"
         assert result["source_length_unit"] == "M"
 
     def test_gw_volume_derived_from_length_unit(self):
@@ -552,6 +554,57 @@ class TestGetBudgetUnitsMetadata:
         result = _get_budget_units_metadata("stream", reader)
         # volume_unit is ignored; length_unit defaults to "FT" → "FT3"
         assert result["source_volume_unit"] == "FT3"
+
+    def test_empty_column_types_infers_from_headers(self):
+        """When column_types is empty, infer volume/area/length from headers."""
+        model = _make_mock_model()
+        model_state._model = model
+        reader = _make_mock_reader(
+            headers=["Deep Percolation", "Pumping", "AG_AREA", "CUM_SUBSIDENCE"],
+        )
+        # Force empty column_types (bypasses `or` default in helper)
+        loc = reader.header.location_data[0]
+        loc.column_types = []
+        loc.column_headers = [
+            "Deep Percolation", "Pumping", "AG_AREA", "CUM_SUBSIDENCE",
+        ]
+
+        result = _get_budget_units_metadata("gw", reader)
+        assert result["has_volume_columns"] is True   # Deep Percolation, Pumping, CUM_SUBSIDENCE
+        assert result["has_area_columns"] is True      # AG_AREA
+        assert result["has_length_columns"] is False   # subsidence is volumetric in GW budgets
+
+    def test_empty_column_types_volume_only_headers(self):
+        """When column_types empty + no area/length keywords → volume only."""
+        model = _make_mock_model()
+        model_state._model = model
+        reader = _make_mock_reader(
+            headers=["Pumping", "Recharge", "Net Deep Percolation"],
+        )
+        loc = reader.header.location_data[0]
+        loc.column_types = []
+        loc.column_headers = [
+            "Pumping", "Recharge", "Net Deep Percolation",
+        ]
+
+        result = _get_budget_units_metadata("gw", reader)
+        assert result["has_volume_columns"] is True
+        assert result["has_area_columns"] is False
+        assert result["has_length_columns"] is False
+
+    def test_empty_column_types_no_headers_defaults_volume(self):
+        """When both column_types and column_headers are empty → assume volume."""
+        model = _make_mock_model()
+        model_state._model = model
+        reader = _make_mock_reader()
+        loc = reader.header.location_data[0]
+        loc.column_types = []
+        loc.column_headers = []
+
+        result = _get_budget_units_metadata("gw", reader)
+        assert result["has_volume_columns"] is True
+        assert result["has_area_columns"] is False
+        assert result["has_length_columns"] is False
 
 
 # ===========================================================================
