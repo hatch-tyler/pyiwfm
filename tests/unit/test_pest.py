@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 
 from pyiwfm.runner.pest import (
-    Parameter,
+    InstructionFile,
     Observation,
     ObservationGroup,
-    TemplateFile,
-    InstructionFile,
+    Parameter,
     PESTInterface,
+    TemplateFile,
     write_pest_control_file,
 )
 
@@ -209,18 +209,14 @@ class TestTemplateFile:
         """Test creating template from existing input file."""
         # Create input file with parameter value
         input_file = tmp_path / "model.in"
-        input_file.write_text(
-            "C Model input\n"
-            "HK = 1.5e+01\n"
-            "SS = 1.0e-05\n"
-        )
+        input_file.write_text("C Model input\nHK = 1.5e+01\nSS = 1.0e-05\n")
 
         template_file = tmp_path / "model.tpl"
 
-        tpl = TemplateFile.create_from_file(
+        TemplateFile.create_from_file(
             input_file,
             template_file,
-            parameters={"hk": 1.5e+01},
+            parameters={"hk": 1.5e01},
         )
 
         assert template_file.exists()

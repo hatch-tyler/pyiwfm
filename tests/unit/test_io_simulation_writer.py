@@ -5,14 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from pyiwfm.io.simulation_writer import (
     SimulationMainConfig,
     SimulationMainWriter,
     write_simulation_main,
 )
-
 
 # ---------------------------------------------------------------------------
 # SimulationMainConfig
@@ -131,7 +128,7 @@ class TestWriteSimulationMain:
     def test_creates_writer_and_calls_write(self, mock_write, tmp_path: Path) -> None:
         mock_write.return_value = tmp_path / "Simulation_MAIN.IN"
         model = MagicMock()
-        result = write_simulation_main(model, tmp_path)
+        write_simulation_main(model, tmp_path)
         mock_write.assert_called_once()
 
     @patch.object(SimulationMainWriter, "write_main")

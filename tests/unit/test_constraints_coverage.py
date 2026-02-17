@@ -61,39 +61,47 @@ class TestBoundaryArea:
 
     def test_boundary_area_simple(self) -> None:
         """Triangle area = 0.5 * base * height."""
-        verts = np.array([
-            [0.0, 0.0],
-            [4.0, 0.0],
-            [0.0, 3.0],
-        ])
+        verts = np.array(
+            [
+                [0.0, 0.0],
+                [4.0, 0.0],
+                [0.0, 3.0],
+            ]
+        )
         b = Boundary(vertices=verts)
         assert b.area == pytest.approx(6.0)
 
     def test_boundary_area_square(self) -> None:
         """Square area = side^2."""
-        verts = np.array([
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [10.0, 10.0],
-            [0.0, 10.0],
-        ])
+        verts = np.array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [10.0, 10.0],
+                [0.0, 10.0],
+            ]
+        )
         b = Boundary(vertices=verts)
         assert b.area == pytest.approx(100.0)
 
     def test_boundary_area_with_holes(self) -> None:
         """Area subtracting holes."""
-        outer = np.array([
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [10.0, 10.0],
-            [0.0, 10.0],
-        ])
-        hole = np.array([
-            [2.0, 2.0],
-            [4.0, 2.0],
-            [4.0, 4.0],
-            [2.0, 4.0],
-        ])
+        outer = np.array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [10.0, 10.0],
+                [0.0, 10.0],
+            ]
+        )
+        hole = np.array(
+            [
+                [2.0, 2.0],
+                [4.0, 2.0],
+                [4.0, 4.0],
+                [2.0, 4.0],
+            ]
+        )
         b = Boundary(vertices=outer, holes=[hole])
         # 100 - 4 = 96
         assert b.area == pytest.approx(96.0)
@@ -104,12 +112,14 @@ class TestBoundaryCentroid:
 
     def test_boundary_centroid(self) -> None:
         """Centroid of rectangle."""
-        verts = np.array([
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [10.0, 6.0],
-            [0.0, 6.0],
-        ])
+        verts = np.array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [10.0, 6.0],
+                [0.0, 6.0],
+            ]
+        )
         b = Boundary(vertices=verts)
         cx, cy = b.centroid
         assert cx == pytest.approx(5.0)
@@ -121,11 +131,13 @@ class TestBoundaryGetSegments:
 
     def test_boundary_get_segments(self) -> None:
         """Segment extraction."""
-        verts = np.array([
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-        ])
+        verts = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [1.0, 1.0],
+            ]
+        )
         b = Boundary(vertices=verts)
         segments = b.get_segments()
         assert len(segments) == 3
@@ -133,11 +145,13 @@ class TestBoundaryGetSegments:
 
     def test_boundary_get_segments_with_markers(self) -> None:
         """Segment markers from boundary markers."""
-        verts = np.array([
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-        ])
+        verts = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [1.0, 1.0],
+            ]
+        )
         markers = np.array([10, 20, 30], dtype=np.int32)
         b = Boundary(vertices=verts, markers=markers)
         segments = b.get_segments()
@@ -166,11 +180,13 @@ class TestStreamConstraintLength:
 
     def test_stream_length(self) -> None:
         """Stream length from vertices."""
-        verts = np.array([
-            [0.0, 0.0],
-            [3.0, 4.0],
-            [6.0, 4.0],
-        ])
+        verts = np.array(
+            [
+                [0.0, 0.0],
+                [3.0, 4.0],
+                [6.0, 4.0],
+            ]
+        )
         sc = StreamConstraint(vertices=verts)
         # 5.0 + 3.0 = 8.0
         assert sc.length == pytest.approx(8.0)
@@ -222,12 +238,14 @@ class TestRefinementZone:
 
     def test_refinement_zone_polygon(self) -> None:
         """Polygon zone creation and contains check."""
-        poly = np.array([
-            [0.0, 0.0],
-            [10.0, 0.0],
-            [10.0, 10.0],
-            [0.0, 10.0],
-        ])
+        poly = np.array(
+            [
+                [0.0, 0.0],
+                [10.0, 0.0],
+                [10.0, 10.0],
+                [0.0, 10.0],
+            ]
+        )
         zone = RefinementZone(polygon=poly, max_area=5.0)
         assert zone.contains(5.0, 5.0)
         assert not zone.contains(15.0, 15.0)

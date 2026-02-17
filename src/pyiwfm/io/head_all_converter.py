@@ -26,6 +26,7 @@ import argparse
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import TextIO
 
 import h5py
 import numpy as np
@@ -93,7 +94,7 @@ def _parse_data_line_numpy(line: str, n_nodes: int) -> np.ndarray:
     return values
 
 
-def _count_data_lines(fh, header_lines: int) -> int:
+def _count_data_lines(fh: TextIO, header_lines: int) -> int:
     """Cheaply count data lines by scanning newlines without storing content."""
     fh.seek(0)
     total = 0
@@ -163,9 +164,7 @@ def convert_headall_to_hdf(
         # --- Estimate timestep count from remaining data lines ---
         data_lines = _count_data_lines(fh, header_lines_read)
         estimated_timesteps = max(data_lines // n_layers, 1)
-        logger.info(
-            "Estimated %d timesteps from %d data lines", estimated_timesteps, data_lines
-        )
+        logger.info("Estimated %d timesteps from %d data lines", estimated_timesteps, data_lines)
 
         # Skip header again after the count pass
         fh.seek(0)
@@ -213,9 +212,7 @@ def convert_headall_to_hdf(
                     cont_line = fh.readline()
                     if not cont_line:
                         break
-                    row_buf[:, layer_idx] = _parse_data_line_numpy(
-                        cont_line.rstrip(), n_nodes
-                    )
+                    row_buf[:, layer_idx] = _parse_data_line_numpy(cont_line.rstrip(), n_nodes)
 
                 # Grow dataset if needed
                 if t_idx >= ds.shape[0]:

@@ -7,11 +7,10 @@ import numpy as np
 import pytest
 
 from pyiwfm.runner.pest_ensemble import (
-    IWFMEnsembleManager,
     EnsembleStatistics,
+    IWFMEnsembleManager,
 )
-from pyiwfm.runner.pest_params import Parameter, IWFMParameterType
-from pyiwfm.runner.pest_geostat import Variogram
+from pyiwfm.runner.pest_params import IWFMParameterType, Parameter
 
 
 class TestEnsembleStatistics:
@@ -136,8 +135,10 @@ class TestObservationEnsemble:
         obs_weights = np.array([1.0, 0.5, 2.0])
 
         ensemble = em.generate_observation_ensemble(
-            obs_values, obs_weights,
-            n_realizations=50, seed=42,
+            obs_values,
+            obs_weights,
+            n_realizations=50,
+            seed=42,
         )
         assert ensemble.shape == (50, 3)
         # Mean should be close to observed values
@@ -171,11 +172,13 @@ class TestEnsembleIO:
 
     def test_write_parameter_ensemble(self, ensemble_manager):
         """Test writing parameter ensemble to CSV."""
-        ensemble = np.array([
-            [1.0, 0.15],
-            [2.0, 0.20],
-            [0.5, 0.10],
-        ])
+        ensemble = np.array(
+            [
+                [1.0, 0.15],
+                [2.0, 0.20],
+                [0.5, 0.10],
+            ]
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "prior.csv"
@@ -191,10 +194,12 @@ class TestEnsembleIO:
 
     def test_write_observation_ensemble(self, ensemble_manager):
         """Test writing observation ensemble to CSV."""
-        ensemble = np.array([
-            [100.0, 200.0],
-            [101.0, 199.0],
-        ])
+        ensemble = np.array(
+            [
+                [100.0, 200.0],
+                [101.0, 199.0],
+            ]
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "obs_noise.csv"
@@ -252,8 +257,8 @@ class TestEnsembleAnalysis:
 
     def test_analyze_ensemble(self, manager_with_params):
         """Test computing ensemble statistics."""
-        np.random.seed(42)
-        ensemble = np.random.rand(100, 2)
+        rng = np.random.default_rng(42)
+        ensemble = rng.random((100, 2))
 
         stats = manager_with_params.analyze_ensemble(ensemble)
         assert stats.n_realizations == 100
@@ -265,10 +270,10 @@ class TestEnsembleAnalysis:
 
     def test_compute_reduction_factor(self, manager_with_params):
         """Test uncertainty reduction computation."""
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
         # Wide prior, narrow posterior
-        prior = np.random.randn(100, 2) * 10
-        posterior = np.random.randn(100, 2) * 1
+        prior = rng.standard_normal((100, 2)) * 10
+        posterior = rng.standard_normal((100, 2)) * 1
 
         reduction = manager_with_params.compute_reduction_factor(prior, posterior)
         assert reduction.shape == (2,)
@@ -277,11 +282,13 @@ class TestEnsembleAnalysis:
 
     def test_get_best_realization(self, manager_with_params):
         """Test getting best realization."""
-        ensemble = np.array([
-            [1.0, 0.15],
-            [2.0, 0.20],
-            [1.5, 0.18],
-        ])
+        ensemble = np.array(
+            [
+                [1.0, 0.15],
+                [2.0, 0.20],
+                [1.5, 0.18],
+            ]
+        )
         objectives = np.array([10.0, 5.0, 8.0])
 
         idx, values = manager_with_params.get_best_realization(ensemble, objectives)

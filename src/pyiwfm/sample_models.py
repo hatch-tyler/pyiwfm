@@ -24,15 +24,12 @@ import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
-from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.core.model import IWFMModel
+from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 
 if TYPE_CHECKING:
-    from pyiwfm.components.groundwater import AppGW
-    from pyiwfm.components.stream import AppStream
-    from pyiwfm.components.lake import AppLake
-    from pyiwfm.components.rootzone import RootZone
+    pass
 
 
 def create_sample_mesh(
@@ -263,11 +260,7 @@ def create_sample_stratigraphy(
     # Ground surface elevation (sloping)
     gs_elev = np.zeros(n_nodes, dtype=np.float64)
     for i, node in enumerate(mesh.nodes.values()):
-        gs_elev[i] = (
-            surface_base
-            + surface_slope[0] * node.x
-            + surface_slope[1] * node.y
-        )
+        gs_elev[i] = surface_base + surface_slope[0] * node.x + surface_slope[1] * node.y
 
     # Layer elevations
     top_elev = np.zeros((n_nodes, n_layers), dtype=np.float64)
@@ -329,8 +322,8 @@ def create_sample_scalar_field(
     elif field_type == "drawdown":
         # Pumping cone centered in domain
         cx, cy = 0.5, 0.5
-        dist = np.sqrt((x_norm - cx)**2 + (y_norm - cy)**2)
-        values = 15.0 * np.exp(-dist**2 / 0.1)
+        dist = np.sqrt((x_norm - cx) ** 2 + (y_norm - cy) ** 2)
+        values = 15.0 * np.exp(-(dist**2) / 0.1)
     elif field_type == "recharge":
         # Higher recharge in the east (foothills)
         values = 0.001 + 0.002 * x_norm + 0.001 * np.sin(4 * np.pi * y_norm)
@@ -338,20 +331,21 @@ def create_sample_scalar_field(
         # Pumping clusters
         c1, c2, c3 = (0.3, 0.4), (0.6, 0.7), (0.7, 0.3)
         for cx, cy in [c1, c2, c3]:
-            dist = np.sqrt((x_norm - cx)**2 + (y_norm - cy)**2)
-            values -= 500.0 * np.exp(-dist**2 / 0.02)
+            dist = np.sqrt((x_norm - cx) ** 2 + (y_norm - cy) ** 2)
+            values -= 500.0 * np.exp(-(dist**2) / 0.02)
     elif field_type == "subsidence":
         # Subsidence cone
         cx, cy = 0.5, 0.5
-        dist = np.sqrt((x_norm - cx)**2 + (y_norm - cy)**2)
-        values = -2.0 * np.exp(-dist**2 / 0.15)
+        dist = np.sqrt((x_norm - cx) ** 2 + (y_norm - cy) ** 2)
+        values = -2.0 * np.exp(-(dist**2) / 0.15)
     else:
         # Generic field
         values = np.sin(2 * np.pi * x_norm) * np.cos(2 * np.pi * y_norm)
 
     # Add noise
     if noise_level > 0:
-        noise = np.random.normal(0, noise_level * np.abs(values).mean(), n_nodes)
+        rng = np.random.default_rng()
+        noise = rng.normal(0, noise_level * np.abs(values).mean(), n_nodes)
         values += noise
 
     return values
@@ -378,21 +372,23 @@ def create_sample_element_field(
     """
     n_elements = mesh.n_elements
 
+    rng = np.random.default_rng()
+
     if field_type == "land_use":
         # Random land use categories (1-5)
-        values = np.random.randint(1, 6, n_elements).astype(np.float64)
+        values = rng.integers(1, 6, n_elements).astype(np.float64)
     elif field_type == "soil_type":
         # Soil types based on element position
         values = np.zeros(n_elements, dtype=np.float64)
         for i, elem in enumerate(mesh.elements.values()):
             # Get element centroid
             cx = sum(mesh.nodes[v].x for v in elem.vertices) / elem.n_vertices
-            cy = sum(mesh.nodes[v].y for v in elem.vertices) / elem.n_vertices
+            sum(mesh.nodes[v].y for v in elem.vertices) / elem.n_vertices
             x_max = max(n.x for n in mesh.nodes.values())
             # Soil type varies with position
             values[i] = 1 + int(3 * cx / x_max)
     else:
-        values = np.random.rand(n_elements)
+        values = rng.random(n_elements)
 
     return values
 
@@ -450,7 +446,8 @@ def create_sample_timeseries(
         values += seasonal_amplitude * np.sin(2 * np.pi * t)
 
     # Add noise
-    values += np.random.normal(0, noise_level * np.abs(values).mean(), n_points)
+    rng = np.random.default_rng()
+    values += rng.normal(0, noise_level * np.abs(values).mean(), n_points)
 
     return TimeSeries.from_datetimes(
         times=times,
@@ -482,7 +479,7 @@ def create_sample_timeseries_collection(
     series_dict: dict[str, TimeSeries] = {}
 
     for i in range(n_locations):
-        name = f"Well_{i+1}"
+        name = f"Well_{i + 1}"
         ts = create_sample_timeseries(
             name=name,
             n_years=n_years,

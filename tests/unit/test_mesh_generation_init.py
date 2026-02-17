@@ -11,8 +11,6 @@ import importlib
 import sys
 from unittest.mock import patch
 
-import pytest
-
 
 class TestTriangleImportFallback:
     """Test Triangle wrapper import fallback."""
@@ -23,6 +21,7 @@ class TestTriangleImportFallback:
         with patch.dict(sys.modules, blocked):
             sys.modules.pop("pyiwfm.mesh_generation", None)
             import pyiwfm.mesh_generation as mg
+
             importlib.reload(mg)
             assert mg.TriangleMeshGenerator is None
 
@@ -38,6 +37,7 @@ class TestGmshImportFallback:
         with patch.dict(sys.modules, blocked):
             sys.modules.pop("pyiwfm.mesh_generation", None)
             import pyiwfm.mesh_generation as mg
+
             importlib.reload(mg)
             assert mg.GmshMeshGenerator is None
 

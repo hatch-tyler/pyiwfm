@@ -12,15 +12,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from pyiwfm.io.config import PreProcessorFileConfig
 from pyiwfm.io.preprocessor_writer import (
-    write_nodes_file,
     write_elements_file,
+    write_nodes_file,
     write_stratigraphy_file,
 )
-
 
 # =============================================================================
 # Test PreProcessorFileConfig
@@ -238,9 +236,7 @@ class TestWriteElementsFile:
         """Test with multiple subregions."""
         output_path = tmp_path / "elements.dat"
         element_ids = np.array([1, 2, 3], dtype=np.int32)
-        vertices = np.array(
-            [[1, 2, 3, 4], [2, 3, 5, 6], [3, 4, 6, 7]], dtype=np.int32
-        )
+        vertices = np.array([[1, 2, 3, 4], [2, 3, 5, 6], [3, 4, 6, 7]], dtype=np.int32)
         subregions = np.array([1, 2, 1], dtype=np.int32)
 
         write_elements_file(output_path, element_ids, vertices, subregions)
@@ -257,9 +253,7 @@ class TestWriteElementsFile:
         subregions = np.array([1, 2], dtype=np.int32)
         subregion_names = {1: "North Region", 2: "South Region"}
 
-        write_elements_file(
-            output_path, element_ids, vertices, subregions, subregion_names
-        )
+        write_elements_file(output_path, element_ids, vertices, subregions, subregion_names)
 
         content = output_path.read_text()
         assert "North Region" in content
@@ -325,9 +319,7 @@ class TestWriteStratigraphyFile:
         layer_tops = np.array([[90.0]], dtype=np.float64)
         layer_bottoms = np.array([[70.0]], dtype=np.float64)
 
-        write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
+        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
 
         content = output_path.read_text()
         assert "IWFM" in content
@@ -343,9 +335,7 @@ class TestWriteStratigraphyFile:
         layer_tops = np.array([[90.0], [100.0]], dtype=np.float64)
         layer_bottoms = np.array([[70.0], [80.0]], dtype=np.float64)
 
-        write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
+        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
 
         content = output_path.read_text()
         assert "1" in content  # NLAYERS = 1
@@ -356,16 +346,10 @@ class TestWriteStratigraphyFile:
         node_ids = np.array([1, 2], dtype=np.int32)
         ground_surface = np.array([100.0, 110.0], dtype=np.float64)
         # 3 layers
-        layer_tops = np.array(
-            [[90.0, 70.0, 50.0], [100.0, 80.0, 60.0]], dtype=np.float64
-        )
-        layer_bottoms = np.array(
-            [[70.0, 50.0, 30.0], [80.0, 60.0, 40.0]], dtype=np.float64
-        )
+        layer_tops = np.array([[90.0, 70.0, 50.0], [100.0, 80.0, 60.0]], dtype=np.float64)
+        layer_bottoms = np.array([[70.0, 50.0, 30.0], [80.0, 60.0, 40.0]], dtype=np.float64)
 
-        write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
+        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
 
         content = output_path.read_text()
         assert "3" in content  # NLAYERS = 3
@@ -381,11 +365,9 @@ class TestWriteStratigraphyFile:
         # Aquitard thickness = GS (100) - Top (90) = 10
         # Aquifer thickness = Top (90) - Bottom (70) = 20
 
-        write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
+        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
 
-        content = output_path.read_text()
+        output_path.read_text()
         # The file should contain thickness values
         assert output_path.exists()
 
@@ -417,9 +399,7 @@ class TestWriteStratigraphyFile:
         layer_tops = np.array([[90.0]], dtype=np.float64)
         layer_bottoms = np.array([[70.0]], dtype=np.float64)
 
-        write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
+        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
 
         assert output_path.exists()
 
@@ -439,9 +419,7 @@ class TestWriteStratigraphyFile:
         #   Aquitard = Bottom1 (80) - Top2 (75) = 5
         #   Aquifer = Top2 (75) - Bottom2 (60) = 15
 
-        write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
+        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
 
         assert output_path.exists()
 
@@ -494,9 +472,7 @@ class TestFileContentParsing:
         """Test that elements file can be read back."""
         output_path = tmp_path / "elements.dat"
         element_ids = np.array([1, 2, 3], dtype=np.int32)
-        vertices = np.array(
-            [[1, 2, 5, 4], [2, 3, 6, 5], [4, 5, 6, 0]], dtype=np.int32
-        )
+        vertices = np.array([[1, 2, 5, 4], [2, 3, 6, 5], [4, 5, 6, 0]], dtype=np.int32)
         subregions = np.array([1, 1, 2], dtype=np.int32)
 
         write_elements_file(output_path, element_ids, vertices, subregions)
@@ -513,9 +489,7 @@ class TestFileContentParsing:
         layer_tops = np.array([[95.0], [100.0], [105.0]], dtype=np.float64)
         layer_bottoms = np.array([[80.0], [85.0], [90.0]], dtype=np.float64)
 
-        write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
+        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
 
         content = output_path.read_text()
         assert "NLAYERS" in content

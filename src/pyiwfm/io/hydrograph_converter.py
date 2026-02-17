@@ -187,7 +187,9 @@ def convert_hydrograph_to_hdf(
 
     logger.info(
         "Wrote %s: data shape (%d, %d)",
-        hdf_path, n_timesteps, n_cols,
+        hdf_path,
+        n_timesteps,
+        n_cols,
     )
     return hdf_path
 
@@ -199,7 +201,9 @@ def main() -> None:
     )
     parser.add_argument("text_file", help="Path to the IWFM hydrograph .out file")
     parser.add_argument(
-        "-o", "--output", default=None,
+        "-o",
+        "--output",
+        default=None,
         help="Output HDF5 file path (default: {name}.hydrograph_cache.hdf)",
     )
     parser.add_argument("-v", "--verbose", action="store_true")

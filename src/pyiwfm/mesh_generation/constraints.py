@@ -9,7 +9,6 @@ fixed points.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterator
 
 import numpy as np
 from numpy.typing import NDArray
@@ -97,8 +96,7 @@ class Boundary:
 
         # Shoelace formula
         area = 0.5 * abs(
-            np.sum(x[:-1] * y[1:]) + x[-1] * y[0]
-            - np.sum(x[1:] * y[:-1]) - x[0] * y[-1]
+            np.sum(x[:-1] * y[1:]) + x[-1] * y[0] - np.sum(x[1:] * y[:-1]) - x[0] * y[-1]
         )
         return float(area)
 
@@ -188,7 +186,7 @@ class StreamConstraint:
 
         return segments
 
-    def resample(self, spacing: float) -> "StreamConstraint":
+    def resample(self, spacing: float) -> StreamConstraint:
         """
         Resample stream at regular spacing.
 

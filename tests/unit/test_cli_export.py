@@ -6,10 +6,7 @@ import argparse
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from pyiwfm.cli.export import add_export_parser, run_export
-
 
 # ---------------------------------------------------------------------------
 # Helpers

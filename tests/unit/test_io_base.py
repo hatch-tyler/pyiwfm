@@ -17,13 +17,12 @@ from typing import Any
 import pytest
 
 from pyiwfm.io.base import (
-    FileInfo,
     BaseReader,
     BaseWriter,
     BinaryReader,
     BinaryWriter,
+    FileInfo,
 )
-
 
 # =============================================================================
 # Concrete implementations for testing abstract classes

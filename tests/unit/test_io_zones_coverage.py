@@ -15,22 +15,20 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 import numpy as np
 import pytest
 
+from pyiwfm.core.zones import Zone, ZoneDefinition
 from pyiwfm.io.zones import (
-    read_iwfm_zone_file,
-    write_iwfm_zone_file,
-    read_geojson_zones,
-    write_geojson_zones,
     auto_detect_zone_file,
+    read_geojson_zones,
+    read_iwfm_zone_file,
     read_zone_file,
+    write_geojson_zones,
+    write_iwfm_zone_file,
     write_zone_file,
 )
-from pyiwfm.core.zones import Zone, ZoneDefinition
-
 
 # =============================================================================
 # Content-Based Format Detection
@@ -59,7 +57,7 @@ class TestAutoDetectContentBased:
     def test_detect_geojson_extension(self, tmp_path: Path) -> None:
         """Test detecting GeoJSON by .geojson extension."""
         filepath = tmp_path / "zones.geojson"
-        filepath.write_text('{}')
+        filepath.write_text("{}")
 
         fmt = auto_detect_zone_file(filepath)
         assert fmt == "geojson"
@@ -67,7 +65,7 @@ class TestAutoDetectContentBased:
     def test_detect_json_extension(self, tmp_path: Path) -> None:
         """Test detecting GeoJSON by .json extension."""
         filepath = tmp_path / "zones.json"
-        filepath.write_text('{}')
+        filepath.write_text("{}")
 
         fmt = auto_detect_zone_file(filepath)
         assert fmt == "geojson"

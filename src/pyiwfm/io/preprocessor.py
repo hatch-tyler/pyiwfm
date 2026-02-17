@@ -7,27 +7,28 @@ input files, which define the model structure and input file paths.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from pyiwfm.core.mesh import AppGrid, Node, Element, Subregion
-from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.core.model import IWFMModel
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.core.mesh import AppGrid, Subregion
+from pyiwfm.core.model import IWFMModel
 from pyiwfm.io.ascii import (
-    read_nodes,
     read_elements,
+    read_nodes,
     read_stratigraphy,
-    write_nodes,
     write_elements,
+    write_nodes,
     write_stratigraphy,
 )
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     resolve_path as _resolve_path,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
 )
 
@@ -96,7 +97,7 @@ def read_preprocessor_main(filepath: Path | str) -> PreProcessorConfig:
 
     config = PreProcessorConfig(base_dir=base_dir)
 
-    with open(filepath, "r") as f:
+    with open(filepath) as f:
         line_num = 0
         data_lines: list[tuple[str, str]] = []  # (value, description)
 
@@ -176,7 +177,7 @@ def read_subregions_file(filepath: Path | str) -> dict[int, Subregion]:
     filepath = Path(filepath)
     subregions: dict[int, Subregion] = {}
 
-    with open(filepath, "r") as f:
+    with open(filepath) as f:
         line_num = 0
         n_subregions = None
 
@@ -257,8 +258,7 @@ def load_model_from_preprocessor(
         subregions = read_subregions_file(config.subregions_file)
     elif subregion_names:
         subregions = {
-            sr_id: Subregion(id=sr_id, name=name)
-            for sr_id, name in subregion_names.items()
+            sr_id: Subregion(id=sr_id, name=name) for sr_id, name in subregion_names.items()
         }
 
     # Create mesh
@@ -444,11 +444,11 @@ def load_complete_model(
         >>> model = load_complete_model("simulation.in")
         >>> print(f"Loaded model with {model.groundwater.n_wells} wells")
     """
-    from pyiwfm.io.simulation import SimulationReader
     from pyiwfm.io.groundwater import GroundwaterReader
-    from pyiwfm.io.streams import StreamReader
     from pyiwfm.io.lakes import LakeReader
     from pyiwfm.io.rootzone import RootZoneReader
+    from pyiwfm.io.simulation import SimulationReader
+    from pyiwfm.io.streams import StreamReader
 
     simulation_file = Path(simulation_file)
     base_dir = simulation_file.parent
@@ -486,6 +486,7 @@ def load_complete_model(
 
                 # Create AppGW component
                 from pyiwfm.components.groundwater import AppGW
+
                 n_nodes = model.mesh.n_nodes if model.mesh else 0
                 n_elements = model.mesh.n_elements if model.mesh else 0
                 n_layers = model.n_layers
@@ -513,18 +514,20 @@ def load_complete_model(
                     elif gw_config.parametric_grids and model.mesh:
                         try:
                             from pyiwfm.core.model import _apply_parametric_grids
+
                             _apply_parametric_grids(
-                                gw, gw_config.parametric_grids, model.mesh,
+                                gw,
+                                gw_config.parametric_grids,
+                                model.mesh,
                             )
                         except Exception:
                             pass
 
                     # Apply Kh anomaly overwrites
-                    if (gw_config.kh_anomalies
-                            and gw.aquifer_params is not None
-                            and model.mesh):
+                    if gw_config.kh_anomalies and gw.aquifer_params is not None and model.mesh:
                         try:
                             from pyiwfm.core.model import _apply_kh_anomalies
+
                             _apply_kh_anomalies(
                                 gw.aquifer_params,
                                 gw_config.kh_anomalies,
@@ -554,6 +557,7 @@ def load_complete_model(
                 nodes = stream_reader.read_stream_nodes(stream_file)
 
                 from pyiwfm.components.stream import AppStream
+
                 stream = AppStream()
                 for node in nodes.values():
                     stream.add_node(node)
@@ -571,6 +575,7 @@ def load_complete_model(
                 lakes_dict = lake_reader.read_lake_definitions(lake_file)
 
                 from pyiwfm.components.lake import AppLake
+
                 lakes = AppLake()
                 for lake in lakes_dict.values():
                     lakes.add_lake(lake)
@@ -588,6 +593,7 @@ def load_complete_model(
                 crops = rz_reader.read_crop_types(rz_file)
 
                 from pyiwfm.components.rootzone import RootZone
+
                 n_elements = model.mesh.n_elements if model.mesh else 0
                 rootzone = RootZone(n_elements=n_elements, n_layers=1)
                 for crop in crops.values():
@@ -650,9 +656,9 @@ def save_complete_model(
     config = ModelWriteConfig(
         output_dir=Path(output_dir),
         ts_format=ts_fmt,
-        dss_file=dss_file or "model.dss",
+        dss_file=str(dss_file) if dss_file else "model.dss",
         file_paths=file_paths or {},
-        **version_kwargs,
+        **version_kwargs,  # type: ignore[arg-type]
     )
     writer = CompleteModelWriter(model, config)
     result = writer.write_all()

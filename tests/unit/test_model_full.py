@@ -5,14 +5,13 @@ Tests the IWFMModel class which orchestrates all model components
 including mesh, stratigraphy, groundwater, streams, lakes, and rootzone.
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch, mock_open
-import numpy as np
+from unittest.mock import MagicMock, patch
 
-from pyiwfm.core.model import IWFMModel
+import pytest
+
 from pyiwfm.core.exceptions import ValidationError
-
+from pyiwfm.core.model import IWFMModel
 
 # =============================================================================
 # Fixtures
@@ -103,8 +102,9 @@ def model_with_mesh(mock_mesh, mock_stratigraphy):
 
 
 @pytest.fixture
-def complete_model(mock_mesh, mock_stratigraphy, mock_groundwater,
-                   mock_streams, mock_lakes, mock_rootzone):
+def complete_model(
+    mock_mesh, mock_stratigraphy, mock_groundwater, mock_streams, mock_lakes, mock_rootzone
+):
     """Create a complete model with all components."""
     return IWFMModel(
         name="CompleteModel",
@@ -651,9 +651,7 @@ class TestIWFMModelFromSimulation:
         result = IWFMModel.from_simulation("simulation.in")
 
         assert result == mock_model
-        mock_load.assert_called_once_with(
-            "simulation.in", load_timeseries=False
-        )
+        mock_load.assert_called_once_with("simulation.in", load_timeseries=False)
 
     @patch("pyiwfm.io.preprocessor.load_complete_model")
     def test_from_simulation_with_timeseries(self, mock_load):
@@ -661,11 +659,9 @@ class TestIWFMModelFromSimulation:
         mock_model = MagicMock(spec=IWFMModel)
         mock_load.return_value = mock_model
 
-        result = IWFMModel.from_simulation("simulation.in", load_timeseries=True)
+        IWFMModel.from_simulation("simulation.in", load_timeseries=True)
 
-        mock_load.assert_called_once_with(
-            "simulation.in", load_timeseries=True
-        )
+        mock_load.assert_called_once_with("simulation.in", load_timeseries=True)
 
 
 class TestIWFMModelFromHDF5:
@@ -738,7 +734,8 @@ class TestIWFMModelToSimulation:
 
         assert files == expected_files
         mock_save.assert_called_once_with(
-            complete_model, tmp_path,
+            complete_model,
+            tmp_path,
             timeseries_format="text",
             file_paths=None,
         )
@@ -775,9 +772,7 @@ class TestIWFMModelToBinary:
 
     @patch("pyiwfm.io.binary.write_binary_mesh")
     @patch("pyiwfm.io.binary.write_binary_stratigraphy")
-    def test_to_binary_mesh_only(
-        self, mock_write_strat, mock_write_mesh, mock_mesh, tmp_path
-    ):
+    def test_to_binary_mesh_only(self, mock_write_strat, mock_write_mesh, mock_mesh, tmp_path):
         """Test binary output with only mesh."""
         model = IWFMModel(name="Test", mesh=mock_mesh)
         output_file = tmp_path / "model.bin"
@@ -789,9 +784,7 @@ class TestIWFMModelToBinary:
 
     @patch("pyiwfm.io.binary.write_binary_mesh")
     @patch("pyiwfm.io.binary.write_binary_stratigraphy")
-    def test_to_binary_empty_model(
-        self, mock_write_strat, mock_write_mesh, tmp_path
-    ):
+    def test_to_binary_empty_model(self, mock_write_strat, mock_write_mesh, tmp_path):
         """Test binary output with empty model."""
         model = IWFMModel(name="Empty")
         output_file = tmp_path / "model.bin"

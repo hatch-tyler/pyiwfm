@@ -2,23 +2,22 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
 from pyiwfm.runner.pest_params import (
-    IWFMParameterType,
-    ParameterTransform,
-    ParameterGroup,
-    Parameter,
-    ZoneParameterization,
-    MultiplierParameterization,
-    PilotPointParameterization,
     DirectParameterization,
-    StreamParameterization,
+    IWFMParameterType,
+    MultiplierParameterization,
+    Parameter,
+    ParameterGroup,
+    ParameterTransform,
+    PilotPointParameterization,
     RootZoneParameterization,
+    StreamParameterization,
+    ZoneParameterization,
 )
 
 
@@ -544,7 +543,7 @@ class TestRootZoneParameterization:
 # Additional tests to increase coverage beyond 88%
 # ---------------------------------------------------------------------------
 
-from pyiwfm.runner.pest_params import ParameterizationStrategy
+from pyiwfm.runner.pest_params import ParameterizationStrategy  # noqa: E402
 
 
 class TestParameterTiedAndPestLine:
@@ -601,24 +600,30 @@ class TestParameterTiedAndPestLine:
     def test_parval1(self):
         """parval1 returns initial_value."""
         param = Parameter(
-            name="pv", initial_value=3.14,
-            lower_bound=1.0, upper_bound=5.0,
+            name="pv",
+            initial_value=3.14,
+            lower_bound=1.0,
+            upper_bound=5.0,
         )
         assert param.parval1 == 3.14
 
     def test_parlbnd(self):
         """parlbnd returns lower_bound."""
         param = Parameter(
-            name="lb", initial_value=2.0,
-            lower_bound=1.0, upper_bound=5.0,
+            name="lb",
+            initial_value=2.0,
+            lower_bound=1.0,
+            upper_bound=5.0,
         )
         assert param.parlbnd == 1.0
 
     def test_parubnd(self):
         """parubnd returns upper_bound."""
         param = Parameter(
-            name="ub", initial_value=2.0,
-            lower_bound=1.0, upper_bound=5.0,
+            name="ub",
+            initial_value=2.0,
+            lower_bound=1.0,
+            upper_bound=5.0,
         )
         assert param.parubnd == 5.0
 
@@ -857,6 +862,7 @@ class TestPilotPointParameterizationEdgeCases:
     def test_initial_value_from_ndarray(self):
         """Initial values from numpy array."""
         import numpy as np
+
         strategy = PilotPointParameterization(
             param_type=IWFMParameterType.HORIZONTAL_K,
             points=[(0, 0), (100, 0), (200, 0)],
@@ -871,6 +877,7 @@ class TestPilotPointParameterizationEdgeCases:
     def test_initial_value_ndarray_index_out_of_range(self):
         """When ndarray index exceeds length, falls back to first element."""
         import numpy as np
+
         strategy = PilotPointParameterization(
             param_type=IWFMParameterType.HORIZONTAL_K,
             points=[(0, 0), (100, 0), (200, 0)],
@@ -896,9 +903,7 @@ class TestPilotPointParameterizationEdgeCases:
     def test_generate_grid_from_node_coordinates(self):
         """generate_pilot_point_grid from model.node_coordinates."""
         model = MagicMock(spec=["node_coordinates"])
-        model.node_coordinates = np.array([
-            [0.0, 0.0], [100.0, 0.0], [0.0, 100.0], [100.0, 100.0]
-        ])
+        model.node_coordinates = np.array([[0.0, 0.0], [100.0, 0.0], [0.0, 100.0], [100.0, 100.0]])
         strategy = PilotPointParameterization(
             param_type=IWFMParameterType.HORIZONTAL_K,
             spacing=50.0,
@@ -921,9 +926,9 @@ class TestPilotPointParameterizationEdgeCases:
     def test_generate_parameters_from_grid(self):
         """generate_parameters uses grid when points is None."""
         model = MagicMock()
-        model.grid.node_coordinates = np.array([
-            [0.0, 0.0], [200.0, 0.0], [0.0, 200.0], [200.0, 200.0]
-        ])
+        model.grid.node_coordinates = np.array(
+            [[0.0, 0.0], [200.0, 0.0], [0.0, 200.0], [200.0, 200.0]]
+        )
         strategy = PilotPointParameterization(
             param_type=IWFMParameterType.HORIZONTAL_K,
             spacing=100.0,

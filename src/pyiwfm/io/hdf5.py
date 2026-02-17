@@ -12,16 +12,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import h5py
 import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.core.mesh import Node, Element, AppGrid, Subregion
-from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.core.model import IWFMModel
-from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.core.exceptions import FileFormatError
-
-import h5py
+from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
+from pyiwfm.core.model import IWFMModel
+from pyiwfm.core.stratigraphy import Stratigraphy
+from pyiwfm.core.timeseries import TimeSeries
 
 
 class HDF5ModelWriter:
@@ -41,9 +40,7 @@ class HDF5ModelWriter:
             name, version, created, ...
     """
 
-    def __init__(
-        self, filepath: Path | str, compression: str | None = "gzip"
-    ) -> None:
+    def __init__(self, filepath: Path | str, compression: str | None = "gzip") -> None:
         """
         Initialize the writer.
 
@@ -55,23 +52,23 @@ class HDF5ModelWriter:
         self.compression = compression
         self._file: h5py.File | None = None
 
-    def __enter__(self) -> "HDF5ModelWriter":
+    def __enter__(self) -> HDF5ModelWriter:
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
         self._file = h5py.File(self.filepath, "w")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: object
+    ) -> None:
         if self._file:
             self._file.close()
 
     def _create_dataset(
-        self, group: h5py.Group, name: str, data: NDArray, **kwargs
+        self, group: h5py.Group, name: str, data: NDArray, **kwargs: Any
     ) -> h5py.Dataset:
         """Create a dataset with optional compression."""
         if self.compression and data.size > 100:
-            return group.create_dataset(
-                name, data=data, compression=self.compression, **kwargs
-            )
+            return group.create_dataset(name, data=data, compression=self.compression, **kwargs)
         return group.create_dataset(name, data=data, **kwargs)
 
     def write_mesh(self, mesh: AppGrid) -> None:
@@ -188,9 +185,7 @@ class HDF5ModelWriter:
         loc_grp = var_grp.create_group(location)
 
         # Convert datetime64 to ISO strings for storage
-        times_str = np.array(
-            [str(t) for t in ts.times], dtype=h5py.special_dtype(vlen=str)
-        )
+        times_str = np.array([str(t) for t in ts.times], dtype=h5py.special_dtype(vlen=str))
         loc_grp.create_dataset("times", data=times_str)
         self._create_dataset(loc_grp, "values", ts.values)
 
@@ -252,11 +247,13 @@ class HDF5ModelReader:
         self.filepath = Path(filepath)
         self._file: h5py.File | None = None
 
-    def __enter__(self) -> "HDF5ModelReader":
+    def __enter__(self) -> HDF5ModelReader:
         self._file = h5py.File(self.filepath, "r")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: object
+    ) -> None:
         if self._file:
             self._file.close()
 
@@ -444,8 +441,9 @@ class HDF5ModelReader:
         metadata = self.read_metadata()
         model_name = name or metadata.get("name", "unnamed")
 
-        mesh = self.read_mesh() if "mesh" in self._file else None
-        strat = self.read_stratigraphy() if "stratigraphy" in self._file else None
+        f = self._file
+        mesh = self.read_mesh() if f is not None and "mesh" in f else None
+        strat = self.read_stratigraphy() if f is not None and "stratigraphy" in f else None
 
         return IWFMModel(
             name=model_name,

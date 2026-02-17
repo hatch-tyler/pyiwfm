@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import shutil
+from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pyiwfm.runner.results import SimulationResult
+
+if TYPE_CHECKING:
+    from pyiwfm.runner.runner import IWFMRunner
 
 
 @dataclass
@@ -46,9 +50,7 @@ class Scenario:
         invalid_chars = '<>:"/\\|?*'
         for char in invalid_chars:
             if char in self.name:
-                raise ValueError(
-                    f"Scenario name contains invalid character: {char}"
-                )
+                raise ValueError(f"Scenario name contains invalid character: {char}")
 
     def __repr__(self) -> str:
         """Return string representation."""
@@ -241,8 +243,9 @@ class ScenarioManager:
             Multiplier for pumping rates. If dict, keys are well IDs.
         """
         # Find pumping files
-        pumping_files = list(scenario_dir.glob("*Pump*.dat")) + \
-                        list(scenario_dir.glob("*Pumping*.dat"))
+        pumping_files = list(scenario_dir.glob("*Pump*.dat")) + list(
+            scenario_dir.glob("*Pumping*.dat")
+        )
 
         for pump_file in pumping_files:
             self._apply_factor_to_timeseries(pump_file, factor)
@@ -262,8 +265,9 @@ class ScenarioManager:
             Multiplier for diversion rates.
         """
         # Find diversion files
-        div_files = list(scenario_dir.glob("*Diversion*.dat")) + \
-                    list(scenario_dir.glob("*Diversions*.dat"))
+        div_files = list(scenario_dir.glob("*Diversion*.dat")) + list(
+            scenario_dir.glob("*Diversions*.dat")
+        )
 
         for div_file in div_files:
             self._apply_factor_to_timeseries(div_file, factor)
@@ -283,8 +287,9 @@ class ScenarioManager:
             Multiplier for recharge rates.
         """
         # Find recharge-related files
-        recharge_files = list(scenario_dir.glob("*Recharge*.dat")) + \
-                         list(scenario_dir.glob("*DeepPerc*.dat"))
+        recharge_files = list(scenario_dir.glob("*Recharge*.dat")) + list(
+            scenario_dir.glob("*DeepPerc*.dat")
+        )
 
         for rech_file in recharge_files:
             self._apply_factor_to_timeseries(rech_file, factor)
@@ -304,8 +309,9 @@ class ScenarioManager:
             Multiplier for stream inflow rates.
         """
         # Find stream inflow files
-        inflow_files = list(scenario_dir.glob("*StreamInflow*.dat")) + \
-                       list(scenario_dir.glob("*Inflows*.dat"))
+        inflow_files = list(scenario_dir.glob("*StreamInflow*.dat")) + list(
+            scenario_dir.glob("*Inflows*.dat")
+        )
 
         for inflow_file in inflow_files:
             self._apply_factor_to_timeseries(inflow_file, factor)
@@ -373,7 +379,7 @@ class ScenarioManager:
     def run_scenario(
         self,
         scenario: Scenario,
-        runner: "IWFMRunner | None" = None,
+        runner: IWFMRunner | None = None,
         timeout: float | None = None,
         cleanup_on_success: bool = False,
     ) -> ScenarioResult:
@@ -421,7 +427,7 @@ class ScenarioManager:
     def run_scenarios(
         self,
         scenarios: list[Scenario],
-        runner: "IWFMRunner | None" = None,
+        runner: IWFMRunner | None = None,
         parallel: int = 1,
         timeout: float | None = None,
         progress_callback: Callable[[str, int, int], None] | None = None,
@@ -488,8 +494,8 @@ class ScenarioManager:
                         results[scenario.name] = result
                     except Exception as e:
                         # Create a failed result
+
                         from pyiwfm.runner.results import SimulationResult
-                        from datetime import timedelta
 
                         results[scenario.name] = ScenarioResult(
                             scenario=scenario,
@@ -551,8 +557,8 @@ class ScenarioManager:
             comparison: dict[str, Any] = {
                 "success": scenario_result.success,
                 "elapsed_time_ratio": (
-                    scenario_result.result.elapsed_time.total_seconds() /
-                    baseline_result.elapsed_time.total_seconds()
+                    scenario_result.result.elapsed_time.total_seconds()
+                    / baseline_result.elapsed_time.total_seconds()
                     if baseline_result.elapsed_time.total_seconds() > 0
                     else 0
                 ),

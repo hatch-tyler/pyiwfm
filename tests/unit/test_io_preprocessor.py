@@ -4,19 +4,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
-from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.core.model import IWFMModel
+from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.io.preprocessor import (
     PreProcessorConfig,
-    read_preprocessor_main,
-    write_preprocessor_main,
-    read_subregions_file,
     load_model_from_preprocessor,
+    read_preprocessor_main,
+    read_subregions_file,
     save_model_to_preprocessor,
+    write_preprocessor_main,
 )
 
 
@@ -193,7 +192,7 @@ C  ID    GS     Aqt1   Aqu1   Aqt2   Aqu2
 
         main_file = tmp_path / "test_pp.in"
         main_file.write_text(
-            f"""C  PreProcessor Main Input
+            """C  PreProcessor Main Input
 Test Model                               / MODEL_NAME
 nodes.dat                                / NODES_FILE
 elements.dat                             / ELEMENTS_FILE
@@ -260,14 +259,13 @@ class TestSaveModelToPreProcessor:
 # Additional tests appended below to increase coverage
 # =========================================================================
 
-from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.preprocessor import (
+from pyiwfm.core.exceptions import FileFormatError  # noqa: E402
+from pyiwfm.io.preprocessor import (  # noqa: E402
     _is_comment_line,
-    _strip_comment,
-    _resolve_path,
     _make_relative_path,
+    _resolve_path,
+    _strip_comment,
     _write_subregions_file,
-    save_complete_model,
 )
 
 
@@ -374,7 +372,11 @@ class TestMakeRelativePath:
 
     def test_path_outside_base(self, tmp_path: Path) -> None:
         """Path outside base directory is returned as absolute string."""
-        target = Path("C:/totally/different/file.dat") if str(tmp_path).startswith("C:") else Path("/totally/different/file.dat")
+        target = (
+            Path("C:/totally/different/file.dat")
+            if str(tmp_path).startswith("C:")
+            else Path("/totally/different/file.dat")
+        )
         result = _make_relative_path(tmp_path, target)
         assert result == str(target)
 
@@ -1165,7 +1167,7 @@ class TestWriteSubregionsRoundtrip:
         _write_subregions_file(sr_file, subregions)
 
         content = sr_file.read_text()
-        lines = [l for l in content.split("\n") if l.strip() and not l.startswith("C")]
+        lines = [line for line in content.split("\n") if line.strip() and not line.startswith("C")]
         # First non-comment line is count, then sorted IDs
         data_lines = lines[1:]  # skip NSUBREGION line
         assert data_lines[0].strip().startswith("1")

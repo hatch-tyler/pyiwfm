@@ -17,11 +17,10 @@ import pytest
 
 from pyiwfm.io.supply_adjust import (
     SupplyAdjustment,
+    _is_fortran_comment,
     read_supply_adjustment,
     write_supply_adjustment,
-    _is_fortran_comment,
 )
-
 
 # =============================================================================
 # Helper function tests

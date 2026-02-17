@@ -14,22 +14,19 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, PropertyMock
-from typing import Any
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
+from pyiwfm.io.config import PreProcessorFileConfig
 from pyiwfm.io.preprocessor_writer import (
     PreProcessorWriter,
-    write_preprocessor_files,
-    write_nodes_file,
     write_elements_file,
+    write_nodes_file,
+    write_preprocessor_files,
     write_stratigraphy_file,
 )
-from pyiwfm.io.config import PreProcessorFileConfig
-from pyiwfm.templates.engine import TemplateEngine
-
 
 # =============================================================================
 # Mock Model Helper
@@ -83,9 +80,7 @@ def _make_mock_model(
     # Mock streams
     if has_streams:
         streams = MagicMock()
-        reach = SimpleNamespace(
-            id=1, upstream_node=1, downstream_node=2, outflow_reach=0
-        )
+        reach = SimpleNamespace(id=1, upstream_node=1, downstream_node=2, outflow_reach=0)
         streams.iter_reaches.return_value = [reach]
 
         node = SimpleNamespace(id=1, gw_node=10, reach_id=1, stage=50.0)
@@ -359,7 +354,8 @@ class TestConvenienceFunctions:
         model = _make_mock_model(has_streams=True, has_lakes=True)
 
         results = write_preprocessor_files(
-            model, tmp_path,
+            model,
+            tmp_path,
             stream_version="4.0",
             lake_version="4.0",
         )
@@ -503,18 +499,18 @@ class TestStandaloneWriterFunctions:
 # =============================================================================
 
 
-from pyiwfm.io.preprocessor import (
+from pyiwfm.core.exceptions import FileFormatError  # noqa: E402
+from pyiwfm.io.preprocessor import (  # noqa: E402
+    PreProcessorConfig,
     _is_comment_line,
-    _strip_comment,
     _resolve_path,
+    _strip_comment,
+    load_model_from_preprocessor,
     read_preprocessor_main,
     read_subregions_file,
-    load_model_from_preprocessor,
-    write_preprocessor_main,
     save_model_to_preprocessor,
-    PreProcessorConfig,
+    write_preprocessor_main,
 )
-from pyiwfm.core.exceptions import FileFormatError
 
 
 class TestHelperFunctions:
@@ -678,10 +674,7 @@ class TestReadSubregionsFile:
     def test_read_invalid_subregion_id(self, tmp_path: Path) -> None:
         """Non-integer subregion ID raises FileFormatError."""
         sr_file = tmp_path / "subregions.dat"
-        sr_file.write_text(
-            "1                               / NSUBREGION\n"
-            "abc  Bad_ID_Region\n"
-        )
+        sr_file.write_text("1                               / NSUBREGION\nabc  Bad_ID_Region\n")
         with pytest.raises(FileFormatError, match="Invalid subregion data"):
             read_subregions_file(sr_file)
 
@@ -790,6 +783,7 @@ class TestSaveModelToPreprocessor:
     def test_save_minimal_model(self, tmp_path: Path) -> None:
         """Save a model with no mesh or stratigraphy."""
         from pyiwfm.core.model import IWFMModel
+
         model = IWFMModel(name="minimal_model")
         model.mesh = None
         model.stratigraphy = None
@@ -804,11 +798,11 @@ class TestSaveModelToPreprocessor:
 # load_complete_model Tests
 # =============================================================================
 
-import sys
-from unittest.mock import patch, MagicMock
-from datetime import datetime
+import sys  # noqa: E402
+from datetime import datetime  # noqa: E402
+from unittest.mock import patch  # noqa: E402
 
-from pyiwfm.io.preprocessor import load_complete_model, save_complete_model
+from pyiwfm.io.preprocessor import load_complete_model, save_complete_model  # noqa: E402
 
 
 def _make_sim_config(
@@ -871,14 +865,16 @@ class TestLoadCompleteModelGroundwater:
         mock_gw_reader.read_wells.return_value = {1: MagicMock(), 2: MagicMock()}
         mock_gw_component = MagicMock()
 
-        with patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls, \
-             patch("pyiwfm.io.groundwater.GroundwaterReader", return_value=mock_gw_reader), \
-             patch("pyiwfm.io.streams.StreamReader"), \
-             patch("pyiwfm.io.lakes.LakeReader"), \
-             patch("pyiwfm.io.rootzone.RootZoneReader"), \
-             patch("pyiwfm.components.groundwater.AppGW", return_value=mock_gw_component):
+        with (
+            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
+            patch("pyiwfm.io.groundwater.GroundwaterReader", return_value=mock_gw_reader),
+            patch("pyiwfm.io.streams.StreamReader"),
+            patch("pyiwfm.io.lakes.LakeReader"),
+            patch("pyiwfm.io.rootzone.RootZoneReader"),
+            patch("pyiwfm.components.groundwater.AppGW", return_value=mock_gw_component),
+        ):
             mock_sim_reader_cls.return_value.read.return_value = sim_config
-            result = load_complete_model(sim_file)
+            load_complete_model(sim_file)
 
         mock_gw_reader.read_wells.assert_called_once()
         assert mock_model.groundwater == mock_gw_component
@@ -908,13 +904,15 @@ class TestLoadCompleteModelGroundwater:
         mock_gw_reader = MagicMock()
         mock_gw_reader.read_wells.side_effect = Exception("GW read failed")
 
-        with patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls, \
-             patch("pyiwfm.io.groundwater.GroundwaterReader", return_value=mock_gw_reader), \
-             patch("pyiwfm.io.streams.StreamReader"), \
-             patch("pyiwfm.io.lakes.LakeReader"), \
-             patch("pyiwfm.io.rootzone.RootZoneReader"):
+        with (
+            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
+            patch("pyiwfm.io.groundwater.GroundwaterReader", return_value=mock_gw_reader),
+            patch("pyiwfm.io.streams.StreamReader"),
+            patch("pyiwfm.io.lakes.LakeReader"),
+            patch("pyiwfm.io.rootzone.RootZoneReader"),
+        ):
             mock_sim_reader_cls.return_value.read.return_value = sim_config
-            result = load_complete_model(sim_file)
+            load_complete_model(sim_file)
 
         assert "groundwater_load_error" in mock_model.metadata
         assert "GW read failed" in mock_model.metadata["groundwater_load_error"]
@@ -948,14 +946,16 @@ class TestLoadCompleteModelStreams:
         mock_stream_reader.read_stream_nodes.return_value = {1: MagicMock()}
         mock_stream_component = MagicMock()
 
-        with patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls, \
-             patch("pyiwfm.io.groundwater.GroundwaterReader"), \
-             patch("pyiwfm.io.streams.StreamReader", return_value=mock_stream_reader), \
-             patch("pyiwfm.io.lakes.LakeReader"), \
-             patch("pyiwfm.io.rootzone.RootZoneReader"), \
-             patch("pyiwfm.components.stream.AppStream", return_value=mock_stream_component):
+        with (
+            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
+            patch("pyiwfm.io.groundwater.GroundwaterReader"),
+            patch("pyiwfm.io.streams.StreamReader", return_value=mock_stream_reader),
+            patch("pyiwfm.io.lakes.LakeReader"),
+            patch("pyiwfm.io.rootzone.RootZoneReader"),
+            patch("pyiwfm.components.stream.AppStream", return_value=mock_stream_component),
+        ):
             mock_sim_reader_cls.return_value.read.return_value = sim_config
-            result = load_complete_model(sim_file)
+            load_complete_model(sim_file)
 
         mock_stream_reader.read_stream_nodes.assert_called_once()
         assert mock_model.streams == mock_stream_component
@@ -989,14 +989,16 @@ class TestLoadCompleteModelLakes:
         mock_lake_reader.read_lake_definitions.return_value = {1: MagicMock()}
         mock_lake_component = MagicMock()
 
-        with patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls, \
-             patch("pyiwfm.io.groundwater.GroundwaterReader"), \
-             patch("pyiwfm.io.streams.StreamReader"), \
-             patch("pyiwfm.io.lakes.LakeReader", return_value=mock_lake_reader), \
-             patch("pyiwfm.io.rootzone.RootZoneReader"), \
-             patch("pyiwfm.components.lake.AppLake", return_value=mock_lake_component):
+        with (
+            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
+            patch("pyiwfm.io.groundwater.GroundwaterReader"),
+            patch("pyiwfm.io.streams.StreamReader"),
+            patch("pyiwfm.io.lakes.LakeReader", return_value=mock_lake_reader),
+            patch("pyiwfm.io.rootzone.RootZoneReader"),
+            patch("pyiwfm.components.lake.AppLake", return_value=mock_lake_component),
+        ):
             mock_sim_reader_cls.return_value.read.return_value = sim_config
-            result = load_complete_model(sim_file)
+            load_complete_model(sim_file)
 
         mock_lake_reader.read_lake_definitions.assert_called_once()
         assert mock_model.lakes == mock_lake_component
@@ -1031,14 +1033,16 @@ class TestLoadCompleteModelRootZone:
         mock_rz_reader.read_crop_types.return_value = {1: MagicMock(), 2: MagicMock()}
         mock_rz_component = MagicMock()
 
-        with patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls, \
-             patch("pyiwfm.io.groundwater.GroundwaterReader"), \
-             patch("pyiwfm.io.streams.StreamReader"), \
-             patch("pyiwfm.io.lakes.LakeReader"), \
-             patch("pyiwfm.io.rootzone.RootZoneReader", return_value=mock_rz_reader), \
-             patch("pyiwfm.components.rootzone.RootZone", return_value=mock_rz_component):
+        with (
+            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
+            patch("pyiwfm.io.groundwater.GroundwaterReader"),
+            patch("pyiwfm.io.streams.StreamReader"),
+            patch("pyiwfm.io.lakes.LakeReader"),
+            patch("pyiwfm.io.rootzone.RootZoneReader", return_value=mock_rz_reader),
+            patch("pyiwfm.components.rootzone.RootZone", return_value=mock_rz_component),
+        ):
             mock_sim_reader_cls.return_value.read.return_value = sim_config
-            result = load_complete_model(sim_file)
+            load_complete_model(sim_file)
 
         mock_rz_reader.read_crop_types.assert_called_once()
         assert mock_model.rootzone == mock_rz_component
@@ -1065,11 +1069,13 @@ class TestLoadCompleteModelPPCandidates:
         # No preprocessor_file set
         sim_config.preprocessor_file = None
 
-        with patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls, \
-             patch("pyiwfm.io.groundwater.GroundwaterReader"), \
-             patch("pyiwfm.io.streams.StreamReader"), \
-             patch("pyiwfm.io.lakes.LakeReader"), \
-             patch("pyiwfm.io.rootzone.RootZoneReader"):
+        with (
+            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
+            patch("pyiwfm.io.groundwater.GroundwaterReader"),
+            patch("pyiwfm.io.streams.StreamReader"),
+            patch("pyiwfm.io.lakes.LakeReader"),
+            patch("pyiwfm.io.rootzone.RootZoneReader"),
+        ):
             mock_sim_reader_cls.return_value.read.return_value = sim_config
             result = load_complete_model(sim_file)
 
@@ -1202,17 +1208,16 @@ class TestSaveCompleteModelComponents:
 
         dss_path = tmp_path / "output.dss"
 
-        files = save_complete_model(
-            model, tmp_path, timeseries_format="dss", dss_file=dss_path
-        )
+        save_complete_model(model, tmp_path, timeseries_format="dss", dss_file=dss_path)
 
         # Verify the writer was called with DSS format in the config
         mock_writer_cls.assert_called_once()
         call_args = mock_writer_cls.call_args
         config = call_args[0][1]  # second positional arg is config
         from pyiwfm.io.config import OutputFormat
+
         assert config.ts_format == OutputFormat.DSS
-        assert config.dss_file == dss_path
+        assert config.dss_file == str(dss_path)
 
     @patch("pyiwfm.io.preprocessor.save_model_to_preprocessor")
     def test_save_dss_import_error_ignored(self, mock_save_pp, tmp_path):
@@ -1233,9 +1238,11 @@ class TestSaveCompleteModelComponents:
 
         dss_path = tmp_path / "output.dss"
 
-        with patch("pyiwfm.io.simulation.SimulationFileConfig"), \
-             patch("pyiwfm.io.simulation.SimulationWriter") as mock_sim_writer_cls, \
-             patch("pyiwfm.io.simulation.SimulationConfig"):
+        with (
+            patch("pyiwfm.io.simulation.SimulationFileConfig"),
+            patch("pyiwfm.io.simulation.SimulationWriter") as mock_sim_writer_cls,
+            patch("pyiwfm.io.simulation.SimulationConfig"),
+        ):
             mock_sim_writer = MagicMock()
             mock_sim_writer.write.return_value = tmp_path / "sim.in"
             mock_sim_writer_cls.return_value = mock_sim_writer
@@ -1244,6 +1251,7 @@ class TestSaveCompleteModelComponents:
             saved_module = sys.modules.pop("pyiwfm.io.dss", None)
             try:
                 import builtins
+
                 original_import = builtins.__import__
 
                 def mock_import(name, *args, **kwargs):
@@ -1277,11 +1285,7 @@ class TestReadSubregionsLineCoverage:
         sr_file = tmp_path / "subregions.dat"
         # Include a line with just a tab that _is_comment_line will catch
         # and a normal subregion line after it
-        sr_file.write_text(
-            "1                               / NSUBREGION\n"
-            "\t\n"
-            "1  MyRegion\n"
-        )
+        sr_file.write_text("1                               / NSUBREGION\n\t\n1  MyRegion\n")
         subregions = read_subregions_file(sr_file)
         assert len(subregions) == 1
         assert subregions[1].name == "MyRegion"

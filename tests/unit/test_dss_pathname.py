@@ -17,18 +17,17 @@ from datetime import datetime
 import pytest
 
 from pyiwfm.io.dss.pathname import (
-    DSSPathname,
-    DSSPathnameTemplate,
-    VALID_INTERVALS,
     INTERVAL_MAPPING,
     PARAMETER_CODES,
+    VALID_INTERVALS,
+    DSSPathname,
+    DSSPathnameTemplate,
     format_dss_date,
     format_dss_date_range,
-    parse_dss_date,
     interval_to_minutes,
     minutes_to_interval,
+    parse_dss_date,
 )
-
 
 # =============================================================================
 # Test DSSPathname

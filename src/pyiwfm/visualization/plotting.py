@@ -44,41 +44,41 @@ Plot a time series of groundwater heads:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Tuple, Sequence
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
-    import matplotlib.pyplot as plt
-    from matplotlib.figure import Figure
     from matplotlib.axes import Axes
-    from matplotlib.collections import PolyCollection
+    from matplotlib.figure import Figure
 
+    from pyiwfm.components.stream import AppStream
+    from pyiwfm.core.cross_section import CrossSection
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
-    from pyiwfm.core.cross_section import CrossSection
-    from pyiwfm.components.stream import AppStream
 
 
-def _get_matplotlib():
+def _get_matplotlib() -> Any:
     """Import matplotlib with proper backend handling."""
     try:
         import matplotlib
+
         matplotlib.use("Agg")  # Non-interactive backend for saving
         import matplotlib.pyplot as plt
+
         return plt
     except ImportError as e:
         raise ImportError(
-            "matplotlib is required for plotting. "
-            "Install with: pip install matplotlib"
+            "matplotlib is required for plotting. Install with: pip install matplotlib"
         ) from e
 
 
 def plot_mesh(
-    grid: "AppGrid",
-    ax: "Axes | None" = None,
+    grid: AppGrid,
+    ax: Axes | None = None,
     show_edges: bool = True,
     show_node_ids: bool = False,
     show_element_ids: bool = False,
@@ -86,8 +86,8 @@ def plot_mesh(
     edge_width: float = 0.5,
     fill_color: str = "lightblue",
     alpha: float = 0.3,
-    figsize: Tuple[float, float] = (10, 8),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
     """
     Plot the mesh with elements and optional annotations.
 
@@ -170,14 +170,14 @@ def plot_mesh(
 
 
 def plot_nodes(
-    grid: "AppGrid",
-    ax: "Axes | None" = None,
+    grid: AppGrid,
+    ax: Axes | None = None,
     highlight_boundary: bool = False,
     marker_size: float = 20,
     color: str = "blue",
     boundary_color: str = "red",
-    figsize: Tuple[float, float] = (10, 8),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
     """
     Plot mesh nodes as points.
 
@@ -217,9 +217,7 @@ def plot_nodes(
         ax.scatter(interior_x, interior_y, s=marker_size, c=color, label="Interior")
 
     if highlight_boundary and boundary_x:
-        ax.scatter(
-            boundary_x, boundary_y, s=marker_size, c=boundary_color, label="Boundary"
-        )
+        ax.scatter(boundary_x, boundary_y, s=marker_size, c=boundary_color, label="Boundary")
         ax.legend()
 
     ax.set_aspect("equal")
@@ -230,16 +228,16 @@ def plot_nodes(
 
 
 def plot_elements(
-    grid: "AppGrid",
-    ax: "Axes | None" = None,
+    grid: AppGrid,
+    ax: Axes | None = None,
     color_by: Literal["subregion", "area", "none"] = "none",
     cmap: str = "viridis",
     show_colorbar: bool = True,
     edge_color: str = "black",
     edge_width: float = 0.5,
     alpha: float = 0.7,
-    figsize: Tuple[float, float] = (10, 8),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
     """
     Plot mesh elements with optional coloring by attribute.
 
@@ -258,8 +256,8 @@ def plot_elements(
         Tuple of (Figure, Axes)
     """
     plt = _get_matplotlib()
-    from matplotlib.collections import PolyCollection
     import matplotlib.colors as mcolors
+    from matplotlib.collections import PolyCollection
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -268,7 +266,7 @@ def plot_elements(
 
     # Build element polygons and get color values
     polygons = []
-    values = []
+    values_list: list[float] = []
 
     for elem in grid.iter_elements():
         coords = []
@@ -278,15 +276,15 @@ def plot_elements(
         polygons.append(coords)
 
         if color_by == "subregion":
-            values.append(elem.subregion)
+            values_list.append(float(elem.subregion))
         elif color_by == "area":
-            values.append(elem.area)
+            values_list.append(elem.area)
         else:
-            values.append(0)
+            values_list.append(0.0)
 
     # Create polygon collection
     if color_by != "none":
-        values = np.array(values)
+        values = np.array(values_list)
         norm = mcolors.Normalize(vmin=values.min(), vmax=values.max())
         colormap = plt.get_cmap(cmap)
 
@@ -322,10 +320,10 @@ def plot_elements(
 
 
 def plot_scalar_field(
-    grid: "AppGrid",
+    grid: AppGrid,
     values: NDArray[np.float64],
     field_type: Literal["node", "cell"] = "node",
-    ax: "Axes | None" = None,
+    ax: Axes | None = None,
     cmap: str = "viridis",
     show_colorbar: bool = True,
     vmin: float | None = None,
@@ -333,8 +331,8 @@ def plot_scalar_field(
     show_mesh: bool = True,
     edge_color: str = "gray",
     edge_width: float = 0.3,
-    figsize: Tuple[float, float] = (10, 8),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
     """
     Plot scalar field values on the mesh.
 
@@ -356,9 +354,9 @@ def plot_scalar_field(
         Tuple of (Figure, Axes)
     """
     plt = _get_matplotlib()
+    import matplotlib.colors as mcolors
     from matplotlib.collections import PolyCollection
     from matplotlib.tri import Triangulation
-    import matplotlib.colors as mcolors
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -382,16 +380,16 @@ def plot_scalar_field(
         y = np.array([grid.nodes[nid].y for nid in sorted_node_ids])
 
         # Build triangles from elements
-        triangles = []
+        triangles_list: list[list[int]] = []
         for elem in grid.iter_elements():
             verts = [node_id_to_idx[vid] for vid in elem.vertices]
             if len(verts) == 3:
-                triangles.append(verts)
+                triangles_list.append(verts)
             else:  # Quad - split into 2 triangles
-                triangles.append([verts[0], verts[1], verts[2]])
-                triangles.append([verts[0], verts[2], verts[3]])
+                triangles_list.append([verts[0], verts[1], verts[2]])
+                triangles_list.append([verts[0], verts[2], verts[3]])
 
-        triangles = np.array(triangles)
+        triangles = np.array(triangles_list)
         triang = Triangulation(x, y, triangles)
 
         # Plot using tripcolor
@@ -433,15 +431,15 @@ def plot_scalar_field(
 
 
 def plot_streams(
-    streams: "AppStream",
-    ax: "Axes | None" = None,
+    streams: AppStream,
+    ax: Axes | None = None,
     show_nodes: bool = False,
     line_color: str = "blue",
     line_width: float = 2.0,
     node_color: str = "blue",
     node_size: float = 30,
-    figsize: Tuple[float, float] = (10, 8),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
     """
     Plot stream network.
 
@@ -492,15 +490,15 @@ def plot_streams(
 
 
 def plot_boundary(
-    grid: "AppGrid",
-    ax: "Axes | None" = None,
+    grid: AppGrid,
+    ax: Axes | None = None,
     line_color: str = "black",
     line_width: float = 2.0,
     fill: bool = False,
     fill_color: str = "lightgray",
     alpha: float = 0.3,
-    figsize: Tuple[float, float] = (10, 8),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
     """
     Plot model boundary.
 
@@ -555,7 +553,7 @@ def plot_boundary(
         cx = sum(n.x for n in boundary_nodes) / len(boundary_nodes)
         cy = sum(n.y for n in boundary_nodes) / len(boundary_nodes)
 
-        def angle(n):
+        def angle(n: Any) -> Any:
             return np.arctan2(n.y - cy, n.x - cx)
 
         sorted_nodes = sorted(boundary_nodes, key=angle)
@@ -571,9 +569,9 @@ def plot_boundary(
             )
             ax.add_patch(patch)
         else:
-            x = [c[0] for c in coords] + [coords[0][0]]
-            y = [c[1] for c in coords] + [coords[0][1]]
-            ax.plot(x, y, color=line_color, linewidth=line_width)
+            x_plot = [c[0] for c in coords] + [coords[0][0]]
+            y_plot = [c[1] for c in coords] + [coords[0][1]]
+            ax.plot(x_plot, y_plot, color=line_color, linewidth=line_width)
 
     ax.autoscale_view()
     ax.set_aspect("equal")
@@ -597,9 +595,9 @@ class MeshPlotter:
 
     def __init__(
         self,
-        grid: "AppGrid",
-        streams: "AppStream | None" = None,
-        figsize: Tuple[float, float] = (10, 8),
+        grid: AppGrid,
+        streams: AppStream | None = None,
+        figsize: tuple[float, float] = (10, 8),
     ) -> None:
         """
         Initialize the mesh plotter.
@@ -612,8 +610,8 @@ class MeshPlotter:
         self.grid = grid
         self.streams = streams
         self.figsize = figsize
-        self._fig = None
-        self._ax = None
+        self._fig: Figure | None = None
+        self._ax: Axes | None = None
 
     def plot_mesh(
         self,
@@ -621,8 +619,8 @@ class MeshPlotter:
         show_node_ids: bool = False,
         show_element_ids: bool = False,
         show_streams: bool = False,
-        **kwargs,
-    ) -> Tuple["Figure", "Axes"]:
+        **kwargs: Any,
+    ) -> tuple[Figure, Axes]:
         """
         Plot the mesh with optional overlays.
 
@@ -660,8 +658,8 @@ class MeshPlotter:
         cell_values: NDArray[np.float64] | None = None,
         title: str | None = None,
         cmap: str = "viridis",
-        **kwargs,
-    ) -> Tuple["Figure", "Axes"]:
+        **kwargs: Any,
+    ) -> tuple[Figure, Axes]:
         """
         Create a composite plot with multiple layers.
 
@@ -717,7 +715,7 @@ class MeshPlotter:
         self,
         output_path: Path | str,
         dpi: int = 150,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Save the current figure to file.
@@ -731,7 +729,8 @@ class MeshPlotter:
             # Create default plot if none exists
             self.plot_mesh()
 
-        self._fig.savefig(output_path, dpi=dpi, bbox_inches="tight", **kwargs)
+        if self._fig is not None:
+            self._fig.savefig(output_path, dpi=dpi, bbox_inches="tight", **kwargs)
 
 
 # =============================================================================
@@ -740,19 +739,19 @@ class MeshPlotter:
 
 
 def plot_timeseries(
-    timeseries: "TimeSeries | Sequence[TimeSeries]",
-    ax: "Axes | None" = None,
+    timeseries: TimeSeries | Sequence[TimeSeries],
+    ax: Axes | None = None,
     title: str | None = None,
     xlabel: str = "Date",
     ylabel: str | None = None,
     legend: bool = True,
     colors: Sequence[str] | None = None,
     linestyles: Sequence[str] | None = None,
-    markers: Sequence[str] | None = None,
-    figsize: Tuple[float, float] = (12, 6),
+    markers: Sequence[str | None] | None = None,
+    figsize: tuple[float, float] = (12, 6),
     grid: bool = True,
     date_format: str | None = None,
-) -> Tuple["Figure", "Axes"]:
+) -> tuple[Figure, Axes]:
     """
     Plot one or more time series as line charts.
 
@@ -808,10 +807,11 @@ def plot_timeseries(
         fig = ax.get_figure()
 
     # Ensure we have a list of time series
+    series_list: list[TimeSeries]
     if hasattr(timeseries, "times"):  # Single TimeSeries
-        series_list = [timeseries]
+        series_list = [timeseries]  # type: ignore[list-item]
     else:
-        series_list = list(timeseries)
+        series_list = list(timeseries)  # type: ignore[arg-type]
 
     # Default styling
     if colors is None:
@@ -870,17 +870,17 @@ def plot_timeseries(
 
 
 def plot_timeseries_comparison(
-    observed: "TimeSeries",
-    simulated: "TimeSeries",
-    ax: "Axes | None" = None,
+    observed: TimeSeries,
+    simulated: TimeSeries,
+    ax: Axes | None = None,
     title: str | None = None,
     show_residuals: bool = False,
     show_metrics: bool = True,
     obs_color: str = "blue",
     sim_color: str = "red",
     obs_marker: str = "o",
-    figsize: Tuple[float, float] = (12, 8),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (12, 8),
+) -> tuple[Figure, Axes]:
     """
     Plot observed vs simulated time series comparison.
 
@@ -924,9 +924,7 @@ def plot_timeseries_comparison(
     plt = _get_matplotlib()
 
     if show_residuals:
-        fig, (ax1, ax2) = plt.subplots(
-            2, 1, figsize=figsize, height_ratios=[3, 1], sharex=True
-        )
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize, height_ratios=[3, 1], sharex=True)
         ax = ax1
     else:
         if ax is None:
@@ -985,7 +983,7 @@ def plot_timeseries_comparison(
                 verticalalignment="top",
                 fontsize=9,
                 fontfamily="monospace",
-                bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+                bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8},
             )
         except ImportError:
             pass
@@ -1024,14 +1022,14 @@ def plot_timeseries_comparison(
 
 
 def plot_timeseries_collection(
-    collection: "TimeSeriesCollection",
+    collection: TimeSeriesCollection,
     locations: Sequence[str] | None = None,
-    ax: "Axes | None" = None,
+    ax: Axes | None = None,
     title: str | None = None,
     max_series: int = 10,
-    figsize: Tuple[float, float] = (12, 6),
-    **kwargs,
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (12, 6),
+    **kwargs: Any,
+) -> tuple[Figure, Axes]:
     """
     Plot multiple time series from a collection.
 
@@ -1077,15 +1075,15 @@ def plot_timeseries_collection(
 
 def plot_budget_bar(
     components: dict[str, float],
-    ax: "Axes | None" = None,
+    ax: Axes | None = None,
     title: str = "Water Budget",
     orientation: Literal["vertical", "horizontal"] = "vertical",
     inflow_color: str = "steelblue",
     outflow_color: str = "coral",
     show_values: bool = True,
     units: str = "AF",
-    figsize: Tuple[float, float] = (10, 6),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (10, 6),
+) -> tuple[Figure, Axes]:
     """
     Plot water budget components as a bar chart.
 
@@ -1144,7 +1142,7 @@ def plot_budget_bar(
         ax.axhline(y=0, color="black", linewidth=0.8)
 
         if show_values:
-            for bar, val in zip(bars, values):
+            for bar, val in zip(bars, values, strict=False):
                 height = bar.get_height()
                 va = "bottom" if height >= 0 else "top"
                 offset = 0.01 * max(abs(v) for v in values)
@@ -1164,7 +1162,7 @@ def plot_budget_bar(
         ax.axvline(x=0, color="black", linewidth=0.8)
 
         if show_values:
-            for bar, val in zip(bars, values):
+            for bar, val in zip(bars, values, strict=False):
                 width = bar.get_width()
                 ha = "left" if width >= 0 else "right"
                 offset = 0.02 * max(abs(v) for v in values)
@@ -1187,15 +1185,15 @@ def plot_budget_bar(
 def plot_budget_stacked(
     times: NDArray[np.datetime64],
     components: dict[str, NDArray[np.float64]],
-    ax: "Axes | None" = None,
+    ax: Axes | None = None,
     title: str = "Water Budget Over Time",
     inflows_above: bool = True,
     cmap: str = "tab10",
     alpha: float = 0.8,
     units: str = "AF",
     show_legend: bool = True,
-    figsize: Tuple[float, float] = (14, 7),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (14, 7),
+) -> tuple[Figure, Axes]:
     """
     Plot water budget components as stacked area chart over time.
 
@@ -1238,7 +1236,6 @@ def plot_budget_stacked(
     >>> fig, ax = plot_budget_stacked(times, components)
     """
     plt = _get_matplotlib()
-    import matplotlib.colors as mcolors
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -1291,14 +1288,14 @@ def plot_budget_stacked(
 
 def plot_budget_pie(
     components: dict[str, float],
-    ax: "Axes | None" = None,
+    ax: Axes | None = None,
     title: str = "Water Budget Distribution",
     budget_type: Literal["inflow", "outflow", "both"] = "both",
     cmap: str = "tab10",
     show_values: bool = True,
     units: str = "AF",
-    figsize: Tuple[float, float] = (10, 8),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
     """
     Plot water budget components as pie chart(s).
 
@@ -1334,13 +1331,13 @@ def plot_budget_pie(
     if budget_type == "both" and inflows and outflows:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
-        def make_pie(ax, data, subtitle):
+        def make_pie(ax: Any, data: dict[str, float], subtitle: str) -> None:
             labels = list(data.keys())
             values = list(data.values())
             colors = plt.get_cmap(cmap)(np.linspace(0, 1, len(labels)))
 
             if show_values:
-                labels = [f"{k}\n({v:,.0f} {units})" for k, v in zip(labels, values)]
+                labels = [f"{k}\n({v:,.0f} {units})" for k, v in zip(labels, values, strict=False)]
 
             wedges, texts, autotexts = ax.pie(
                 values,
@@ -1354,6 +1351,7 @@ def plot_budget_pie(
         make_pie(ax1, inflows, "Inflows")
         make_pie(ax2, outflows, "Outflows")
         fig.suptitle(title, fontsize=12, fontweight="bold")
+        ax = ax1  # Use first axes as the returned Axes
     else:
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
@@ -1366,7 +1364,7 @@ def plot_budget_pie(
         colors = plt.get_cmap(cmap)(np.linspace(0, 1, len(labels)))
 
         if show_values:
-            labels = [f"{k}\n({v:,.0f} {units})" for k, v in zip(labels, values)]
+            labels = [f"{k}\n({v:,.0f} {units})" for k, v in zip(labels, values, strict=False)]
 
         ax.pie(values, labels=labels, autopct="%1.1f%%", colors=colors, startangle=90)
         ax.set_title(title, fontsize=12, fontweight="bold")
@@ -1379,11 +1377,11 @@ def plot_water_balance(
     inflows: dict[str, float],
     outflows: dict[str, float],
     storage_change: float = 0.0,
-    ax: "Axes | None" = None,
+    ax: Axes | None = None,
     title: str = "Water Balance Summary",
     units: str = "AF",
-    figsize: Tuple[float, float] = (12, 6),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (12, 6),
+) -> tuple[Figure, Axes]:
     """
     Plot comprehensive water balance summary with inflows, outflows, and storage.
 
@@ -1458,7 +1456,7 @@ def plot_water_balance(
     bars = ax.barh(y_pos, values, color=colors, edgecolor="black", linewidth=0.5)
 
     # Add value labels
-    for bar, val in zip(bars, values):
+    for bar, val in zip(bars, values, strict=False):
         width = bar.get_width()
         ha = "left" if width >= 0 else "right"
         offset = max(abs(v) for v in values) * 0.02
@@ -1494,7 +1492,7 @@ def plot_water_balance(
         va="bottom",
         fontsize=9,
         fontfamily="monospace",
-        bbox=dict(boxstyle="round", facecolor="lightyellow", alpha=0.9),
+        bbox={"boxstyle": "round", "facecolor": "lightyellow", "alpha": 0.9},
     )
 
     fig.tight_layout()
@@ -1503,13 +1501,13 @@ def plot_water_balance(
 
 def plot_zbudget(
     zone_budgets: dict[int | str, dict[str, float]],
-    ax: "Axes | None" = None,
+    ax: Axes | None = None,
     title: str = "Zone Budget Summary",
     plot_type: Literal["bar", "heatmap"] = "bar",
     units: str = "AF",
     cmap: str = "RdYlBu",
-    figsize: Tuple[float, float] = (12, 8),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (12, 8),
+) -> tuple[Figure, Axes]:
     """
     Plot zone budget data for multiple zones.
 
@@ -1552,7 +1550,7 @@ def plot_zbudget(
         fig = ax.get_figure()
 
     zones = list(zone_budgets.keys())
-    all_components = set()
+    all_components: set[str] = set()
     for budget in zone_budgets.values():
         all_components.update(budget.keys())
     components = sorted(all_components)
@@ -1612,12 +1610,12 @@ def plot_budget_timeseries(
     times: NDArray[np.datetime64],
     budgets: dict[str, NDArray[np.float64]],
     cumulative: bool = False,
-    ax: "Axes | None" = None,
+    ax: Axes | None = None,
     title: str = "Budget Components Over Time",
     units: str = "AF",
     show_net: bool = True,
-    figsize: Tuple[float, float] = (14, 6),
-) -> Tuple["Figure", "Axes"]:
+    figsize: tuple[float, float] = (14, 6),
+) -> tuple[Figure, Axes]:
     """
     Plot budget component time series as line charts.
 
@@ -1657,12 +1655,14 @@ def plot_budget_timeseries(
 
     net = np.zeros(len(times))
 
-    for (name, values), color in zip(budgets.items(), colors):
+    for (name, values), color in zip(budgets.items(), colors, strict=False):
         plot_values = np.cumsum(values) if cumulative else values
         net += values
 
         linestyle = "-" if np.mean(values) >= 0 else "--"
-        ax.plot(times_plot, plot_values, label=name, color=color, linestyle=linestyle, linewidth=1.5)
+        ax.plot(
+            times_plot, plot_values, label=name, color=color, linestyle=linestyle, linewidth=1.5
+        )
 
     if show_net:
         net_plot = np.cumsum(net) if cumulative else net
@@ -1721,10 +1721,10 @@ class BudgetPlotter:
         self.budgets = budgets
         self.times = times
         self.units = units
-        self._fig = None
-        self._ax = None
+        self._fig: Figure | None = None
+        self._ax: Axes | None = None
 
-    def bar_chart(self, **kwargs) -> Tuple["Figure", "Axes"]:
+    def bar_chart(self, **kwargs: Any) -> tuple[Figure, Axes]:
         """Create bar chart of budget components."""
         # Convert arrays to totals if needed
         totals = {}
@@ -1738,7 +1738,7 @@ class BudgetPlotter:
         self._fig, self._ax = fig, ax
         return fig, ax
 
-    def stacked_area(self, **kwargs) -> Tuple["Figure", "Axes"]:
+    def stacked_area(self, **kwargs: Any) -> tuple[Figure, Axes]:
         """Create stacked area chart over time."""
         if self.times is None:
             raise ValueError("Time array required for stacked area chart")
@@ -1755,7 +1755,7 @@ class BudgetPlotter:
         self._fig, self._ax = fig, ax
         return fig, ax
 
-    def pie_chart(self, **kwargs) -> Tuple["Figure", "Axes"]:
+    def pie_chart(self, **kwargs: Any) -> tuple[Figure, Axes]:
         """Create pie chart of budget distribution."""
         totals = {}
         for k, v in self.budgets.items():
@@ -1768,7 +1768,7 @@ class BudgetPlotter:
         self._fig, self._ax = fig, ax
         return fig, ax
 
-    def line_chart(self, **kwargs) -> Tuple["Figure", "Axes"]:
+    def line_chart(self, **kwargs: Any) -> tuple[Figure, Axes]:
         """Create line chart of budget components over time."""
         if self.times is None:
             raise ValueError("Time array required for line chart")
@@ -1784,11 +1784,12 @@ class BudgetPlotter:
         self._fig, self._ax = fig, ax
         return fig, ax
 
-    def save(self, output_path: Path | str, dpi: int = 150, **kwargs) -> None:
+    def save(self, output_path: Path | str, dpi: int = 150, **kwargs: Any) -> None:
         """Save current figure to file."""
         if self._fig is None:
             self.bar_chart()
-        self._fig.savefig(output_path, dpi=dpi, bbox_inches="tight", **kwargs)
+        if self._fig is not None:
+            self._fig.savefig(output_path, dpi=dpi, bbox_inches="tight", **kwargs)
 
 
 # =============================================================================
@@ -1797,8 +1798,8 @@ class BudgetPlotter:
 
 
 def plot_cross_section(
-    cross_section: "CrossSection",
-    ax: "Axes | None" = None,
+    cross_section: CrossSection,
+    ax: Axes | None = None,
     layer_colors: Sequence[str] | None = None,
     layer_labels: Sequence[str] | None = None,
     scalar_name: str | None = None,
@@ -1808,7 +1809,7 @@ def plot_cross_section(
     alpha: float = 0.7,
     title: str | None = None,
     figsize: tuple[float, float] = (14, 6),
-) -> Tuple["Figure", "Axes"]:
+) -> tuple[Figure, Axes]:
     """
     Plot a cross-section through an IWFM model.
 
@@ -1917,7 +1918,7 @@ def plot_cross_section(
                 dist,
                 bot_vals,
                 top_vals,
-                where=valid,
+                where=valid.tolist(),
                 alpha=alpha,
                 color=color,
                 edgecolor="black",
@@ -1948,15 +1949,15 @@ def plot_cross_section(
 
 
 def plot_cross_section_location(
-    grid: "AppGrid",
-    cross_section: "CrossSection",
-    ax: "Axes | None" = None,
+    grid: AppGrid,
+    cross_section: CrossSection,
+    ax: Axes | None = None,
     line_color: str = "red",
     line_width: float = 2.5,
     mesh_alpha: float = 0.3,
     show_labels: bool = True,
     figsize: tuple[float, float] = (10, 8),
-) -> Tuple["Figure", "Axes"]:
+) -> tuple[Figure, Axes]:
     """
     Plot a plan-view map showing the cross-section line on the mesh.
 

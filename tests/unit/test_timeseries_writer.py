@@ -23,12 +23,11 @@ from pyiwfm.io.timeseries_writer import (
     make_max_lake_elev_ts_config,
     make_precip_ts_config,
     make_pumping_ts_config,
-    make_reuse_ts_config,
     make_return_flow_ts_config,
+    make_reuse_ts_config,
     make_stream_inflow_ts_config,
     make_stream_surface_area_ts_config,
 )
-
 
 # =============================================================================
 # DSSPathItem tests
@@ -73,9 +72,7 @@ class TestTimeSeriesDataConfig:
         assert config.use_dss is False
 
     def test_use_dss_property_true_when_paths_set(self) -> None:
-        config = TimeSeriesDataConfig(
-            dss_paths=[DSSPathItem(index=1, path="/A/B/C//1DAY/F/")]
-        )
+        config = TimeSeriesDataConfig(dss_paths=[DSSPathItem(index=1, path="/A/B/C//1DAY/F/")])
         assert config.use_dss is True
 
     def test_custom_tags(self) -> None:
@@ -112,10 +109,12 @@ class TestIWFMTimeSeriesDataWriter:
             nsp_tag="NSPPUMP",
             nfq_tag="NFQPUMP",
             dates=["10/01/1990_24:00", "10/02/1990_24:00"],
-            data=np.array([
-                [100.0, 200.0, 300.0],
-                [110.0, 210.0, 310.0],
-            ]),
+            data=np.array(
+                [
+                    [100.0, 200.0, 300.0],
+                    [110.0, 210.0, 310.0],
+                ]
+            ),
         )
 
         writer = IWFMTimeSeriesDataWriter()
@@ -363,7 +362,7 @@ class TestIWFMTimeSeriesDataWriter:
         ncol = 5
         n_times = 10
         data = rng.uniform(0, 1000, (n_times, ncol))
-        dates = [f"10/{i+1:02d}/1990_24:00" for i in range(n_times)]
+        dates = [f"10/{i + 1:02d}/1990_24:00" for i in range(n_times)]
 
         config = TimeSeriesDataConfig(
             title="Round Trip",
@@ -382,15 +381,19 @@ class TestIWFMTimeSeriesDataWriter:
         # Read back and verify data values
         content = outfile.read_text()
         lines = content.strip().split("\n")
-        data_lines = [
-            line for line in lines
-            if line.strip() and not line.strip().startswith("C") and "/" not in line.split()[0]
+        [
+            line
+            for line in lines
+            if line.strip()
+            and not line.strip().startswith("C")
+            and "/" not in line.split()[0]
             and line.strip()[0].isdigit() is False
         ]
 
         # Filter to lines that start with date patterns
         date_lines = [
-            line for line in lines
+            line
+            for line in lines
             if line.strip() and line.strip()[:2].isdigit() and "/" in line.strip()[:10]
         ]
 
@@ -548,22 +551,29 @@ class TestFactoryWriterIntegration:
 
     @pytest.fixture
     def sample_dates(self) -> list[str]:
-        return [f"10/{i+1:02d}/1990_24:00" for i in range(3)]
+        return [f"10/{i + 1:02d}/1990_24:00" for i in range(3)]
 
     @pytest.fixture
     def sample_data_3col(self) -> np.ndarray:
-        return np.array([
-            [1.0, 2.0, 3.0],
-            [4.0, 5.0, 6.0],
-            [7.0, 8.0, 9.0],
-        ])
+        return np.array(
+            [
+                [1.0, 2.0, 3.0],
+                [4.0, 5.0, 6.0],
+                [7.0, 8.0, 9.0],
+            ]
+        )
 
     def test_pumping_round_trip(
-        self, tmp_path: Path, writer: IWFMTimeSeriesDataWriter,
-        sample_dates: list[str], sample_data_3col: np.ndarray,
+        self,
+        tmp_path: Path,
+        writer: IWFMTimeSeriesDataWriter,
+        sample_dates: list[str],
+        sample_data_3col: np.ndarray,
     ) -> None:
         config = make_pumping_ts_config(
-            ncol=3, dates=sample_dates, data=sample_data_3col,
+            ncol=3,
+            dates=sample_dates,
+            data=sample_data_3col,
         )
         outfile = tmp_path / "TSPumping.dat"
         writer.write(config, outfile)
@@ -574,11 +584,16 @@ class TestFactoryWriterIntegration:
         assert "10/01/1990_24:00" in content
 
     def test_precip_round_trip(
-        self, tmp_path: Path, writer: IWFMTimeSeriesDataWriter,
-        sample_dates: list[str], sample_data_3col: np.ndarray,
+        self,
+        tmp_path: Path,
+        writer: IWFMTimeSeriesDataWriter,
+        sample_dates: list[str],
+        sample_data_3col: np.ndarray,
     ) -> None:
         config = make_precip_ts_config(
-            ncol=3, dates=sample_dates, data=sample_data_3col,
+            ncol=3,
+            dates=sample_dates,
+            data=sample_data_3col,
         )
         outfile = tmp_path / "Precip.dat"
         writer.write(config, outfile)
@@ -588,11 +603,16 @@ class TestFactoryWriterIntegration:
         assert "FACTRN" in content
 
     def test_et_round_trip(
-        self, tmp_path: Path, writer: IWFMTimeSeriesDataWriter,
-        sample_dates: list[str], sample_data_3col: np.ndarray,
+        self,
+        tmp_path: Path,
+        writer: IWFMTimeSeriesDataWriter,
+        sample_dates: list[str],
+        sample_data_3col: np.ndarray,
     ) -> None:
         config = make_et_ts_config(
-            ncol=3, dates=sample_dates, data=sample_data_3col,
+            ncol=3,
+            dates=sample_dates,
+            data=sample_data_3col,
         )
         outfile = tmp_path / "ET.dat"
         writer.write(config, outfile)
@@ -602,8 +622,11 @@ class TestFactoryWriterIntegration:
         assert "FACTET" in content
 
     def test_stream_inflow_round_trip(
-        self, tmp_path: Path, writer: IWFMTimeSeriesDataWriter,
-        sample_dates: list[str], sample_data_3col: np.ndarray,
+        self,
+        tmp_path: Path,
+        writer: IWFMTimeSeriesDataWriter,
+        sample_dates: list[str],
+        sample_data_3col: np.ndarray,
     ) -> None:
         config = make_stream_inflow_ts_config(
             ncol=3,
@@ -620,11 +643,16 @@ class TestFactoryWriterIntegration:
         assert "ID   IRST" in content
 
     def test_surface_area_has_tunit(
-        self, tmp_path: Path, writer: IWFMTimeSeriesDataWriter,
-        sample_dates: list[str], sample_data_3col: np.ndarray,
+        self,
+        tmp_path: Path,
+        writer: IWFMTimeSeriesDataWriter,
+        sample_dates: list[str],
+        sample_data_3col: np.ndarray,
     ) -> None:
         config = make_stream_surface_area_ts_config(
-            ncol=3, dates=sample_dates, data=sample_data_3col,
+            ncol=3,
+            dates=sample_dates,
+            data=sample_data_3col,
         )
         outfile = tmp_path / "SurfArea.dat"
         writer.write(config, outfile)
@@ -644,31 +672,35 @@ class TestImports:
 
     def test_import_writer_class(self) -> None:
         from pyiwfm.io import IWFMTimeSeriesDataWriter as W
+
         assert W is not None
 
     def test_import_config_class(self) -> None:
         from pyiwfm.io import TimeSeriesDataConfig as C
+
         assert C is not None
 
     def test_import_dss_path_item(self) -> None:
         from pyiwfm.io import DSSPathItem as D
+
         assert D is not None
 
     def test_import_factory_helpers(self) -> None:
         from pyiwfm.io import (
-            make_pumping_ts_config,
-            make_stream_inflow_ts_config,
-            make_diversion_ts_config,
-            make_precip_ts_config,
-            make_et_ts_config,
+            make_ag_water_demand_ts_config,
             make_crop_coeff_ts_config,
+            make_diversion_ts_config,
+            make_et_ts_config,
+            make_irig_period_ts_config,
+            make_max_lake_elev_ts_config,
+            make_precip_ts_config,
+            make_pumping_ts_config,
             make_return_flow_ts_config,
             make_reuse_ts_config,
-            make_irig_period_ts_config,
-            make_ag_water_demand_ts_config,
-            make_max_lake_elev_ts_config,
+            make_stream_inflow_ts_config,
             make_stream_surface_area_ts_config,
         )
+
         # All should be callable
         assert callable(make_pumping_ts_config)
         assert callable(make_stream_inflow_ts_config)

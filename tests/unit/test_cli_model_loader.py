@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from pyiwfm.cli._model_loader import _resolve_path, load_model
-
 
 # ---------------------------------------------------------------------------
 # _resolve_path

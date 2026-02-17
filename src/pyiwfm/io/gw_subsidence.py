@@ -23,10 +23,15 @@ from numpy.typing import NDArray
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
+)
+from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
+)
+from pyiwfm.io.iwfm_reader import (
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _strip_comment,
 )
 
 
@@ -42,6 +47,7 @@ class SubsidenceHydrographSpec:
         y: Y coordinate (if hydtyp=0)
         name: Optional name/description
     """
+
     id: int = 0
     hydtyp: int = 0
     layer: int = 1
@@ -64,14 +70,15 @@ class SubsidenceNodeParams:
         kv_sub: Vertical conductivity of interbeds per layer (v5.0 only)
         n_eq: Number of equivalent delay interbeds per layer (v5.0 only)
     """
+
     node_id: int = 0
     elastic_sc: list[float] = field(default_factory=list)
     inelastic_sc: list[float] = field(default_factory=list)
     interbed_thick: list[float] = field(default_factory=list)
     interbed_thick_min: list[float] = field(default_factory=list)
     precompact_head: list[float] = field(default_factory=list)
-    kv_sub: list[float] = field(default_factory=list)       # v5.0 only
-    n_eq: list[float] = field(default_factory=list)          # v5.0 only
+    kv_sub: list[float] = field(default_factory=list)  # v5.0 only
+    n_eq: list[float] = field(default_factory=list)  # v5.0 only
 
 
 @dataclass
@@ -97,6 +104,7 @@ class SubsidenceConfig:
         ic_interbed_thick: IC interbed thickness array (n_nodes, n_layers)
         ic_precompact_head: IC pre-compaction head array (n_nodes, n_layers)
     """
+
     version: str = ""
     ic_file: Path | None = None
     tecplot_file: Path | None = None
@@ -160,7 +168,7 @@ class SubsidenceReader:
         config.n_layers = n_layers
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Version header
             config.version = self._read_version(f)
 
@@ -207,9 +215,7 @@ class SubsidenceReader:
                 # SUBHYDOUTFL (output file path)
                 hydout_path = _next_data_or_empty(f)
                 if hydout_path:
-                    config.hydrograph_output_file = _resolve_path_f(
-                        base_dir, hydout_path
-                    )
+                    config.hydrograph_output_file = _resolve_path_f(base_dir, hydout_path)
 
                 # Read NOUTS rows: ID HYDTYP ILYR X Y NAME
                 for _ in range(config.n_hydrograph_outputs):
@@ -266,9 +272,7 @@ class SubsidenceReader:
 
         return config
 
-    def _read_direct_params(
-        self, f: TextIO, config: SubsidenceConfig, is_v50: bool
-    ) -> None:
+    def _read_direct_params(self, f: TextIO, config: SubsidenceConfig, is_v50: bool) -> None:
         """Read direct parameter input (NGroup == 0).
 
         For each node, reads n_layers rows of subsidence parameters.
@@ -299,7 +303,9 @@ class SubsidenceReader:
                     inelastic = float(parts[offset + 1]) * (factors[2] if len(factors) > 2 else 1.0)
                     thick = float(parts[offset + 2]) * (factors[3] if len(factors) > 3 else 1.0)
                     thick_min = float(parts[offset + 3]) * (factors[4] if len(factors) > 4 else 1.0)
-                    precompact = float(parts[offset + 4]) * (factors[5] if len(factors) > 5 else 1.0)
+                    precompact = float(parts[offset + 4]) * (
+                        factors[5] if len(factors) > 5 else 1.0
+                    )
                     kv = float(parts[offset + 5]) * (factors[6] if len(factors) > 6 else 1.0)
                     neq = float(parts[offset + 6])
 
@@ -317,7 +323,9 @@ class SubsidenceReader:
                     inelastic = float(parts[offset + 1]) * (factors[2] if len(factors) > 2 else 1.0)
                     thick = float(parts[offset + 2]) * (factors[3] if len(factors) > 3 else 1.0)
                     thick_min = float(parts[offset + 3]) * (factors[4] if len(factors) > 4 else 1.0)
-                    precompact = float(parts[offset + 4]) * (factors[5] if len(factors) > 5 else 1.0)
+                    precompact = float(parts[offset + 4]) * (
+                        factors[5] if len(factors) > 5 else 1.0
+                    )
 
                     node_params.elastic_sc.append(elastic)
                     node_params.inelastic_sc.append(inelastic)
@@ -341,7 +349,7 @@ class SubsidenceReader:
         config.ic_interbed_thick = np.zeros((n_nodes, n_layers))
         config.ic_precompact_head = np.zeros((n_nodes, n_layers))
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Conversion factor
             factor_str = _next_data_or_empty(f)
             config.ic_factor = float(factor_str) if factor_str else 1.0
@@ -358,9 +366,7 @@ class SubsidenceReader:
 
                 # node_id = int(float(parts[0]))  # 1-based
                 for layer in range(n_layers):
-                    config.ic_interbed_thick[i, layer] = (
-                        float(parts[1 + layer]) * config.ic_factor
-                    )
+                    config.ic_interbed_thick[i, layer] = float(parts[1 + layer]) * config.ic_factor
                     config.ic_precompact_head[i, layer] = (
                         float(parts[1 + n_layers + layer]) * config.ic_factor
                     )

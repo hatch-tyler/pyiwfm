@@ -6,14 +6,13 @@ import numpy as np
 import pytest
 
 from pyiwfm.components.connectors import (
-    StreamGWConnection,
-    StreamGWConnector,
     LakeGWConnection,
     LakeGWConnector,
+    StreamGWConnection,
+    StreamGWConnector,
     StreamLakeConnection,
     StreamLakeConnector,
 )
-from pyiwfm.core.exceptions import ComponentError
 
 
 class TestStreamGWConnection:
@@ -131,12 +130,16 @@ class TestStreamGWConnector:
         """Test calculating total exchange."""
         connector = StreamGWConnector()
 
-        connector.add_connection(StreamGWConnection(
-            stream_node_id=10, gw_node_id=5, conductance=100.0, stream_bed_elev=50.0
-        ))
-        connector.add_connection(StreamGWConnection(
-            stream_node_id=20, gw_node_id=15, conductance=100.0, stream_bed_elev=50.0
-        ))
+        connector.add_connection(
+            StreamGWConnection(
+                stream_node_id=10, gw_node_id=5, conductance=100.0, stream_bed_elev=50.0
+            )
+        )
+        connector.add_connection(
+            StreamGWConnection(
+                stream_node_id=20, gw_node_id=15, conductance=100.0, stream_bed_elev=50.0
+            )
+        )
 
         stream_stages = {10: 55.0, 20: 55.0}
         gw_heads = {5: 45.0, 15: 45.0}
@@ -155,12 +158,12 @@ class TestStreamGWConnector:
         """Test converting to arrays."""
         connector = StreamGWConnector()
 
-        connector.add_connection(StreamGWConnection(
-            stream_node_id=10, gw_node_id=5, conductance=100.0
-        ))
-        connector.add_connection(StreamGWConnection(
-            stream_node_id=20, gw_node_id=15, conductance=200.0
-        ))
+        connector.add_connection(
+            StreamGWConnection(stream_node_id=10, gw_node_id=5, conductance=100.0)
+        )
+        connector.add_connection(
+            StreamGWConnection(stream_node_id=20, gw_node_id=15, conductance=200.0)
+        )
 
         arrays = connector.to_arrays()
 
@@ -309,15 +312,15 @@ class TestStreamLakeConnector:
         """Test getting inflow connections for a lake."""
         connector = StreamLakeConnector()
 
-        connector.add_connection(StreamLakeConnection(
-            stream_node_id=10, lake_id=1, connection_type="inflow"
-        ))
-        connector.add_connection(StreamLakeConnection(
-            stream_node_id=20, lake_id=1, connection_type="inflow"
-        ))
-        connector.add_connection(StreamLakeConnection(
-            stream_node_id=50, lake_id=1, connection_type="outflow"
-        ))
+        connector.add_connection(
+            StreamLakeConnection(stream_node_id=10, lake_id=1, connection_type="inflow")
+        )
+        connector.add_connection(
+            StreamLakeConnection(stream_node_id=20, lake_id=1, connection_type="inflow")
+        )
+        connector.add_connection(
+            StreamLakeConnection(stream_node_id=50, lake_id=1, connection_type="outflow")
+        )
 
         inflows = connector.get_inflows_for_lake(1)
         assert len(inflows) == 2
@@ -327,12 +330,12 @@ class TestStreamLakeConnector:
         """Test getting outflow connections for a lake."""
         connector = StreamLakeConnector()
 
-        connector.add_connection(StreamLakeConnection(
-            stream_node_id=10, lake_id=1, connection_type="inflow"
-        ))
-        connector.add_connection(StreamLakeConnection(
-            stream_node_id=50, lake_id=1, connection_type="outflow"
-        ))
+        connector.add_connection(
+            StreamLakeConnection(stream_node_id=10, lake_id=1, connection_type="inflow")
+        )
+        connector.add_connection(
+            StreamLakeConnection(stream_node_id=50, lake_id=1, connection_type="outflow")
+        )
 
         outflows = connector.get_outflows_for_lake(1)
         assert len(outflows) == 1
@@ -454,9 +457,7 @@ class TestStreamGWConnectorEdgeCases:
     def test_calculate_total_exchange_no_connections(self) -> None:
         """An empty connector returns zero total exchange."""
         connector = StreamGWConnector()
-        total = connector.calculate_total_exchange(
-            stream_stages={1: 60.0}, gw_heads={2: 50.0}
-        )
+        total = connector.calculate_total_exchange(stream_stages={1: 60.0}, gw_heads={2: 50.0})
         assert total == 0.0
 
     def test_to_arrays_empty(self) -> None:
@@ -547,38 +548,28 @@ class TestLakeGWConnectorExtended:
     def test_calculate_flow_gaining_lake(self) -> None:
         """GW head above lake stage produces negative (gaining) flow."""
         connector = LakeGWConnector()
-        connector.add_connection(
-            LakeGWConnection(lake_id=1, gw_node_id=5, conductance=500.0)
-        )
+        connector.add_connection(LakeGWConnection(lake_id=1, gw_node_id=5, conductance=500.0))
         flow = connector.calculate_flow(lake_id=1, lake_stage=90.0, gw_head=100.0)
         assert flow < 0  # Negative = aquifer to lake
 
     def test_calculate_flow_no_matching_connections(self) -> None:
         """No matching lake_id gives zero flow."""
         connector = LakeGWConnector()
-        connector.add_connection(
-            LakeGWConnection(lake_id=1, gw_node_id=5, conductance=500.0)
-        )
+        connector.add_connection(LakeGWConnection(lake_id=1, gw_node_id=5, conductance=500.0))
         flow = connector.calculate_flow(lake_id=999, lake_stage=110.0, gw_head=95.0)
         assert flow == 0.0
 
     def test_calculate_flow_zero_conductance(self) -> None:
         connector = LakeGWConnector()
-        connector.add_connection(
-            LakeGWConnection(lake_id=1, gw_node_id=5, conductance=0.0)
-        )
+        connector.add_connection(LakeGWConnection(lake_id=1, gw_node_id=5, conductance=0.0))
         flow = connector.calculate_flow(lake_id=1, lake_stage=110.0, gw_head=95.0)
         assert flow == 0.0
 
     def test_calculate_flow_multiple_connections_same_lake(self) -> None:
         """Flow is summed across multiple connections for the same lake."""
         connector = LakeGWConnector()
-        connector.add_connection(
-            LakeGWConnection(lake_id=1, gw_node_id=5, conductance=100.0)
-        )
-        connector.add_connection(
-            LakeGWConnection(lake_id=1, gw_node_id=6, conductance=200.0)
-        )
+        connector.add_connection(LakeGWConnection(lake_id=1, gw_node_id=5, conductance=100.0))
+        connector.add_connection(LakeGWConnection(lake_id=1, gw_node_id=6, conductance=200.0))
         # head_diff = 110 - 100 = 10; total = (100 + 200) * 10 = 3000
         flow = connector.calculate_flow(lake_id=1, lake_stage=110.0, gw_head=100.0)
         assert flow == pytest.approx(3000.0)
@@ -586,12 +577,8 @@ class TestLakeGWConnectorExtended:
     def test_calculate_total_exchange(self) -> None:
         """Test total exchange calculation for lake-GW connector."""
         connector = LakeGWConnector()
-        connector.add_connection(
-            LakeGWConnection(lake_id=1, gw_node_id=5, conductance=100.0)
-        )
-        connector.add_connection(
-            LakeGWConnection(lake_id=2, gw_node_id=10, conductance=200.0)
-        )
+        connector.add_connection(LakeGWConnection(lake_id=1, gw_node_id=5, conductance=100.0))
+        connector.add_connection(LakeGWConnection(lake_id=2, gw_node_id=10, conductance=200.0))
 
         lake_stages = {1: 110.0, 2: 105.0}
         gw_heads = {5: 100.0, 10: 95.0}
@@ -604,15 +591,9 @@ class TestLakeGWConnectorExtended:
     def test_calculate_total_exchange_partial_keys(self) -> None:
         """Missing keys skip those connections."""
         connector = LakeGWConnector()
-        connector.add_connection(
-            LakeGWConnection(lake_id=1, gw_node_id=5, conductance=100.0)
-        )
-        connector.add_connection(
-            LakeGWConnection(lake_id=2, gw_node_id=10, conductance=200.0)
-        )
-        total = connector.calculate_total_exchange(
-            lake_stages={1: 110.0}, gw_heads={5: 100.0}
-        )
+        connector.add_connection(LakeGWConnection(lake_id=1, gw_node_id=5, conductance=100.0))
+        connector.add_connection(LakeGWConnection(lake_id=2, gw_node_id=10, conductance=200.0))
+        total = connector.calculate_total_exchange(lake_stages={1: 110.0}, gw_heads={5: 100.0})
         assert total == pytest.approx(1000.0)
 
     def test_calculate_total_exchange_empty(self) -> None:

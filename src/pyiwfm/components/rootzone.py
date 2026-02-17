@@ -8,10 +8,11 @@ calculations. It mirrors IWFM's Package_RootZone.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -163,27 +164,19 @@ class RootZone:
     native_riparian_config: Any = field(default=None, repr=False)
     # Surface flow destinations per element
     # v4.0-v4.11: single destination per element -> (dest_type, dest_id)
-    surface_flow_destinations: dict[int, tuple[int, int]] = field(
-        default_factory=dict, repr=False
-    )
+    surface_flow_destinations: dict[int, tuple[int, int]] = field(default_factory=dict, repr=False)
     # Area data file paths (for lazy loading)
     nonponded_area_file: Path | None = field(default=None, repr=False)
     ponded_area_file: Path | None = field(default=None, repr=False)
     urban_area_file: Path | None = field(default=None, repr=False)
     native_area_file: Path | None = field(default=None, repr=False)
     # v4.12+: per-landuse destinations
-    surface_flow_dest_ag: dict[int, tuple[int, int]] = field(
-        default_factory=dict, repr=False
-    )
-    surface_flow_dest_urban_in: dict[int, tuple[int, int]] = field(
-        default_factory=dict, repr=False
-    )
+    surface_flow_dest_ag: dict[int, tuple[int, int]] = field(default_factory=dict, repr=False)
+    surface_flow_dest_urban_in: dict[int, tuple[int, int]] = field(default_factory=dict, repr=False)
     surface_flow_dest_urban_out: dict[int, tuple[int, int]] = field(
         default_factory=dict, repr=False
     )
-    surface_flow_dest_nvrv: dict[int, tuple[int, int]] = field(
-        default_factory=dict, repr=False
-    )
+    surface_flow_dest_nvrv: dict[int, tuple[int, int]] = field(default_factory=dict, repr=False)
 
     @property
     def n_crop_types(self) -> int:
@@ -216,9 +209,7 @@ class RootZone:
 
     def get_total_area(self, land_use_type: LandUseType) -> float:
         """Calculate total area for a land use type."""
-        return sum(
-            e.area for e in self.element_landuse if e.land_use_type == land_use_type
-        )
+        return sum(e.area for e in self.element_landuse if e.land_use_type == land_use_type)
 
     def set_soil_moisture(self, moisture: NDArray[np.float64]) -> None:
         """Set the soil moisture array."""
@@ -355,9 +346,7 @@ class RootZone:
                 if self.urban_config is not None:
                     for row in getattr(self.urban_config, "element_data", []):
                         if row.element_id == elem_id:
-                            imp_frac = 1.0 - getattr(
-                                row, "pervious_fraction", 1.0
-                            )
+                            imp_frac = 1.0 - getattr(row, "pervious_fraction", 1.0)
                             break
                 self.element_landuse.append(
                     ElementLandUse(
@@ -391,9 +380,7 @@ class RootZone:
         # Check element references (1-based IDs)
         for elu in self.element_landuse:
             if elu.element_id > self.n_elements or elu.element_id < 1:
-                raise ComponentError(
-                    f"Land use references invalid element {elu.element_id}"
-                )
+                raise ComponentError(f"Land use references invalid element {elu.element_id}")
 
         # Check crop references in agricultural land use
         for elu in self.element_landuse:
@@ -401,8 +388,7 @@ class RootZone:
                 for crop_id in elu.crop_fractions:
                     if crop_id not in self.crop_types:
                         raise ComponentError(
-                            f"Element {elu.element_id} references "
-                            f"undefined crop type {crop_id}"
+                            f"Element {elu.element_id} references undefined crop type {crop_id}"
                         )
 
     def to_arrays(self) -> dict[str, NDArray]:
@@ -425,7 +411,7 @@ class RootZone:
         n_elements: int,
         n_layers: int,
         soil_moisture: NDArray[np.float64] | None = None,
-    ) -> "RootZone":
+    ) -> RootZone:
         """
         Create root zone component from arrays.
 

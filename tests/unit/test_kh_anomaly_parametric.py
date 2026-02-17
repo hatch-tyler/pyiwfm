@@ -15,21 +15,19 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from pyiwfm.components.groundwater import AquiferParameters
+from pyiwfm.core.mesh import AppGrid, Element, Node
+from pyiwfm.core.model import _apply_kh_anomalies
 from pyiwfm.io.groundwater import (
+    GWMainFileReader,
     KhAnomalyEntry,
     ParametricGridData,
-    GWMainFileReader,
-    GWMainFileConfig,
 )
 from pyiwfm.io.parametric_grid import (
+    ParamElement,
     ParametricGrid,
     ParamNode,
-    ParamElement,
 )
-from pyiwfm.components.groundwater import AquiferParameters
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.core.model import _apply_kh_anomalies
-
 
 # =============================================================================
 # Test KhAnomalyEntry parsing
@@ -130,10 +128,7 @@ class TestApplyKhAnomalies:
             3: (4, 5, 8, 7)
             4: (5, 6, 9, 8)
         """
-        nodes = {
-            i: Node(id=i, x=float((i - 1) % 3), y=float((i - 1) // 3))
-            for i in range(1, 10)
-        }
+        nodes = {i: Node(id=i, x=float((i - 1) % 3), y=float((i - 1) // 3)) for i in range(1, 10)}
         elements = {
             1: Element(id=1, vertices=(1, 2, 5, 4), subregion=1),
             2: Element(id=2, vertices=(2, 3, 6, 5), subregion=1),
@@ -243,12 +238,9 @@ class TestParametricGrid:
         Each node has 1 layer, 2 params.
         """
         nodes = [
-            ParamNode(node_id=0, x=0.0, y=0.0,
-                      values=np.array([[1.0, 10.0]])),
-            ParamNode(node_id=1, x=10.0, y=0.0,
-                      values=np.array([[2.0, 20.0]])),
-            ParamNode(node_id=2, x=0.0, y=10.0,
-                      values=np.array([[3.0, 30.0]])),
+            ParamNode(node_id=0, x=0.0, y=0.0, values=np.array([[1.0, 10.0]])),
+            ParamNode(node_id=1, x=10.0, y=0.0, values=np.array([[2.0, 20.0]])),
+            ParamNode(node_id=2, x=0.0, y=10.0, values=np.array([[3.0, 30.0]])),
         ]
         elements = [ParamElement(elem_id=0, vertices=(0, 1, 2))]
         return ParametricGrid(nodes=nodes, elements=elements)
@@ -299,14 +291,10 @@ class TestParametricGrid:
         Each node has 1 layer, 1 param.
         """
         nodes = [
-            ParamNode(node_id=0, x=0.0, y=0.0,
-                      values=np.array([[1.0]])),
-            ParamNode(node_id=1, x=10.0, y=0.0,
-                      values=np.array([[2.0]])),
-            ParamNode(node_id=2, x=10.0, y=10.0,
-                      values=np.array([[3.0]])),
-            ParamNode(node_id=3, x=0.0, y=10.0,
-                      values=np.array([[4.0]])),
+            ParamNode(node_id=0, x=0.0, y=0.0, values=np.array([[1.0]])),
+            ParamNode(node_id=1, x=10.0, y=0.0, values=np.array([[2.0]])),
+            ParamNode(node_id=2, x=10.0, y=10.0, values=np.array([[3.0]])),
+            ParamNode(node_id=3, x=0.0, y=10.0, values=np.array([[4.0]])),
         ]
         elements = [ParamElement(elem_id=0, vertices=(0, 1, 2, 3))]
         return ParametricGrid(nodes=nodes, elements=elements)
@@ -342,14 +330,10 @@ class TestParametricGrid:
         """Grid with multiple elements should find correct element."""
         # Two triangles sharing an edge
         nodes = [
-            ParamNode(node_id=0, x=0.0, y=0.0,
-                      values=np.array([[10.0]])),
-            ParamNode(node_id=1, x=10.0, y=0.0,
-                      values=np.array([[20.0]])),
-            ParamNode(node_id=2, x=5.0, y=10.0,
-                      values=np.array([[30.0]])),
-            ParamNode(node_id=3, x=5.0, y=-10.0,
-                      values=np.array([[40.0]])),
+            ParamNode(node_id=0, x=0.0, y=0.0, values=np.array([[10.0]])),
+            ParamNode(node_id=1, x=10.0, y=0.0, values=np.array([[20.0]])),
+            ParamNode(node_id=2, x=5.0, y=10.0, values=np.array([[30.0]])),
+            ParamNode(node_id=3, x=5.0, y=-10.0, values=np.array([[40.0]])),
         ]
         elements = [
             ParamElement(elem_id=0, vertices=(0, 1, 2)),  # Upper triangle

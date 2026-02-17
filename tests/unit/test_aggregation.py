@@ -16,9 +16,8 @@ from pyiwfm.core.aggregation import (
     DataAggregator,
     create_aggregator_from_grid,
 )
+from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.core.zones import Zone, ZoneDefinition
-from pyiwfm.core.mesh import AppGrid, Node, Element
-
 
 # =============================================================================
 # Test AggregationMethod Enum
@@ -339,9 +338,7 @@ class TestAggregateToArray:
         element_zones = np.array([1, 1, 2, 2, 2], dtype=np.int32)
         return ZoneDefinition(zones=zones, element_zones=element_zones)
 
-    def test_aggregate_to_array(
-        self, aggregator: DataAggregator, zone_def: ZoneDefinition
-    ) -> None:
+    def test_aggregate_to_array(self, aggregator: DataAggregator, zone_def: ZoneDefinition) -> None:
         """Test expanding zone values back to element array."""
         values = np.array([10.0, 20.0, 30.0, 40.0, 50.0], dtype=np.float64)
 
@@ -354,9 +351,7 @@ class TestAggregateToArray:
         assert result[3] == pytest.approx(40.0)
         assert result[4] == pytest.approx(40.0)
 
-    def test_aggregate_to_array_unassigned_elements(
-        self, aggregator: DataAggregator
-    ) -> None:
+    def test_aggregate_to_array_unassigned_elements(self, aggregator: DataAggregator) -> None:
         """Test aggregate_to_array with unassigned elements."""
         zones = {1: Zone(id=1, name="Zone A", elements=[1, 2])}
         element_zones = np.array([1, 1, 0, 0, 0], dtype=np.int32)  # Last 3 unassigned

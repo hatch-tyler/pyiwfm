@@ -8,17 +8,17 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.io.binary import (
     FortranBinaryReader,
     FortranBinaryWriter,
     read_binary_mesh,
-    write_binary_mesh,
     read_binary_stratigraphy,
+    write_binary_mesh,
     write_binary_stratigraphy,
 )
-from pyiwfm.core.exceptions import FileFormatError
 
 
 class TestFortranBinaryReader:
@@ -241,9 +241,7 @@ class TestBinaryStratigraphyIO:
         gs_elev = np.array([100.0, 100.0, 100.0, 100.0])
         top_elev = np.array([[100.0, 50.0]] * 4)
         bottom_elev = np.array([[50.0, 0.0]] * 4)
-        active_node = np.array(
-            [[True, True], [True, False], [False, True], [False, False]]
-        )
+        active_node = np.array([[True, True], [True, False], [False, True], [False, False]])
 
         strat = Stratigraphy(
             n_layers=n_layers,

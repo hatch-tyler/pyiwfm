@@ -9,14 +9,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from pyiwfm.io.rootzone import (
     RootZoneFileConfig,
     _is_comment_line,
     _strip_comment,
 )
-
 
 # =============================================================================
 # Test Helper Functions

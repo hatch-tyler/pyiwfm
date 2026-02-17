@@ -21,29 +21,33 @@ from typing import TextIO
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
-    is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty,
-    resolve_path as _resolve_path_f,
-    strip_inline_comment as _strip_comment,
 )
-
+from pyiwfm.io.iwfm_reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
+    next_data_or_empty as _next_data_or_empty,
+)
+from pyiwfm.io.iwfm_reader import (
+    resolve_path as _resolve_path_f,
+)
 
 # =============================================================================
 # Pumping distribution methods
 # =============================================================================
 
-DIST_USER_FRAC = 0      # Use user-specified fractions
-DIST_TOTAL_AREA = 1     # Distribute by total area
-DIST_AG_URB_AREA = 2    # Distribute by developed area
-DIST_AG_AREA = 3        # Distribute by agricultural area
-DIST_URB_AREA = 4       # Distribute by urban area
+DIST_USER_FRAC = 0  # Use user-specified fractions
+DIST_TOTAL_AREA = 1  # Distribute by total area
+DIST_AG_URB_AREA = 2  # Distribute by developed area
+DIST_AG_AREA = 3  # Distribute by agricultural area
+DIST_URB_AREA = 4  # Distribute by urban area
 
 # Destination types
-DEST_SAME_ELEMENT = -1   # Deliver to same element as well
-DEST_OUTSIDE = 0         # Deliver outside model domain
-DEST_ELEMENT = 1         # Deliver to specified element
-DEST_SUBREGION = 2       # Deliver to specified subregion
-DEST_ELEM_GROUP = 3      # Deliver to element group
+DEST_SAME_ELEMENT = -1  # Deliver to same element as well
+DEST_OUTSIDE = 0  # Deliver outside model domain
+DEST_ELEMENT = 1  # Deliver to specified element
+DEST_SUBREGION = 2  # Deliver to specified subregion
+DEST_ELEM_GROUP = 3  # Deliver to element group
 
 
 # =============================================================================
@@ -64,6 +68,7 @@ class WellSpec:
         perf_bottom: Perforation bottom elevation
         name: Well name/description (from / delimiter in spec file)
     """
+
     id: int
     x: float
     y: float
@@ -89,6 +94,7 @@ class WellPumpingSpec:
         pump_max_column: Column for maximum pumping
         pump_max_fraction: Fraction of maximum pumping
     """
+
     well_id: int
     pump_column: int = 0
     pump_fraction: float = 1.0
@@ -118,6 +124,7 @@ class ElementPumpingSpec:
         pump_max_column: Column for maximum pumping
         pump_max_fraction: Fraction of maximum pumping
     """
+
     element_id: int
     pump_column: int = 0
     pump_fraction: float = 1.0
@@ -139,6 +146,7 @@ class ElementGroup:
         id: Group ID
         elements: List of element IDs in this group
     """
+
     id: int
     elements: list[int] = field(default_factory=list)
 
@@ -166,6 +174,7 @@ class PumpingConfig:
 
         pump_factor: Pumping rate conversion factor
     """
+
     version: str = ""
     well_file: Path | None = None
     elem_pump_file: Path | None = None
@@ -228,7 +237,7 @@ class PumpingReader:
         config = PumpingConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Version
             config.version = self._read_version(f)
 
@@ -265,7 +274,7 @@ class PumpingReader:
     def _read_well_file(self, filepath: Path, config: PumpingConfig) -> None:
         """Read well specification file."""
         self._line_num = 0
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # NWell
             n_wells = int(_next_data_or_empty(f))
             if n_wells <= 0:
@@ -285,21 +294,23 @@ class PumpingReader:
                 name = ""
                 if "/" in line:
                     slash_idx = line.index("/")
-                    name = line[slash_idx + 1:].strip()
+                    name = line[slash_idx + 1 :].strip()
                     line = line[:slash_idx].strip()
                 parts = line.split()
                 if len(parts) < 6:
                     continue
 
-                config.well_specs.append(WellSpec(
-                    id=int(float(parts[0])),
-                    x=float(parts[1]) * config.factor_xy,
-                    y=float(parts[2]) * config.factor_xy,
-                    radius=float(parts[3]) / 2.0 * config.factor_radius,
-                    perf_top=float(parts[4]) * config.factor_length,
-                    perf_bottom=float(parts[5]) * config.factor_length,
-                    name=name,
-                ))
+                config.well_specs.append(
+                    WellSpec(
+                        id=int(float(parts[0])),
+                        x=float(parts[1]) * config.factor_xy,
+                        y=float(parts[2]) * config.factor_xy,
+                        radius=float(parts[3]) / 2.0 * config.factor_radius,
+                        perf_top=float(parts[4]) * config.factor_length,
+                        perf_bottom=float(parts[5]) * config.factor_length,
+                        name=name,
+                    )
+                )
 
             # Read pumping specifications: 10 values per well
             for _ in range(n_wells):
@@ -308,28 +319,28 @@ class PumpingReader:
                 if len(parts) < 10:
                     continue
 
-                config.well_pumping_specs.append(WellPumpingSpec(
-                    well_id=int(float(parts[0])),
-                    pump_column=int(float(parts[1])),
-                    pump_fraction=float(parts[2]),
-                    dist_method=int(float(parts[3])),
-                    dest_type=int(float(parts[4])),
-                    dest_id=int(float(parts[5])),
-                    irig_frac_column=int(float(parts[6])),
-                    adjust_column=int(float(parts[7])),
-                    pump_max_column=int(float(parts[8])),
-                    pump_max_fraction=float(parts[9]),
-                ))
+                config.well_pumping_specs.append(
+                    WellPumpingSpec(
+                        well_id=int(float(parts[0])),
+                        pump_column=int(float(parts[1])),
+                        pump_fraction=float(parts[2]),
+                        dist_method=int(float(parts[3])),
+                        dest_type=int(float(parts[4])),
+                        dest_id=int(float(parts[5])),
+                        irig_frac_column=int(float(parts[6])),
+                        adjust_column=int(float(parts[7])),
+                        pump_max_column=int(float(parts[8])),
+                        pump_max_fraction=float(parts[9]),
+                    )
+                )
 
             # Read element groups
             config.well_groups = self._read_element_groups(f)
 
-    def _read_elem_pump_file(
-        self, filepath: Path, config: PumpingConfig, n_layers: int
-    ) -> None:
+    def _read_elem_pump_file(self, filepath: Path, config: PumpingConfig, n_layers: int) -> None:
         """Read element pumping specification file."""
         self._line_num = 0
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # NSink
             n_sinks = int(_next_data_or_empty(f))
             if n_sinks <= 0:
@@ -360,19 +371,21 @@ class PumpingReader:
                 pump_max_col = int(float(parts[offset + 4]))
                 pump_max_frac = float(parts[offset + 5])
 
-                config.elem_pumping_specs.append(ElementPumpingSpec(
-                    element_id=elem_id,
-                    pump_column=pump_col,
-                    pump_fraction=pump_frac,
-                    dist_method=dist_method,
-                    layer_factors=layer_factors,
-                    dest_type=dest_type,
-                    dest_id=dest_id,
-                    irig_frac_column=irig_col,
-                    adjust_column=adjust_col,
-                    pump_max_column=pump_max_col,
-                    pump_max_fraction=pump_max_frac,
-                ))
+                config.elem_pumping_specs.append(
+                    ElementPumpingSpec(
+                        element_id=elem_id,
+                        pump_column=pump_col,
+                        pump_fraction=pump_frac,
+                        dist_method=dist_method,
+                        layer_factors=layer_factors,
+                        dest_type=dest_type,
+                        dest_id=dest_id,
+                        irig_frac_column=irig_col,
+                        adjust_column=adjust_col,
+                        pump_max_column=pump_max_col,
+                        pump_max_fraction=pump_max_frac,
+                    )
+                )
 
             # Read element groups
             config.elem_groups = self._read_element_groups(f)

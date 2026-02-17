@@ -109,9 +109,7 @@ class UnsatZoneComponentWriter(TemplateWriter):
         dict[str, Path]
             Mapping of file type to output path.
         """
-        logger.info(
-            f"Writing unsaturated zone files to {self.config.unsatzone_dir}"
-        )
+        logger.info(f"Writing unsaturated zone files to {self.config.unsatzone_dir}")
 
         self.config.unsatzone_dir.mkdir(parents=True, exist_ok=True)
 
@@ -119,9 +117,7 @@ class UnsatZoneComponentWriter(TemplateWriter):
 
         uz = self.model.unsaturated_zone
         if uz is None and not write_defaults:
-            logger.warning(
-                "No unsaturated zone component in model and write_defaults=False"
-            )
+            logger.warning("No unsaturated zone component in model and write_defaults=False")
             return results
 
         results["main"] = self.write_main()
@@ -172,29 +168,32 @@ class UnsatZoneComponentWriter(TemplateWriter):
                         if uz.hyd_cond_factor
                         else layer.hyd_cond
                     )
-                    layers_data.append({
-                        "thickness_max": thickness_raw,
-                        "total_porosity": layer.total_porosity,
-                        "lambda_param": layer.lambda_param,
-                        "hyd_cond": hyd_cond_raw,
-                        "kunsat_method": layer.kunsat_method,
-                    })
-                element_data.append({
-                    "element_id": elem.element_id,
-                    "layers": layers_data,
-                })
+                    layers_data.append(
+                        {
+                            "thickness_max": thickness_raw,
+                            "total_porosity": layer.total_porosity,
+                            "lambda_param": layer.lambda_param,
+                            "hyd_cond": hyd_cond_raw,
+                            "kunsat_method": layer.kunsat_method,
+                        }
+                    )
+                element_data.append(
+                    {
+                        "element_id": elem.element_id,
+                        "layers": layers_data,
+                    }
+                )
 
                 if elem.initial_moisture is not None:
-                    initial_conditions.append({
-                        "element_id": elem.element_id,
-                        "moisture": elem.initial_moisture.tolist(),
-                    })
+                    initial_conditions.append(
+                        {
+                            "element_id": elem.element_id,
+                            "moisture": elem.initial_moisture.tolist(),
+                        }
+                    )
 
             # Check if all elements share the same initial moisture (uniform)
-            if (
-                len(initial_conditions) == 1
-                and initial_conditions[0]["element_id"] == 0
-            ):
+            if len(initial_conditions) == 1 and initial_conditions[0]["element_id"] == 0:
                 uniform_moisture = initial_conditions[0]["moisture"]
                 initial_conditions = []
 
@@ -228,9 +227,7 @@ class UnsatZoneComponentWriter(TemplateWriter):
             "initial_conditions": initial_conditions,
         }
 
-        return self._engine.render_template(
-            "unsaturated_zone/unsaturated_zone_main.j2", **context
-        )
+        return self._engine.render_template("unsaturated_zone/unsaturated_zone_main.j2", **context)
 
 
 def write_unsaturated_zone_component(

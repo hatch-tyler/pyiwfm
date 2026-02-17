@@ -8,13 +8,12 @@ import pytest
 # Skip tests if gmsh is not installed
 gmsh = pytest.importorskip("gmsh")
 
-from pyiwfm.mesh_generation.constraints import (
+from pyiwfm.mesh_generation.constraints import (  # noqa: E402
     Boundary,
-    StreamConstraint,
-    RefinementZone,
     PointConstraint,
+    StreamConstraint,
 )
-from pyiwfm.mesh_generation.gmsh_wrapper import GmshMeshGenerator
+from pyiwfm.mesh_generation.gmsh_wrapper import GmshMeshGenerator  # noqa: E402
 
 
 class TestGmshMeshGenerator:
@@ -40,12 +39,16 @@ class TestGmshMeshGenerator:
         """Test generating triangular mesh for simple square boundary."""
         gen = GmshMeshGenerator(element_type="triangle")
 
-        boundary = Boundary(vertices=np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ]))
+        boundary = Boundary(
+            vertices=np.array(
+                [
+                    [0.0, 0.0],
+                    [100.0, 0.0],
+                    [100.0, 100.0],
+                    [0.0, 100.0],
+                ]
+            )
+        )
 
         result = gen.generate(boundary, max_area=500.0)
 
@@ -57,12 +60,16 @@ class TestGmshMeshGenerator:
         """Test generating quad mesh for simple square boundary."""
         gen = GmshMeshGenerator(element_type="quad")
 
-        boundary = Boundary(vertices=np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ]))
+        boundary = Boundary(
+            vertices=np.array(
+                [
+                    [0.0, 0.0],
+                    [100.0, 0.0],
+                    [100.0, 100.0],
+                    [0.0, 100.0],
+                ]
+            )
+        )
 
         result = gen.generate(boundary, max_area=500.0)
 
@@ -75,18 +82,22 @@ class TestGmshMeshGenerator:
         """Test generating mesh with interior hole."""
         gen = GmshMeshGenerator(element_type="triangle")
 
-        outer = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ])
-        hole = np.array([
-            [40.0, 40.0],
-            [60.0, 40.0],
-            [60.0, 60.0],
-            [40.0, 60.0],
-        ])
+        outer = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+            ]
+        )
+        hole = np.array(
+            [
+                [40.0, 40.0],
+                [60.0, 40.0],
+                [60.0, 60.0],
+                [40.0, 60.0],
+            ]
+        )
 
         boundary = Boundary(vertices=outer, holes=[hole])
 
@@ -103,19 +114,25 @@ class TestGmshMeshGenerator:
         """Test generating mesh with stream constraint."""
         gen = GmshMeshGenerator(element_type="triangle")
 
-        boundary = Boundary(vertices=np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ]))
+        boundary = Boundary(
+            vertices=np.array(
+                [
+                    [0.0, 0.0],
+                    [100.0, 0.0],
+                    [100.0, 100.0],
+                    [0.0, 100.0],
+                ]
+            )
+        )
 
         stream = StreamConstraint(
-            vertices=np.array([
-                [10.0, 50.0],
-                [50.0, 50.0],
-                [90.0, 50.0],
-            ]),
+            vertices=np.array(
+                [
+                    [10.0, 50.0],
+                    [50.0, 50.0],
+                    [90.0, 50.0],
+                ]
+            ),
             stream_id=1,
         )
 
@@ -127,12 +144,16 @@ class TestGmshMeshGenerator:
         """Test generating mesh with fixed point constraint."""
         gen = GmshMeshGenerator(element_type="triangle")
 
-        boundary = Boundary(vertices=np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ]))
+        boundary = Boundary(
+            vertices=np.array(
+                [
+                    [0.0, 0.0],
+                    [100.0, 0.0],
+                    [100.0, 100.0],
+                    [0.0, 100.0],
+                ]
+            )
+        )
 
         point = PointConstraint(x=50.0, y=50.0, marker=1)
 
@@ -152,14 +173,18 @@ class TestGmshMeshGenerator:
         gen = GmshMeshGenerator(element_type="triangle")
 
         # L-shaped boundary
-        boundary = Boundary(vertices=np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 50.0],
-            [50.0, 50.0],
-            [50.0, 100.0],
-            [0.0, 100.0],
-        ]))
+        boundary = Boundary(
+            vertices=np.array(
+                [
+                    [0.0, 0.0],
+                    [100.0, 0.0],
+                    [100.0, 50.0],
+                    [50.0, 50.0],
+                    [50.0, 100.0],
+                    [0.0, 100.0],
+                ]
+            )
+        )
 
         result = gen.generate(boundary, max_area=200.0)
 
@@ -169,12 +194,16 @@ class TestGmshMeshGenerator:
         """Test converting result to AppGrid."""
         gen = GmshMeshGenerator(element_type="triangle")
 
-        boundary = Boundary(vertices=np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ]))
+        boundary = Boundary(
+            vertices=np.array(
+                [
+                    [0.0, 0.0],
+                    [100.0, 0.0],
+                    [100.0, 100.0],
+                    [0.0, 100.0],
+                ]
+            )
+        )
 
         result = gen.generate(boundary, max_area=500.0)
         grid = result.to_appgrid()
@@ -186,12 +215,16 @@ class TestGmshMeshGenerator:
         """Test that generated elements have reasonable quality."""
         gen = GmshMeshGenerator(element_type="triangle")
 
-        boundary = Boundary(vertices=np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ]))
+        boundary = Boundary(
+            vertices=np.array(
+                [
+                    [0.0, 0.0],
+                    [100.0, 0.0],
+                    [100.0, 100.0],
+                    [0.0, 100.0],
+                ]
+            )
+        )
 
         result = gen.generate(boundary, max_area=200.0, min_angle=20.0)
 

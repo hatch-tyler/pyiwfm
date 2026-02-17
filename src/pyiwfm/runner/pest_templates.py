@@ -10,13 +10,10 @@ with parameter values during model runs.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
-
-import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from pyiwfm.runner.pest import TemplateFile
 from pyiwfm.runner.pest_params import (
@@ -115,7 +112,7 @@ class IWFMTemplateManager:
     def __init__(
         self,
         model: Any = None,
-        parameter_manager: "IWFMParameterManager | None" = None,
+        parameter_manager: IWFMParameterManager | None = None,
         output_dir: Path | str | None = None,
         delimiter: str = "#",
     ):
@@ -211,11 +208,9 @@ class IWFMTemplateManager:
         template_lines = [f"ptf {self.delimiter}"]
 
         # Process each line
-        markers = []
+        markers: list[TemplateMarker] = []
         for i, line in enumerate(lines):
-            new_line = self._replace_values_in_line(
-                line, param_values, markers, i + 1
-            )
+            new_line = self._replace_values_in_line(line, param_values, markers, i + 1)
             template_lines.append(new_line)
 
         # Write template
@@ -382,10 +377,7 @@ class IWFMTemplateManager:
         if self.pm is not None:
             params = self.pm.get_parameters_by_type(param_type)
             # Filter to reach parameters (have reach_id in metadata)
-            parameters = [
-                p for p in params
-                if p.metadata.get("reach_id") is not None
-            ]
+            parameters = [p for p in params if p.metadata.get("reach_id") is not None]
 
         if not parameters:
             raise ValueError(f"No stream parameters found for {param_type.value}")
@@ -638,10 +630,7 @@ class IWFMTemplateManager:
         parameters = []
         if self.pm is not None:
             params = self.pm.get_pilot_point_parameters()
-            parameters = [
-                p for p in params
-                if p.param_type == param_type and p.layer == layer
-            ]
+            parameters = [p for p in params if p.param_type == param_type and p.layer == layer]
 
         if not parameters:
             raise ValueError(
@@ -740,10 +729,7 @@ class IWFMTemplateManager:
         if self.pm is not None:
             params = self.pm.get_parameters_by_type(param_type)
             # Filter to parameters with land_use_type metadata
-            parameters = [
-                p for p in params
-                if p.metadata.get("land_use_type") is not None
-            ]
+            parameters = [p for p in params if p.metadata.get("land_use_type") is not None]
 
         if not parameters:
             raise ValueError(f"No root zone parameters found for {param_type.value}")
@@ -827,7 +813,7 @@ class IWFMTemplateManager:
         input_files = input_files or {}
 
         # Group parameters by type
-        param_types = {}
+        param_types: dict[IWFMParameterType, list[Any]] = {}
         for param in self.pm.get_all_parameters():
             if param.param_type is not None:
                 pt = param.param_type
@@ -839,7 +825,7 @@ class IWFMTemplateManager:
             # Check for pilot points
             pp_params = [p for p in params if p.location is not None]
             if pp_params:
-                layers = set(p.layer for p in pp_params if p.layer is not None)
+                layers = {p.layer for p in pp_params if p.layer is not None}
                 for layer in layers:
                     try:
                         tpl = self.generate_pilot_point_template(param_type, layer=layer)
@@ -920,13 +906,15 @@ class IWFMTemplateManager:
                     marker = f"{self.delimiter}{param_name:^12s}{self.delimiter}"
                     start = result.find(pattern)
                     end = start + len(pattern)
-                    markers.append(TemplateMarker(
-                        parameter_name=param_name,
-                        line_number=line_number,
-                        column_start=start,
-                        column_end=end,
-                        original_value=pattern,
-                    ))
+                    markers.append(
+                        TemplateMarker(
+                            parameter_name=param_name,
+                            line_number=line_number,
+                            column_start=start,
+                            column_end=end,
+                            original_value=pattern,
+                        )
+                    )
                     result = result.replace(pattern, marker, 1)
                     break
 

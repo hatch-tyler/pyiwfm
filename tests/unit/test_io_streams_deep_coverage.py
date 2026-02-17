@@ -13,22 +13,16 @@ from textwrap import dedent
 
 import pytest
 
+from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.streams import (
     StreamMainFileReader,
-    StreamMainFileConfig,
-    StreamBedParamRow,
-    CrossSectionRow,
-    StreamInitialConditionRow,
+    StreamReader,
     StreamSpecReader,
-    StreamReachSpec,
+    parse_stream_version,
     read_stream_main_file,
     read_stream_spec,
-    parse_stream_version,
     stream_version_ge,
-    StreamReader,
 )
-from pyiwfm.core.exceptions import FileFormatError
-
 
 # =============================================================================
 # Helpers
@@ -477,7 +471,7 @@ class TestStreamMainFileReaderEdgeCases:
         )
         reader = StreamMainFileReader()
         # Directly test _read_version
-        with open(fpath, "r") as f:
+        with open(fpath) as f:
             version = reader._read_version(f)
         # The blank lines are skipped, comment is skipped, then #4.2 found
         assert version == "4.2"
@@ -494,7 +488,7 @@ class TestStreamMainFileReaderEdgeCases:
             """,
         )
         reader = StreamMainFileReader()
-        with open(fpath, "r") as f:
+        with open(fpath) as f:
             version = reader._read_version(f)
         # "4.2" doesn't start with # and is not a comment -> break -> return ""
         assert version == ""

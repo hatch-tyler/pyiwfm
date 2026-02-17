@@ -29,11 +29,10 @@ import numpy as np
 import pytest
 
 from pyiwfm.io.gw_writer import (
-    GWWriterConfig,
     GWComponentWriter,
+    GWWriterConfig,
     write_gw_component,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -110,8 +109,13 @@ def model_with_full_gw():
 
     # Tile drains
     drain1 = SimpleNamespace(
-        id=1, element=3, gw_node=3, elevation=75.0,
-        conductance=0.01, dest_type=1, destination_id=10,
+        id=1,
+        element=3,
+        gw_node=3,
+        elevation=75.0,
+        conductance=0.01,
+        dest_type=1,
+        destination_id=10,
     )
     gw.tile_drains = {1: drain1}
     gw.td_elev_factor = 1.0
@@ -214,9 +218,7 @@ class TestGWWriteAll:
     ) -> None:
         """write_all() skips bc_main when boundary_conditions is empty."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_empty_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_empty_gw, config, template_engine=mock_engine)
         results = writer.write_all()
         assert "main" in results
         assert "bc_main" not in results
@@ -226,9 +228,7 @@ class TestGWWriteAll:
     ) -> None:
         """write_all() skips pump_main when no wells or element pumping."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_empty_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_empty_gw, config, template_engine=mock_engine)
         results = writer.write_all()
         assert "pump_main" not in results
 
@@ -237,9 +237,7 @@ class TestGWWriteAll:
     ) -> None:
         """write_all() skips tile_drains when tile_drains is empty."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_empty_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_empty_gw, config, template_engine=mock_engine)
         results = writer.write_all()
         assert "tile_drains" not in results
 
@@ -248,9 +246,7 @@ class TestGWWriteAll:
     ) -> None:
         """write_all() skips subsidence when subsidence is empty list."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_empty_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_empty_gw, config, template_engine=mock_engine)
         results = writer.write_all()
         assert "subsidence" not in results
 
@@ -259,9 +255,7 @@ class TestGWWriteAll:
     ) -> None:
         """write_all() includes all files when full GW data is present."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_full_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_full_gw, config, template_engine=mock_engine)
         results = writer.write_all()
         assert "main" in results
         assert "bc_main" in results
@@ -283,9 +277,7 @@ class TestGWWriteMain:
     ) -> None:
         """write_main() creates the main output file."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_empty_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_empty_gw, config, template_engine=mock_engine)
         path = writer.write_main()
         assert path.exists()
         assert path == config.main_path
@@ -295,9 +287,7 @@ class TestGWWriteMain:
     ) -> None:
         """write_main() output contains aquifer parameter data rows."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_full_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_full_gw, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
         # Should contain node IDs and aquifer params
@@ -313,9 +303,7 @@ class TestGWWriteBcMain:
     ) -> None:
         """write_bc_main() creates the BC main file."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_full_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_full_gw, config, template_engine=mock_engine)
         path = writer.write_bc_main()
         assert path.exists()
         assert path == config.bc_main_path
@@ -329,9 +317,7 @@ class TestGWWritePumpMain:
     ) -> None:
         """write_pump_main() creates the pumping main file."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_full_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_full_gw, config, template_engine=mock_engine)
         path = writer.write_pump_main()
         assert path.exists()
         assert path == config.pump_main_path
@@ -345,9 +331,7 @@ class TestGWWriteTileDrains:
     ) -> None:
         """write_tile_drains() creates the tile drain file."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_full_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_full_gw, config, template_engine=mock_engine)
         path = writer.write_tile_drains()
         assert path.exists()
 
@@ -360,9 +344,7 @@ class TestGWWriteSubsidence:
     ) -> None:
         """write_subsidence() creates the subsidence file."""
         config = GWWriterConfig(output_dir=tmp_path)
-        writer = GWComponentWriter(
-            model_with_full_gw, config, template_engine=mock_engine
-        )
+        writer = GWComponentWriter(model_with_full_gw, config, template_engine=mock_engine)
         path = writer.write_subsidence()
         assert path.exists()
 

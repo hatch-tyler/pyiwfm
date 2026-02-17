@@ -10,10 +10,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from pyiwfm.runner.results import (
-    RunResult,
-    PreprocessorResult,
-    SimulationResult,
     BudgetResult,
+    PreprocessorResult,
+    RunResult,
+    SimulationResult,
     ZBudgetResult,
 )
 from pyiwfm.runner.runner import (
@@ -179,7 +179,7 @@ class TestIWFMExecutables:
     def test_available_property(self):
         """Test available property lists found executables."""
         # Create executables with None values
-        exes = IWFMExecutables()
+        IWFMExecutables()
         # All should be None after __post_init__ validates non-existent paths
         # Note: If a path is set but doesn't exist, __post_init__ sets it to None
         # But if we set it after init, it won't be validated
@@ -466,9 +466,7 @@ class TestFindExecutablesExtended:
 
     def test_with_nonexistent_search_paths(self):
         """Test search with non-existent directories."""
-        exes = find_iwfm_executables(
-            search_paths=[Path("/nonexistent/path/xyz")]
-        )
+        exes = find_iwfm_executables(search_paths=[Path("/nonexistent/path/xyz")])
         assert isinstance(exes, IWFMExecutables)
 
     def test_with_empty_env_var(self, monkeypatch):
@@ -644,9 +642,7 @@ class TestIWFMRunnerExtended:
         exe_path = tmp_path / "Test.exe"
         exe_path.touch()
 
-        code, stdout, stderr, elapsed = runner._run_executable(
-            exe_path, "input\n", tmp_path
-        )
+        code, stdout, stderr, elapsed = runner._run_executable(exe_path, "input\n", tmp_path)
 
         assert code == -1
         assert "Permission denied" in stderr
@@ -654,22 +650,18 @@ class TestIWFMRunnerExtended:
     @patch("subprocess.run")
     def test_run_executable_with_env(self, mock_run, tmp_path):
         """Test _run_executable passes environment variables."""
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="OK", stderr=""
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout="OK", stderr="")
 
         runner = IWFMRunner()
         exe_path = tmp_path / "Test.exe"
         exe_path.touch()
 
-        runner._run_executable(
-            exe_path, "input\n", tmp_path,
-            env={"MY_VAR": "value"}
-        )
+        runner._run_executable(exe_path, "input\n", tmp_path, env={"MY_VAR": "value"})
 
         call_kwargs = mock_run.call_args
-        assert "MY_VAR" in call_kwargs.kwargs.get("env", {}) or \
-               "MY_VAR" in call_kwargs[1].get("env", {})
+        assert "MY_VAR" in call_kwargs.kwargs.get("env", {}) or "MY_VAR" in call_kwargs[1].get(
+            "env", {}
+        )
 
     @patch("subprocess.run")
     def test_run_executable_timeout_none_stdout(self, mock_run, tmp_path):
@@ -837,9 +829,7 @@ class TestIWFMRunnerExtended:
         work_dir = tmp_path / "work"
         work_dir.mkdir()
 
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="", stderr=""
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 
         exes = IWFMExecutables(simulation=exe)
         runner = IWFMRunner(executables=exes)
@@ -910,7 +900,8 @@ class TestRunResultExtended:
     def test_log_file_string_conversion(self):
         """Test log_file string is converted to Path."""
         result = RunResult(
-            success=True, return_code=0,
+            success=True,
+            return_code=0,
             log_file="C:/path/to/log.out",
         )
         assert isinstance(result.log_file, Path)
@@ -947,7 +938,8 @@ class TestPreprocessorResultExtended:
     def test_inherits_raise_on_error(self):
         """Test raise_on_error inherited from RunResult."""
         result = PreprocessorResult(
-            success=False, return_code=1,
+            success=False,
+            return_code=1,
             errors=["Preprocessor failed"],
         )
         with pytest.raises(RuntimeError, match="Preprocessor failed"):
@@ -1045,7 +1037,8 @@ class TestBudgetResultExtended:
     def test_inherits_failed_and_raise(self):
         """Test inherited methods work correctly."""
         result = BudgetResult(
-            success=False, return_code=1,
+            success=False,
+            return_code=1,
             stderr="Budget processing failed",
         )
         assert result.failed is True
@@ -1085,7 +1078,8 @@ class TestZBudgetResultExtended:
     def test_inherits_failed_and_raise(self):
         """Test inherited methods work correctly."""
         result = ZBudgetResult(
-            success=False, return_code=1,
+            success=False,
+            return_code=1,
             errors=["Zone processing error"],
         )
         assert result.failed is True

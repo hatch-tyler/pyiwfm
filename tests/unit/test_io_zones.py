@@ -17,17 +17,16 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from pyiwfm.core.zones import Zone, ZoneDefinition
 from pyiwfm.io.zones import (
-    read_iwfm_zone_file,
-    write_iwfm_zone_file,
-    read_geojson_zones,
-    write_geojson_zones,
     auto_detect_zone_file,
+    read_geojson_zones,
+    read_iwfm_zone_file,
     read_zone_file,
+    write_geojson_zones,
+    write_iwfm_zone_file,
     write_zone_file,
 )
-from pyiwfm.core.zones import Zone, ZoneDefinition
-
 
 # =============================================================================
 # Test IWFM Zone File Reading
@@ -481,9 +480,7 @@ class TestWriteZoneFile:
         element_zones = np.array([1, 1], dtype=np.int32)
         return ZoneDefinition(zones=zones, element_zones=element_zones)
 
-    def test_write_iwfm_by_extension(
-        self, sample_zone_def: ZoneDefinition, tmp_path: Path
-    ) -> None:
+    def test_write_iwfm_by_extension(self, sample_zone_def: ZoneDefinition, tmp_path: Path) -> None:
         """Test writing IWFM format by extension."""
         output_file = tmp_path / "output.dat"
 
@@ -506,9 +503,7 @@ class TestWriteZoneFile:
             geojson = json.load(f)
         assert geojson["type"] == "FeatureCollection"
 
-    def test_write_txt_as_iwfm(
-        self, sample_zone_def: ZoneDefinition, tmp_path: Path
-    ) -> None:
+    def test_write_txt_as_iwfm(self, sample_zone_def: ZoneDefinition, tmp_path: Path) -> None:
         """Test .txt extension writes IWFM format."""
         output_file = tmp_path / "output.txt"
 
@@ -653,7 +648,7 @@ class TestWriteGeojsonZonesWithGrid:
 
     def test_write_with_convex_hull(self, tmp_path: Path) -> None:
         """Test writing GeoJSON with grid geometry (convex hull)."""
-        from pyiwfm.core.mesh import AppGrid, Node, Element
+        from pyiwfm.core.mesh import AppGrid, Element, Node
 
         # Arrange elements so centroids are NOT collinear
         #   elem 1 centroid: (50, 50)
@@ -695,7 +690,7 @@ class TestWriteGeojsonZonesWithGrid:
 
     def test_write_single_element_zone(self, tmp_path: Path) -> None:
         """Test writing zone with single element (point geometry)."""
-        from pyiwfm.core.mesh import AppGrid, Node, Element
+        from pyiwfm.core.mesh import AppGrid, Element, Node
 
         nodes = {
             1: Node(id=1, x=0.0, y=0.0),

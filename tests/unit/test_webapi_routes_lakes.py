@@ -8,7 +8,7 @@ various property edge cases.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -16,12 +16,11 @@ import pytest
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 pydantic = pytest.importorskip("pydantic", reason="Pydantic not available")
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
-from pyiwfm.core.mesh import AppGrid, Element, Node
-from pyiwfm.visualization.webapi.config import ModelState, model_state
-from pyiwfm.visualization.webapi.server import create_app
-
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.visualization.webapi.config import model_state  # noqa: E402
+from pyiwfm.visualization.webapi.server import create_app  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -47,9 +46,17 @@ def _reset_model_state():
     model_state._observations = {}
     model_state._results_dir = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
 
@@ -247,18 +254,14 @@ class TestLakesGeojsonNoModel:
 class TestLakesGeojsonNoLakes:
     """Tests for /api/lakes/geojson when model has no lakes."""
 
-    def test_lakes_is_none_returns_empty_feature_collection(
-        self, client_with_model_no_lakes
-    ):
+    def test_lakes_is_none_returns_empty_feature_collection(self, client_with_model_no_lakes):
         resp = client_with_model_no_lakes.get("/api/lakes/geojson")
         assert resp.status_code == 200
         data = resp.json()
         assert data["type"] == "FeatureCollection"
         assert data["features"] == []
 
-    def test_zero_lakes_returns_empty_feature_collection(
-        self, client_with_empty_lakes
-    ):
+    def test_zero_lakes_returns_empty_feature_collection(self, client_with_empty_lakes):
         resp = client_with_empty_lakes.get("/api/lakes/geojson")
         assert resp.status_code == 200
         data = resp.json()
@@ -406,7 +409,7 @@ class TestLakesGeojsonShortRing:
             # (3 unique + close). That passes the < 4 check.
             # To test ring < 4, we need to manipulate boundary edges.
             # We patch the adjacency walking to produce a short ring.
-            grid = _make_grid()
+            _make_grid()
 
             # Create a degenerate lake whose elements produce only 2 boundary
             # edges (which cannot close into a ring of >= 4).
@@ -633,7 +636,9 @@ class TestLakesGeojsonProperties:
         try:
             grid = _make_grid()
             lake = _make_mock_lake(
-                lake_id=1, elements=[1], name="High Lake",
+                lake_id=1,
+                elements=[1],
+                name="High Lake",
                 max_elevation=1e10,
             )
             lakes_comp = _make_mock_lakes_component({1: lake})
@@ -655,7 +660,9 @@ class TestLakesGeojsonProperties:
         try:
             grid = _make_grid()
             lake = _make_mock_lake(
-                lake_id=1, elements=[1], name="Very High Lake",
+                lake_id=1,
+                elements=[1],
+                name="Very High Lake",
                 max_elevation=2e10,
             )
             lakes_comp = _make_mock_lakes_component({1: lake})
@@ -677,7 +684,9 @@ class TestLakesGeojsonProperties:
         try:
             grid = _make_grid()
             lake = _make_mock_lake(
-                lake_id=1, elements=[1], name="Normal Lake",
+                lake_id=1,
+                elements=[1],
+                name="Normal Lake",
                 max_elevation=500.0,
             )
             lakes_comp = _make_mock_lakes_component({1: lake})
@@ -704,7 +713,10 @@ class TestLakesGeojsonProperties:
                 volumes=[0.0, 2500.0, 7000.0, 15000.0],
             )
             lake = _make_mock_lake(
-                lake_id=1, elements=[1], name="Rated Lake", rating=rating,
+                lake_id=1,
+                elements=[1],
+                name="Rated Lake",
+                rating=rating,
             )
             lakes_comp = _make_mock_lakes_component({1: lake})
             model = _make_mock_model(grid=grid, lakes=lakes_comp)
@@ -873,7 +885,10 @@ class TestLakeRatingValid:
                 volumes=[5000.0, 15000.0, 30000.0],
             )
             lake = _make_mock_lake(
-                lake_id=1, elements=[1], name="Rated Lake", rating=rating,
+                lake_id=1,
+                elements=[1],
+                name="Rated Lake",
+                rating=rating,
             )
             lakes_comp = _make_mock_lakes_component({1: lake})
             model = _make_mock_model(grid=grid, lakes=lakes_comp)
@@ -899,7 +914,10 @@ class TestLakeRatingValid:
             grid = _make_grid()
             rating = _make_mock_rating()
             lake = _make_mock_lake(
-                lake_id=5, elements=[1], name=None, rating=rating,
+                lake_id=5,
+                elements=[1],
+                name=None,
+                rating=rating,
             )
             lakes_comp = _make_mock_lakes_component({5: lake})
             model = _make_mock_model(grid=grid, lakes=lakes_comp)
@@ -920,7 +938,10 @@ class TestLakeRatingValid:
             grid = _make_grid()
             rating = _make_mock_rating()
             lake = _make_mock_lake(
-                lake_id=3, elements=[1], name="", rating=rating,
+                lake_id=3,
+                elements=[1],
+                name="",
+                rating=rating,
             )
             lakes_comp = _make_mock_lakes_component({3: lake})
             model = _make_mock_model(grid=grid, lakes=lakes_comp)
@@ -949,7 +970,10 @@ class TestLakeRatingValid:
             rating.volumes = volumes
 
             lake = _make_mock_lake(
-                lake_id=1, elements=[1], name="Big Rating Lake", rating=rating,
+                lake_id=1,
+                elements=[1],
+                name="Big Rating Lake",
+                rating=rating,
             )
             lakes_comp = _make_mock_lakes_component({1: lake})
             model = _make_mock_model(grid=grid, lakes=lakes_comp)

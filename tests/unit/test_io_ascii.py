@@ -2,23 +2,22 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
+from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.io.ascii import (
-    read_nodes,
     read_elements,
+    read_nodes,
     read_stratigraphy,
-    write_nodes,
     write_elements,
+    write_nodes,
     write_stratigraphy,
 )
-from pyiwfm.core.exceptions import FileFormatError
 
 
 class TestReadNodes:
@@ -196,9 +195,9 @@ C  Node  GS     Aqt1   Aqu1   Aqt2   Aqu2
         np.testing.assert_allclose(strat.gs_elev, [100.0, 100.0, 100.0, 100.0])
         # Verify computed elevations
         np.testing.assert_allclose(strat.top_elev[:, 0], [100.0, 100.0, 100.0, 100.0])  # L1 top
-        np.testing.assert_allclose(strat.bottom_elev[:, 0], [50.0, 50.0, 50.0, 50.0])   # L1 bottom
-        np.testing.assert_allclose(strat.top_elev[:, 1], [50.0, 50.0, 50.0, 50.0])      # L2 top
-        np.testing.assert_allclose(strat.bottom_elev[:, 1], [0.0, 0.0, 0.0, 0.0])       # L2 bottom
+        np.testing.assert_allclose(strat.bottom_elev[:, 0], [50.0, 50.0, 50.0, 50.0])  # L1 bottom
+        np.testing.assert_allclose(strat.top_elev[:, 1], [50.0, 50.0, 50.0, 50.0])  # L2 top
+        np.testing.assert_allclose(strat.bottom_elev[:, 1], [0.0, 0.0, 0.0, 0.0])  # L2 bottom
 
 
 class TestWriteNodes:
@@ -222,9 +221,7 @@ class TestWriteNodes:
         assert nodes_back[1].x == pytest.approx(0.0)
         assert nodes_back[2].x == pytest.approx(100.0)
 
-    def test_write_nodes_roundtrip(
-        self, tmp_path: Path, small_grid_nodes: list[dict]
-    ) -> None:
+    def test_write_nodes_roundtrip(self, tmp_path: Path, small_grid_nodes: list[dict]) -> None:
         """Test node write/read roundtrip preserves data."""
         nodes = {d["id"]: Node(**d) for d in small_grid_nodes}
 
@@ -333,7 +330,7 @@ class TestMeshRoundtrip:
 # Additional coverage tests
 # =============================================================================
 
-from pyiwfm.io.ascii import _is_comment_line, _strip_comment, COMMENT_CHARS
+from pyiwfm.io.ascii import _is_comment_line, _strip_comment  # noqa: E402
 
 
 class TestIsCommentLine:

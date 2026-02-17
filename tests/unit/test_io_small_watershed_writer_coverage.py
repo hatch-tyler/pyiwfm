@@ -27,7 +27,6 @@ from pyiwfm.io.small_watershed_writer import (
     write_small_watershed_component,
 )
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -183,9 +182,7 @@ class TestSmallWatershedFormatProperty:
     ) -> None:
         """format property returns 'iwfm_small_watershed'."""
         config = SmallWatershedWriterConfig(output_dir=tmp_path)
-        writer = SmallWatershedComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = SmallWatershedComponentWriter(bare_model, config, template_engine=mock_engine)
         assert writer.format == "iwfm_small_watershed"
 
 
@@ -202,9 +199,7 @@ class TestSmallWatershedWriteDelegation:
     ) -> None:
         """write() calls write_all() internally."""
         config = SmallWatershedWriterConfig(output_dir=tmp_path)
-        writer = SmallWatershedComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = SmallWatershedComponentWriter(bare_model, config, template_engine=mock_engine)
         with patch.object(writer, "write_all") as mock_write_all:
             writer.write()
             mock_write_all.assert_called_once()
@@ -223,9 +218,7 @@ class TestSmallWatershedWriteAll:
     ) -> None:
         """write_all(write_defaults=False) returns empty dict when no component."""
         config = SmallWatershedWriterConfig(output_dir=tmp_path)
-        writer = SmallWatershedComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = SmallWatershedComponentWriter(bare_model, config, template_engine=mock_engine)
         results = writer.write_all(write_defaults=False)
         assert results == {}
 
@@ -234,9 +227,7 @@ class TestSmallWatershedWriteAll:
     ) -> None:
         """write_all(write_defaults=True) writes main file even without component."""
         config = SmallWatershedWriterConfig(output_dir=tmp_path)
-        writer = SmallWatershedComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = SmallWatershedComponentWriter(bare_model, config, template_engine=mock_engine)
         results = writer.write_all(write_defaults=True)
         assert "main" in results
         assert results["main"].exists()
@@ -271,9 +262,7 @@ class TestSmallWatershedWriteMain:
     ) -> None:
         """write_main() with sw=None produces ws_list=[] and n_watersheds=0."""
         config = SmallWatershedWriterConfig(output_dir=tmp_path)
-        writer = SmallWatershedComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = SmallWatershedComponentWriter(bare_model, config, template_engine=mock_engine)
         path = writer.write_main()
         assert path.exists()
         render_call = mock_engine.render_template.call_args
@@ -390,9 +379,7 @@ class TestWriteSmallWatershedConvenience:
             "pyiwfm.io.small_watershed_writer.TemplateEngine",
             return_value=mock_engine,
         ):
-            results = write_small_watershed_component(
-                bare_model, tmp_path, config=custom_config
-            )
+            results = write_small_watershed_component(bare_model, tmp_path, config=custom_config)
         # output_dir should be overwritten to tmp_path
         assert custom_config.output_dir == tmp_path
         assert "main" in results

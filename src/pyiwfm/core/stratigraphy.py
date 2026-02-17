@@ -8,7 +8,7 @@ Class_Stratigraphy.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -76,16 +76,12 @@ class Stratigraphy:
     def _check_layer_index(self, layer: int) -> None:
         """Check if layer index is valid."""
         if layer < 0 or layer >= self.n_layers:
-            raise IndexError(
-                f"Layer index {layer} out of range [0, {self.n_layers - 1}]"
-            )
+            raise IndexError(f"Layer index {layer} out of range [0, {self.n_layers - 1}]")
 
     def _check_node_index(self, node_idx: int) -> None:
         """Check if node index is valid."""
         if node_idx < 0 or node_idx >= self.n_nodes:
-            raise IndexError(
-                f"Node index {node_idx} out of range [0, {self.n_nodes - 1}]"
-            )
+            raise IndexError(f"Node index {node_idx} out of range [0, {self.n_nodes - 1}]")
 
     def get_layer_thickness(self, layer: int) -> NDArray[np.float64]:
         """
@@ -135,9 +131,7 @@ class Stratigraphy:
         self._check_layer_index(layer)
         return self.bottom_elev[:, layer]
 
-    def get_node_elevations(
-        self, node_idx: int
-    ) -> tuple[float, list[float], list[float]]:
+    def get_node_elevations(self, node_idx: int) -> tuple[float, list[float], list[float]]:
         """
         Get all elevations for a specific node.
 
@@ -249,8 +243,7 @@ class Stratigraphy:
             if np.any(thickness < 0):
                 negative_nodes = np.where(thickness < 0)[0]
                 raise StratigraphyError(
-                    f"Layer {layer} has negative thickness at nodes: "
-                    f"{negative_nodes.tolist()}"
+                    f"Layer {layer} has negative thickness at nodes: {negative_nodes.tolist()}"
                 )
 
         # Check for layer discontinuities (gaps between layers)

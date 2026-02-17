@@ -10,22 +10,19 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-from numpy.typing import NDArray
 
 from pyiwfm.io.dss.wrapper import (
+    HECDSS_LIB_ENV,
+    IFLTAB_SIZE,
     DSSFile,
     DSSFileError,
     DSSFileMock,
     DSSLibraryError,
     DSSTimeSeriesInfo,
-    HAS_DSS_LIBRARY,
-    HECDSS_LIB_ENV,
-    IFLTAB_SIZE,
     _get_library_path,
     _load_library,
     check_dss_available,
@@ -314,9 +311,7 @@ class TestDSSFileMethods:
                             )
                         assert "not open for writing" in str(exc_info.value)
 
-    def test_write_regular_timeseries(
-        self, tmp_path: Path, mock_lib: MagicMock
-    ) -> None:
+    def test_write_regular_timeseries(self, tmp_path: Path, mock_lib: MagicMock) -> None:
         """Test write_regular_timeseries."""
         with patch("pyiwfm.io.dss.wrapper.HAS_DSS_LIBRARY", True):
             with patch("pyiwfm.io.dss.wrapper.check_dss_available"):
@@ -358,9 +353,7 @@ class TestDSSFileMethods:
             dss_file.get_timeseries_info("/A/B/C/D/E/F/")
         assert "not open" in str(exc_info.value)
 
-    def test_get_timeseries_info(
-        self, tmp_path: Path, mock_lib: MagicMock
-    ) -> None:
+    def test_get_timeseries_info(self, tmp_path: Path, mock_lib: MagicMock) -> None:
         """Test get_timeseries_info returns empty info for missing record."""
         # zstructTsNewTimes returns None → early return with default info
         mock_lib.zstructTsNewTimes.return_value = None
@@ -413,9 +406,7 @@ class TestDSSFileJulianConversion:
                     times = dss._julian_to_datetime(julian, minutes)
                     assert len(times) == 1
 
-    def test_julian_to_datetime_multiple(
-        self, tmp_path: Path, mock_lib: MagicMock
-    ) -> None:
+    def test_julian_to_datetime_multiple(self, tmp_path: Path, mock_lib: MagicMock) -> None:
         """Test _julian_to_datetime with multiple values."""
         with patch("pyiwfm.io.dss.wrapper.HAS_DSS_LIBRARY", True):
             with patch("pyiwfm.io.dss.wrapper.check_dss_available"):

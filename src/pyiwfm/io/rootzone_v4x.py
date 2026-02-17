@@ -16,18 +16,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
 
-from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     LineBuffer as _LineBuffer,
-    is_comment_line as _is_comment_line,
-    strip_inline_comment as _strip_comment,
 )
 from pyiwfm.io.iwfm_writer import (
     ensure_parent_dir as _ensure_parent_dir,
+)
+from pyiwfm.io.iwfm_writer import (
     write_comment as _write_comment,
 )
-
 
 # =====================================================================
 # Helper data classes
@@ -210,9 +207,7 @@ class NativeRiparianConfigV4x:
     native_root_depth: float = 0.0
     riparian_root_depth: float = 0.0
     element_data: list[NativeRiparianElementRowV4x] = field(default_factory=list)
-    initial_conditions: list[NativeRiparianInitialRowV4x] = field(
-        default_factory=list
-    )
+    initial_conditions: list[NativeRiparianInitialRowV4x] = field(default_factory=list)
 
 
 # =====================================================================
@@ -229,7 +224,7 @@ class _V4xReaderBase:
     @staticmethod
     def _make_buffer(filepath: Path | str) -> _LineBuffer:
         filepath = Path(filepath)
-        with open(filepath, "r") as fh:
+        with open(filepath) as fh:
             lines = fh.readlines()
         return _LineBuffer(lines)
 
@@ -243,9 +238,7 @@ class _V4xReaderBase:
             return p
         return base_dir / p
 
-    def _read_element_table(
-        self, buf: _LineBuffer, n_values: int
-    ) -> list[ElementCropRow]:
+    def _read_element_table(self, buf: _LineBuffer, n_values: int) -> list[ElementCropRow]:
         """Read *n_elements* rows each with *element_id + n_values* cols.
 
         Handles the IWFM ``IE=0`` shorthand: when the first row has
@@ -344,9 +337,7 @@ class NonPondedCropReaderV4x(_V4xReaderBase):
             cfg.rz_budget_file = self._resolve_path(base_dir, buf.next_data())
 
         # 9. Root depth fractions file
-        cfg.root_depth_fractions_file = self._resolve_path(
-            base_dir, buf.next_data()
-        )
+        cfg.root_depth_fractions_file = self._resolve_path(base_dir, buf.next_data())
 
         # 10. Root depth factor
         cfg.root_depth_factor = float(buf.next_data())
@@ -376,9 +367,7 @@ class NonPondedCropReaderV4x(_V4xReaderBase):
         cfg.irrigation_pointers = self._read_element_table(buf, cfg.n_crops)
 
         # 16. Min soil moisture file
-        cfg.min_soil_moisture_file = self._resolve_path(
-            base_dir, buf.next_data()
-        )
+        cfg.min_soil_moisture_file = self._resolve_path(base_dir, buf.next_data())
 
         # 17. Min moisture pointers
         cfg.min_moisture_pointers = self._read_element_table(buf, cfg.n_crops)
@@ -389,9 +378,7 @@ class NonPondedCropReaderV4x(_V4xReaderBase):
 
         # 19. Target moisture pointers (if target file given)
         if cfg.target_soil_moisture_file is not None:
-            cfg.target_moisture_pointers = self._read_element_table(
-                buf, cfg.n_crops
-            )
+            cfg.target_moisture_pointers = self._read_element_table(buf, cfg.n_crops)
 
         # 20. Return flow fraction pointers
         cfg.return_flow_pointers = self._read_element_table(buf, cfg.n_crops)
@@ -408,9 +395,7 @@ class NonPondedCropReaderV4x(_V4xReaderBase):
             cfg.leaching_pointers = self._read_element_table(buf, cfg.n_crops)
 
         # 24. Initial conditions
-        cfg.initial_conditions = self._read_ag_initial_conditions(
-            buf, cfg.n_crops
-        )
+        cfg.initial_conditions = self._read_ag_initial_conditions(buf, cfg.n_crops)
 
         return cfg
 
@@ -529,14 +514,10 @@ class UrbanReaderV4x(_V4xReaderBase):
         cfg.population_file = self._resolve_path(base_dir, buf.next_data())
 
         # Per-capita water use file
-        cfg.per_capita_water_use_file = self._resolve_path(
-            base_dir, buf.next_data()
-        )
+        cfg.per_capita_water_use_file = self._resolve_path(base_dir, buf.next_data())
 
         # Water use specs file
-        cfg.water_use_specs_file = self._resolve_path(
-            base_dir, buf.next_data()
-        )
+        cfg.water_use_specs_file = self._resolve_path(base_dir, buf.next_data())
 
         # Element data (NElements rows x 10 cols)
         for _ in range(self.n_elements):
@@ -614,9 +595,7 @@ class NativeRiparianReaderV4x(_V4xReaderBase):
                     riparian_cn=float(parts[2]),
                     native_etc_column=int(parts[3]),
                     riparian_etc_column=int(parts[4]),
-                    riparian_stream_node=(
-                        int(parts[5]) if len(parts) > 5 else 0
-                    ),
+                    riparian_stream_node=(int(parts[5]) if len(parts) > 5 else 0),
                 )
             )
 
@@ -661,22 +640,16 @@ class _V4xWriterBase:
             f.write(f"   {val}\n")
 
     @staticmethod
-    def _write_element_table(
-        f: TextIO, rows: list[ElementCropRow]
-    ) -> None:
+    def _write_element_table(f: TextIO, rows: list[ElementCropRow]) -> None:
         for row in rows:
             vals = " ".join(f"{v:>10.4f}" for v in row.values)
             f.write(f"   {row.element_id:<6} {vals}\n")
 
     @staticmethod
-    def _write_ag_initial_conditions(
-        f: TextIO, rows: list[AgInitialConditionRow]
-    ) -> None:
+    def _write_ag_initial_conditions(f: TextIO, rows: list[AgInitialConditionRow]) -> None:
         for row in rows:
             mcs = " ".join(f"{v:>10.6f}" for v in row.moisture_contents)
-            f.write(
-                f"   {row.element_id:<6} {row.precip_fraction:>10.4f} {mcs}\n"
-            )
+            f.write(f"   {row.element_id:<6} {row.precip_fraction:>10.4f} {mcs}\n")
 
 
 class NonPondedCropWriterV4x(_V4xWriterBase):
@@ -693,9 +666,7 @@ class NonPondedCropWriterV4x(_V4xWriterBase):
             self._write_data(f, str(cfg.n_crops), "NCROPS")
 
             # 2. Demand-from-moisture flag
-            self._write_data(
-                f, str(cfg.demand_from_moisture_flag), "DEMAND_FROM_MOISTURE"
-            )
+            self._write_data(f, str(cfg.demand_from_moisture_flag), "DEMAND_FROM_MOISTURE")
 
             # 3. Crop codes
             self._write_comment(f, "Crop codes")
@@ -716,9 +687,7 @@ class NonPondedCropWriterV4x(_V4xWriterBase):
                 self._write_path(f, cfg.rz_budget_file, "RZ_BUDGET")
 
             # 9. Root depth fractions file
-            self._write_path(
-                f, cfg.root_depth_fractions_file, "ROOT_DEPTH_FRAC_FILE"
-            )
+            self._write_path(f, cfg.root_depth_fractions_file, "ROOT_DEPTH_FRAC_FILE")
 
             # 10. Root depth factor
             self._write_data(f, f"{cfg.root_depth_factor:.4f}", "ROOT_DEPTH_FACTOR")
@@ -727,8 +696,7 @@ class NonPondedCropWriterV4x(_V4xWriterBase):
             self._write_comment(f, "Root depth data: index  max_depth  frac_col")
             for rd in cfg.root_depth_data:
                 f.write(
-                    f"   {rd.crop_index:<6} {rd.max_root_depth:>10.4f}"
-                    f" {rd.fractions_column:>6}\n"
+                    f"   {rd.crop_index:<6} {rd.max_root_depth:>10.4f} {rd.fractions_column:>6}\n"
                 )
 
             # 12. Curve numbers
@@ -748,18 +716,14 @@ class NonPondedCropWriterV4x(_V4xWriterBase):
             self._write_element_table(f, cfg.irrigation_pointers)
 
             # 16. Min soil moisture file
-            self._write_path(
-                f, cfg.min_soil_moisture_file, "MIN_SOIL_MOISTURE_FILE"
-            )
+            self._write_path(f, cfg.min_soil_moisture_file, "MIN_SOIL_MOISTURE_FILE")
 
             # 17. Min moisture pointers
             self._write_comment(f, "Min moisture pointers")
             self._write_element_table(f, cfg.min_moisture_pointers)
 
             # 18. Target soil moisture file
-            self._write_path(
-                f, cfg.target_soil_moisture_file, "TARGET_SOIL_MOISTURE_FILE"
-            )
+            self._write_path(f, cfg.target_soil_moisture_file, "TARGET_SOIL_MOISTURE_FILE")
 
             # 19. Target moisture pointers
             if cfg.target_soil_moisture_file is not None:
@@ -775,9 +739,7 @@ class NonPondedCropWriterV4x(_V4xWriterBase):
             self._write_element_table(f, cfg.reuse_pointers)
 
             # 22. Leaching factors file
-            self._write_path(
-                f, cfg.leaching_factors_file, "LEACHING_FACTORS_FILE"
-            )
+            self._write_path(f, cfg.leaching_factors_file, "LEACHING_FACTORS_FILE")
 
             # 23. Leaching factor pointers
             if cfg.leaching_factors_file is not None:
@@ -794,7 +756,6 @@ class PondedCropWriterV4x(_V4xWriterBase):
 
     def write(self, cfg: PondedCropConfigV4x, filepath: Path) -> None:
         _ensure_parent_dir(filepath)
-        nc = 5
         with open(filepath, "w") as f:
             self._write_comment(f, "Ponded agricultural crop file (v4.x)")
             self._write_comment(f, "Generated by pyiwfm")
@@ -874,9 +835,7 @@ class UrbanWriterV4x(_V4xWriterBase):
             self._write_data(f, f"{cfg.root_depth_factor:.4f}", "ROOT_DEPTH_FACTOR")
             self._write_data(f, f"{cfg.root_depth:.4f}", "ROOT_DEPTH")
             self._write_path(f, cfg.population_file, "POPULATION_FILE")
-            self._write_path(
-                f, cfg.per_capita_water_use_file, "PER_CAPITA_WATER_USE_FILE"
-            )
+            self._write_path(f, cfg.per_capita_water_use_file, "PER_CAPITA_WATER_USE_FILE")
             self._write_path(f, cfg.water_use_specs_file, "WATER_USE_SPECS_FILE")
 
             # Element data
@@ -901,11 +860,11 @@ class UrbanWriterV4x(_V4xWriterBase):
 
             # Initial conditions
             self._write_comment(f, "Initial conditions: IE  PrecipFrac  MC")
-            for row in cfg.initial_conditions:
+            for ic_row in cfg.initial_conditions:
                 f.write(
-                    f"   {row.element_id:<6}"
-                    f" {row.precip_fraction:>10.4f}"
-                    f" {row.moisture_content:>10.6f}\n"
+                    f"   {ic_row.element_id:<6}"
+                    f" {ic_row.precip_fraction:>10.4f}"
+                    f" {ic_row.moisture_content:>10.6f}\n"
                 )
 
 
@@ -920,25 +879,16 @@ class NativeRiparianWriterV4x(_V4xWriterBase):
             self._write_comment(f, "")
 
             self._write_path(f, cfg.area_data_file, "AREA_FILE")
-            self._write_data(
-                f, f"{cfg.root_depth_factor:.4f}", "ROOT_DEPTH_FACTOR"
-            )
-            self._write_data(
-                f, f"{cfg.native_root_depth:.4f}", "NATIVE_ROOT_DEPTH"
-            )
-            self._write_data(
-                f, f"{cfg.riparian_root_depth:.4f}", "RIPARIAN_ROOT_DEPTH"
-            )
+            self._write_data(f, f"{cfg.root_depth_factor:.4f}", "ROOT_DEPTH_FACTOR")
+            self._write_data(f, f"{cfg.native_root_depth:.4f}", "NATIVE_ROOT_DEPTH")
+            self._write_data(f, f"{cfg.riparian_root_depth:.4f}", "RIPARIAN_ROOT_DEPTH")
 
             # Element data — include ISTRMRV column if any row has it
-            has_stream_node = any(
-                row.riparian_stream_node != 0 for row in cfg.element_data
-            )
+            has_stream_node = any(row.riparian_stream_node != 0 for row in cfg.element_data)
             if has_stream_node:
                 self._write_comment(
                     f,
-                    "IE  NativeCN  RiparianCN  NativeEtcCol"
-                    "  RiparianEtcCol  ISTRMRV",
+                    "IE  NativeCN  RiparianCN  NativeEtcCol  RiparianEtcCol  ISTRMRV",
                 )
                 for row in cfg.element_data:
                     f.write(
@@ -964,14 +914,12 @@ class NativeRiparianWriterV4x(_V4xWriterBase):
                     )
 
             # Initial conditions
-            self._write_comment(
-                f, "Initial conditions: IE  NativeMC  RiparianMC"
-            )
-            for row in cfg.initial_conditions:
+            self._write_comment(f, "Initial conditions: IE  NativeMC  RiparianMC")
+            for ic_row in cfg.initial_conditions:
                 f.write(
-                    f"   {row.element_id:<6}"
-                    f" {row.native_moisture:>10.6f}"
-                    f" {row.riparian_moisture:>10.6f}\n"
+                    f"   {ic_row.element_id:<6}"
+                    f" {ic_row.native_moisture:>10.6f}"
+                    f" {ic_row.riparian_moisture:>10.6f}\n"
                 )
 
 

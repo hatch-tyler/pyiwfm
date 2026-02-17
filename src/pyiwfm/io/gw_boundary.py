@@ -20,13 +20,14 @@ from typing import TextIO
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty,
-    resolve_path as _resolve_path_f,
-    strip_inline_comment as _strip_comment,
 )
-
+from pyiwfm.io.iwfm_reader import (
+    next_data_or_empty as _next_data_or_empty,
+)
+from pyiwfm.io.iwfm_reader import (
+    resolve_path as _resolve_path_f,
+)
 
 # =============================================================================
 # Data classes for each BC type
@@ -43,6 +44,7 @@ class SpecifiedFlowBC:
         ts_column: Time series column (0 = static)
         base_flow: Base flow value (positive = inflow)
     """
+
     node_id: int
     layer: int
     ts_column: int = 0
@@ -59,6 +61,7 @@ class SpecifiedHeadBC:
         ts_column: Time series column (0 = static)
         head_value: Head value
     """
+
     node_id: int
     layer: int
     ts_column: int = 0
@@ -78,6 +81,7 @@ class GeneralHeadBC:
         external_head: External head value
         conductance: BC conductance
     """
+
     node_id: int
     layer: int
     ts_column: int = 0
@@ -101,6 +105,7 @@ class ConstrainedGeneralHeadBC:
         max_flow_ts_column: Time series column for max flow (0 = static)
         max_flow: Maximum BC flow
     """
+
     node_id: int
     layer: int
     ts_column: int = 0
@@ -141,6 +146,7 @@ class GWBoundaryConfig:
         cgh_conductance_factor: Conductance conversion factor
         cgh_conductance_time_unit: Time unit for conductance
     """
+
     # Sub-file paths
     sp_flow_file: Path | None = None
     sp_head_file: Path | None = None
@@ -194,8 +200,12 @@ class GWBoundaryConfig:
 
     @property
     def total_bcs(self) -> int:
-        return (self.n_specified_flow + self.n_specified_head +
-                self.n_general_head + self.n_constrained_gh)
+        return (
+            self.n_specified_flow
+            + self.n_specified_head
+            + self.n_general_head
+            + self.n_constrained_gh
+        )
 
 
 class GWBoundaryReader:
@@ -232,7 +242,7 @@ class GWBoundaryReader:
         config = GWBoundaryConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Read 5 file paths
             sp_flow_path = _next_data_or_empty(f)
             if sp_flow_path:
@@ -295,7 +305,7 @@ class GWBoundaryReader:
     def _read_specified_flow(self, filepath: Path, config: GWBoundaryConfig) -> None:
         """Read specified flow BC sub-file."""
         self._line_num = 0
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # NQB
             nqb_str = _next_data_or_empty(f)
             nqb = int(nqb_str) if nqb_str else 0
@@ -316,17 +326,19 @@ class GWBoundaryReader:
                 if len(parts) < 4:
                     continue
 
-                config.specified_flow_bcs.append(SpecifiedFlowBC(
-                    node_id=int(float(parts[0])),
-                    layer=int(float(parts[1])),
-                    ts_column=int(float(parts[2])),
-                    base_flow=float(parts[3]) * config.sp_flow_factor,
-                ))
+                config.specified_flow_bcs.append(
+                    SpecifiedFlowBC(
+                        node_id=int(float(parts[0])),
+                        layer=int(float(parts[1])),
+                        ts_column=int(float(parts[2])),
+                        base_flow=float(parts[3]) * config.sp_flow_factor,
+                    )
+                )
 
     def _read_specified_head(self, filepath: Path, config: GWBoundaryConfig) -> None:
         """Read specified head BC sub-file."""
         self._line_num = 0
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # NHB
             nhb_str = _next_data_or_empty(f)
             nhb = int(nhb_str) if nhb_str else 0
@@ -344,17 +356,19 @@ class GWBoundaryReader:
                 if len(parts) < 4:
                     continue
 
-                config.specified_head_bcs.append(SpecifiedHeadBC(
-                    node_id=int(float(parts[0])),
-                    layer=int(float(parts[1])),
-                    ts_column=int(float(parts[2])),
-                    head_value=float(parts[3]) * config.sp_head_factor,
-                ))
+                config.specified_head_bcs.append(
+                    SpecifiedHeadBC(
+                        node_id=int(float(parts[0])),
+                        layer=int(float(parts[1])),
+                        ts_column=int(float(parts[2])),
+                        head_value=float(parts[3]) * config.sp_head_factor,
+                    )
+                )
 
     def _read_general_head(self, filepath: Path, config: GWBoundaryConfig) -> None:
         """Read general head BC sub-file."""
         self._line_num = 0
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # NGB
             ngb_str = _next_data_or_empty(f)
             ngb = int(ngb_str) if ngb_str else 0
@@ -379,18 +393,20 @@ class GWBoundaryReader:
                 if len(parts) < 5:
                     continue
 
-                config.general_head_bcs.append(GeneralHeadBC(
-                    node_id=int(float(parts[0])),
-                    layer=int(float(parts[1])),
-                    ts_column=int(float(parts[2])),
-                    external_head=float(parts[3]) * config.gh_head_factor,
-                    conductance=float(parts[4]) * config.gh_conductance_factor,
-                ))
+                config.general_head_bcs.append(
+                    GeneralHeadBC(
+                        node_id=int(float(parts[0])),
+                        layer=int(float(parts[1])),
+                        ts_column=int(float(parts[2])),
+                        external_head=float(parts[3]) * config.gh_head_factor,
+                        conductance=float(parts[4]) * config.gh_conductance_factor,
+                    )
+                )
 
     def _read_constrained_gh(self, filepath: Path, config: GWBoundaryConfig) -> None:
         """Read constrained general head BC sub-file."""
         self._line_num = 0
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # NCGB
             ncgb_str = _next_data_or_empty(f)
             ncgb = int(ncgb_str) if ncgb_str else 0
@@ -423,16 +439,18 @@ class GWBoundaryReader:
                 if len(parts) < 8:
                     continue
 
-                config.constrained_gh_bcs.append(ConstrainedGeneralHeadBC(
-                    node_id=int(float(parts[0])),
-                    layer=int(float(parts[1])),
-                    ts_column=int(float(parts[2])),
-                    external_head=float(parts[3]) * config.cgh_head_factor,
-                    conductance=float(parts[4]) * config.cgh_conductance_factor,
-                    constraining_head=float(parts[5]) * config.cgh_head_factor,
-                    max_flow_ts_column=int(float(parts[6])),
-                    max_flow=float(parts[7]) * config.cgh_max_flow_factor,
-                ))
+                config.constrained_gh_bcs.append(
+                    ConstrainedGeneralHeadBC(
+                        node_id=int(float(parts[0])),
+                        layer=int(float(parts[1])),
+                        ts_column=int(float(parts[2])),
+                        external_head=float(parts[3]) * config.cgh_head_factor,
+                        conductance=float(parts[4]) * config.cgh_conductance_factor,
+                        constraining_head=float(parts[5]) * config.cgh_head_factor,
+                        max_flow_ts_column=int(float(parts[6])),
+                        max_flow=float(parts[7]) * config.cgh_max_flow_factor,
+                    )
+                )
 
     def _next_data_line(self, f: TextIO) -> str:
         """Return the next non-comment data line."""
@@ -444,9 +462,7 @@ class GWBoundaryReader:
         raise FileFormatError("Unexpected end of file", line_number=self._line_num)
 
 
-def read_gw_boundary(
-    filepath: Path | str, base_dir: Path | None = None
-) -> GWBoundaryConfig:
+def read_gw_boundary(filepath: Path | str, base_dir: Path | None = None) -> GWBoundaryConfig:
     """Read IWFM GW boundary conditions file.
 
     Args:

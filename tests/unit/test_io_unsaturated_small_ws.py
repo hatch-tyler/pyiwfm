@@ -14,35 +14,38 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.unsaturated_zone import (
-    UnsatZoneMainReader,
-    UnsatZoneMainConfig,
-    UnsatZoneElementData,
-    read_unsaturated_zone_main,
-    _is_comment_line as uz_is_comment,
-    _strip_comment as uz_parse_value,
+from pyiwfm.components.small_watershed import (
+    AppSmallWatershed,
+    WatershedUnit,
 )
-from pyiwfm.io.small_watershed import (
-    SmallWatershedMainReader,
-    SmallWatershedMainConfig,
-    WatershedSpec,
-    WatershedGWNode as IOWatershedGWNode,
-    WatershedRootZoneParams,
-    WatershedAquiferParams,
-    read_small_watershed_main,
+from pyiwfm.components.small_watershed import (
+    WatershedGWNode as CompWatershedGWNode,
 )
 from pyiwfm.components.unsaturated_zone import (
     AppUnsatZone,
     UnsatZoneElement,
     UnsatZoneLayer,
 )
-from pyiwfm.components.small_watershed import (
-    AppSmallWatershed,
-    WatershedUnit,
-    WatershedGWNode as CompWatershedGWNode,
+from pyiwfm.core.exceptions import ComponentError
+from pyiwfm.io.iwfm_reader import is_comment_line as uz_is_comment
+from pyiwfm.io.iwfm_reader import strip_inline_comment as uz_parse_value
+from pyiwfm.io.small_watershed import (
+    SmallWatershedMainConfig,
+    SmallWatershedMainReader,
+    WatershedAquiferParams,
+    WatershedRootZoneParams,
+    WatershedSpec,
+    read_small_watershed_main,
 )
-from pyiwfm.core.exceptions import ComponentError, FileFormatError
-
+from pyiwfm.io.small_watershed import (
+    WatershedGWNode as IOWatershedGWNode,
+)
+from pyiwfm.io.unsaturated_zone import (
+    UnsatZoneElementData,
+    UnsatZoneMainConfig,
+    UnsatZoneMainReader,
+    read_unsaturated_zone_main,
+)
 
 # =============================================================================
 # IO helpers tests
@@ -241,10 +244,7 @@ class TestUnsatZoneMainReader:
 
     def test_convenience_function(self, tmp_path: Path) -> None:
         """Test read_unsaturated_zone_main convenience function."""
-        content = (
-            "#4.0\n"
-            "    0                              / NLayers\n"
-        )
+        content = "#4.0\n    0                              / NLayers\n"
         filepath = self._write(tmp_path, content)
         config = read_unsaturated_zone_main(filepath)
         assert config.n_layers == 0
@@ -460,8 +460,7 @@ class TestUnsatZoneLayer:
 
     def test_with_values(self) -> None:
         layer = UnsatZoneLayer(
-            thickness_max=5.0, total_porosity=0.35,
-            lambda_param=0.5, hyd_cond=1e-5, kunsat_method=1
+            thickness_max=5.0, total_porosity=0.35, lambda_param=0.5, hyd_cond=1e-5, kunsat_method=1
         )
         assert layer.thickness_max == 5.0
 
@@ -509,17 +508,13 @@ class TestAppUnsatZone:
     def test_iter_elements_sorted(self) -> None:
         comp = AppUnsatZone(n_layers=1)
         for eid in [3, 1, 2]:
-            comp.add_element(UnsatZoneElement(
-                element_id=eid, layers=[UnsatZoneLayer()]
-            ))
+            comp.add_element(UnsatZoneElement(element_id=eid, layers=[UnsatZoneLayer()]))
         ids = [e.element_id for e in comp.iter_elements()]
         assert ids == [1, 2, 3]
 
     def test_validate_success(self) -> None:
         comp = AppUnsatZone(n_layers=1)
-        comp.add_element(UnsatZoneElement(
-            element_id=1, layers=[UnsatZoneLayer()]
-        ))
+        comp.add_element(UnsatZoneElement(element_id=1, layers=[UnsatZoneLayer()]))
         comp.validate()  # Should not raise
 
     def test_validate_zero_layers_raises(self) -> None:
@@ -529,9 +524,12 @@ class TestAppUnsatZone:
 
     def test_validate_layer_mismatch_raises(self) -> None:
         comp = AppUnsatZone(n_layers=2)
-        comp.add_element(UnsatZoneElement(
-            element_id=1, layers=[UnsatZoneLayer()]  # only 1 layer
-        ))
+        comp.add_element(
+            UnsatZoneElement(
+                element_id=1,
+                layers=[UnsatZoneLayer()],  # only 1 layer
+            )
+        )
         with pytest.raises(ComponentError, match="1 layers"):
             comp.validate()
 
@@ -599,9 +597,7 @@ class TestWatershedUnit:
         assert ws.curve_number == 0.0
 
     def test_n_gw_nodes_property(self) -> None:
-        ws = WatershedUnit(
-            gw_nodes=[CompWatershedGWNode(), CompWatershedGWNode()]
-        )
+        ws = WatershedUnit(gw_nodes=[CompWatershedGWNode(), CompWatershedGWNode()])
         assert ws.n_gw_nodes == 2
 
     def test_repr(self) -> None:
@@ -621,8 +617,9 @@ class TestAppSmallWatershed:
 
     def test_add_and_get_watershed(self) -> None:
         comp = AppSmallWatershed()
-        ws = WatershedUnit(id=5, area=100.0, dest_stream_node=1,
-                           gw_nodes=[CompWatershedGWNode(gw_node_id=1)])
+        ws = WatershedUnit(
+            id=5, area=100.0, dest_stream_node=1, gw_nodes=[CompWatershedGWNode(gw_node_id=1)]
+        )
         comp.add_watershed(ws)
         assert comp.n_watersheds == 1
         assert comp.get_watershed(5).area == 100.0
@@ -630,45 +627,65 @@ class TestAppSmallWatershed:
     def test_iter_watersheds_sorted(self) -> None:
         comp = AppSmallWatershed()
         for wid in [3, 1, 2]:
-            comp.add_watershed(WatershedUnit(
-                id=wid, area=float(wid),
-                dest_stream_node=1,
-                gw_nodes=[CompWatershedGWNode(gw_node_id=1)],
-            ))
+            comp.add_watershed(
+                WatershedUnit(
+                    id=wid,
+                    area=float(wid),
+                    dest_stream_node=1,
+                    gw_nodes=[CompWatershedGWNode(gw_node_id=1)],
+                )
+            )
         ids = [ws.id for ws in comp.iter_watersheds()]
         assert ids == [1, 2, 3]
 
     def test_validate_success(self) -> None:
         comp = AppSmallWatershed()
-        comp.add_watershed(WatershedUnit(
-            id=1, area=100.0, dest_stream_node=5,
-            gw_nodes=[CompWatershedGWNode(gw_node_id=10)],
-        ))
+        comp.add_watershed(
+            WatershedUnit(
+                id=1,
+                area=100.0,
+                dest_stream_node=5,
+                gw_nodes=[CompWatershedGWNode(gw_node_id=10)],
+            )
+        )
         comp.validate()  # Should not raise
 
     def test_validate_zero_area_raises(self) -> None:
         comp = AppSmallWatershed()
-        comp.add_watershed(WatershedUnit(
-            id=1, area=0.0, dest_stream_node=5,
-            gw_nodes=[CompWatershedGWNode(gw_node_id=10)],
-        ))
+        comp.add_watershed(
+            WatershedUnit(
+                id=1,
+                area=0.0,
+                dest_stream_node=5,
+                gw_nodes=[CompWatershedGWNode(gw_node_id=10)],
+            )
+        )
         with pytest.raises(ComponentError, match="non-positive area"):
             comp.validate()
 
     def test_validate_invalid_stream_node_raises(self) -> None:
         comp = AppSmallWatershed()
-        comp.add_watershed(WatershedUnit(
-            id=1, area=100.0, dest_stream_node=0,
-            gw_nodes=[CompWatershedGWNode(gw_node_id=10)],
-        ))
+        comp.add_watershed(
+            WatershedUnit(
+                id=1,
+                area=100.0,
+                dest_stream_node=0,
+                gw_nodes=[CompWatershedGWNode(gw_node_id=10)],
+            )
+        )
         with pytest.raises(ComponentError, match="invalid destination"):
             comp.validate()
 
     def test_validate_no_gw_nodes_raises(self) -> None:
         comp = AppSmallWatershed()
-        comp.add_watershed(WatershedUnit(
-            id=1, area=100.0, dest_stream_node=5, gw_nodes=[],
-        ))
+        comp.add_watershed(
+            WatershedUnit(
+                id=1,
+                area=100.0,
+                dest_stream_node=5,
+                gw_nodes=[],
+            )
+        )
         with pytest.raises(ComponentError, match="no connected GW nodes"):
             comp.validate()
 

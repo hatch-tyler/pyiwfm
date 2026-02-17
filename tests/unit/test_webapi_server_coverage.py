@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -12,7 +11,6 @@ pytest.importorskip("fastapi", reason="FastAPI not available")
 
 from pyiwfm.visualization.webapi.config import ViewerSettings
 from pyiwfm.visualization.webapi.server import create_app, launch_viewer
-
 
 # ---------------------------------------------------------------------------
 # create_app

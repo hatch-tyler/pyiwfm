@@ -8,17 +8,15 @@ Tests cover:
 - File generation with various model configurations
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
-from dataclasses import FrozenInstanceError
 
 from pyiwfm.io.stream_writer import (
-    StreamWriterConfig,
     StreamComponentWriter,
+    StreamWriterConfig,
     write_stream_component,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -37,7 +35,16 @@ def mock_model():
 def mock_stream_node():
     """Create a mock stream node."""
     # Use spec to prevent MagicMock auto-attribute creation
-    node = MagicMock(spec=['id', 'wetted_perimeter', 'conductivity', 'bed_thickness', 'cross_section', 'initial_condition'])
+    node = MagicMock(
+        spec=[
+            "id",
+            "wetted_perimeter",
+            "conductivity",
+            "bed_thickness",
+            "cross_section",
+            "initial_condition",
+        ]
+    )
     node.id = 1
     node.wetted_perimeter = 200.0
     # gw_node not set intentionally - spec prevents auto-creation, so AttributeError will be raised
@@ -48,13 +55,31 @@ def mock_stream_node():
 def mock_diversion():
     """Create a mock diversion."""
     # Use spec to prevent auto-attribute creation for Jinja2 template compatibility
-    div = MagicMock(spec=['id', 'source_node', 'destination_type', 'destination_id', 'max_rate',
-                          'priority', 'name', 'max_div_column', 'max_div_fraction',
-                          'recoverable_loss_column', 'recoverable_loss_fraction',
-                          'non_recoverable_loss_column', 'non_recoverable_loss_fraction',
-                          'spill_column', 'spill_fraction', 'delivery_dest_type',
-                          'delivery_dest_id', 'delivery_column', 'delivery_fraction',
-                          'irrigation_fraction_column', 'adjustment_column'])
+    div = MagicMock(
+        spec=[
+            "id",
+            "source_node",
+            "destination_type",
+            "destination_id",
+            "max_rate",
+            "priority",
+            "name",
+            "max_div_column",
+            "max_div_fraction",
+            "recoverable_loss_column",
+            "recoverable_loss_fraction",
+            "non_recoverable_loss_column",
+            "non_recoverable_loss_fraction",
+            "spill_column",
+            "spill_fraction",
+            "delivery_dest_type",
+            "delivery_dest_id",
+            "delivery_column",
+            "delivery_fraction",
+            "irrigation_fraction_column",
+            "adjustment_column",
+        ]
+    )
     div.id = 1
     div.source_node = 10
     div.destination_type = "element"
@@ -84,11 +109,26 @@ def mock_diversion():
 def mock_bypass():
     """Create a mock bypass."""
     # Use spec to prevent auto-attribute creation
-    bypass = MagicMock(spec=['id', 'source_node', 'destination_node', 'capacity', 'name',
-                             'flow_factor', 'flow_time_unit', 'spill_factor', 'spill_time_unit',
-                             'diversion_column', 'rating_table_flows', 'rating_table_spills',
-                             'dest_type', 'recoverable_loss_fraction', 'non_recoverable_loss_fraction',
-                             'seepage_locations'])
+    bypass = MagicMock(
+        spec=[
+            "id",
+            "source_node",
+            "destination_node",
+            "capacity",
+            "name",
+            "flow_factor",
+            "flow_time_unit",
+            "spill_factor",
+            "spill_time_unit",
+            "diversion_column",
+            "rating_table_flows",
+            "rating_table_spills",
+            "dest_type",
+            "recoverable_loss_fraction",
+            "non_recoverable_loss_fraction",
+            "seepage_locations",
+        ]
+    )
     bypass.id = 1
     bypass.source_node = 15
     bypass.destination_node = 20
@@ -115,7 +155,16 @@ def mock_model_with_streams(mock_stream_node, mock_diversion, mock_bypass):
 
     streams = MagicMock()
     # Create second node with spec to prevent auto-attribute creation
-    node2 = MagicMock(spec=['id', 'wetted_perimeter', 'conductivity', 'bed_thickness', 'cross_section', 'initial_condition'])
+    node2 = MagicMock(
+        spec=[
+            "id",
+            "wetted_perimeter",
+            "conductivity",
+            "bed_thickness",
+            "cross_section",
+            "initial_condition",
+        ]
+    )
     node2.id = 2
     node2.wetted_perimeter = None
     streams.nodes = {1: mock_stream_node, 2: node2}
@@ -134,7 +183,16 @@ def mock_model_no_diversions():
 
     streams = MagicMock()
     # Use spec to prevent auto-attribute creation
-    node = MagicMock(spec=['id', 'wetted_perimeter', 'conductivity', 'bed_thickness', 'cross_section', 'initial_condition'])
+    node = MagicMock(
+        spec=[
+            "id",
+            "wetted_perimeter",
+            "conductivity",
+            "bed_thickness",
+            "cross_section",
+            "initial_condition",
+        ]
+    )
     node.id = 1
     node.wetted_perimeter = 100.0
     streams.nodes = {1: node}
@@ -207,9 +265,7 @@ class TestStreamWriterConfig:
     def test_main_path_property(self, tmp_path):
         """Test main_path property returns correct path."""
         config = StreamWriterConfig(
-            output_dir=tmp_path,
-            stream_subdir="Stream",
-            main_file="Stream_MAIN.dat"
+            output_dir=tmp_path, stream_subdir="Stream", main_file="Stream_MAIN.dat"
         )
 
         assert config.main_path == tmp_path / "Stream" / "Stream_MAIN.dat"
@@ -288,7 +344,7 @@ class TestStreamComponentWriterWrite:
         """Test write() calls write_all()."""
         writer = StreamComponentWriter(mock_model, stream_config)
 
-        with patch.object(writer, 'write_all') as mock_write_all:
+        with patch.object(writer, "write_all") as mock_write_all:
             writer.write()
             mock_write_all.assert_called_once()
 
@@ -513,7 +569,7 @@ class TestWriteStreamComponent:
             version="5.0",
         )
 
-        result = write_stream_component(mock_model, tmp_path, config)
+        write_stream_component(mock_model, tmp_path, config)
 
         assert (tmp_path / "Streams" / "Stream_MAIN.dat").exists()
 
@@ -529,14 +585,12 @@ class TestWriteStreamComponent:
         other_path = tmp_path / "other"
         config = StreamWriterConfig(output_dir=other_path)
 
-        result = write_stream_component(mock_model, tmp_path, config)
+        write_stream_component(mock_model, tmp_path, config)
 
         # Should use tmp_path, not other_path
         assert (tmp_path / "Stream" / "Stream_MAIN.dat").exists()
 
-    def test_write_stream_component_with_full_streams(
-        self, mock_model_with_streams, tmp_path
-    ):
+    def test_write_stream_component_with_full_streams(self, mock_model_with_streams, tmp_path):
         """Test write_stream_component with full stream data."""
         result = write_stream_component(mock_model_with_streams, tmp_path)
 
@@ -558,7 +612,16 @@ class TestStreamWriterEdgeCases:
         model = MagicMock()
         streams = MagicMock()
         # Use spec to prevent auto-attribute creation
-        node = MagicMock(spec=['id', 'wetted_perimeter', 'conductivity', 'bed_thickness', 'cross_section', 'initial_condition'])
+        node = MagicMock(
+            spec=[
+                "id",
+                "wetted_perimeter",
+                "conductivity",
+                "bed_thickness",
+                "cross_section",
+                "initial_condition",
+            ]
+        )
         node.id = 1
         node.wetted_perimeter = None
         streams.nodes = {1: node}
@@ -580,7 +643,16 @@ class TestStreamWriterEdgeCases:
         nodes = {}
         for i in range(5):
             # Use spec to prevent auto-attribute creation
-            node = MagicMock(spec=['id', 'wetted_perimeter', 'conductivity', 'bed_thickness', 'cross_section', 'initial_condition'])
+            node = MagicMock(
+                spec=[
+                    "id",
+                    "wetted_perimeter",
+                    "conductivity",
+                    "bed_thickness",
+                    "cross_section",
+                    "initial_condition",
+                ]
+            )
             node.id = i + 1
             node.wetted_perimeter = 100.0 + i * 10
             nodes[i + 1] = node
@@ -606,13 +678,31 @@ class TestStreamWriterEdgeCases:
         diversions = {}
         for i in range(3):
             # Use spec to prevent auto-attribute creation
-            div = MagicMock(spec=['id', 'source_node', 'destination_type', 'destination_id', 'max_rate',
-                                  'priority', 'name', 'max_div_column', 'max_div_fraction',
-                                  'recoverable_loss_column', 'recoverable_loss_fraction',
-                                  'non_recoverable_loss_column', 'non_recoverable_loss_fraction',
-                                  'spill_column', 'spill_fraction', 'delivery_dest_type',
-                                  'delivery_dest_id', 'delivery_column', 'delivery_fraction',
-                                  'irrigation_fraction_column', 'adjustment_column'])
+            div = MagicMock(
+                spec=[
+                    "id",
+                    "source_node",
+                    "destination_type",
+                    "destination_id",
+                    "max_rate",
+                    "priority",
+                    "name",
+                    "max_div_column",
+                    "max_div_fraction",
+                    "recoverable_loss_column",
+                    "recoverable_loss_fraction",
+                    "non_recoverable_loss_column",
+                    "non_recoverable_loss_fraction",
+                    "spill_column",
+                    "spill_fraction",
+                    "delivery_dest_type",
+                    "delivery_dest_id",
+                    "delivery_column",
+                    "delivery_fraction",
+                    "irrigation_fraction_column",
+                    "adjustment_column",
+                ]
+            )
             div.id = i + 1
             div.source_node = 10 + i
             div.destination_type = "element"
@@ -660,11 +750,26 @@ class TestStreamWriterEdgeCases:
         bypasses = {}
         for i in range(3):
             # Use spec to prevent auto-attribute creation
-            bypass = MagicMock(spec=['id', 'source_node', 'destination_node', 'capacity', 'name',
-                                     'flow_factor', 'flow_time_unit', 'spill_factor', 'spill_time_unit',
-                                     'diversion_column', 'rating_table_flows', 'rating_table_spills',
-                                     'dest_type', 'recoverable_loss_fraction', 'non_recoverable_loss_fraction',
-                                     'seepage_locations'])
+            bypass = MagicMock(
+                spec=[
+                    "id",
+                    "source_node",
+                    "destination_node",
+                    "capacity",
+                    "name",
+                    "flow_factor",
+                    "flow_time_unit",
+                    "spill_factor",
+                    "spill_time_unit",
+                    "diversion_column",
+                    "rating_table_flows",
+                    "rating_table_spills",
+                    "dest_type",
+                    "recoverable_loss_fraction",
+                    "non_recoverable_loss_fraction",
+                    "seepage_locations",
+                ]
+            )
             bypass.id = i + 1
             bypass.source_node = 10 + i
             bypass.destination_node = 20 + i
@@ -723,7 +828,7 @@ class TestStreamWriterEdgeCases:
         """Test handling streams without inflows attribute."""
         model = MagicMock()
         # Use spec to list only the attributes we want to exist
-        streams = MagicMock(spec=['nodes', 'diversions', 'bypasses', 'reaches', 'budget_node_ids'])
+        streams = MagicMock(spec=["nodes", "diversions", "bypasses", "reaches", "budget_node_ids"])
         streams.nodes = {}
         streams.diversions = {}
         streams.bypasses = {}
@@ -745,7 +850,16 @@ class TestStreamWriterEdgeCases:
         # Use spec to prevent auto-attribute creation
         nodes = {}
         for i in range(1, 11):
-            node = MagicMock(spec=['id', 'wetted_perimeter', 'conductivity', 'bed_thickness', 'cross_section', 'initial_condition'])
+            node = MagicMock(
+                spec=[
+                    "id",
+                    "wetted_perimeter",
+                    "conductivity",
+                    "bed_thickness",
+                    "cross_section",
+                    "initial_condition",
+                ]
+            )
             node.id = i
             node.wetted_perimeter = 100.0
             nodes[i] = node

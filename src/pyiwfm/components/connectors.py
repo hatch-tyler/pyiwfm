@@ -9,12 +9,9 @@ interactions. It mirrors IWFM's Package_ComponentConnectors.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterator
 
 import numpy as np
 from numpy.typing import NDArray
-
-from pyiwfm.core.exceptions import ComponentError
 
 
 @dataclass
@@ -362,15 +359,13 @@ class StreamLakeConnector:
     def get_inflows_for_lake(self, lake_id: int) -> list[StreamLakeConnection]:
         """Get inflow connections for a lake."""
         return [
-            c for c in self.connections
-            if c.lake_id == lake_id and c.connection_type == "inflow"
+            c for c in self.connections if c.lake_id == lake_id and c.connection_type == "inflow"
         ]
 
     def get_outflows_for_lake(self, lake_id: int) -> list[StreamLakeConnection]:
         """Get outflow connections for a lake."""
         return [
-            c for c in self.connections
-            if c.lake_id == lake_id and c.connection_type == "outflow"
+            c for c in self.connections if c.lake_id == lake_id and c.connection_type == "outflow"
         ]
 
     def validate(self) -> None:

@@ -16,7 +16,7 @@ import logging
 from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import h5py
 import numpy as np
@@ -122,7 +122,7 @@ class LazyHeadDataLoader:
         except Exception as e:
             logger.error(f"Failed to load head metadata: {e}")
 
-    def _load_metadata_pyiwfm(self, f) -> None:
+    def _load_metadata_pyiwfm(self, f: Any) -> None:
         """Load metadata from pyiwfm-format HDF5 (dataset 'head')."""
         ds = f[self._dataset_name]
         # Expected shape: (n_timesteps, n_nodes, n_layers) or (n_timesteps, n_nodes)
@@ -132,7 +132,7 @@ class LazyHeadDataLoader:
 
         self._load_times(f)
 
-    def _load_metadata_iwfm_native(self, f) -> None:
+    def _load_metadata_iwfm_native(self, f: Any) -> None:
         """Load metadata from IWFM native HDF5 (dataset '/GWHeadAtAllNodes').
 
         The Fortran code writes data as shape ``(n_timesteps, n_nodes * n_layers)``
@@ -160,7 +160,7 @@ class LazyHeadDataLoader:
 
         self._load_times(f)
 
-    def _load_times(self, f) -> None:
+    def _load_times(self, f: Any) -> None:
         """Load time information from HDF5 file."""
         if "times" in f:
             time_strings = f["times"][:]
@@ -173,6 +173,7 @@ class LazyHeadDataLoader:
         else:
             # Generate placeholder times
             from datetime import timedelta
+
             base = datetime(2000, 1, 1)
             self._times = [base + timedelta(days=i) for i in range(self._n_frames)]
 
@@ -192,7 +193,8 @@ class LazyHeadDataLoader:
         if data.ndim == 1:
             data = data.reshape(-1, 1)
 
-        return data.astype(np.float64)
+        result: NDArray[np.float64] = data.astype(np.float64)
+        return result
 
     def _evict_if_needed(self) -> None:
         """Evict oldest cache entry if cache is full."""

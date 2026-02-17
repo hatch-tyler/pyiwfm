@@ -6,10 +6,7 @@ import argparse
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from pyiwfm.cli.viewer import add_viewer_parser, run_viewer
-
 
 # ---------------------------------------------------------------------------
 # Helpers

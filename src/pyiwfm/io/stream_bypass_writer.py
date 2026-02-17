@@ -17,7 +17,11 @@ from pathlib import Path
 
 from pyiwfm.io.iwfm_writer import (
     ensure_parent_dir as _ensure_parent_dir,
+)
+from pyiwfm.io.iwfm_writer import (
     write_comment as _write_comment,
+)
+from pyiwfm.io.iwfm_writer import (
     write_value as _write_value,
 )
 from pyiwfm.io.stream_bypass import BypassSpecConfig

@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
+from pyiwfm.runner.pest_manager import IWFMParameterManager
 from pyiwfm.runner.pest_params import (
     IWFMParameterType,
-    ParameterTransform,
     Parameter,
+    ParameterTransform,
 )
-from pyiwfm.runner.pest_manager import IWFMParameterManager
 
 
 class TestIWFMParameterManagerInit:
@@ -499,10 +498,12 @@ class TestDataFrameExport:
         names = [p.name for p in params]
 
         # Create DataFrame with new values
-        df = pd.DataFrame({
-            "name": names,
-            "initial_value": [20.0, 30.0],
-        })
+        df = pd.DataFrame(
+            {
+                "name": names,
+                "initial_value": [20.0, 30.0],
+            }
+        )
 
         pm.from_dataframe(df)
 
@@ -756,14 +757,14 @@ class TestAddParameterizationEdgeCases:
     def test_add_duplicate_zone_parameters_updates(self):
         """Test that adding duplicate zone parameters updates existing ones."""
         pm = IWFMParameterManager()
-        params1 = pm.add_zone_parameters(
+        pm.add_zone_parameters(
             IWFMParameterType.HORIZONTAL_K,
             zones=[1, 2],
             layer=1,
             initial_values=10.0,
         )
         # Re-add the same zones with different initial values
-        params2 = pm.add_zone_parameters(
+        pm.add_zone_parameters(
             IWFMParameterType.HORIZONTAL_K,
             zones=[1, 2],
             layer=1,

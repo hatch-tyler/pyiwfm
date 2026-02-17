@@ -6,12 +6,12 @@ import numpy as np
 import pytest
 
 from pyiwfm.components.stream import (
+    AppStream,
+    Bypass,
+    Diversion,
+    StreamRating,
     StrmNode,
     StrmReach,
-    Diversion,
-    Bypass,
-    AppStream,
-    StreamRating,
 )
 from pyiwfm.core.exceptions import ComponentError
 
@@ -337,22 +337,26 @@ class TestAppStream:
 
         # Add nodes
         for i in range(1, 6):
-            stream.add_node(StrmNode(
-                id=i,
-                x=float(i * 100),
-                y=0.0,
-                reach_id=1,
-                upstream_node=i - 1 if i > 1 else None,
-                downstream_node=i + 1 if i < 5 else None,
-            ))
+            stream.add_node(
+                StrmNode(
+                    id=i,
+                    x=float(i * 100),
+                    y=0.0,
+                    reach_id=1,
+                    upstream_node=i - 1 if i > 1 else None,
+                    downstream_node=i + 1 if i < 5 else None,
+                )
+            )
 
         # Add reach
-        stream.add_reach(StrmReach(
-            id=1,
-            upstream_node=1,
-            downstream_node=5,
-            nodes=[1, 2, 3, 4, 5],
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=5,
+                nodes=[1, 2, 3, 4, 5],
+            )
+        )
 
         stream.build_connectivity()
 
@@ -367,19 +371,23 @@ class TestAppStream:
 
         # Add nodes along a straight line
         for i in range(1, 6):
-            stream.add_node(StrmNode(
-                id=i,
-                x=float(i * 100),
-                y=0.0,
-                reach_id=1,
-            ))
+            stream.add_node(
+                StrmNode(
+                    id=i,
+                    x=float(i * 100),
+                    y=0.0,
+                    reach_id=1,
+                )
+            )
 
-        stream.add_reach(StrmReach(
-            id=1,
-            upstream_node=1,
-            downstream_node=5,
-            nodes=[1, 2, 3, 4, 5],
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=5,
+                nodes=[1, 2, 3, 4, 5],
+            )
+        )
 
         length = stream.get_reach_length(1)
         assert length == pytest.approx(400.0)  # 4 segments * 100 units
@@ -393,7 +401,9 @@ class TestAppStream:
             stream.add_node(StrmNode(id=i, x=float(i * 100), y=0.0, reach_id=1 if i <= 5 else 2))
 
         stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=5, nodes=[1, 2, 3, 4, 5]))
-        stream.add_reach(StrmReach(id=2, upstream_node=6, downstream_node=10, nodes=[6, 7, 8, 9, 10]))
+        stream.add_reach(
+            StrmReach(id=2, upstream_node=6, downstream_node=10, nodes=[6, 7, 8, 9, 10])
+        )
 
         total = stream.get_total_length()
         assert total == pytest.approx(800.0)  # 2 reaches * 400 units
@@ -438,12 +448,14 @@ class TestAppStream:
         for i in range(1, 6):
             stream.add_node(StrmNode(id=i, x=float(i * 100), y=0.0, reach_id=1))
 
-        stream.add_reach(StrmReach(
-            id=1,
-            upstream_node=1,
-            downstream_node=5,
-            nodes=[1, 2, 3, 4, 5],
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=5,
+                nodes=[1, 2, 3, 4, 5],
+            )
+        )
 
         nodes = stream.get_nodes_in_reach(1)
         assert len(nodes) == 5
@@ -465,12 +477,14 @@ class TestAppStream:
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1))
         stream.add_node(StrmNode(id=2, x=100.0, y=0.0, reach_id=1))
 
-        stream.add_reach(StrmReach(
-            id=1,
-            upstream_node=1,
-            downstream_node=2,
-            nodes=[1, 2],
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=2,
+                nodes=[1, 2],
+            )
+        )
 
         # Should pass basic validation
         stream.validate()
@@ -484,20 +498,24 @@ class TestAppStreamIO:
         stream = AppStream()
 
         for i in range(1, 4):
-            stream.add_node(StrmNode(
-                id=i,
-                x=float(i * 100),
-                y=float(i * 50),
-                reach_id=1,
-                gw_node=i,
-            ))
+            stream.add_node(
+                StrmNode(
+                    id=i,
+                    x=float(i * 100),
+                    y=float(i * 50),
+                    reach_id=1,
+                    gw_node=i,
+                )
+            )
 
-        stream.add_reach(StrmReach(
-            id=1,
-            upstream_node=1,
-            downstream_node=3,
-            nodes=[1, 2, 3],
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=3,
+                nodes=[1, 2, 3],
+            )
+        )
 
         arrays = stream.to_arrays()
 
@@ -531,10 +549,10 @@ class TestAppStreamIO:
 # Additional tests appended for increased coverage
 # ---------------------------------------------------------------------------
 
-from pyiwfm.components.stream import (
+from pyiwfm.components.stream import (  # noqa: E402
+    ReachCrossing,
     _ccw,
     segments_intersect,
-    ReachCrossing,
 )
 
 
@@ -584,9 +602,7 @@ class TestSegmentsIntersect:
     def test_nearly_shared_endpoint(self) -> None:
         """Points within tolerance should be treated as shared endpoints."""
         # With a very small offset within default tolerance
-        assert segments_intersect(
-            (0, 0), (1, 1), (1 + 1e-12, 1 + 1e-12), (2, 2)
-        ) is False
+        assert segments_intersect((0, 0), (1, 1), (1 + 1e-12, 1 + 1e-12), (2, 2)) is False
 
 
 class TestReachCrossingDataclass:
@@ -624,9 +640,7 @@ class TestReachCrossingDataclass:
         """Intersection point can be set explicitly."""
         seg1 = ((0.0, 0.0), (2.0, 2.0), 1, 0)
         seg2 = ((0.0, 2.0), (2.0, 0.0), 2, 0)
-        crossing = ReachCrossing(
-            segment1=seg1, segment2=seg2, intersection_point=(1.0, 1.0)
-        )
+        crossing = ReachCrossing(segment1=seg1, segment2=seg2, intersection_point=(1.0, 1.0))
         assert crossing.intersection_point == (1.0, 1.0)
 
 
@@ -927,12 +941,8 @@ class TestAppStreamConnectivity:
     def test_build_connectivity_clears_cache(self) -> None:
         """Building connectivity should refresh the cache."""
         stream = AppStream()
-        stream.add_node(
-            StrmNode(id=1, x=0.0, y=0.0, downstream_node=2, upstream_node=None)
-        )
-        stream.add_node(
-            StrmNode(id=2, x=1.0, y=0.0, downstream_node=None, upstream_node=1)
-        )
+        stream.add_node(StrmNode(id=1, x=0.0, y=0.0, downstream_node=2, upstream_node=None))
+        stream.add_node(StrmNode(id=2, x=1.0, y=0.0, downstream_node=None, upstream_node=1))
 
         stream.build_connectivity()
         assert stream.get_downstream_node(1) == 2
@@ -981,9 +991,7 @@ class TestAppStreamValidation:
         """Validation should fail if a reach references a nonexistent node."""
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))
-        stream.add_reach(
-            StrmReach(id=1, upstream_node=1, downstream_node=99, nodes=[1, 99])
-        )
+        stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=99, nodes=[1, 99]))
 
         with pytest.raises(ComponentError, match="non-existent node 99"):
             stream.validate()
@@ -1022,9 +1030,7 @@ class TestAppStreamValidation:
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))
         stream.add_node(StrmNode(id=2, x=1.0, y=0.0))
-        stream.add_reach(
-            StrmReach(id=1, upstream_node=1, downstream_node=2, nodes=[1, 2])
-        )
+        stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=2, nodes=[1, 2]))
         stream.add_diversion(
             Diversion(id=1, source_node=1, destination_type="outside", destination_id=0)
         )
@@ -1043,9 +1049,7 @@ class TestAppStreamGetReachSegments:
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1))
         stream.add_node(StrmNode(id=2, x=1.0, y=0.0, reach_id=1))
         stream.add_node(StrmNode(id=3, x=2.0, y=0.0, reach_id=1))
-        stream.add_reach(
-            StrmReach(id=1, upstream_node=1, downstream_node=3, nodes=[1, 2, 3])
-        )
+        stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=3, nodes=[1, 2, 3]))
 
         segments = stream.get_reach_segments(1)
         assert len(segments) == 2
@@ -1056,9 +1060,7 @@ class TestAppStreamGetReachSegments:
         """A reach with one node produces no segments."""
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1))
-        stream.add_reach(
-            StrmReach(id=1, upstream_node=1, downstream_node=1, nodes=[1])
-        )
+        stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=1, nodes=[1]))
 
         segments = stream.get_reach_segments(1)
         assert segments == []
@@ -1066,9 +1068,7 @@ class TestAppStreamGetReachSegments:
     def test_segments_empty_reach(self) -> None:
         """A reach with no nodes produces no segments."""
         stream = AppStream()
-        stream.add_reach(
-            StrmReach(id=1, upstream_node=1, downstream_node=1, nodes=[])
-        )
+        stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=1, nodes=[]))
 
         segments = stream.get_reach_segments(1)
         assert segments == []
@@ -1083,16 +1083,12 @@ class TestAppStreamDetectCrossings:
         # Reach 1: from (0,0) to (4,4)
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1))
         stream.add_node(StrmNode(id=2, x=4.0, y=4.0, reach_id=1))
-        stream.add_reach(
-            StrmReach(id=1, upstream_node=1, downstream_node=2, nodes=[1, 2])
-        )
+        stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=2, nodes=[1, 2]))
 
         # Reach 2: from (0,4) to (4,0) -- crosses reach 1
         stream.add_node(StrmNode(id=3, x=0.0, y=4.0, reach_id=2))
         stream.add_node(StrmNode(id=4, x=4.0, y=0.0, reach_id=2))
-        stream.add_reach(
-            StrmReach(id=2, upstream_node=3, downstream_node=4, nodes=[3, 4])
-        )
+        stream.add_reach(StrmReach(id=2, upstream_node=3, downstream_node=4, nodes=[3, 4]))
 
         return stream
 
@@ -1102,16 +1098,12 @@ class TestAppStreamDetectCrossings:
         # Reach 1: horizontal at y=0
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1))
         stream.add_node(StrmNode(id=2, x=4.0, y=0.0, reach_id=1))
-        stream.add_reach(
-            StrmReach(id=1, upstream_node=1, downstream_node=2, nodes=[1, 2])
-        )
+        stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=2, nodes=[1, 2]))
 
         # Reach 2: horizontal at y=2
         stream.add_node(StrmNode(id=3, x=0.0, y=2.0, reach_id=2))
         stream.add_node(StrmNode(id=4, x=4.0, y=2.0, reach_id=2))
-        stream.add_reach(
-            StrmReach(id=2, upstream_node=3, downstream_node=4, nodes=[3, 4])
-        )
+        stream.add_reach(StrmReach(id=2, upstream_node=3, downstream_node=4, nodes=[3, 4]))
 
         return stream
 
@@ -1179,16 +1171,12 @@ class TestAppStreamDetectCrossings:
         # Reach 1: (0,0) -> (1,1)
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1))
         stream.add_node(StrmNode(id=2, x=1.0, y=1.0, reach_id=1))
-        stream.add_reach(
-            StrmReach(id=1, upstream_node=1, downstream_node=2, nodes=[1, 2])
-        )
+        stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=2, nodes=[1, 2]))
 
         # Reach 2: (1,1) -> (2,0) -- shares endpoint with reach 1
         stream.add_node(StrmNode(id=3, x=1.0, y=1.0, reach_id=2))
         stream.add_node(StrmNode(id=4, x=2.0, y=0.0, reach_id=2))
-        stream.add_reach(
-            StrmReach(id=2, upstream_node=3, downstream_node=4, nodes=[3, 4])
-        )
+        stream.add_reach(StrmReach(id=2, upstream_node=3, downstream_node=4, nodes=[3, 4]))
 
         crossings = stream.detect_crossings()
         assert len(crossings) == 0
@@ -1200,9 +1188,7 @@ class TestAppStreamComputeIntersection:
     def test_normal_intersection(self) -> None:
         """Two crossing segments yield their intersection point."""
         stream = AppStream()
-        pt = stream._compute_intersection(
-            (0.0, 0.0), (2.0, 2.0), (0.0, 2.0), (2.0, 0.0)
-        )
+        pt = stream._compute_intersection((0.0, 0.0), (2.0, 2.0), (0.0, 2.0), (2.0, 0.0))
         assert pt is not None
         assert pt[0] == pytest.approx(1.0)
         assert pt[1] == pytest.approx(1.0)
@@ -1210,17 +1196,13 @@ class TestAppStreamComputeIntersection:
     def test_parallel_segments_return_none(self) -> None:
         """Parallel segments return None (no intersection)."""
         stream = AppStream()
-        pt = stream._compute_intersection(
-            (0.0, 0.0), (2.0, 0.0), (0.0, 1.0), (2.0, 1.0)
-        )
+        pt = stream._compute_intersection((0.0, 0.0), (2.0, 0.0), (0.0, 1.0), (2.0, 1.0))
         assert pt is None
 
     def test_coincident_segments_return_none(self) -> None:
         """Coincident (overlapping) segments return None."""
         stream = AppStream()
-        pt = stream._compute_intersection(
-            (0.0, 0.0), (2.0, 0.0), (1.0, 0.0), (3.0, 0.0)
-        )
+        pt = stream._compute_intersection((0.0, 0.0), (2.0, 0.0), (1.0, 0.0), (3.0, 0.0))
         assert pt is None
 
 
@@ -1233,9 +1215,7 @@ class TestAppStreamGetNodesInReach:
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1))
         stream.add_node(StrmNode(id=3, x=2.0, y=0.0, reach_id=1))
         # Node 2 is missing from the network
-        stream.add_reach(
-            StrmReach(id=1, upstream_node=1, downstream_node=3, nodes=[1, 2, 3])
-        )
+        stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=3, nodes=[1, 2, 3]))
 
         nodes = stream.get_nodes_in_reach(1)
         assert len(nodes) == 2

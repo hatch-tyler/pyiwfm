@@ -8,9 +8,9 @@ import pytest
 
 from pyiwfm.runner.pest_helper import (
     IWFMPestHelper,
+    RegularizationConfig,
     RegularizationType,
     SVDConfig,
-    RegularizationConfig,
 )
 from pyiwfm.runner.pest_params import IWFMParameterType
 
@@ -70,7 +70,7 @@ class TestIWFMPestHelperInit:
         """Test that pest_dir is created."""
         with tempfile.TemporaryDirectory() as tmpdir:
             pest_dir = Path(tmpdir) / "nested" / "pest"
-            helper = IWFMPestHelper(pest_dir=pest_dir)
+            IWFMPestHelper(pest_dir=pest_dir)
             assert pest_dir.exists()
 
     def test_init_with_model_dir(self):
@@ -301,8 +301,11 @@ class TestBuild:
         with tempfile.TemporaryDirectory() as tmpdir:
             helper = IWFMPestHelper(pest_dir=tmpdir)
             helper.add_head_observations(
-                well_id="w1", x=0, y=0,
-                times=[datetime(2020, 1, 1)], values=[100.0],
+                well_id="w1",
+                x=0,
+                y=0,
+                times=[datetime(2020, 1, 1)],
+                values=[100.0],
             )
             with pytest.raises(ValueError, match="No parameters"):
                 helper.build()
@@ -342,8 +345,11 @@ class TestSummary:
             helper = IWFMPestHelper(pest_dir=tmpdir, case_name="test")
             helper.add_zone_parameters("hk", zones=[1, 2], layer=1)
             helper.add_head_observations(
-                well_id="w1", x=0, y=0,
-                times=[datetime(2020, 1, 1)], values=[100.0],
+                well_id="w1",
+                x=0,
+                y=0,
+                times=[datetime(2020, 1, 1)],
+                values=[100.0],
             )
 
             summary = helper.summary()
@@ -358,8 +364,11 @@ class TestSummary:
             helper = IWFMPestHelper(pest_dir=tmpdir, case_name="test")
             helper.add_zone_parameters("hk", zones=[1], layer=1)
             helper.add_head_observations(
-                well_id="w1", x=0, y=0,
-                times=[datetime(2020, 1, 1)], values=[100.0],
+                well_id="w1",
+                x=0,
+                y=0,
+                times=[datetime(2020, 1, 1)],
+                values=[100.0],
             )
             helper.build()
 
@@ -417,8 +426,11 @@ class TestPropertyMethods:
         with tempfile.TemporaryDirectory() as tmpdir:
             helper = IWFMPestHelper(pest_dir=tmpdir)
             helper.add_head_observations(
-                well_id="w1", x=0, y=0,
-                times=[datetime(2020, 1, 1)], values=[100.0],
+                well_id="w1",
+                x=0,
+                y=0,
+                times=[datetime(2020, 1, 1)],
+                values=[100.0],
                 group="heads",
             )
             groups = helper.observation_groups
@@ -427,7 +439,7 @@ class TestPropertyMethods:
     def test_add_template_and_instruction(self):
         """Test registering templates and instructions."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            from pyiwfm.runner.pest import TemplateFile, InstructionFile
+            from pyiwfm.runner.pest import InstructionFile, TemplateFile
 
             helper = IWFMPestHelper(pest_dir=tmpdir)
 
@@ -599,19 +611,22 @@ class TestAddObservationsEdgeCases:
             helper = IWFMPestHelper(pest_dir=tmpdir)
             # Add observations in two groups
             helper.add_head_observations(
-                well_id="w1", x=0, y=0,
-                times=[datetime(2020, 1, 1)], values=[100.0],
+                well_id="w1",
+                x=0,
+                y=0,
+                times=[datetime(2020, 1, 1)],
+                values=[100.0],
                 group="heads",
             )
             helper.add_streamflow_observations(
-                gage_id="g1", reach_id=1,
-                times=[datetime(2020, 1, 1)], values=[500.0],
+                gage_id="g1",
+                reach_id=1,
+                times=[datetime(2020, 1, 1)],
+                values=[500.0],
                 group="flows",
             )
             # Should not raise
-            helper.balance_observation_weights(
-                contributions={"heads": 0.5, "flows": 0.5}
-            )
+            helper.balance_observation_weights(contributions={"heads": 0.5, "flows": 0.5})
 
 
 class TestConfigurationEdgeCases:
@@ -692,7 +707,7 @@ class TestBuildEdgeCases:
     def test_build_with_templates_and_instructions(self):
         """Test build with registered templates and instructions."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            from pyiwfm.runner.pest import TemplateFile, InstructionFile
+            from pyiwfm.runner.pest import InstructionFile, TemplateFile
 
             helper = self._create_helper_with_data(tmpdir)
 
@@ -800,8 +815,11 @@ class TestSummaryEdgeCases:
             helper.set_regularization(reg_type="tikhonov")
             helper.add_zone_parameters("hk", zones=[1], layer=1)
             helper.add_head_observations(
-                well_id="w1", x=0, y=0,
-                times=[datetime(2020, 1, 1)], values=[100.0],
+                well_id="w1",
+                x=0,
+                y=0,
+                times=[datetime(2020, 1, 1)],
+                values=[100.0],
             )
             summary = helper.summary()
             assert summary["regularization"] == "tikhonov"
@@ -850,6 +868,7 @@ class TestInitWithNoModelDir:
     def test_init_with_model(self):
         """Test initialization with a model object."""
         from unittest.mock import MagicMock
+
         with tempfile.TemporaryDirectory() as tmpdir:
             model = MagicMock()
             helper = IWFMPestHelper(pest_dir=tmpdir, model=model)

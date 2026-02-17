@@ -54,7 +54,8 @@ def load_model(
             pp_path = _resolve_path(model_dir, preprocessor_file)
             logger.info(
                 "Loading full model from simulation + preprocessor: %s, %s",
-                sim_path, pp_path,
+                sim_path,
+                pp_path,
             )
             return IWFMModel.from_simulation_with_preprocessor(sim_path, pp_path)
         logger.info("Loading full model from simulation file: %s", sim_path)
@@ -75,7 +76,8 @@ def load_model(
     if sim_file and pp_file:
         logger.info(
             "Auto-detected simulation + preprocessor files: %s, %s",
-            sim_file, pp_file,
+            sim_file,
+            pp_file,
         )
         try:
             return IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)

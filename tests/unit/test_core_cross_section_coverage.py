@@ -6,9 +6,7 @@ import numpy as np
 import pytest
 
 from pyiwfm.core.cross_section import CrossSection, CrossSectionExtractor
-
 from tests.conftest import make_simple_grid, make_simple_stratigraphy
-
 
 # ---------------------------------------------------------------------------
 # CrossSection dataclass
@@ -112,7 +110,7 @@ class TestCrossSectionExtractor:
 
     def test_single_element_mesh(self) -> None:
         """Test with a mesh that has just one element."""
-        from pyiwfm.core.mesh import AppGrid, Node, Element
+        from pyiwfm.core.mesh import AppGrid, Element, Node
         from pyiwfm.core.stratigraphy import Stratigraphy
 
         nodes = {
@@ -164,7 +162,8 @@ class TestCrossSectionExtractor:
     def test_interpolate_layer_property(self) -> None:
         ext = self._make_extractor()
         xs = ext.extract(start=(0.0, 100.0), end=(200.0, 100.0), n_samples=5)
-        node_layer_values = np.random.rand(9, 2)
+        rng = np.random.default_rng(42)
+        node_layer_values = rng.random((9, 2))
         result = ext.interpolate_layer_property(xs, node_layer_values, "kh")
         assert "kh" in xs.layer_properties
         assert result.shape == (5, 2)

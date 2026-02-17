@@ -9,10 +9,7 @@ Covers:
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
-from datetime import datetime
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 
 def _make_helper_for_build(tmp_path: Path, case_name: str = "test"):
@@ -61,11 +58,14 @@ class TestBuildWithSVD:
             (tmp_path / "pest").mkdir(parents=True, exist_ok=True)
             (tmp_path / "pest" / "templates").mkdir(exist_ok=True)
             (tmp_path / "pest" / "instructions").mkdir(exist_ok=True)
-            result = helper.build()
+            helper.build()
 
         # Verify SVD options were set
-        calls = [c for c in mock_pest.set_pestpp_option.call_args_list
-                 if c[0][0] in ("svd_pack", "max_n_super")]
+        calls = [
+            c
+            for c in mock_pest.set_pestpp_option.call_args_list
+            if c[0][0] in ("svd_pack", "max_n_super")
+        ]
         assert len(calls) == 2
 
 
@@ -200,7 +200,6 @@ class TestRunPestpp:
 
     def test_run_pestpp_success(self, tmp_path: Path) -> None:
         """run_pestpp executes subprocess.run with correct args."""
-        from pyiwfm.runner.pest_helper import IWFMPestHelper
 
         helper = _make_helper_for_build(tmp_path, "run_test")
         helper._is_built = True
@@ -213,8 +212,10 @@ class TestRunPestpp:
         mock_result = MagicMock()
         mock_result.returncode = 0
 
-        with patch("shutil.which", return_value="/usr/bin/pestpp-glm"), \
-             patch("subprocess.run", return_value=mock_result) as mock_run:
+        with (
+            patch("shutil.which", return_value="/usr/bin/pestpp-glm"),
+            patch("subprocess.run", return_value=mock_result) as mock_run,
+        ):
             result = helper.run_pestpp("pestpp-glm")
 
         assert result is mock_result
@@ -224,7 +225,6 @@ class TestRunPestpp:
 
     def test_run_pestpp_with_extra_args(self, tmp_path: Path) -> None:
         """run_pestpp with extra_args appends them to command."""
-        from pyiwfm.runner.pest_helper import IWFMPestHelper
 
         helper = _make_helper_for_build(tmp_path, "extra_test")
         helper._is_built = True
@@ -234,8 +234,10 @@ class TestRunPestpp:
         (pest_dir / "extra_test.pst").write_text("pst content")
 
         mock_result = MagicMock()
-        with patch("shutil.which", return_value="/usr/bin/pestpp-glm"), \
-             patch("subprocess.run", return_value=mock_result) as mock_run:
+        with (
+            patch("shutil.which", return_value="/usr/bin/pestpp-glm"),
+            patch("subprocess.run", return_value=mock_result) as mock_run,
+        ):
             helper.run_pestpp("pestpp-glm", extra_args=["--verbose", "--restart"])
 
         call_args = mock_run.call_args[0][0]
@@ -248,7 +250,6 @@ class TestRunPestppGlm:
 
     def test_run_pestpp_glm_with_kwargs(self, tmp_path: Path) -> None:
         """run_pestpp_glm with kwargs rebuilds and runs."""
-        from pyiwfm.runner.pest_helper import IWFMPestHelper
 
         helper = _make_helper_for_build(tmp_path, "glm_test")
         helper._is_built = True
@@ -259,9 +260,11 @@ class TestRunPestppGlm:
 
         mock_result = MagicMock()
 
-        with patch.object(helper, "set_pestpp_options") as mock_set, \
-             patch.object(helper, "build") as mock_build, \
-             patch.object(helper, "run_pestpp", return_value=mock_result) as mock_run:
+        with (
+            patch.object(helper, "set_pestpp_options") as mock_set,
+            patch.object(helper, "build") as mock_build,
+            patch.object(helper, "run_pestpp", return_value=mock_result) as mock_run,
+        ):
             result = helper.run_pestpp_glm(n_workers=2, max_n_iter=50)
 
         mock_set.assert_called_once_with(max_n_iter=50)
@@ -275,16 +278,17 @@ class TestRunPestppIes:
 
     def test_run_pestpp_ies(self, tmp_path: Path) -> None:
         """run_pestpp_ies sets options, builds, and runs."""
-        from pyiwfm.runner.pest_helper import IWFMPestHelper
 
         helper = _make_helper_for_build(tmp_path, "ies_test")
         helper._is_built = True
 
         mock_result = MagicMock()
 
-        with patch.object(helper, "set_pestpp_options") as mock_set, \
-             patch.object(helper, "build") as mock_build, \
-             patch.object(helper, "run_pestpp", return_value=mock_result) as mock_run:
+        with (
+            patch.object(helper, "set_pestpp_options") as mock_set,
+            patch.object(helper, "build") as mock_build,
+            patch.object(helper, "run_pestpp", return_value=mock_result) as mock_run,
+        ):
             result = helper.run_pestpp_ies(n_realizations=50, n_workers=4)
 
         mock_set.assert_called_once_with(ies_num_reals=50)
@@ -298,16 +302,17 @@ class TestRunPestppSen:
 
     def test_run_pestpp_sen(self, tmp_path: Path) -> None:
         """run_pestpp_sen sets GSA options, builds, and runs."""
-        from pyiwfm.runner.pest_helper import IWFMPestHelper
 
         helper = _make_helper_for_build(tmp_path, "sen_test")
         helper._is_built = True
 
         mock_result = MagicMock()
 
-        with patch.object(helper, "set_pestpp_options") as mock_set, \
-             patch.object(helper, "build") as mock_build, \
-             patch.object(helper, "run_pestpp", return_value=mock_result) as mock_run:
+        with (
+            patch.object(helper, "set_pestpp_options") as mock_set,
+            patch.object(helper, "build") as mock_build,
+            patch.object(helper, "run_pestpp", return_value=mock_result) as mock_run,
+        ):
             result = helper.run_pestpp_sen(method="morris", n_samples=500)
 
         mock_set.assert_called_once_with(gsa_method="morris", gsa_sobol_samples=500)

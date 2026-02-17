@@ -19,12 +19,11 @@ from typing import TextIO
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty,
-    strip_inline_comment as _strip_comment,
 )
-
+from pyiwfm.io.iwfm_reader import (
+    next_data_or_empty as _next_data_or_empty,
+)
 
 # Delivery destination types (from Fortran source)
 DEST_ELEMENT = 1
@@ -56,6 +55,7 @@ class DiversionSpec:
         adjustment_col: Column for adjustment data
         name: Diversion name (up to 20 chars)
     """
+
     id: int = 0
     stream_node: int = 0
     max_diver_col: int = 0
@@ -83,6 +83,7 @@ class ElementGroup:
         id: Group ID
         elements: List of element IDs in this group
     """
+
     id: int = 0
     elements: list[int] = field(default_factory=list)
 
@@ -97,6 +98,7 @@ class RechargeZoneDest:
         zone_ids: List of zone IDs
         zone_fractions: List of fractions for each zone
     """
+
     diversion_id: int = 0
     n_zones: int = 0
     zone_ids: list[int] = field(default_factory=list)
@@ -116,6 +118,7 @@ class DiversionSpecConfig:
         spill_zones: List of spill zone destinations (for spills)
         has_spills: Whether the file uses 16-column format with spills
     """
+
     n_diversions: int = 0
     diversions: list[DiversionSpec] = field(default_factory=list)
     n_element_groups: int = 0
@@ -149,7 +152,7 @@ class DiversionSpecReader:
         config = DiversionSpecConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # NDiver (number of diversions)
             ndiver_str = _next_data_or_empty(f)
             if not ndiver_str:
@@ -171,17 +174,13 @@ class DiversionSpecReader:
             config.has_spills = n_numeric >= 16
 
             # Parse first diversion
-            config.diversions.append(
-                self._parse_diversion_line(parts, config.has_spills)
-            )
+            config.diversions.append(self._parse_diversion_line(parts, config.has_spills))
 
             # Parse remaining diversions
             for _ in range(config.n_diversions - 1):
                 line = self._next_data_line(f)
                 parts = line.split()
-                config.diversions.append(
-                    self._parse_diversion_line(parts, config.has_spills)
-                )
+                config.diversions.append(self._parse_diversion_line(parts, config.has_spills))
 
             # Element groups
             ngroup_str = _next_data_or_empty(f)
@@ -222,9 +221,7 @@ class DiversionSpecReader:
                 break
         return count
 
-    def _parse_diversion_line(
-        self, parts: list[str], has_spills: bool
-    ) -> DiversionSpec:
+    def _parse_diversion_line(self, parts: list[str], has_spills: bool) -> DiversionSpec:
         """Parse a single diversion specification line.
 
         Args:
@@ -238,25 +235,41 @@ class DiversionSpecReader:
 
         try:
             idx = 0
-            spec.id = int(parts[idx]); idx += 1
-            spec.stream_node = int(parts[idx]); idx += 1
-            spec.max_diver_col = int(parts[idx]); idx += 1
-            spec.frac_max_diver = float(parts[idx]); idx += 1
-            spec.recv_loss_col = int(parts[idx]); idx += 1
-            spec.frac_recv_loss = float(parts[idx]); idx += 1
-            spec.non_recv_loss_col = int(parts[idx]); idx += 1
-            spec.frac_non_recv_loss = float(parts[idx]); idx += 1
+            spec.id = int(parts[idx])
+            idx += 1
+            spec.stream_node = int(parts[idx])
+            idx += 1
+            spec.max_diver_col = int(parts[idx])
+            idx += 1
+            spec.frac_max_diver = float(parts[idx])
+            idx += 1
+            spec.recv_loss_col = int(parts[idx])
+            idx += 1
+            spec.frac_recv_loss = float(parts[idx])
+            idx += 1
+            spec.non_recv_loss_col = int(parts[idx])
+            idx += 1
+            spec.frac_non_recv_loss = float(parts[idx])
+            idx += 1
 
             if has_spills:
-                spec.spill_col = int(parts[idx]); idx += 1
-                spec.frac_spill = float(parts[idx]); idx += 1
+                spec.spill_col = int(parts[idx])
+                idx += 1
+                spec.frac_spill = float(parts[idx])
+                idx += 1
 
-            spec.dest_type = int(parts[idx]); idx += 1
-            spec.dest_id = int(parts[idx]); idx += 1
-            spec.delivery_col = int(parts[idx]); idx += 1
-            spec.frac_delivery = float(parts[idx]); idx += 1
-            spec.irrig_frac_col = int(parts[idx]); idx += 1
-            spec.adjustment_col = int(parts[idx]); idx += 1
+            spec.dest_type = int(parts[idx])
+            idx += 1
+            spec.dest_id = int(parts[idx])
+            idx += 1
+            spec.delivery_col = int(parts[idx])
+            idx += 1
+            spec.frac_delivery = float(parts[idx])
+            idx += 1
+            spec.irrig_frac_col = int(parts[idx])
+            idx += 1
+            spec.adjustment_col = int(parts[idx])
+            idx += 1
 
             # Name is optional, remainder of line
             if idx < len(parts):

@@ -10,8 +10,6 @@ import importlib
 import sys
 from unittest.mock import patch
 
-import pytest
-
 
 class TestDSSImportFallback:
     """Test DSS import fallback."""
@@ -22,6 +20,7 @@ class TestDSSImportFallback:
         with patch.dict(sys.modules, blocked):
             sys.modules.pop("pyiwfm.io", None)
             import pyiwfm.io as io_mod
+
             importlib.reload(io_mod)
             assert io_mod._dss_exports == []
 

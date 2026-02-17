@@ -59,7 +59,7 @@ class PreProcessorFileConfig:
     stream_version: str = "5.0"
     lake_version: str = "5.0"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -123,7 +123,7 @@ class GWFileConfig:
         default_factory=lambda: TimeSeriesOutputConfig(dss_file="Groundwater.dss")
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     def get_path(self, filename: str) -> Path:
@@ -154,7 +154,7 @@ class StreamFileConfig:
         default_factory=lambda: TimeSeriesOutputConfig(dss_file="Streams.dss")
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -179,7 +179,7 @@ class LakeFileConfig:
         default_factory=lambda: TimeSeriesOutputConfig(dss_file="Lakes.dss")
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -230,7 +230,7 @@ class RootZoneFileConfig:
         default_factory=lambda: TimeSeriesOutputConfig(dss_file="RootZone.dss")
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -246,7 +246,7 @@ class SmallWatershedFileConfig:
     version: str = "4.1"
     main_file: str = "SmallWatersheds.dat"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -261,7 +261,7 @@ class UnsatZoneFileConfig:
     output_dir: Path
     main_file: str = "UnsatZone.dat"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -307,7 +307,7 @@ class SimulationFileConfig:
     rootzone_version: str = "5.0"
     small_watershed_version: str = "4.1"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -388,7 +388,7 @@ class BudgetFileConfig:
     output_dir: Path
     main_file: str = "Budget.in"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -404,7 +404,7 @@ class ZBudgetFileConfig:
     main_file: str = "ZBudget.in"
     zone_definition_file: str = "ZoneDefinitions.dat"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -442,7 +442,7 @@ class ModelOutputConfig:
     _preprocessor: PreProcessorFileConfig | None = None
     _simulation: SimulationFileConfig | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     @property
@@ -539,7 +539,6 @@ class ModelWriteConfig:
         "stratigraphy": "Preprocessor/Stratigraphy.dat",
         "stream_config": "Preprocessor/StreamConfig.dat",
         "lake_config": "Preprocessor/LakeConfig.dat",
-
         # Simulation-level
         "simulation_main": "Simulation/Simulation_MAIN.IN",
         "preprocessor_bin": "Simulation/PreProcessor.bin",
@@ -548,7 +547,6 @@ class ModelWriteConfig:
         "irig_frac": "Simulation/IrigFrac.dat",
         "supply_adjust": "Simulation/SupplyAdjust.dat",
         "dss_ts_file": "Simulation/climate_data.dss",
-
         # GW component
         "gw_main": "Simulation/GW/GW_MAIN.dat",
         "gw_bc_main": "Simulation/GW/BC_MAIN.dat",
@@ -561,24 +559,19 @@ class ModelWriteConfig:
         "gw_bound_tsd": "Simulation/GW/BoundTSD.dat",
         "gw_tile_drain": "Simulation/GW/TileDrain.dat",
         "gw_subsidence": "Simulation/GW/Subsidence.dat",
-
         # Stream component
         "stream_main": "Simulation/Stream/Stream_MAIN.dat",
         "stream_inflow": "Simulation/Stream/StreamInflow.dat",
         "stream_diver_specs": "Simulation/Stream/DiverSpecs.dat",
         "stream_bypass_specs": "Simulation/Stream/BypassSpecs.dat",
         "stream_diversions": "Simulation/Stream/Diversions.dat",
-
         # Lake component
         "lake_main": "Simulation/Lake/Lake_MAIN.dat",
         "lake_max_elev": "Simulation/Lake/MaxLakeElev.dat",
-
         # Small watershed component (copied, not regenerated)
         "swshed_main": "Simulation/SmallWatersheds/SWatersheds.dat",
-
         # Unsaturated zone component (copied, not regenerated)
         "unsatzone_main": "Simulation/UnsatZone.dat",
-
         # Root zone component
         "rootzone_main": "Simulation/RootZone/RootZone_MAIN.dat",
         "rootzone_return_flow": "Simulation/RootZone/ReturnFlowFrac.dat",
@@ -589,7 +582,6 @@ class ModelWriteConfig:
         "rootzone_ponded": "Simulation/RootZone/PondedCrops.dat",
         "rootzone_urban": "Simulation/RootZone/Urban.dat",
         "rootzone_native": "Simulation/RootZone/NativeRiparian.dat",
-
         # Results (output files)
         "results_gw_budget": "Results/GW.hdf",
         "results_gw_zbudget": "Results/GW_ZBud.hdf",
@@ -600,7 +592,7 @@ class ModelWriteConfig:
         "results_rz_budget": "Results/RootZone.hdf",
     }
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.output_dir = Path(self.output_dir)
 
     def get_path(self, file_key: str) -> Path:

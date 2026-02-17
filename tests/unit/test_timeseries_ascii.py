@@ -19,22 +19,20 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.io.timeseries_ascii import (
-    COMMENT_CHARS,
     IWFM_TIMESTAMP_FORMAT,
     IWFM_TIMESTAMP_LENGTH,
     TimeSeriesFileConfig,
     TimeSeriesReader,
     TimeSeriesWriter,
+    _is_comment_line,
     format_iwfm_timestamp,
     parse_iwfm_timestamp,
     read_timeseries,
     write_timeseries,
-    _is_comment_line,
 )
-from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
-from pyiwfm.core.exceptions import FileFormatError
-
 
 # =============================================================================
 # Test format_iwfm_timestamp
@@ -658,12 +656,8 @@ class TestRoundtrip:
         read_collection = reader.read_to_collection(filepath, column_ids=["A", "B"])
 
         assert len(read_collection) == 2
-        np.testing.assert_array_almost_equal(
-            read_collection["A"].values, np.array([1.0, 2.0])
-        )
-        np.testing.assert_array_almost_equal(
-            read_collection["B"].values, np.array([3.0, 4.0])
-        )
+        np.testing.assert_array_almost_equal(read_collection["A"].values, np.array([1.0, 2.0]))
+        np.testing.assert_array_almost_equal(read_collection["B"].values, np.array([3.0, 4.0]))
 
 
 # =============================================================================
@@ -738,7 +732,9 @@ class TestEdgeCases:
         times = [datetime(2020, 1, 1) + i * np.timedelta64(1, "D") for i in range(365)]
         times = [datetime(2020, 1, 1, 0, 0, 0)]
         for i in range(1, 365):
-            times.append(datetime(2020, 1, 1, 0, 0, 0) + (datetime(2020, 1, 2) - datetime(2020, 1, 1)) * i)
+            times.append(
+                datetime(2020, 1, 1, 0, 0, 0) + (datetime(2020, 1, 2) - datetime(2020, 1, 1)) * i
+            )
         values = np.arange(365).reshape(-1, 1).astype(float)
 
         writer = TimeSeriesWriter()

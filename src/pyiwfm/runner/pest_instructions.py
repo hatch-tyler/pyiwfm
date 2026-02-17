@@ -14,14 +14,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
-
-import numpy as np
+from typing import TYPE_CHECKING, Any
 
 from pyiwfm.runner.pest import InstructionFile
 from pyiwfm.runner.pest_observations import (
-    IWFMObservationType,
     IWFMObservation,
+    IWFMObservationType,
 )
 
 if TYPE_CHECKING:
@@ -141,7 +139,7 @@ class IWFMInstructionManager:
     def __init__(
         self,
         model: Any = None,
-        observation_manager: "IWFMObservationManager | None" = None,
+        observation_manager: IWFMObservationManager | None = None,
         output_dir: Path | str | None = None,
         marker: str = "@",
     ):
@@ -237,7 +235,7 @@ class IWFMInstructionManager:
             lines.append(f"l{header_lines}")
 
         # Group observations by time for efficiency
-        obs_by_time = {}
+        obs_by_time: dict[str, list[IWFMObservation]] = {}
         for obs in observations:
             if obs.datetime is not None:
                 time_str = obs.datetime.strftime(time_format)
@@ -260,9 +258,7 @@ class IWFMInstructionManager:
                     lines.append("l1")  # Move to next line
 
                 # Build whitespace-delimited read instruction
-                instruction = self._build_read_instruction(
-                    value_column, obs.name
-                )
+                instruction = self._build_read_instruction(value_column, obs.name)
                 lines.append(instruction)
                 obs_names.append(obs.name)
 
@@ -313,7 +309,9 @@ class IWFMInstructionManager:
             observations = self.om.get_observations_by_type(IWFMObservationType.HEAD)
 
         # Group observations by well
-        obs_by_well = {}
+        obs_by_well: dict[str, list[IWFMObservation]] = {}
+        if observations is None:
+            observations = []
         for obs in observations:
             well_id = obs.metadata.get("well_id")
             if well_id and well_id in output_files:
@@ -388,13 +386,9 @@ class IWFMInstructionManager:
         # Get observations
         if observations is None and self.om is not None:
             if variable == "flow":
-                observations = self.om.get_observations_by_type(
-                    IWFMObservationType.STREAM_FLOW
-                )
+                observations = self.om.get_observations_by_type(IWFMObservationType.STREAM_FLOW)
             else:
-                observations = self.om.get_observations_by_type(
-                    IWFMObservationType.STREAM_STAGE
-                )
+                observations = self.om.get_observations_by_type(IWFMObservationType.STREAM_STAGE)
 
         if not observations:
             raise ValueError(f"No {variable} observations provided")
@@ -412,7 +406,7 @@ class IWFMInstructionManager:
             lines.append(f"l{header_lines}")
 
         # Group observations by time
-        obs_by_time = {}
+        obs_by_time: dict[str, list[IWFMObservation]] = {}
         for obs in observations:
             if obs.datetime is not None:
                 time_str = obs.datetime.strftime(time_format)
@@ -488,9 +482,7 @@ class IWFMInstructionManager:
         output_file = Path(output_file)
 
         if observations is None and self.om is not None:
-            observations = self.om.get_observations_by_type(
-                IWFMObservationType.STREAM_GAIN_LOSS
-            )
+            observations = self.om.get_observations_by_type(IWFMObservationType.STREAM_GAIN_LOSS)
 
         if not observations:
             raise ValueError("No gain/loss observations provided")
@@ -507,7 +499,9 @@ class IWFMInstructionManager:
 
         # For gain/loss, we need to search for both time and reach
         obs_names = []
-        for obs in sorted(observations, key=lambda o: (o.datetime or datetime.min, o.metadata.get("reach_id", 0))):
+        for obs in sorted(
+            observations, key=lambda o: (o.datetime or datetime.min, o.metadata.get("reach_id", 0))
+        ):
             if obs.datetime is None:
                 continue
 
@@ -596,9 +590,7 @@ class IWFMInstructionManager:
             raise ValueError(f"Invalid budget type: {budget_type}")
 
         if observations is None and self.om is not None:
-            observations = self.om.get_observations_by_type(
-                budget_obs_types[budget_type]
-            )
+            observations = self.om.get_observations_by_type(budget_obs_types[budget_type])
 
         if not observations:
             raise ValueError(f"No {budget_type} budget observations provided")
@@ -622,7 +614,7 @@ class IWFMInstructionManager:
 
             time_str = obs.datetime.strftime(time_format)
             component = obs.metadata.get("component", "")
-            location_id = obs.metadata.get("location_id")
+            obs.metadata.get("location_id")
 
             # Search for time
             lines.append(f"{self.marker}{time_str}{self.marker}")
@@ -695,13 +687,9 @@ class IWFMInstructionManager:
 
         if observations is None and self.om is not None:
             if variable == "level":
-                observations = self.om.get_observations_by_type(
-                    IWFMObservationType.LAKE_LEVEL
-                )
+                observations = self.om.get_observations_by_type(IWFMObservationType.LAKE_LEVEL)
             else:
-                observations = self.om.get_observations_by_type(
-                    IWFMObservationType.LAKE_STORAGE
-                )
+                observations = self.om.get_observations_by_type(IWFMObservationType.LAKE_STORAGE)
 
         if not observations:
             raise ValueError(f"No lake {variable} observations provided")
@@ -716,7 +704,7 @@ class IWFMInstructionManager:
         if header_lines > 0:
             lines.append(f"l{header_lines}")
 
-        obs_by_time = {}
+        obs_by_time: dict[str, list[IWFMObservation]] = {}
         for obs in observations:
             if obs.datetime is not None:
                 time_str = obs.datetime.strftime(time_format)
@@ -790,9 +778,7 @@ class IWFMInstructionManager:
         output_file = Path(output_file)
 
         if observations is None and self.om is not None:
-            observations = self.om.get_observations_by_type(
-                IWFMObservationType.SUBSIDENCE
-            )
+            observations = self.om.get_observations_by_type(IWFMObservationType.SUBSIDENCE)
 
         if not observations:
             raise ValueError("No subsidence observations provided")
@@ -996,33 +982,33 @@ class IWFMInstructionManager:
 
         # Generate instructions for each observation type
         type_methods = {
-            IWFMObservationType.HEAD: (
-                "head", self.generate_head_instructions
-            ),
+            IWFMObservationType.HEAD: ("head", self.generate_head_instructions),
             IWFMObservationType.STREAM_FLOW: (
-                "flow", lambda f, **kw: self.generate_flow_instructions(f, variable="flow", **kw)
+                "flow",
+                lambda f, **kw: self.generate_flow_instructions(f, variable="flow", **kw),
             ),
             IWFMObservationType.STREAM_STAGE: (
-                "stage", lambda f, **kw: self.generate_flow_instructions(f, variable="stage", **kw)
+                "stage",
+                lambda f, **kw: self.generate_flow_instructions(f, variable="stage", **kw),
             ),
             IWFMObservationType.LAKE_LEVEL: (
-                "lake_level", lambda f, **kw: self.generate_lake_instructions(f, variable="level", **kw)
+                "lake_level",
+                lambda f, **kw: self.generate_lake_instructions(f, variable="level", **kw),
             ),
             IWFMObservationType.LAKE_STORAGE: (
-                "lake_storage", lambda f, **kw: self.generate_lake_instructions(f, variable="storage", **kw)
+                "lake_storage",
+                lambda f, **kw: self.generate_lake_instructions(f, variable="storage", **kw),
             ),
-            IWFMObservationType.SUBSIDENCE: (
-                "subsidence", self.generate_subsidence_instructions
-            ),
+            IWFMObservationType.SUBSIDENCE: ("subsidence", self.generate_subsidence_instructions),
         }
 
         for obs_type, (key, method) in type_methods.items():
             observations = self.om.get_observations_by_type(obs_type)
             if observations and key in output_files:
                 try:
-                    ins = method(output_files[key], observations=observations)
+                    ins = method(output_files[key], observations=observations)  # type: ignore[operator]
                     instructions.append(ins)
-                except Exception as e:
+                except Exception:
                     # Log warning but continue
                     pass
 

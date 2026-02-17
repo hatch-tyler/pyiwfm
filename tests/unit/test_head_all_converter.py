@@ -13,7 +13,7 @@ import pytest
 # Skip all tests if h5py is not available
 h5py = pytest.importorskip("h5py")
 
-from pyiwfm.io.head_all_converter import (
+from pyiwfm.io.head_all_converter import (  # noqa: E402
     _COL_WIDTH,
     _TIME_WIDTH,
     _count_data_lines,
@@ -24,10 +24,10 @@ from pyiwfm.io.head_all_converter import (
     main,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers to build realistic IWFM text content
 # ---------------------------------------------------------------------------
+
 
 def _make_header(node_ids: list[int]) -> str:
     """Build the 6-line header block for a GWALLOUTFL file.
@@ -111,6 +111,7 @@ def _make_multi_layer_file(
 # Tests: _parse_timestamp
 # ---------------------------------------------------------------------------
 
+
 class TestParseTimestamp:
     """Tests for _parse_timestamp."""
 
@@ -152,6 +153,7 @@ class TestParseTimestamp:
 # ---------------------------------------------------------------------------
 # Tests: _parse_node_ids
 # ---------------------------------------------------------------------------
+
 
 class TestParseNodeIds:
     """Tests for _parse_node_ids."""
@@ -199,6 +201,7 @@ class TestParseNodeIds:
 # ---------------------------------------------------------------------------
 # Tests: _parse_data_line_numpy
 # ---------------------------------------------------------------------------
+
 
 class TestParseDataLineNumpy:
     """Tests for _parse_data_line_numpy."""
@@ -273,6 +276,7 @@ class TestParseDataLineNumpy:
 # Tests: _count_data_lines
 # ---------------------------------------------------------------------------
 
+
 class TestCountDataLines:
     """Tests for _count_data_lines."""
 
@@ -311,6 +315,7 @@ class TestCountDataLines:
 # ---------------------------------------------------------------------------
 # Tests: convert_headall_to_hdf  (integration / end-to-end)
 # ---------------------------------------------------------------------------
+
 
 class TestConvertHeadallToHdf:
     """Tests for the main converter function."""
@@ -670,6 +675,7 @@ class TestConvertHeadallToHdf:
 # ---------------------------------------------------------------------------
 # Tests: main()  (CLI entry point)
 # ---------------------------------------------------------------------------
+
 
 class TestMain:
     """Tests for the CLI entry point."""

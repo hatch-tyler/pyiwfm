@@ -26,26 +26,26 @@ except ImportError:
 
 try:
     from pyiwfm.visualization.plotting import (
-        # Mesh plotting
-        MeshPlotter,
-        plot_mesh,
-        plot_nodes,
-        plot_elements,
-        plot_scalar_field,
-        plot_streams,
-        plot_boundary,
-        # Time series plotting
-        plot_timeseries,
-        plot_timeseries_comparison,
-        plot_timeseries_collection,
         # Budget plotting
         BudgetPlotter,
+        # Mesh plotting
+        MeshPlotter,
+        plot_boundary,
         plot_budget_bar,
-        plot_budget_stacked,
         plot_budget_pie,
+        plot_budget_stacked,
+        plot_budget_timeseries,
+        plot_elements,
+        plot_mesh,
+        plot_nodes,
+        plot_scalar_field,
+        plot_streams,
+        # Time series plotting
+        plot_timeseries,
+        plot_timeseries_collection,
+        plot_timeseries_comparison,
         plot_water_balance,
         plot_zbudget,
-        plot_budget_timeseries,
     )
 except ImportError:
     # Mesh plotting

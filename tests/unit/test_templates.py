@@ -10,8 +10,7 @@ import pytest
 # Skip all tests if jinja2 is not available
 pytest.importorskip("jinja2")
 
-from pyiwfm.templates.engine import TemplateEngine, IWFMFileWriter
-from pyiwfm.io.ascii import read_nodes, read_elements, read_stratigraphy
+from pyiwfm.templates.engine import IWFMFileWriter, TemplateEngine
 
 
 class TestTemplateEngine:
@@ -96,7 +95,7 @@ class TestIWFMFileWriter:
 
         # Check file structure
         content = output_file.read_text()
-        lines = content.strip().split("\n")
+        content.strip().split("\n")
 
         # Should have header + 1 count line + 6 data lines
         assert "NNODES" in content
@@ -155,16 +154,9 @@ class TestIWFMFileWriter:
         """Test writing a stratigraphy file - check file structure."""
         writer = IWFMFileWriter()
 
-        n_nodes = 4
-        n_layers = 2
-
         gs_elev = np.array([100.0, 100.0, 100.0, 100.0])
-        top_elev = np.array(
-            [[100.0, 50.0], [100.0, 50.0], [100.0, 50.0], [100.0, 50.0]]
-        )
-        bottom_elev = np.array(
-            [[50.0, 0.0], [50.0, 0.0], [50.0, 0.0], [50.0, 0.0]]
-        )
+        top_elev = np.array([[100.0, 50.0], [100.0, 50.0], [100.0, 50.0], [100.0, 50.0]])
+        bottom_elev = np.array([[50.0, 0.0], [50.0, 0.0], [50.0, 0.0], [50.0, 0.0]])
 
         output_file = tmp_path / "stratigraphy.dat"
         writer.write_stratigraphy_file(output_file, gs_elev, top_elev, bottom_elev)
@@ -187,9 +179,7 @@ class TestTemplateFilters:
         """Test fortran_float filter."""
         engine = TemplateEngine()
 
-        result = engine.render_string(
-            "{{ 3.14159 | fortran_float(12, 4) }}"
-        )
+        result = engine.render_string("{{ 3.14159 | fortran_float(12, 4) }}")
 
         assert result.strip() == "3.1416"
 
@@ -232,18 +222,19 @@ class TestTemplateFilters:
 # ── Additional tests for increased coverage ──────────────────────────
 
 
-from pyiwfm.templates.engine import (
+from datetime import datetime as dt  # noqa: E402
+
+from pyiwfm.templates.engine import (  # noqa: E402
+    _dss_pathname,
     _fortran_float,
     _fortran_int,
-    _iwfm_comment,
-    _pad_right,
-    _pad_left,
-    _iwfm_timestamp,
-    _dss_pathname,
-    _timeseries_ref,
     _iwfm_array_row,
+    _iwfm_comment,
+    _iwfm_timestamp,
+    _pad_left,
+    _pad_right,
+    _timeseries_ref,
 )
-from datetime import datetime as dt
 
 
 class TestFilterFunctionsDirect:
@@ -463,9 +454,7 @@ class TestIWFMFileWriterExtended:
         assert "20" in content
         assert "30" in content
 
-    def test_write_elements_file_custom_ids_and_subregions(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_elements_file_custom_ids_and_subregions(self, tmp_path: Path) -> None:
         """Test writing elements file with custom element IDs and explicit n_subregions."""
         writer = IWFMFileWriter()
 
@@ -475,8 +464,11 @@ class TestIWFMFileWriterExtended:
 
         output_file = tmp_path / "elems_custom.dat"
         writer.write_elements_file(
-            output_file, vertices, subregions,
-            element_ids=element_ids, n_subregions=5,
+            output_file,
+            vertices,
+            subregions,
+            element_ids=element_ids,
+            n_subregions=5,
         )
 
         content = output_file.read_text()
@@ -489,7 +481,6 @@ class TestIWFMFileWriterExtended:
         """Test writing stratigraphy file with custom node IDs."""
         writer = IWFMFileWriter()
 
-        n_nodes = 3
         gs_elev = np.array([100.0, 95.0, 90.0])
         top_elev = np.array([[100.0, 50.0], [95.0, 45.0], [90.0, 40.0]])
         bottom_elev = np.array([[50.0, 0.0], [45.0, -5.0], [40.0, -10.0]])

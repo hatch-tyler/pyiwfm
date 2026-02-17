@@ -7,17 +7,14 @@ import re
 import shutil
 import subprocess
 import sys
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Callable, Iterator
 
 from pyiwfm.runner.results import (
-    RunResult,
+    BudgetResult,
     PreprocessorResult,
     SimulationResult,
-    BudgetResult,
     ZBudgetResult,
 )
 
@@ -75,9 +72,7 @@ class IWFMExecutables:
 
     def __repr__(self) -> str:
         """Return string representation."""
-        return (
-            f"IWFMExecutables(available={self.available})"
-        )
+        return f"IWFMExecutables(available={self.available})"
 
 
 def find_iwfm_executables(
@@ -681,6 +676,5 @@ class IWFMRunner:
     def __repr__(self) -> str:
         """Return string representation."""
         return (
-            f"IWFMRunner(executables={self.executables.available}, "
-            f"working_dir={self.working_dir})"
+            f"IWFMRunner(executables={self.executables.available}, working_dir={self.working_dir})"
         )

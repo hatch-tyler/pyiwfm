@@ -11,14 +11,16 @@ Covers:
 from __future__ import annotations
 
 import struct
-from io import BytesIO
 from pathlib import Path
 
 import pytest
 
 from pyiwfm.io.base import (
-    BaseReader, BaseWriter, BinaryReader,
-    ModelReader, ModelWriter,
+    BaseReader,
+    BaseWriter,
+    BinaryReader,
+    ModelReader,
+    ModelWriter,
 )
 
 
@@ -199,7 +201,7 @@ class TestBaseWriterAbstractPass:
 
     def test_format_pass(self, tmp_path: Path) -> None:
         """Accessing format calls super().format which executes pass."""
-        writer = _ConcreteWriter(tmp_path / "output.dat")
+        _ConcreteWriter(tmp_path / "output.dat")
         # super().format returns None since it's a pass body
         # Our _ConcreteWriter.format calls super().format and returns it
 

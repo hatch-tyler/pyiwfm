@@ -17,21 +17,19 @@ Every branch and edge case is exercised to achieve 95%+ coverage.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 pydantic = pytest.importorskip("pydantic", reason="Pydantic not available")
 
-from fastapi.testclient import TestClient
-
-from pyiwfm.visualization.webapi.config import model_state
-from pyiwfm.visualization.webapi.server import create_app
+from fastapi.testclient import TestClient  # noqa: E402
 
 # We need to import the module itself to reset the _land_use_loaded flag
-import pyiwfm.visualization.webapi.routes.rootzone as rz_module
-
+import pyiwfm.visualization.webapi.routes.rootzone as rz_module  # noqa: E402
+from pyiwfm.visualization.webapi.config import model_state  # noqa: E402
+from pyiwfm.visualization.webapi.server import create_app  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -57,9 +55,17 @@ def _reset_model_state():
     model_state._observations = {}
     model_state._results_dir = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
     # Reset the module-level _land_use_loaded flag
@@ -127,7 +133,9 @@ def _make_mock_area_manager(n_timesteps=0, snapshot=None, dates=None, timeseries
     return mgr
 
 
-def _make_mock_elu(element_id, land_use_type_value, area, crop_fractions=None, impervious_fraction=0.0):
+def _make_mock_elu(
+    element_id, land_use_type_value, area, crop_fractions=None, impervious_fraction=0.0
+):
     """Create a mock ElementLandUse."""
     elu = MagicMock()
     elu.element_id = element_id
@@ -301,7 +309,11 @@ class TestEnsureLandUseLoaded:
         model_state._model = model
 
         snapshot = {
-            1: {"fractions": {"agricultural": 0.5, "urban": 0.3}, "dominant": "agricultural", "total_area": 1000.0},
+            1: {
+                "fractions": {"agricultural": 0.5, "urban": 0.3},
+                "dominant": "agricultural",
+                "total_area": 1000.0,
+            },
         }
         mgr = _make_mock_area_manager(n_timesteps=5, snapshot=snapshot)
         model_state.get_area_manager = lambda: mgr
@@ -636,7 +648,11 @@ class TestGetLandUse:
     def test_land_use_via_hdf5_manager(self):
         """Land use from HDF5 manager at default timestep."""
         snapshot = {
-            1: {"fractions": {"agricultural": 0.6, "urban": 0.4}, "dominant": "agricultural", "total_area": 500.0},
+            1: {
+                "fractions": {"agricultural": 0.6, "urban": 0.4},
+                "dominant": "agricultural",
+                "total_area": 500.0,
+            },
             2: {"fractions": {"urban": 1.0}, "dominant": "urban", "total_area": 200.0},
         }
         mgr = _make_mock_area_manager(n_timesteps=10, snapshot=snapshot)
@@ -663,7 +679,11 @@ class TestGetLandUse:
     def test_land_use_via_hdf5_manager_with_timestep(self):
         """Land use from HDF5 manager at specific timestep."""
         snapshot = {
-            1: {"fractions": {"agricultural": 1.0}, "dominant": "agricultural", "total_area": 300.0},
+            1: {
+                "fractions": {"agricultural": 1.0},
+                "dominant": "agricultural",
+                "total_area": 300.0,
+            },
         }
         mgr = _make_mock_area_manager(n_timesteps=5, snapshot=snapshot)
 
@@ -685,7 +705,11 @@ class TestGetLandUse:
     def test_land_use_via_hdf5_manager_timestep_clamped(self):
         """Timestep exceeding n_timesteps is clamped to last."""
         snapshot = {
-            1: {"fractions": {"agricultural": 1.0}, "dominant": "agricultural", "total_area": 100.0},
+            1: {
+                "fractions": {"agricultural": 1.0},
+                "dominant": "agricultural",
+                "total_area": 100.0,
+            },
         }
         mgr = _make_mock_area_manager(n_timesteps=3, snapshot=snapshot)
 
@@ -1045,7 +1069,9 @@ class TestGetElementCrops:
         ct2 = _make_mock_crop_type(2, "Alfalfa")
 
         elu = _make_mock_elu(
-            1, "agricultural", 1000.0,
+            1,
+            "agricultural",
+            1000.0,
             crop_fractions={1: 0.6, 2: 0.4},
         )
 
@@ -1077,7 +1103,9 @@ class TestGetElementCrops:
     def test_agricultural_crop_missing_from_crop_types(self):
         """Crop ID not in crop_types dict uses fallback name."""
         elu = _make_mock_elu(
-            1, "agricultural", 100.0,
+            1,
+            "agricultural",
+            100.0,
             crop_fractions={99: 1.0},
         )
 

@@ -19,8 +19,7 @@ requires the ``vtk`` package which may not be available in the test environment.
 
 from __future__ import annotations
 
-import math
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -44,7 +43,6 @@ from pyiwfm.visualization.webapi.routes.streams import (
     _node_z,
 )
 from pyiwfm.visualization.webapi.server import create_app
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -72,9 +70,17 @@ def _reset_model_state():
     model_state._stream_reach_boundaries = None
     model_state._diversion_ts_data = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
 
@@ -100,7 +106,12 @@ def _make_grid():
 
 
 def _make_strm_node(
-    id, gw_node, reach_id=0, downstream_node=None, x=0.0, y=0.0,
+    id,
+    gw_node,
+    reach_id=0,
+    downstream_node=None,
+    x=0.0,
+    y=0.0,
 ):
     """Create a mock StrmNode object."""
     sn = MagicMock()
@@ -411,7 +422,8 @@ class TestBuildReachesFromPreprocessorBinary:
         stream = _make_mock_stream({1: sn1})
         grid = _make_grid()
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=[(1, 1, 3)],
         ):
             result = _build_reaches_from_preprocessor_binary(stream, grid, None, {})
@@ -425,7 +437,8 @@ class TestBuildReachesFromPreprocessorBinary:
         stream = _make_mock_stream({1: sn1, 2: sn2, 3: sn3})
         grid = _make_grid()
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=[(1, 1, 3)],
         ):
             result = _build_reaches_from_preprocessor_binary(stream, grid, None, {})
@@ -442,7 +455,8 @@ class TestBuildReachesFromPreprocessorBinary:
         grid = _make_grid()
         # Boundary (1, 5, 5) yields only 1 node
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=[(1, 5, 5)],
         ):
             result = _build_reaches_from_preprocessor_binary(stream, grid, None, {})
@@ -458,7 +472,8 @@ class TestBuildReachesFromPreprocessorBinary:
         stream = _make_mock_stream({1: sn1, 2: sn2, 3: sn3, 4: sn4, 5: sn5})
         grid = _make_grid()
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=[(1, 1, 3), (2, 4, 5)],
         ):
             result = _build_reaches_from_preprocessor_binary(stream, grid, None, {})
@@ -598,7 +613,8 @@ class TestBuildStreamData:
         stream.reaches = {}
         grid = _make_grid()
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=[(1, 1, 3)],
         ):
             nodes_data, reaches_data = _build_stream_data(stream, grid, None, {})
@@ -614,7 +630,8 @@ class TestBuildStreamData:
         stream.reaches = {}
         grid = _make_grid()
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=None,
         ):
             nodes_data, reaches_data = _build_stream_data(stream, grid, None, {})
@@ -629,7 +646,8 @@ class TestBuildStreamData:
         stream.reaches = {}
         grid = _make_grid()
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=None,
         ):
             nodes_data, reaches_data = _build_stream_data(stream, grid, None, {})
@@ -645,7 +663,8 @@ class TestBuildStreamData:
         stream.reaches = {}
         grid = _make_grid()
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=None,
         ):
             nodes_data, reaches_data = _build_stream_data(stream, grid, None, {})
@@ -669,7 +688,8 @@ class TestBuildStreamData:
         stream.reaches = {}
         grid = _make_grid()
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=None,
         ):
             nodes_data, reaches_data = _build_stream_data(stream, grid, None, {})
@@ -704,7 +724,8 @@ class TestGetGwNodesForReaches:
         stream.reaches = {}
         grid = _make_grid()
         with patch.object(
-            model_state, "get_stream_reach_boundaries",
+            model_state,
+            "get_stream_reach_boundaries",
             return_value=None,
         ):
             result = _get_gw_nodes_for_reaches(stream, grid, None, {})
@@ -787,7 +808,8 @@ class TestGetStreamsGeojson:
             reach.id = 1
             reach.stream_nodes = [sn1, sn2, sn3]
             stream = _make_mock_stream(
-                {1: sn1, 2: sn2, 3: sn3}, reaches={1: reach},
+                {1: sn1, 2: sn2, 3: sn3},
+                reaches={1: reach},
             )
             model = _make_mock_model(grid=grid, streams=stream, has_streams=True)
             model_state._model = model
@@ -1175,12 +1197,16 @@ class TestGetDiversions:
             sn1 = _make_strm_node(id=1, gw_node=1)
             sn2 = _make_strm_node(id=2, gw_node=2)
             div1 = _make_mock_diversion(
-                source_node=1, destination_type="element",
-                destination_id=1, name="Div 1",
+                source_node=1,
+                destination_type="element",
+                destination_id=1,
+                name="Div 1",
             )
             div2 = _make_mock_diversion(
-                source_node=2, destination_type="element",
-                destination_id=2, name="Div 2",
+                source_node=2,
+                destination_type="element",
+                destination_id=2,
+                name="Div 2",
             )
             stream = _make_mock_stream(
                 nodes_dict={1: sn1, 2: sn2},
@@ -1500,15 +1526,18 @@ class TestGetDiversionDetail:
             model_state.reproject_coords = lambda x, y: (x, y)
 
             times = np.array(["2020-01-01", "2020-02-01", "2020-03-01"], dtype="datetime64")
-            values = np.array([
-                [100.0, 200.0],
-                [110.0, 220.0],
-                [120.0, 240.0],
-            ])
+            values = np.array(
+                [
+                    [100.0, 200.0],
+                    [110.0, 220.0],
+                    [120.0, 240.0],
+                ]
+            )
             meta = {}
 
             with patch.object(
-                model_state, "get_diversion_timeseries",
+                model_state,
+                "get_diversion_timeseries",
                 return_value=(times, values, meta),
             ):
                 app = create_app()
@@ -1559,7 +1588,8 @@ class TestGetDiversionDetail:
             meta = {}
 
             with patch.object(
-                model_state, "get_diversion_timeseries",
+                model_state,
+                "get_diversion_timeseries",
                 return_value=(times, values, meta),
             ):
                 app = create_app()
@@ -1628,7 +1658,8 @@ class TestGetDiversionDetail:
             meta = {}
 
             with patch.object(
-                model_state, "get_diversion_timeseries",
+                model_state,
+                "get_diversion_timeseries",
                 return_value=(times, values, meta),
             ):
                 app = create_app()
@@ -1671,7 +1702,8 @@ class TestGetDiversionDetail:
             meta = {}
 
             with patch.object(
-                model_state, "get_diversion_timeseries",
+                model_state,
+                "get_diversion_timeseries",
                 return_value=(times, values, meta),
             ):
                 app = create_app()
@@ -1713,7 +1745,8 @@ class TestGetDiversionDetail:
             meta = {}
 
             with patch.object(
-                model_state, "get_diversion_timeseries",
+                model_state,
+                "get_diversion_timeseries",
                 return_value=(times, values, meta),
             ):
                 app = create_app()

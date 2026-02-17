@@ -179,18 +179,13 @@ class AppSmallWatershed:
         """
         for ws in self.watersheds.values():
             if ws.area <= 0:
-                raise ComponentError(
-                    f"Watershed {ws.id} has non-positive area: {ws.area}"
-                )
+                raise ComponentError(f"Watershed {ws.id} has non-positive area: {ws.area}")
             if ws.dest_stream_node <= 0:
                 raise ComponentError(
-                    f"Watershed {ws.id} has invalid destination "
-                    f"stream node: {ws.dest_stream_node}"
+                    f"Watershed {ws.id} has invalid destination stream node: {ws.dest_stream_node}"
                 )
             if ws.n_gw_nodes == 0:
-                raise ComponentError(
-                    f"Watershed {ws.id} has no connected GW nodes"
-                )
+                raise ComponentError(f"Watershed {ws.id} has no connected GW nodes")
 
     @classmethod
     def from_config(cls, config: SmallWatershedMainConfig) -> AppSmallWatershed:

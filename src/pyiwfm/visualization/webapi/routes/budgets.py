@@ -5,29 +5,31 @@ Budget data API routes.
 from __future__ import annotations
 
 import math
-from datetime import datetime
+from typing import TYPE_CHECKING
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
 
-from pyiwfm.io.budget import BUDGET_DATA_TYPES
 from pyiwfm.visualization.webapi.config import model_state
+
+if TYPE_CHECKING:
+    from pyiwfm.io.budget import BudgetReader
 
 router = APIRouter(prefix="/api/budgets", tags=["budgets"])
 
 # Map budget data type codes to human-readable unit descriptions
 _DATA_TYPE_UNITS = {
-    1: "Volume/Time",      # VR - Volumetric rate
-    2: "Volume",           # VLB - Volume at beginning
-    3: "Volume",           # VLE - Volume at end
-    4: "Area",             # AR - Area
-    5: "Length",            # LT - Length
-    6: "Volume/Time",      # VR_PotCUAW
-    7: "Volume/Time",      # VR_AgSupplyReq
-    8: "Volume/Time",      # VR_AgShort
-    9: "Volume/Time",      # VR_AgPump
-    10: "Volume/Time",     # VR_AgDiv
-    11: "Volume/Time",     # VR_AgOthIn
+    1: "Volume/Time",  # VR - Volumetric rate
+    2: "Volume",  # VLB - Volume at beginning
+    3: "Volume",  # VLE - Volume at end
+    4: "Area",  # AR - Area
+    5: "Length",  # LT - Length
+    6: "Volume/Time",  # VR_PotCUAW
+    7: "Volume/Time",  # VR_AgSupplyReq
+    8: "Volume/Time",  # VR_AgShort
+    9: "Volume/Time",  # VR_AgPump
+    10: "Volume/Time",  # VR_AgDiv
+    11: "Volume/Time",  # VR_AgOthIn
 }
 
 # Volume-related type codes (VR variants + VLB/VLE)
@@ -184,12 +186,11 @@ def _safe_float(val: float) -> float | None:
 def _sanitize_values(values: list) -> list:
     """Replace NaN/Inf with None in a list of numeric values."""
     return [
-        None if (isinstance(v, float) and (math.isnan(v) or math.isinf(v))) else v
-        for v in values
+        None if (isinstance(v, float) and (math.isnan(v) or math.isinf(v))) else v for v in values
     ]
 
 
-def _get_column_units(reader: object, location: str | int = 0) -> list[str]:
+def _get_column_units(reader: BudgetReader, location: str | int = 0) -> list[str]:
     """Get units for each column based on budget data type codes."""
     loc_idx = reader.get_location_index(location)
     if len(reader.header.location_data) == 1:
@@ -203,7 +204,7 @@ def _get_column_units(reader: object, location: str | int = 0) -> list[str]:
     return units
 
 
-def _parse_title_units(reader: object) -> dict[str, str]:
+def _parse_title_units(reader: BudgetReader) -> dict[str, str]:
     """Try to extract unit strings from budget header titles (e.g. 'UNIT OF VOLUME = TAF')."""
     result: dict[str, str] = {}
     try:
@@ -247,11 +248,11 @@ def _detect_budget_category(budget_type: str) -> str:
     return "other"
 
 
-def _get_budget_units_metadata(budget_type: str, reader: object) -> dict:
+def _get_budget_units_metadata(budget_type: str, reader: BudgetReader) -> dict:
     """Build units metadata for a budget type based on model metadata and column types."""
     model = model_state.model
     meta = model.metadata if model else {}
-    category = _detect_budget_category(budget_type)
+    _detect_budget_category(budget_type)
 
     # HDF budget files store values in simulation units (not output units).
     # IWFM has no direct volume unit field — derive from the length unit:
@@ -295,8 +296,7 @@ def _get_budget_units_metadata(budget_type: str, reader: object) -> dict:
             for hdr in loc_data.column_headers:
                 upper = hdr.upper()
                 if "AREA" in upper and (
-                    upper.endswith("AREA") or upper.endswith("_AREA")
-                    or "AREA)" in upper
+                    upper.endswith("AREA") or upper.endswith("_AREA") or "AREA)" in upper
                 ):
                     has_area = True
                 elif "SUBSID" in upper or "CUM_SUBSID" in upper:
@@ -347,10 +347,7 @@ def get_budget_locations(budget_type: str) -> dict:
         )
 
     return {
-        "locations": [
-            {"id": i, "name": name}
-            for i, name in enumerate(reader.locations)
-        ],
+        "locations": [{"id": i, "name": name} for i, name in enumerate(reader.locations)],
     }
 
 
@@ -372,7 +369,7 @@ def get_budget_columns(
         headers = reader.get_column_headers(loc)
         units = _get_column_units(reader, loc)
     except (KeyError, IndexError) as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
     return {
         "columns": [
@@ -406,7 +403,7 @@ def get_budget_data(
         times_arr, values_arr = reader.get_values(loc, col_indices)
         headers = reader.get_column_headers(loc)
     except (KeyError, IndexError, ValueError) as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     # Convert times to ISO strings
     ts = reader.header.timestep
@@ -443,11 +440,13 @@ def get_budget_data(
 
     result_columns = []
     for i, name in enumerate(col_names):
-        result_columns.append({
-            "name": name,
-            "values": _sanitize_values(values_arr[:, i].tolist()),
-            "units": col_units[i] if i < len(col_units) else "",
-        })
+        result_columns.append(
+            {
+                "name": name,
+                "values": _sanitize_values(values_arr[:, i].tolist()),
+                "units": col_units[i] if i < len(col_units) else "",
+            }
+        )
 
     # Build units metadata
     units_metadata = _get_budget_units_metadata(budget_type, reader)
@@ -479,7 +478,7 @@ def get_budget_summary(
         times_arr, values_arr = reader.get_values(loc)
         headers = reader.get_column_headers(loc)
     except (KeyError, IndexError) as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     totals = {}
     averages = {}
@@ -500,9 +499,7 @@ def get_budget_summary(
 def get_budget_spatial(
     budget_type: str,
     column: str = Query(default="", description="Column name to map"),
-    stat: str = Query(
-        default="total", description="Statistic: 'total', 'average', or 'last'"
-    ),
+    stat: str = Query(default="total", description="Statistic: 'total', 'average', or 'last'"),
 ) -> dict:
     """
     Get per-location (subregion) budget values for spatial mapping.
@@ -528,10 +525,7 @@ def get_budget_spatial(
         if col_idx is None:
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    f"Column '{column}' not found. "
-                    f"Available: {first_headers}"
-                ),
+                detail=(f"Column '{column}' not found. Available: {first_headers}"),
             )
     else:
         # Default to first column
@@ -553,17 +547,21 @@ def get_budget_spatial(
                 value = float(np.nansum(col_vals))
 
             safe = _safe_float(value)
-            locations.append({
-                "id": loc_i,
-                "name": loc_name,
-                "value": round(safe, 2) if safe is not None else 0.0,
-            })
+            locations.append(
+                {
+                    "id": loc_i,
+                    "name": loc_name,
+                    "value": round(safe, 2) if safe is not None else 0.0,
+                }
+            )
         except (KeyError, IndexError):
-            locations.append({
-                "id": loc_i,
-                "name": loc_name,
-                "value": 0.0,
-            })
+            locations.append(
+                {
+                    "id": loc_i,
+                    "name": loc_name,
+                    "value": 0.0,
+                }
+            )
 
     all_vals = [loc["value"] for loc in locations]
     vmin = min(all_vals) if all_vals else 0.0
@@ -630,7 +628,9 @@ def get_budget_location_geometry(
     )
 
     result: dict = {
-        "spatial_type": "entire_model" if is_entire_model else spatial_type_map.get(category, "unknown"),
+        "spatial_type": "entire_model"
+        if is_entire_model
+        else spatial_type_map.get(category, "unknown"),
         "location_index": loc_idx,
         "location_name": loc_name,
         "geometry": None,
@@ -650,9 +650,7 @@ def get_budget_location_geometry(
                     if gw_id is not None and model.grid:
                         gw_node = model.grid.nodes.get(gw_id)
                         if gw_node:
-                            lng, lat = model_state.reproject_coords(
-                                gw_node.x, gw_node.y
-                            )
+                            lng, lat = model_state.reproject_coords(gw_node.x, gw_node.y)
                             result["geometry"] = {
                                 "type": "Point",
                                 "coordinates": [lng, lat],
@@ -744,12 +742,14 @@ def get_water_balance() -> dict:
             matched = False
             for pattern, (src, dst) in mappings.items():
                 if pattern.lower() in col_name.lower():
-                    links.append({
-                        "source": get_node_idx(src),
-                        "target": get_node_idx(dst),
-                        "value": round(total_val, 1),
-                        "label": col_name,
-                    })
+                    links.append(
+                        {
+                            "source": get_node_idx(src),
+                            "target": get_node_idx(dst),
+                            "value": round(total_val, 1),
+                            "label": col_name,
+                        }
+                    )
                     matched = True
                     break
             if not matched:
@@ -761,19 +761,23 @@ def get_water_balance() -> dict:
                     "lake": "Lakes",
                 }.get(btype, btype.title())
                 if "inflow" in col_name.lower() or "in" == col_name[-2:].lower():
-                    links.append({
-                        "source": get_node_idx(f"{col_name}"),
-                        "target": get_node_idx(component),
-                        "value": round(total_val, 1),
-                        "label": col_name,
-                    })
+                    links.append(
+                        {
+                            "source": get_node_idx(f"{col_name}"),
+                            "target": get_node_idx(component),
+                            "value": round(total_val, 1),
+                            "label": col_name,
+                        }
+                    )
                 else:
-                    links.append({
-                        "source": get_node_idx(component),
-                        "target": get_node_idx(f"{col_name}"),
-                        "value": round(total_val, 1),
-                        "label": col_name,
-                    })
+                    links.append(
+                        {
+                            "source": get_node_idx(component),
+                            "target": get_node_idx(f"{col_name}"),
+                            "value": round(total_val, 1),
+                            "label": col_name,
+                        }
+                    )
 
     return {
         "nodes": node_names,

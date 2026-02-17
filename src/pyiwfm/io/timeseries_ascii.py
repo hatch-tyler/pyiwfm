@@ -8,22 +8,23 @@ IWFM uses 24:00 to represent midnight (end of day).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Sequence, TextIO
+from typing import TextIO
 
 import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
 )
-
 
 # IWFM timestamp format: MM/DD/YYYY_HH:MM (16 characters)
 # IWFM uses 24:00 for midnight (end of day) instead of 00:00 (start of next day).
@@ -203,9 +204,7 @@ class TimeSeriesWriter:
         n_times, n_columns = values.shape
 
         if len(times) != n_times:
-            raise ValueError(
-                f"Times length ({len(times)}) doesn't match values rows ({n_times})"
-            )
+            raise ValueError(f"Times length ({len(times)}) doesn't match values rows ({n_times})")
 
         if column_ids is None:
             column_ids = list(range(1, n_columns + 1))
@@ -328,9 +327,7 @@ class TimeSeriesWriter:
         for i, loc in enumerate(column_ids):
             ts = collection[loc]
             if len(ts.times) != n_times:
-                raise ValueError(
-                    f"Time series '{loc}' has different length than reference"
-                )
+                raise ValueError(f"Time series '{loc}' has different length than reference")
             if ts.values.ndim == 1:
                 values[:, i] = ts.values
             else:
@@ -342,11 +339,12 @@ class TimeSeriesWriter:
         else:
             dt_times = list(times)
 
+        col_ids: list[str | int] = list(column_ids)
         self.write(
             filepath=filepath,
             times=dt_times,
             values=values,
-            column_ids=column_ids,
+            column_ids=col_ids,
             units=first_ts.units,
             factor=factor,
             header=header,
@@ -382,7 +380,7 @@ class TimeSeriesReader:
         n_columns = 0
         factor = 1.0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             line_num = 0
 
             # Read NDATA
@@ -449,7 +447,7 @@ class TimeSeriesReader:
                         raise FileFormatError(
                             f"Invalid data line: '{stripped}'",
                             line_number=line_num,
-                        )
+                        ) from None
                     # Before data started: skip extra header lines
                     continue
 

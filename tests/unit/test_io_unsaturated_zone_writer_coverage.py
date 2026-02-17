@@ -26,7 +26,6 @@ from pyiwfm.io.unsaturated_zone_writer import (
     write_unsaturated_zone_component,
 )
 
-
 # =============================================================================
 # Fixtures
 # =============================================================================
@@ -160,9 +159,7 @@ class TestUnsatZoneFormatProperty:
         Covers line 93.
         """
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(bare_model, config, template_engine=mock_engine)
         assert writer.format == "iwfm_unsaturated_zone"
 
 
@@ -182,9 +179,7 @@ class TestUnsatZoneWriteDelegation:
         Covers line 97.
         """
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(bare_model, config, template_engine=mock_engine)
         with patch.object(writer, "write_all") as mock_write_all:
             writer.write()
             mock_write_all.assert_called_once()
@@ -206,9 +201,7 @@ class TestUnsatZoneWriteAll:
         Covers lines 122-125.
         """
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(bare_model, config, template_engine=mock_engine)
         results = writer.write_all(write_defaults=False)
         assert results == {}
 
@@ -217,9 +210,7 @@ class TestUnsatZoneWriteAll:
     ) -> None:
         """write_all(write_defaults=True) writes main file even without uz component."""
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(bare_model, config, template_engine=mock_engine)
         results = writer.write_all(write_defaults=True)
         assert "main" in results
         assert results["main"].exists()
@@ -229,9 +220,7 @@ class TestUnsatZoneWriteAll:
     ) -> None:
         """write_all() with uz component writes main file."""
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            model_with_uz, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(model_with_uz, config, template_engine=mock_engine)
         results = writer.write_all()
         assert "main" in results
         assert results["main"].exists()
@@ -254,9 +243,7 @@ class TestRenderMain:
         Covers the loop at line 161+ (iter_elements branch).
         """
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            model_with_uz, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(model_with_uz, config, template_engine=mock_engine)
         uz = model_with_uz.unsaturated_zone
 
         writer._render_main(uz)
@@ -280,9 +267,7 @@ class TestRenderMain:
         Covers line 187 (if elem.initial_moisture is not None branch).
         """
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            model_with_uz, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(model_with_uz, config, template_engine=mock_engine)
 
         uz = model_with_uz.unsaturated_zone
 
@@ -304,9 +289,7 @@ class TestRenderMain:
         # uniform_moisture should remain None when multiple elements
         assert call_kwargs["uniform_moisture"] is None
 
-    def test_render_main_uniform_moisture(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_render_main_uniform_moisture(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """_render_main() with a single element_id=0 having initial moisture
         triggers the uniform_moisture path.
 
@@ -346,9 +329,7 @@ class TestRenderMain:
         model.unsaturated_zone = uz
 
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            model, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(model, config, template_engine=mock_engine)
 
         writer._render_main(uz)
 
@@ -367,9 +348,7 @@ class TestRenderMain:
         Covers lines 204->212, 206, 208, 210.
         """
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            model_with_uz, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(model_with_uz, config, template_engine=mock_engine)
 
         uz = model_with_uz.unsaturated_zone
         # Set component-level file overrides
@@ -389,9 +368,7 @@ class TestRenderMain:
     ) -> None:
         """_render_main(None) uses config defaults for all values."""
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(bare_model, config, template_engine=mock_engine)
 
         writer._render_main(None)
 
@@ -412,9 +389,7 @@ class TestRenderMain:
     ) -> None:
         """_render_main() applies reverse conversion factors for thickness and hyd_cond."""
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            model_with_uz, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(model_with_uz, config, template_engine=mock_engine)
 
         uz = model_with_uz.unsaturated_zone
         uz.thickness_factor = 2.0
@@ -434,9 +409,7 @@ class TestRenderMain:
     ) -> None:
         """When thickness_factor or hyd_cond_factor is 0 (falsy), raw values are used."""
         config = UnsatZoneWriterConfig(output_dir=tmp_path)
-        writer = UnsatZoneComponentWriter(
-            model_with_uz, config, template_engine=mock_engine
-        )
+        writer = UnsatZoneComponentWriter(model_with_uz, config, template_engine=mock_engine)
 
         uz = model_with_uz.unsaturated_zone
         uz.thickness_factor = 0
@@ -480,18 +453,14 @@ class TestWriteUnsatZoneConvenience:
 
         Covers lines 261-262.
         """
-        config = UnsatZoneWriterConfig(
-            output_dir=tmp_path, version="5.0"
-        )
+        config = UnsatZoneWriterConfig(output_dir=tmp_path, version="5.0")
         new_dir = tmp_path / "custom_out"
         new_dir.mkdir()
         with patch(
             "pyiwfm.io.unsaturated_zone_writer.TemplateEngine",
             return_value=mock_engine,
         ):
-            results = write_unsaturated_zone_component(
-                bare_model, new_dir, config=config
-            )
+            results = write_unsaturated_zone_component(bare_model, new_dir, config=config)
         # output_dir should have been updated on the config
         assert config.output_dir == new_dir
         assert "main" in results
@@ -507,7 +476,5 @@ class TestWriteUnsatZoneConvenience:
             "pyiwfm.io.unsaturated_zone_writer.TemplateEngine",
             return_value=mock_engine,
         ):
-            results = write_unsaturated_zone_component(
-                bare_model, str(tmp_path)
-            )
+            results = write_unsaturated_zone_component(bare_model, str(tmp_path))
         assert "main" in results

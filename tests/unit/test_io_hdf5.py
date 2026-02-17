@@ -8,20 +8,20 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
-from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.core.model import IWFMModel
-from pyiwfm.core.timeseries import TimeSeries
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
+from pyiwfm.core.model import IWFMModel
+from pyiwfm.core.stratigraphy import Stratigraphy
+from pyiwfm.core.timeseries import TimeSeries
 
 # Skip all tests if h5py is not available
 pytest.importorskip("h5py")
 
 from pyiwfm.io.hdf5 import (
-    HDF5ModelWriter,
     HDF5ModelReader,
-    write_model_hdf5,
+    HDF5ModelWriter,
     read_model_hdf5,
+    write_model_hdf5,
 )
 
 
@@ -127,9 +127,7 @@ class TestHDF5TimeSeriesIO:
 
     def test_write_read_timeseries_roundtrip(self, tmp_path: Path) -> None:
         """Test time series write/read roundtrip."""
-        times = np.array(
-            ["2020-01-01", "2020-01-02", "2020-01-03"], dtype="datetime64[D]"
-        )
+        times = np.array(["2020-01-01", "2020-01-02", "2020-01-03"], dtype="datetime64[D]")
         values = np.array([100.0, 101.0, 102.0])
 
         ts = TimeSeries(
@@ -302,7 +300,8 @@ class TestHDF5WriterErrorPaths:
         """Test write_stratigraphy raises RuntimeError when file not open."""
         writer = HDF5ModelWriter("dummy.h5")
         strat = Stratigraphy(
-            n_layers=1, n_nodes=2,
+            n_layers=1,
+            n_nodes=2,
             gs_elev=np.array([100.0, 100.0]),
             top_elev=np.array([[90.0], [90.0]]),
             bottom_elev=np.array([[80.0], [80.0]]),
@@ -364,6 +363,7 @@ class TestHDF5ReaderErrorPaths:
     def test_read_mesh_missing(self, tmp_path: Path) -> None:
         """Test read_mesh raises FileFormatError when no mesh data."""
         import h5py
+
         filepath = tmp_path / "empty.h5"
         with h5py.File(filepath, "w") as f:
             f.create_group("other")
@@ -375,6 +375,7 @@ class TestHDF5ReaderErrorPaths:
     def test_read_stratigraphy_missing(self, tmp_path: Path) -> None:
         """Test read_stratigraphy raises FileFormatError when no stratigraphy."""
         import h5py
+
         filepath = tmp_path / "empty.h5"
         with h5py.File(filepath, "w") as f:
             f.create_group("other")
@@ -386,6 +387,7 @@ class TestHDF5ReaderErrorPaths:
     def test_read_timeseries_no_group(self, tmp_path: Path) -> None:
         """Test read_timeseries raises when no timeseries group exists."""
         import h5py
+
         filepath = tmp_path / "empty.h5"
         with h5py.File(filepath, "w") as f:
             f.create_group("other")
@@ -397,6 +399,7 @@ class TestHDF5ReaderErrorPaths:
     def test_read_timeseries_missing_variable(self, tmp_path: Path) -> None:
         """Test read_timeseries raises when variable not found."""
         import h5py
+
         filepath = tmp_path / "ts.h5"
         with h5py.File(filepath, "w") as f:
             ts_grp = f.create_group("timeseries")
@@ -409,6 +412,7 @@ class TestHDF5ReaderErrorPaths:
     def test_read_timeseries_missing_location(self, tmp_path: Path) -> None:
         """Test read_timeseries raises when location not found."""
         import h5py
+
         filepath = tmp_path / "ts.h5"
         with h5py.File(filepath, "w") as f:
             ts_grp = f.create_group("timeseries")
@@ -422,6 +426,7 @@ class TestHDF5ReaderErrorPaths:
     def test_list_timeseries_empty(self, tmp_path: Path) -> None:
         """Test list_timeseries returns empty dict when no timeseries group."""
         import h5py
+
         filepath = tmp_path / "empty.h5"
         with h5py.File(filepath, "w") as f:
             f.create_group("other")
@@ -438,13 +443,15 @@ class TestHDF5MetadataEdgeCases:
         """Test writing metadata with datetime value."""
         filepath = tmp_path / "meta.h5"
         with HDF5ModelWriter(filepath) as writer:
-            writer.write_metadata({
-                "created": datetime(2020, 6, 15, 12, 0, 0),
-                "name": "test",
-                "count": 42,
-                "ratio": 3.14,
-                "active": True,
-            })
+            writer.write_metadata(
+                {
+                    "created": datetime(2020, 6, 15, 12, 0, 0),
+                    "name": "test",
+                    "count": 42,
+                    "ratio": 3.14,
+                    "active": True,
+                }
+            )
 
         with HDF5ModelReader(filepath) as reader:
             meta = reader.read_metadata()
@@ -469,6 +476,7 @@ class TestHDF5MetadataEdgeCases:
     def test_read_metadata_no_metadata_group(self, tmp_path: Path) -> None:
         """Test reading metadata returns empty dict when no metadata group."""
         import h5py
+
         filepath = tmp_path / "empty.h5"
         with h5py.File(filepath, "w") as f:
             f.create_group("other")
@@ -506,6 +514,7 @@ class TestHDF5ModelIOEdgeCases:
     def test_read_model_no_mesh_no_strat(self, tmp_path: Path) -> None:
         """Test reading model when HDF5 has no mesh/strat groups."""
         import h5py
+
         filepath = tmp_path / "minimal.h5"
         with h5py.File(filepath, "w") as f:
             meta = f.create_group("metadata")
@@ -525,6 +534,7 @@ class TestHDF5MeshWithoutOptionalFields:
     def test_read_mesh_without_area_and_boundary(self, tmp_path: Path) -> None:
         """Test reading mesh with no area/is_boundary datasets."""
         import h5py
+
         filepath = tmp_path / "mesh_minimal.h5"
         with h5py.File(filepath, "w") as f:
             mesh_grp = f.create_group("mesh")

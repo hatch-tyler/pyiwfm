@@ -9,12 +9,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-from numpy.typing import NDArray
 
 from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.io.dss.pathname import DSSPathname, DSSPathnameTemplate
@@ -106,9 +104,7 @@ class TestDSSTimeSeriesWriter:
             assert len(writer._pathnames_written) == 0
             assert len(writer._errors) == 0
 
-    def test_context_manager(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_context_manager(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test writer as context manager."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
@@ -133,9 +129,7 @@ class TestDSSTimeSeriesWriter:
                 writer.open()  # Second call should not create new DSSFile
                 mock_dss_file.open.assert_called_once()
 
-    def test_close_returns_result(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_close_returns_result(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test close returns DSSWriteResult."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
@@ -173,9 +167,7 @@ class TestDSSTimeSeriesWriter:
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
                 writer = DSSTimeSeriesWriter(tmp_path / "test.dss")
                 writer.open()
-                success = writer.write_timeseries(
-                    sample_timeseries, "/PROJECT/LOC/FLOW//1DAY/VER/"
-                )
+                success = writer.write_timeseries(sample_timeseries, "/PROJECT/LOC/FLOW//1DAY/VER/")
                 assert success
 
     def test_write_timeseries_auto_open(
@@ -189,9 +181,7 @@ class TestDSSTimeSeriesWriter:
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
                 writer = DSSTimeSeriesWriter(tmp_path / "test.dss")
                 # Don't call open explicitly
-                success = writer.write_timeseries(
-                    sample_timeseries, "/PROJECT/LOC/FLOW//1DAY/VER/"
-                )
+                success = writer.write_timeseries(sample_timeseries, "/PROJECT/LOC/FLOW//1DAY/VER/")
                 assert success
                 mock_dss_file.open.assert_called_once()
 
@@ -227,9 +217,7 @@ class TestDSSTimeSeriesWriter:
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss):
                 writer = DSSTimeSeriesWriter(tmp_path / "test.dss")
                 writer.open()
-                success = writer.write_timeseries(
-                    sample_timeseries, "/PROJECT/LOC/FLOW//1DAY/VER/"
-                )
+                success = writer.write_timeseries(sample_timeseries, "/PROJECT/LOC/FLOW//1DAY/VER/")
                 assert not success
                 assert len(writer._errors) == 1
 
@@ -239,16 +227,10 @@ class TestDSSTimeSeriesWriter:
         mock_dss_file: MagicMock,
     ) -> None:
         """Test write_collection method."""
-        times = np.array(
-            [np.datetime64("2020-01-01"), np.datetime64("2020-01-02")]
-        )
+        times = np.array([np.datetime64("2020-01-01"), np.datetime64("2020-01-02")])
         collection = TimeSeriesCollection(variable="FLOW")
-        collection.add(
-            TimeSeries(times=times, values=np.array([1.0, 2.0]), location="LOC1")
-        )
-        collection.add(
-            TimeSeries(times=times, values=np.array([3.0, 4.0]), location="LOC2")
-        )
+        collection.add(TimeSeries(times=times, values=np.array([1.0, 2.0]), location="LOC1"))
+        collection.add(TimeSeries(times=times, values=np.array([3.0, 4.0]), location="LOC2"))
 
         def pathname_factory(loc: str) -> DSSPathname:
             return DSSPathname.from_string(f"/PROJECT/{loc}/FLOW//1DAY/VER/")
@@ -257,9 +239,7 @@ class TestDSSTimeSeriesWriter:
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
                 writer = DSSTimeSeriesWriter(tmp_path / "test.dss")
                 writer.open()
-                n_written = writer.write_collection(
-                    collection, pathname_factory, units="CFS"
-                )
+                n_written = writer.write_collection(collection, pathname_factory, units="CFS")
                 assert n_written == 2
 
     def test_write_multiple_timeseries(
@@ -273,9 +253,7 @@ class TestDSSTimeSeriesWriter:
             "LOC1": np.array([1.0, 2.0]),
             "LOC2": np.array([3.0, 4.0]),
         }
-        template = DSSPathnameTemplate(
-            a_part="PROJECT", c_part="FLOW", e_part="1DAY", f_part="VER"
-        )
+        template = DSSPathnameTemplate(a_part="PROJECT", c_part="FLOW", e_part="1DAY", f_part="VER")
 
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
@@ -292,21 +270,15 @@ class TestDSSTimeSeriesWriter:
         mock_dss_file: MagicMock,
     ) -> None:
         """Test write_multiple_timeseries with numpy datetime."""
-        times = np.array(
-            [np.datetime64("2020-01-01"), np.datetime64("2020-01-02")]
-        )
+        times = np.array([np.datetime64("2020-01-01"), np.datetime64("2020-01-02")])
         values_dict = {"LOC1": np.array([1.0, 2.0])}
-        template = DSSPathnameTemplate(
-            a_part="PROJECT", c_part="FLOW", e_part="1DAY"
-        )
+        template = DSSPathnameTemplate(a_part="PROJECT", c_part="FLOW", e_part="1DAY")
 
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
                 writer = DSSTimeSeriesWriter(tmp_path / "test.dss")
                 writer.open()
-                n_written = writer.write_multiple_timeseries(
-                    times, values_dict, template
-                )
+                n_written = writer.write_multiple_timeseries(times, values_dict, template)
                 assert n_written == 1
 
     def test_numpy_dt_to_datetime(self, tmp_path: Path) -> None:
@@ -343,9 +315,7 @@ class TestDSSTimeSeriesReader:
             assert reader.filepath == tmp_path / "test.dss"
             assert reader._dss is None
 
-    def test_context_manager(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_context_manager(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test reader as context manager."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
@@ -361,9 +331,7 @@ class TestDSSTimeSeriesReader:
                 assert reader._dss is not None
                 mock_dss_file.open.assert_called_once()
 
-    def test_open_idempotent(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_open_idempotent(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test open is idempotent."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
@@ -382,17 +350,13 @@ class TestDSSTimeSeriesReader:
                 assert reader._dss is None
                 mock_dss_file.close.assert_called_once()
 
-    def test_close_not_open(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_close_not_open(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test close when not open."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             reader = DSSTimeSeriesReader(tmp_path / "test.dss")
             reader.close()  # Should not raise
 
-    def test_read_timeseries(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_read_timeseries(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test read_timeseries method."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
@@ -403,9 +367,7 @@ class TestDSSTimeSeriesReader:
                 assert ts.location == "LOC"
                 mock_dss_file.read_regular_timeseries.assert_called_once()
 
-    def test_read_timeseries_auto_open(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_read_timeseries_auto_open(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test read_timeseries opens file automatically."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
@@ -414,9 +376,7 @@ class TestDSSTimeSeriesReader:
                 assert isinstance(ts, TimeSeries)
                 mock_dss_file.open.assert_called_once()
 
-    def test_read_timeseries_with_dates(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_read_timeseries_with_dates(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test read_timeseries with date range."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
@@ -433,17 +393,13 @@ class TestDSSTimeSeriesReader:
                     "/PROJECT/LOC/FLOW//1DAY/VER/", start, end
                 )
 
-    def test_read_timeseries_with_name(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_read_timeseries_with_name(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test read_timeseries with custom name."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
                 reader = DSSTimeSeriesReader(tmp_path / "test.dss")
                 reader.open()
-                ts = reader.read_timeseries(
-                    "/PROJECT/LOC/FLOW//1DAY/VER/", name="Custom Name"
-                )
+                ts = reader.read_timeseries("/PROJECT/LOC/FLOW//1DAY/VER/", name="Custom Name")
                 assert ts.name == "Custom Name"
 
     def test_read_timeseries_pathname_object(
@@ -458,9 +414,7 @@ class TestDSSTimeSeriesReader:
                 ts = reader.read_timeseries(pathname)
                 assert ts.location == "LOC"
 
-    def test_read_collection(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_read_collection(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test read_collection method."""
         with patch("pyiwfm.io.dss.timeseries.check_dss_available"):
             with patch("pyiwfm.io.dss.timeseries.DSSFile", return_value=mock_dss_file):
@@ -474,9 +428,7 @@ class TestDSSTimeSeriesReader:
                 assert isinstance(collection, TimeSeriesCollection)
                 assert collection.variable == "FLOW"
 
-    def test_read_collection_skips_missing(
-        self, tmp_path: Path
-    ) -> None:
+    def test_read_collection_skips_missing(self, tmp_path: Path) -> None:
         """Test read_collection skips missing records."""
         from pyiwfm.io.dss.wrapper import DSSFileError
 
@@ -532,9 +484,7 @@ class TestConvenienceFunctions:
         )
         return mock
 
-    def test_write_timeseries_to_dss(
-        self, tmp_path: Path, mock_writer: MagicMock
-    ) -> None:
+    def test_write_timeseries_to_dss(self, tmp_path: Path, mock_writer: MagicMock) -> None:
         """Test write_timeseries_to_dss function."""
         ts = TimeSeries(
             times=np.array([np.datetime64("2020-01-01")]),
@@ -543,25 +493,15 @@ class TestConvenienceFunctions:
             location="LOC",
         )
 
-        with patch(
-            "pyiwfm.io.dss.timeseries.DSSTimeSeriesWriter", return_value=mock_writer
-        ):
-            result = write_timeseries_to_dss(
-                tmp_path / "test.dss", ts, "/A/B/C/D/E/F/"
-            )
+        with patch("pyiwfm.io.dss.timeseries.DSSTimeSeriesWriter", return_value=mock_writer):
+            result = write_timeseries_to_dss(tmp_path / "test.dss", ts, "/A/B/C/D/E/F/")
             assert isinstance(result, DSSWriteResult)
             mock_writer.write_timeseries.assert_called_once()
 
-    def test_read_timeseries_from_dss(
-        self, tmp_path: Path, mock_reader: MagicMock
-    ) -> None:
+    def test_read_timeseries_from_dss(self, tmp_path: Path, mock_reader: MagicMock) -> None:
         """Test read_timeseries_from_dss function."""
-        with patch(
-            "pyiwfm.io.dss.timeseries.DSSTimeSeriesReader", return_value=mock_reader
-        ):
-            ts = read_timeseries_from_dss(
-                tmp_path / "test.dss", "/A/B/C/D/E/F/"
-            )
+        with patch("pyiwfm.io.dss.timeseries.DSSTimeSeriesReader", return_value=mock_reader):
+            ts = read_timeseries_from_dss(tmp_path / "test.dss", "/A/B/C/D/E/F/")
             assert isinstance(ts, TimeSeries)
             mock_reader.read_timeseries.assert_called_once()
 
@@ -572,36 +512,24 @@ class TestConvenienceFunctions:
         start = datetime(2020, 1, 1)
         end = datetime(2020, 12, 31)
 
-        with patch(
-            "pyiwfm.io.dss.timeseries.DSSTimeSeriesReader", return_value=mock_reader
-        ):
+        with patch("pyiwfm.io.dss.timeseries.DSSTimeSeriesReader", return_value=mock_reader):
             read_timeseries_from_dss(
                 tmp_path / "test.dss",
                 "/A/B/C/D/E/F/",
                 start_date=start,
                 end_date=end,
             )
-            mock_reader.read_timeseries.assert_called_with(
-                "/A/B/C/D/E/F/", start, end
-            )
+            mock_reader.read_timeseries.assert_called_with("/A/B/C/D/E/F/", start, end)
 
-    def test_write_collection_to_dss(
-        self, tmp_path: Path, mock_writer: MagicMock
-    ) -> None:
+    def test_write_collection_to_dss(self, tmp_path: Path, mock_writer: MagicMock) -> None:
         """Test write_collection_to_dss function."""
         times = np.array([np.datetime64("2020-01-01")])
         collection = TimeSeriesCollection(variable="FLOW")
-        collection.add(
-            TimeSeries(times=times, values=np.array([1.0]), location="LOC1")
-        )
+        collection.add(TimeSeries(times=times, values=np.array([1.0]), location="LOC1"))
 
-        template = DSSPathnameTemplate(
-            a_part="PROJECT", c_part="FLOW", e_part="1DAY"
-        )
+        template = DSSPathnameTemplate(a_part="PROJECT", c_part="FLOW", e_part="1DAY")
 
-        with patch(
-            "pyiwfm.io.dss.timeseries.DSSTimeSeriesWriter", return_value=mock_writer
-        ):
+        with patch("pyiwfm.io.dss.timeseries.DSSTimeSeriesWriter", return_value=mock_writer):
             result = write_collection_to_dss(
                 tmp_path / "test.dss", collection, template, units="CFS"
             )
@@ -621,9 +549,7 @@ class TestIntegrationWithPathname:
         mock.write_regular_timeseries.return_value = None
         return mock
 
-    def test_pathname_date_range_update(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_pathname_date_range_update(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test pathname D-part is updated with date range."""
         times = np.array(
             [
@@ -647,13 +573,13 @@ class TestIntegrationWithPathname:
 
                 # Check the pathname that was written
                 call_kwargs = mock_dss_file.write_regular_timeseries.call_args
-                written_pathname = call_kwargs.kwargs.get("pathname", call_kwargs.args[0] if call_kwargs.args else "")
+                written_pathname = call_kwargs.kwargs.get(
+                    "pathname", call_kwargs.args[0] if call_kwargs.args else ""
+                )
                 # D-part should now contain date range
                 assert "2020" in written_pathname or written_pathname  # Basic check
 
-    def test_template_makes_pathname(
-        self, tmp_path: Path, mock_dss_file: MagicMock
-    ) -> None:
+    def test_template_makes_pathname(self, tmp_path: Path, mock_dss_file: MagicMock) -> None:
         """Test using DSSPathnameTemplate to create pathnames."""
         template = DSSPathnameTemplate(
             a_part="C2VSIM",

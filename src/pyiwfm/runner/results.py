@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
@@ -155,13 +154,9 @@ class SimulationResult(RunResult):
             self.main_file = Path(self.main_file)
         if isinstance(self.final_heads_file, str):
             self.final_heads_file = Path(self.final_heads_file)
-        self.budget_files = [
-            Path(f) if isinstance(f, str) else f
-            for f in self.budget_files
-        ]
+        self.budget_files = [Path(f) if isinstance(f, str) else f for f in self.budget_files]
         self.hydrograph_files = [
-            Path(f) if isinstance(f, str) else f
-            for f in self.hydrograph_files
+            Path(f) if isinstance(f, str) else f for f in self.hydrograph_files
         ]
 
 

@@ -6,14 +6,11 @@ Tests the PreProcessorWriter class and standalone file writing functions.
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
-from numpy.typing import NDArray
 
 from pyiwfm.io.config import PreProcessorFileConfig
 from pyiwfm.io.preprocessor_writer import (
@@ -44,9 +41,7 @@ class TestPreProcessorWriterInit:
         """Create a preprocessor file config."""
         return PreProcessorFileConfig(output_dir=tmp_path / "output")
 
-    def test_init_basic(
-        self, mock_model: MagicMock, config: PreProcessorFileConfig
-    ) -> None:
+    def test_init_basic(self, mock_model: MagicMock, config: PreProcessorFileConfig) -> None:
         """Test basic initialization."""
         writer = PreProcessorWriter(mock_model, config)
         assert writer.model is mock_model
@@ -172,16 +167,14 @@ class TestPreProcessorWriterWriteElements:
         assert "NSUBREGION" in content
         assert "3" in content  # n_elements
 
-    def test_write_elements_with_multiple_subregions(
-        self, config: PreProcessorFileConfig
-    ) -> None:
+    def test_write_elements_with_multiple_subregions(self, config: PreProcessorFileConfig) -> None:
         """Test write_elements with multiple subregions."""
         model = MagicMock()
         model.n_elements = 3
 
         elements = {}
         subregion_ids = [1, 2, 1]  # Elements in different subregions
-        for i, sr in zip(range(1, 4), subregion_ids):
+        for i, sr in zip(range(1, 4), subregion_ids, strict=False):
             elem = MagicMock()
             elem.vertices = [i, i + 1, i + 2, 0]  # Triangle
             elem.subregion = sr
@@ -196,9 +189,7 @@ class TestPreProcessorWriterWriteElements:
         content = path.read_text()
         assert "2" in content  # n_subregions = 2
 
-    def test_write_elements_triangles(
-        self, config: PreProcessorFileConfig
-    ) -> None:
+    def test_write_elements_triangles(self, config: PreProcessorFileConfig) -> None:
         """Test write_elements handles triangular elements."""
         model = MagicMock()
         model.n_elements = 1
@@ -216,7 +207,7 @@ class TestPreProcessorWriterWriteElements:
         content = path.read_text()
         lines = content.strip().split("\n")
         # Last line should have element data with vertex 4 = 0
-        data_lines = [l for l in lines if not l.strip().startswith("C") and l.strip()]
+        data_lines = [line for line in lines if not line.strip().startswith("C") and line.strip()]
         # Find line with element 1 vertices
         for line in data_lines:
             parts = line.split()
@@ -323,9 +314,7 @@ class TestPreProcessorWriterWriteMain:
         assert "NODE X-Y COORDINATE FILE" in content
         assert "STRATIGRAPHIC DATA FILE" in content
 
-    def test_write_main_with_streams(
-        self, config: PreProcessorFileConfig
-    ) -> None:
+    def test_write_main_with_streams(self, config: PreProcessorFileConfig) -> None:
         """Test write_main with streams enabled."""
         model = MagicMock()
         model.name = "Test Model"
@@ -394,9 +383,7 @@ class TestPreProcessorWriterWriteStreamConfig:
         assert "NREACH" in content
         assert "NSTRMNODE" in content
 
-    def test_write_stream_config_no_streams(
-        self, config: PreProcessorFileConfig
-    ) -> None:
+    def test_write_stream_config_no_streams(self, config: PreProcessorFileConfig) -> None:
         """Test write_stream_config with no streams."""
         model = MagicMock()
         model.streams = None
@@ -454,9 +441,7 @@ class TestPreProcessorWriterWriteLakeConfig:
         assert "NLAKES" in content
         assert "LAKEID" in content
 
-    def test_write_lake_config_no_lakes(
-        self, config: PreProcessorFileConfig
-    ) -> None:
+    def test_write_lake_config_no_lakes(self, config: PreProcessorFileConfig) -> None:
         """Test write_lake_config with no lakes."""
         model = MagicMock()
         model.lakes = None
@@ -467,7 +452,9 @@ class TestPreProcessorWriterWriteLakeConfig:
         content = path.read_text()
         # Should have NLAKES = 0
         lines = content.split("\n")
-        nlakes_line = [l for l in lines if "NLAKES" in l and not l.strip().startswith("C")]
+        nlakes_line = [
+            line for line in lines if "NLAKES" in line and not line.strip().startswith("C")
+        ]
         assert len(nlakes_line) > 0
         assert "0" in nlakes_line[0]
 
@@ -598,9 +585,7 @@ class TestWritePreprocessorFiles:
 
         return model
 
-    def test_write_preprocessor_files(
-        self, mock_model: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_write_preprocessor_files(self, mock_model: MagicMock, tmp_path: Path) -> None:
         """Test write_preprocessor_files function."""
         results = write_preprocessor_files(mock_model, tmp_path / "output")
 
@@ -697,9 +682,7 @@ class TestWriteElementsFile:
         subregions = np.array([1], dtype=np.int32)
         names = {1: "Sacramento Valley"}
 
-        write_elements_file(
-            output_path, element_ids, vertices, subregions, subregion_names=names
-        )
+        write_elements_file(output_path, element_ids, vertices, subregions, subregion_names=names)
 
         content = output_path.read_text()
         assert "Sacramento Valley" in content
@@ -708,9 +691,7 @@ class TestWriteElementsFile:
         """Test element file with multiple subregions."""
         output_path = tmp_path / "elements.dat"
         element_ids = np.array([1, 2, 3], dtype=np.int32)
-        vertices = np.array(
-            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]], dtype=np.int32
-        )
+        vertices = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]], dtype=np.int32)
         subregions = np.array([1, 2, 1], dtype=np.int32)
 
         write_elements_file(output_path, element_ids, vertices, subregions)
@@ -747,9 +728,7 @@ class TestWriteStratigraphyFile:
         layer_tops = np.array([[90.0, 70.0]])
         layer_bottoms = np.array([[70.0, 50.0]])
 
-        write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
+        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
 
         content = output_path.read_text()
         assert "2" in content  # 2 layers
@@ -775,9 +754,7 @@ class TestWriteStratigraphyFile:
         content = output_path.read_text()
         assert "0.304800" in content
 
-    def test_write_stratigraphy_file_thickness_calculation(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_stratigraphy_file_thickness_calculation(self, tmp_path: Path) -> None:
         """Test that thicknesses are calculated correctly."""
         output_path = tmp_path / "strat.dat"
         node_ids = np.array([1], dtype=np.int32)
@@ -785,16 +762,12 @@ class TestWriteStratigraphyFile:
         layer_tops = np.array([[90.0]])  # 10 ft below ground surface
         layer_bottoms = np.array([[70.0]])  # 20 ft aquifer thickness
 
-        write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
+        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
 
         # Read and verify data
         content = output_path.read_text()
         lines = content.strip().split("\n")
-        data_lines = [
-            l for l in lines if not l.strip().startswith("C") and l.strip()
-        ]
+        data_lines = [line for line in lines if not line.strip().startswith("C") and line.strip()]
 
         # Find the data line (skip header lines with keywords)
         for line in data_lines:

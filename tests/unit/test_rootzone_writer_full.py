@@ -8,16 +8,15 @@ Tests cover:
 - File generation with various model configurations
 """
 
-import pytest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from pyiwfm.io.rootzone_writer import (
-    RootZoneWriterConfig,
     RootZoneComponentWriter,
+    RootZoneWriterConfig,
     write_rootzone_component,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -152,9 +151,7 @@ class TestRootZoneWriterConfig:
     def test_main_path_property(self, tmp_path):
         """Test main_path property returns correct path."""
         config = RootZoneWriterConfig(
-            output_dir=tmp_path,
-            rootzone_subdir="RootZone",
-            main_file="RootZone_MAIN.dat"
+            output_dir=tmp_path, rootzone_subdir="RootZone", main_file="RootZone_MAIN.dat"
         )
 
         assert config.main_path == tmp_path / "RootZone" / "RootZone_MAIN.dat"
@@ -246,7 +243,7 @@ class TestRootZoneComponentWriterWrite:
         """Test write() calls write_all()."""
         writer = RootZoneComponentWriter(mock_model, rootzone_config)
 
-        with patch.object(writer, 'write_all') as mock_write_all:
+        with patch.object(writer, "write_all") as mock_write_all:
             writer.write()
             mock_write_all.assert_called_once()
 
@@ -385,7 +382,7 @@ class TestWriteRootZoneComponent:
             version="5.0",
         )
 
-        result = write_rootzone_component(mock_model, tmp_path, config)
+        write_rootzone_component(mock_model, tmp_path, config)
 
         assert (tmp_path / "RZ" / "RootZone_MAIN.dat").exists()
 
@@ -401,14 +398,12 @@ class TestWriteRootZoneComponent:
         other_path = tmp_path / "other"
         config = RootZoneWriterConfig(output_dir=other_path)
 
-        result = write_rootzone_component(mock_model, tmp_path, config)
+        write_rootzone_component(mock_model, tmp_path, config)
 
         # Should use tmp_path, not other_path
         assert (tmp_path / "RootZone" / "RootZone_MAIN.dat").exists()
 
-    def test_write_rootzone_component_with_full_rootzone(
-        self, mock_model_with_rootzone, tmp_path
-    ):
+    def test_write_rootzone_component_with_full_rootzone(self, mock_model_with_rootzone, tmp_path):
         """Test write_rootzone_component with full rootzone data."""
         result = write_rootzone_component(mock_model_with_rootzone, tmp_path)
 
@@ -435,9 +430,7 @@ class TestRootZoneWriterEdgeCases:
         # Should have custom wilting point 0.1 for elements with soil params
         assert "0.1" in content
 
-    def test_elements_use_defaults_when_no_soil_params(
-        self, mock_model_with_grid, rootzone_config
-    ):
+    def test_elements_use_defaults_when_no_soil_params(self, mock_model_with_grid, rootzone_config):
         """Test elements use defaults when no soil parameters."""
         writer = RootZoneComponentWriter(mock_model_with_grid, rootzone_config)
 
@@ -512,7 +505,9 @@ class TestRootZoneWriterEdgeCases:
         # Should use default values
         assert "0.0" in content  # default wilting point
 
-    def test_soil_params_missing_for_some_elements(self, mock_model_with_grid, mock_soil_params, rootzone_config):
+    def test_soil_params_missing_for_some_elements(
+        self, mock_model_with_grid, mock_soil_params, rootzone_config
+    ):
         """Test elements without soil params use defaults."""
         rootzone = MagicMock()
         # Only element 1 has soil params

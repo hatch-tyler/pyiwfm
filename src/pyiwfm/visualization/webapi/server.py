@@ -93,6 +93,7 @@ def create_app(
     if static_dir.exists():
         app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
     else:
+
         @app.get("/")
         def root() -> dict:
             return {
@@ -140,8 +141,7 @@ def launch_viewer(
         import uvicorn
     except ImportError as e:
         raise ImportError(
-            "uvicorn is required for the web viewer. "
-            "Install with: pip install uvicorn[standard]"
+            "uvicorn is required for the web viewer. Install with: pip install uvicorn[standard]"
         ) from e
 
     settings = ViewerSettings(

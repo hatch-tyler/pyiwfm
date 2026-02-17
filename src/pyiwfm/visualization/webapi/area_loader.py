@@ -120,18 +120,14 @@ class LazyAreaDataLoader:
                 # Load times
                 if "times" in f:
                     raw = f["times"][:]
-                    self._times = [
-                        t.decode() if isinstance(t, bytes) else t
-                        for t in raw
-                    ]
+                    self._times = [t.decode() if isinstance(t, bytes) else t for t in raw]
 
                 # Load element IDs
                 if "element_ids" in f:
                     self._element_ids = f["element_ids"][:].astype(np.int32)
 
                 logger.info(
-                    "Area data loaded: %d timesteps, %d elements, %d cols "
-                    "from %s",
+                    "Area data loaded: %d timesteps, %d elements, %d cols from %s",
                     self._n_frames,
                     self._n_elements,
                     self._n_cols,
@@ -162,7 +158,8 @@ class LazyAreaDataLoader:
         if data.ndim == 1:
             data = data.reshape(-1, 1)
         self._cache[frame_idx] = data
-        return data
+        result: NDArray[np.float64] = data
+        return result
 
     def get_element_timeseries(self, element_idx: int) -> NDArray[np.float64]:
         """Get all timesteps for one element using HDF5 hyperslab slicing.
@@ -170,8 +167,8 @@ class LazyAreaDataLoader:
         Returns array of shape ``(n_timesteps, n_cols)``.
         """
         with h5py.File(self._file_path, "r") as f:
-            data = f[self._dataset][:, element_idx, :].astype(np.float64)
-        return data
+            result: NDArray[np.float64] = f[self._dataset][:, element_idx, :].astype(np.float64)
+        return result
 
     def get_layer_range(
         self,
@@ -257,7 +254,9 @@ class AreaDataManager:
             if not src.exists():
                 logger.warning(
                     "Area file '%s' (%s): path %s does not exist",
-                    lbl, attr, src,
+                    lbl,
+                    attr,
+                    src,
                 )
                 continue
 
@@ -274,7 +273,8 @@ class AreaDataManager:
                             if cached_n <= 1:
                                 logger.info(
                                     "Stale cache for '%s': only %d element(s), reconverting",
-                                    lbl, cached_n,
+                                    lbl,
+                                    cached_n,
                                 )
                                 needs_convert = True
                     except Exception:
@@ -283,12 +283,16 @@ class AreaDataManager:
                 if needs_convert:
                     logger.info(
                         "Converting %s -> %s (%d bytes)",
-                        src.name, hdf.name, src.stat().st_size,
+                        src.name,
+                        hdf.name,
+                        src.stat().st_size,
                     )
                     convert_area_to_hdf(src, hdf, label=lbl)
                 else:
                     logger.info(
-                        "Using cached HDF5 for '%s': %s", lbl, hdf.name,
+                        "Using cached HDF5 for '%s': %s",
+                        lbl,
+                        hdf.name,
                     )
                 loader = LazyAreaDataLoader(hdf, dataset=lbl)
                 setattr(self, lbl, loader)
@@ -301,7 +305,9 @@ class AreaDataManager:
                 )
             except Exception as e:
                 logger.error(
-                    "Failed to load area data for '%s': %s", lbl, e,
+                    "Failed to load area data for '%s': %s",
+                    lbl,
+                    e,
                     exc_info=True,
                 )
 
@@ -350,10 +356,7 @@ class AreaDataManager:
         result: dict[int, dict] = {}
         for eid, areas in elem_data.items():
             total = sum(areas.values())
-            fractions = {
-                k: round(v / total, 4) if total > 0 else 0.0
-                for k, v in areas.items()
-            }
+            fractions = {k: round(v / total, 4) if total > 0 else 0.0 for k, v in areas.items()}
             dominant = max(areas, key=lambda k: areas[k]) if total > 0 else "unknown"
             result[eid] = {
                 "fractions": fractions,
@@ -362,9 +365,7 @@ class AreaDataManager:
             }
         return result
 
-    def get_element_breakdown(
-        self, element_id: int, timestep: int = 0
-    ) -> dict[str, list[float]]:
+    def get_element_breakdown(self, element_id: int, timestep: int = 0) -> dict[str, list[float]]:
         """Get per-column area breakdown for one element at one timestep.
 
         Returns a dict mapping land-use label (e.g. ``"nonponded"``) to a

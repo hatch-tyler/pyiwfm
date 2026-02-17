@@ -22,13 +22,21 @@ from pyiwfm.components.rootzone import (
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
-    is_comment_line as _is_comment_line,
     next_data_line,
-    next_data_or_empty as _next_data_or_empty,
     parse_version,
-    resolve_path as _resolve_path_f,
-    strip_inline_comment as _strip_comment,
     version_ge,
+)
+from pyiwfm.io.iwfm_reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
+    next_data_or_empty as _next_data_or_empty,
+)
+from pyiwfm.io.iwfm_reader import (
+    resolve_path as _resolve_path_f,
+)
+from pyiwfm.io.iwfm_reader import (
+    strip_inline_comment as _strip_comment,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,7 +75,6 @@ class ElementSoilParamRow:
     dest_urban_in: int = 0
     dest_urban_out: int = 0
     dest_nvrv: int = 0
-
 
 
 @dataclass
@@ -200,15 +207,15 @@ class RootZoneWriter:
             # Write crops in ID order
             for crop_id in sorted(rootzone.crop_types.keys()):
                 crop = rootzone.crop_types[crop_id]
-                f.write(
-                    f"{crop.id:<6} {crop.root_depth:>10.4f} {crop.kc:>8.4f}  {crop.name}\n"
-                )
+                f.write(f"{crop.id:<6} {crop.root_depth:>10.4f} {crop.kc:>8.4f}  {crop.name}\n")
 
                 # Write monthly Kc if available
                 if crop.monthly_kc is not None:
                     f.write("C  Monthly Kc values (Jan-Dec):\n")
                     for i in range(0, 12, 6):
-                        kc_vals = " ".join(f"{crop.monthly_kc[j]:>8.4f}" for j in range(i, min(i + 6, 12)))
+                        kc_vals = " ".join(
+                            f"{crop.monthly_kc[j]:>8.4f}" for j in range(i, min(i + 6, 12))
+                        )
                         f.write(f"   {kc_vals}\n")
 
         return filepath
@@ -264,10 +271,20 @@ class RootZoneWriter:
         filepath = self.config.get_landuse_path()
 
         # Group by land use type
-        ag_landuse = [elu for elu in rootzone.element_landuse if elu.land_use_type == LandUseType.AGRICULTURAL]
-        urban_landuse = [elu for elu in rootzone.element_landuse if elu.land_use_type == LandUseType.URBAN]
-        native_landuse = [elu for elu in rootzone.element_landuse if elu.land_use_type == LandUseType.NATIVE_RIPARIAN]
-        water_landuse = [elu for elu in rootzone.element_landuse if elu.land_use_type == LandUseType.WATER]
+        ag_landuse = [
+            elu for elu in rootzone.element_landuse if elu.land_use_type == LandUseType.AGRICULTURAL
+        ]
+        urban_landuse = [
+            elu for elu in rootzone.element_landuse if elu.land_use_type == LandUseType.URBAN
+        ]
+        native_landuse = [
+            elu
+            for elu in rootzone.element_landuse
+            if elu.land_use_type == LandUseType.NATIVE_RIPARIAN
+        ]
+        water_landuse = [
+            elu for elu in rootzone.element_landuse if elu.land_use_type == LandUseType.WATER
+        ]
 
         with open(filepath, "w") as f:
             # Write header
@@ -280,7 +297,9 @@ class RootZoneWriter:
                 f.write("C\n")
 
             # Write total count
-            f.write(f"{len(rootzone.element_landuse):<10}                              / NLANDUSE\n")
+            f.write(
+                f"{len(rootzone.element_landuse):<10}                              / NLANDUSE\n"
+            )
 
             # Write agricultural land use
             f.write("C\n")
@@ -297,9 +316,7 @@ class RootZoneWriter:
             f.write(f"{len(urban_landuse):<10}                              / NURBAN_LANDUSE\n")
 
             for elu in urban_landuse:
-                f.write(
-                    f"{elu.element_id:<6} {elu.area:>14.4f} {elu.impervious_fraction:>8.4f}\n"
-                )
+                f.write(f"{elu.element_id:<6} {elu.area:>14.4f} {elu.impervious_fraction:>8.4f}\n")
 
             # Write native/riparian land use
             f.write("C\n")
@@ -350,7 +367,7 @@ class RootZoneWriter:
             f.write(f"{rootzone.n_layers:<10}                              / NLAYERS\n")
 
             # Build header for layers
-            layer_cols = "  ".join([f"SM_L{i+1:02d}" for i in range(rootzone.n_layers)])
+            layer_cols = "  ".join([f"SM_L{i + 1:02d}" for i in range(rootzone.n_layers)])
             f.write(f"C  ELEM  {layer_cols}\n")
 
             # Write soil moisture data
@@ -559,8 +576,8 @@ class RootZoneMainFileConfig:
     lwu_budget_file: Path | None = None
     rz_budget_file: Path | None = None
     lwu_zone_budget_file: Path | None = None  # v4.11+ only
-    rz_zone_budget_file: Path | None = None   # v4.11+ only
-    lu_area_scale_file: Path | None = None    # v4.11+ only
+    rz_zone_budget_file: Path | None = None  # v4.11+ only
+    lu_area_scale_file: Path | None = None  # v4.11+ only
     final_moisture_file: Path | None = None
     # Soil parameter conversion factors
     k_factor: float = 1.0
@@ -764,9 +781,7 @@ class RootZoneMainFileReader:
             if is_v412_plus:
                 dest_path = _next_data_or_empty(f)
                 if dest_path:
-                    config.surface_flow_dest_file = _resolve_path_f(
-                        base_dir, dest_path
-                    )
+                    config.surface_flow_dest_file = _resolve_path_f(base_dir, dest_path)
 
             # Per-element soil parameters
             config.element_soil_params = self._read_element_soil_params(
@@ -903,8 +918,7 @@ class RootZoneMainFileReader:
 
         if rows:
             logger.debug(
-                "Read %d soil parameter rows (elements %d–%d) from rootzone "
-                "main file (version %s)",
+                "Read %d soil parameter rows (elements %d–%d) from rootzone main file (version %s)",
                 len(rows),
                 rows[0].element_id,
                 rows[-1].element_id,

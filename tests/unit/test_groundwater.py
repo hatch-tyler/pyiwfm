@@ -6,13 +6,13 @@ import numpy as np
 import pytest
 
 from pyiwfm.components.groundwater import (
-    Well,
-    ElementPumping,
-    BoundaryCondition,
-    TileDrain,
-    Subsidence,
-    AquiferParameters,
     AppGW,
+    AquiferParameters,
+    BoundaryCondition,
+    ElementPumping,
+    Subsidence,
+    TileDrain,
+    Well,
 )
 from pyiwfm.core.exceptions import ComponentError
 

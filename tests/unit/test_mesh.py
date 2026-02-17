@@ -5,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyiwfm.core.mesh import AppGrid, Element, Face, Node, Subregion
 from pyiwfm.core.exceptions import MeshError
+from pyiwfm.core.mesh import AppGrid, Element, Face, Node, Subregion
 
 
 class TestNode:
@@ -485,9 +485,7 @@ class TestAppGridValidation:
         with pytest.raises(MeshError, match="no elements"):
             grid.validate()
 
-    def test_validate_invalid_vertex_reference(
-        self, small_grid_nodes: list[dict]
-    ) -> None:
+    def test_validate_invalid_vertex_reference(self, small_grid_nodes: list[dict]) -> None:
         """Test validation fails for invalid vertex references."""
         nodes = {d["id"]: Node(**d) for d in small_grid_nodes}
         elements = {1: Element(id=1, vertices=(1, 2, 999, 4))}  # 999 doesn't exist

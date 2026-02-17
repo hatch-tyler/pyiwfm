@@ -6,11 +6,11 @@ import numpy as np
 import pytest
 
 from pyiwfm.components.rootzone import (
-    LandUseType,
     CropType,
-    SoilParameters,
     ElementLandUse,
+    LandUseType,
     RootZone,
+    SoilParameters,
 )
 from pyiwfm.core.exceptions import ComponentError
 
@@ -61,8 +61,7 @@ class TestCropType:
         crop = CropType(
             id=1,
             name="Wheat",
-            monthly_kc=np.array([0.3, 0.3, 0.5, 0.8, 1.1, 1.2,
-                                 1.1, 0.9, 0.6, 0.4, 0.3, 0.3]),
+            monthly_kc=np.array([0.3, 0.3, 0.5, 0.8, 1.1, 1.2, 1.1, 0.9, 0.6, 0.4, 0.3, 0.3]),
         )
 
         assert len(crop.monthly_kc) == 12
@@ -213,16 +212,20 @@ class TestRootZone:
         """Test getting land use for an element."""
         rz = RootZone(n_elements=10, n_layers=1)
 
-        rz.add_element_landuse(ElementLandUse(
-            element_id=5,
-            land_use_type=LandUseType.AGRICULTURAL,
-            area=5000.0,
-        ))
-        rz.add_element_landuse(ElementLandUse(
-            element_id=5,
-            land_use_type=LandUseType.URBAN,
-            area=1000.0,
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=5,
+                land_use_type=LandUseType.AGRICULTURAL,
+                area=5000.0,
+            )
+        )
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=5,
+                land_use_type=LandUseType.URBAN,
+                area=1000.0,
+            )
+        )
 
         uses = rz.get_landuse_for_element(5)
         assert len(uses) == 2
@@ -231,21 +234,27 @@ class TestRootZone:
         """Test calculating total area by land use type."""
         rz = RootZone(n_elements=10, n_layers=1)
 
-        rz.add_element_landuse(ElementLandUse(
-            element_id=1,
-            land_use_type=LandUseType.AGRICULTURAL,
-            area=5000.0,
-        ))
-        rz.add_element_landuse(ElementLandUse(
-            element_id=2,
-            land_use_type=LandUseType.AGRICULTURAL,
-            area=3000.0,
-        ))
-        rz.add_element_landuse(ElementLandUse(
-            element_id=3,
-            land_use_type=LandUseType.URBAN,
-            area=2000.0,
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=1,
+                land_use_type=LandUseType.AGRICULTURAL,
+                area=5000.0,
+            )
+        )
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=2,
+                land_use_type=LandUseType.AGRICULTURAL,
+                area=3000.0,
+            )
+        )
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=3,
+                land_use_type=LandUseType.URBAN,
+                area=2000.0,
+            )
+        )
 
         ag_area = rz.get_total_area(LandUseType.AGRICULTURAL)
         assert ag_area == pytest.approx(8000.0)
@@ -284,11 +293,13 @@ class TestRootZone:
         """Test validation catches invalid element references."""
         rz = RootZone(n_elements=5, n_layers=1)
 
-        rz.add_element_landuse(ElementLandUse(
-            element_id=100,  # Invalid element
-            land_use_type=LandUseType.AGRICULTURAL,
-            area=5000.0,
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=100,  # Invalid element
+                land_use_type=LandUseType.AGRICULTURAL,
+                area=5000.0,
+            )
+        )
 
         with pytest.raises(ComponentError, match="element"):
             rz.validate()
@@ -297,9 +308,15 @@ class TestRootZone:
         """Test iterating over elements with land use."""
         rz = RootZone(n_elements=10, n_layers=1)
 
-        rz.add_element_landuse(ElementLandUse(element_id=3, land_use_type=LandUseType.URBAN, area=1000.0))
-        rz.add_element_landuse(ElementLandUse(element_id=1, land_use_type=LandUseType.AGRICULTURAL, area=2000.0))
-        rz.add_element_landuse(ElementLandUse(element_id=5, land_use_type=LandUseType.NATIVE_RIPARIAN, area=3000.0))
+        rz.add_element_landuse(
+            ElementLandUse(element_id=3, land_use_type=LandUseType.URBAN, area=1000.0)
+        )
+        rz.add_element_landuse(
+            ElementLandUse(element_id=1, land_use_type=LandUseType.AGRICULTURAL, area=2000.0)
+        )
+        rz.add_element_landuse(
+            ElementLandUse(element_id=5, land_use_type=LandUseType.NATIVE_RIPARIAN, area=3000.0)
+        )
 
         elements = list(rz.iter_elements_with_landuse())
         assert len(elements) == 3
@@ -348,8 +365,7 @@ class TestCropTypeEdgeCases:
 
     def test_crop_get_kc_monthly(self) -> None:
         """Test get_kc returns monthly value when monthly_kc is set."""
-        monthly = np.array([0.3, 0.3, 0.5, 0.8, 1.1, 1.2,
-                            1.1, 0.9, 0.6, 0.4, 0.3, 0.3])
+        monthly = np.array([0.3, 0.3, 0.5, 0.8, 1.1, 1.2, 1.1, 0.9, 0.6, 0.4, 0.3, 0.3])
         crop = CropType(id=1, name="Wheat", kc=0.7, monthly_kc=monthly)
 
         # month=0 should return annual kc
@@ -429,12 +445,14 @@ class TestRootZoneEdgeCases:
     def test_validate_crop_reference_error(self) -> None:
         """Test validation catches undefined crop type references."""
         rz = RootZone(n_elements=10, n_layers=1)
-        rz.add_element_landuse(ElementLandUse(
-            element_id=1,  # valid 1-based ID
-            land_use_type=LandUseType.AGRICULTURAL,
-            area=5000.0,
-            crop_fractions={99: 0.5},  # crop 99 not defined
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=1,  # valid 1-based ID
+                land_use_type=LandUseType.AGRICULTURAL,
+                area=5000.0,
+                crop_fractions={99: 0.5},  # crop 99 not defined
+            )
+        )
 
         with pytest.raises(ComponentError, match="crop type"):
             rz.validate()
@@ -442,11 +460,13 @@ class TestRootZoneEdgeCases:
     def test_validate_zero_element_id(self) -> None:
         """Test validation catches zero element ID (IDs are 1-based)."""
         rz = RootZone(n_elements=5, n_layers=1)
-        rz.add_element_landuse(ElementLandUse(
-            element_id=0,
-            land_use_type=LandUseType.URBAN,
-            area=1000.0,
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=0,
+                land_use_type=LandUseType.URBAN,
+                area=1000.0,
+            )
+        )
 
         with pytest.raises(ComponentError, match="element"):
             rz.validate()
@@ -454,11 +474,13 @@ class TestRootZoneEdgeCases:
     def test_validate_negative_element_id(self) -> None:
         """Test validation catches negative element IDs."""
         rz = RootZone(n_elements=5, n_layers=1)
-        rz.add_element_landuse(ElementLandUse(
-            element_id=-1,
-            land_use_type=LandUseType.URBAN,
-            area=1000.0,
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=-1,
+                land_use_type=LandUseType.URBAN,
+                area=1000.0,
+            )
+        )
 
         with pytest.raises(ComponentError, match="element"):
             rz.validate()
@@ -466,11 +488,13 @@ class TestRootZoneEdgeCases:
     def test_validate_element_id_exceeds_n_elements(self) -> None:
         """Test validation catches element ID > n_elements (1-based)."""
         rz = RootZone(n_elements=5, n_layers=1)
-        rz.add_element_landuse(ElementLandUse(
-            element_id=6,  # n_elements=5, so max valid ID is 5
-            land_use_type=LandUseType.URBAN,
-            area=1000.0,
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=6,  # n_elements=5, so max valid ID is 5
+                land_use_type=LandUseType.URBAN,
+                area=1000.0,
+            )
+        )
 
         with pytest.raises(ComponentError, match="element"):
             rz.validate()
@@ -478,11 +502,13 @@ class TestRootZoneEdgeCases:
     def test_validate_max_valid_element_id(self) -> None:
         """Test validation accepts element_id == n_elements (1-based)."""
         rz = RootZone(n_elements=5, n_layers=1)
-        rz.add_element_landuse(ElementLandUse(
-            element_id=5,  # n_elements=5, so 5 is valid
-            land_use_type=LandUseType.URBAN,
-            area=1000.0,
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=5,  # n_elements=5, so 5 is valid
+                land_use_type=LandUseType.URBAN,
+                area=1000.0,
+            )
+        )
 
         # Should not raise — element 5 is valid for n_elements=5
         rz.validate()
@@ -513,15 +539,15 @@ class TestRootZoneEdgeCases:
     def test_iter_elements_with_landuse_deduplication(self) -> None:
         """Test iter_elements deduplicates when element has multiple land uses."""
         rz = RootZone(n_elements=10, n_layers=1)
-        rz.add_element_landuse(ElementLandUse(
-            element_id=5, land_use_type=LandUseType.AGRICULTURAL, area=3000.0
-        ))
-        rz.add_element_landuse(ElementLandUse(
-            element_id=5, land_use_type=LandUseType.URBAN, area=1000.0
-        ))
-        rz.add_element_landuse(ElementLandUse(
-            element_id=7, land_use_type=LandUseType.NATIVE_RIPARIAN, area=2000.0
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(element_id=5, land_use_type=LandUseType.AGRICULTURAL, area=3000.0)
+        )
+        rz.add_element_landuse(
+            ElementLandUse(element_id=5, land_use_type=LandUseType.URBAN, area=1000.0)
+        )
+        rz.add_element_landuse(
+            ElementLandUse(element_id=7, land_use_type=LandUseType.NATIVE_RIPARIAN, area=2000.0)
+        )
 
         elements = list(rz.iter_elements_with_landuse())
         assert elements == [5, 7]

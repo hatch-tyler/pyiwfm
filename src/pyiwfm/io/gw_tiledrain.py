@@ -17,15 +17,20 @@ from typing import TextIO
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
+)
+from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
 )
 
-
 # Destination types for tile drains
-TD_DEST_OUTSIDE = 1    # Flow goes outside model domain
-TD_DEST_STREAM = 2     # Flow goes to a stream node
+TD_DEST_OUTSIDE = 1  # Flow goes outside model domain
+TD_DEST_STREAM = 2  # Flow goes to a stream node
 
 
 @dataclass
@@ -40,6 +45,7 @@ class TileDrainSpec:
         dest_type: Destination type (1=outside, 2=stream node)
         dest_id: Destination ID (stream node number if dest_type=2)
     """
+
     id: int
     gw_node: int
     elevation: float
@@ -58,6 +64,7 @@ class SubIrrigationSpec:
         elevation: Sub-irrigation elevation
         conductance: Conductance
     """
+
     id: int
     gw_node: int
     elevation: float
@@ -82,6 +89,7 @@ class TileDrainConfig:
         subirig_time_unit: Time unit for sub-irrigation conductance
         sub_irrigations: List of sub-irrigation specifications
     """
+
     version: str = ""
     # Tile drains
     n_drains: int = 0
@@ -122,7 +130,7 @@ class TileDrainReader:
         self._line_num = 0
         self._pushed_back = None
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Version header (e.g., #4.0)
             config.version = self._read_version(f)
 
@@ -147,14 +155,16 @@ class TileDrainReader:
                     if len(parts) < 6:
                         continue
 
-                    config.tile_drains.append(TileDrainSpec(
-                        id=int(parts[0]),
-                        gw_node=int(parts[1]),
-                        elevation=float(parts[2]) * config.drain_height_factor,
-                        conductance=float(parts[3]) * config.drain_conductance_factor,
-                        dest_type=int(parts[4]),
-                        dest_id=int(parts[5]),
-                    ))
+                    config.tile_drains.append(
+                        TileDrainSpec(
+                            id=int(parts[0]),
+                            gw_node=int(parts[1]),
+                            elevation=float(parts[2]) * config.drain_height_factor,
+                            conductance=float(parts[3]) * config.drain_conductance_factor,
+                            dest_type=int(parts[4]),
+                            dest_id=int(parts[5]),
+                        )
+                    )
 
             # --- Sub-Irrigation Section ---
 
@@ -177,12 +187,14 @@ class TileDrainReader:
                     if len(parts) < 4:
                         continue
 
-                    config.sub_irrigations.append(SubIrrigationSpec(
-                        id=int(parts[0]),
-                        gw_node=int(parts[1]),
-                        elevation=float(parts[2]) * config.subirig_height_factor,
-                        conductance=float(parts[3]) * config.subirig_conductance_factor,
-                    ))
+                    config.sub_irrigations.append(
+                        SubIrrigationSpec(
+                            id=int(parts[0]),
+                            gw_node=int(parts[1]),
+                            elevation=float(parts[2]) * config.subirig_height_factor,
+                            conductance=float(parts[3]) * config.subirig_conductance_factor,
+                        )
+                    )
 
         return config
 

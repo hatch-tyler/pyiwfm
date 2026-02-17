@@ -5,29 +5,27 @@ Tests the PreProcessor file I/O handlers including reading and writing
 IWFM PreProcessor input files.
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import numpy as np
 
-from pyiwfm.io.preprocessor import (
-    COMMENT_CHARS,
-    _is_comment_line,
-    _strip_comment,
-    _resolve_path,
-    _make_relative_path,
-    PreProcessorConfig,
-    read_preprocessor_main,
-    read_subregions_file,
-    write_preprocessor_main,
-    save_model_to_preprocessor,
-    load_model_from_preprocessor,
-    load_complete_model,
-    save_complete_model,
-)
+import pytest
+
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.mesh import Subregion
-
+from pyiwfm.io.preprocessor import (
+    PreProcessorConfig,
+    _is_comment_line,
+    _make_relative_path,
+    _resolve_path,
+    _strip_comment,
+    load_complete_model,
+    load_model_from_preprocessor,
+    read_preprocessor_main,
+    read_subregions_file,
+    save_complete_model,
+    save_model_to_preprocessor,
+    write_preprocessor_main,
+)
 
 # =============================================================================
 # Helper Function Tests
@@ -123,6 +121,7 @@ class TestResolvePath:
     def test_resolve_absolute_path(self, tmp_path):
         """Test resolving absolute path."""
         import platform
+
         if platform.system() == "Windows":
             abs_path = "C:/absolute/path/to/file.dat"
         else:
@@ -133,7 +132,7 @@ class TestResolvePath:
     def test_resolve_windows_absolute_path(self, tmp_path):
         """Test resolving Windows absolute path."""
         abs_path = "C:/Users/test/file.dat"
-        result = _resolve_path(tmp_path, abs_path)
+        _resolve_path(tmp_path, abs_path)
         # On Windows this would be absolute, on Unix it's relative
         # The function checks is_absolute() which handles this
 
@@ -440,9 +439,7 @@ class TestWritePreprocessorMain:
 
         output_file = tmp_path / "preprocessor.in"
         write_preprocessor_main(
-            output_file,
-            config,
-            header="Custom Header Line 1\nCustom Header Line 2"
+            output_file, config, header="Custom Header Line 1\nCustom Header Line 2"
         )
 
         content = output_file.read_text()
@@ -541,9 +538,7 @@ class TestSaveModelToPreprocessor:
 
     @patch("pyiwfm.io.preprocessor.write_nodes")
     @patch("pyiwfm.io.preprocessor.write_elements")
-    def test_save_creates_output_directory(
-        self, mock_write_elem, mock_write_nodes, tmp_path
-    ):
+    def test_save_creates_output_directory(self, mock_write_elem, mock_write_nodes, tmp_path):
         """Test that output directory is created if it doesn't exist."""
         output_dir = tmp_path / "new_dir" / "nested"
 
@@ -563,9 +558,7 @@ class TestSaveModelToPreprocessor:
 
     @patch("pyiwfm.io.preprocessor.write_nodes")
     @patch("pyiwfm.io.preprocessor.write_elements")
-    def test_save_uses_default_name(
-        self, mock_write_elem, mock_write_nodes, tmp_path
-    ):
+    def test_save_uses_default_name(self, mock_write_elem, mock_write_nodes, tmp_path):
         """Test that default name is used if model has no name."""
         model = MagicMock()
         model.name = ""
@@ -596,7 +589,13 @@ class TestLoadModelFromPreprocessor:
     @patch("pyiwfm.io.preprocessor.read_nodes")
     @patch("pyiwfm.io.preprocessor.read_preprocessor_main")
     def test_load_basic_model(
-        self, mock_read_pp, mock_read_nodes, mock_read_elem, mock_read_strat, mock_grid_cls, tmp_path
+        self,
+        mock_read_pp,
+        mock_read_nodes,
+        mock_read_elem,
+        mock_read_strat,
+        mock_grid_cls,
+        tmp_path,
     ):
         """Test loading basic model."""
         # Setup mocks
@@ -645,9 +644,7 @@ class TestLoadModelFromPreprocessor:
 
     @patch("pyiwfm.io.preprocessor.read_nodes")
     @patch("pyiwfm.io.preprocessor.read_preprocessor_main")
-    def test_load_raises_on_missing_elements_file(
-        self, mock_read_pp, mock_read_nodes, tmp_path
-    ):
+    def test_load_raises_on_missing_elements_file(self, mock_read_pp, mock_read_nodes, tmp_path):
         """Test error when elements file is not specified."""
         mock_config = MagicMock()
         mock_config.nodes_file = tmp_path / "nodes.dat"
@@ -675,8 +672,14 @@ class TestLoadCompleteModel:
     @patch("pyiwfm.io.preprocessor.load_model_from_preprocessor")
     @patch("pyiwfm.io.simulation.SimulationReader")
     def test_load_complete_model_basic(
-        self, mock_sim_reader, mock_load_pp, mock_gw_reader,
-        mock_stream_reader, mock_lake_reader, mock_rz_reader, tmp_path
+        self,
+        mock_sim_reader,
+        mock_load_pp,
+        mock_gw_reader,
+        mock_stream_reader,
+        mock_lake_reader,
+        mock_rz_reader,
+        tmp_path,
     ):
         """Test loading complete model from simulation file."""
         # Create a real Path that exists check can work on
@@ -716,9 +719,7 @@ class TestLoadCompleteModel:
 
     @patch("pyiwfm.io.preprocessor.IWFMModel")
     @patch("pyiwfm.io.simulation.SimulationReader")
-    def test_load_handles_missing_preprocessor(
-        self, mock_sim_reader, mock_model_cls, tmp_path
-    ):
+    def test_load_handles_missing_preprocessor(self, mock_sim_reader, mock_model_cls, tmp_path):
         """Test loading when preprocessor file doesn't exist."""
         sim_reader_instance = MagicMock()
         mock_sim_reader.return_value = sim_reader_instance
@@ -755,9 +756,7 @@ class TestSaveCompleteModel:
     """Test save_complete_model function."""
 
     @patch("pyiwfm.io.model_writer.CompleteModelWriter")
-    def test_save_minimal_model(
-        self, mock_writer_cls, tmp_path
-    ):
+    def test_save_minimal_model(self, mock_writer_cls, tmp_path):
         """Test saving minimal model without components."""
         mock_result = MagicMock()
         mock_result.files = {
@@ -782,9 +781,7 @@ class TestSaveCompleteModel:
         mock_writer_cls.assert_called_once()
 
     @patch("pyiwfm.io.model_writer.CompleteModelWriter")
-    def test_save_model_with_groundwater(
-        self, mock_writer_cls, tmp_path
-    ):
+    def test_save_model_with_groundwater(self, mock_writer_cls, tmp_path):
         """Test saving model with groundwater component."""
         mock_result = MagicMock()
         mock_result.files = {
@@ -810,9 +807,7 @@ class TestSaveCompleteModel:
 
     @patch("pyiwfm.io.simulation.SimulationWriter")
     @patch("pyiwfm.io.preprocessor.save_model_to_preprocessor")
-    def test_save_creates_output_directory(
-        self, mock_save_pp, mock_sim_writer, tmp_path
-    ):
+    def test_save_creates_output_directory(self, mock_save_pp, mock_sim_writer, tmp_path):
         """Test that output directory is created."""
         output_dir = tmp_path / "new_output" / "nested"
 

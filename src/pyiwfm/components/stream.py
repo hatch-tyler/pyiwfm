@@ -9,8 +9,9 @@ Package_AppStream.
 from __future__ import annotations
 
 import math
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Iterator, Any
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -251,7 +252,7 @@ class StrmNode:
     cross_section: CrossSectionData | None = None
     initial_condition: float = 0.0
 
-    def distance_to(self, other: "StrmNode") -> float:
+    def distance_to(self, other: StrmNode) -> float:
         """Calculate distance to another stream node."""
         return math.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2)
 
@@ -557,7 +558,7 @@ class AppStream:
         Returns:
             Total length of the reach
         """
-        reach = self.reaches[reach_id]
+        self.reaches[reach_id]
         nodes = self.get_nodes_in_reach(reach_id)
 
         if len(nodes) < 2:
@@ -597,9 +598,7 @@ class AppStream:
         for reach in self.reaches.values():
             for nid in reach.nodes:
                 if nid not in self.nodes:
-                    raise ComponentError(
-                        f"Reach {reach.id} references non-existent node {nid}"
-                    )
+                    raise ComponentError(f"Reach {reach.id} references non-existent node {nid}")
 
         # Check diversion source nodes
         for div in self.diversions.values():
@@ -619,7 +618,9 @@ class AppStream:
                     f"Bypass {bypass.id} references non-existent destination node {bypass.destination_node}"
                 )
 
-    def get_reach_segments(self, reach_id: int) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    def get_reach_segments(
+        self, reach_id: int
+    ) -> list[tuple[tuple[float, float], tuple[float, float]]]:
         """
         Get all line segments for a reach.
 
@@ -756,13 +757,13 @@ class AppStream:
 
         if crossings and raise_on_error:
             msg_parts = [f"Stream network has {len(crossings)} invalid crossing(s):"]
-            for i, c in enumerate(crossings[:5]):  # Show first 5
+            for _i, c in enumerate(crossings[:5]):  # Show first 5
                 point_str = ""
                 if c.intersection_point:
-                    point_str = f" at ({c.intersection_point[0]:.1f}, {c.intersection_point[1]:.1f})"
-                msg_parts.append(
-                    f"  - Reach {c.reach1_id} crosses Reach {c.reach2_id}{point_str}"
-                )
+                    point_str = (
+                        f" at ({c.intersection_point[0]:.1f}, {c.intersection_point[1]:.1f})"
+                    )
+                msg_parts.append(f"  - Reach {c.reach1_id} crosses Reach {c.reach2_id}{point_str}")
             if len(crossings) > 5:
                 msg_parts.append(f"  ... and {len(crossings) - 5} more")
             raise ComponentError("\n".join(msg_parts))
@@ -777,15 +778,13 @@ class AppStream:
             Dictionary of arrays
         """
         sorted_ids = sorted(self.nodes.keys())
-        n = len(sorted_ids)
+        len(sorted_ids)
 
         node_ids = np.array(sorted_ids, dtype=np.int32)
         x = np.array([self.nodes[nid].x for nid in sorted_ids])
         y = np.array([self.nodes[nid].y for nid in sorted_ids])
         reach_ids = np.array([self.nodes[nid].reach_id for nid in sorted_ids], dtype=np.int32)
-        gw_nodes = np.array(
-            [self.nodes[nid].gw_node or 0 for nid in sorted_ids], dtype=np.int32
-        )
+        gw_nodes = np.array([self.nodes[nid].gw_node or 0 for nid in sorted_ids], dtype=np.int32)
 
         return {
             "node_ids": node_ids,
@@ -803,7 +802,7 @@ class AppStream:
         y: NDArray[np.float64],
         reach_ids: NDArray[np.int32],
         gw_nodes: NDArray[np.int32] | None = None,
-    ) -> "AppStream":
+    ) -> AppStream:
         """
         Create stream network from arrays.
 

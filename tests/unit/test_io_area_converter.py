@@ -11,11 +11,9 @@ from pathlib import Path
 from unittest import mock
 
 import h5py
-import numpy as np
 import pytest
 
 from pyiwfm.io.area_converter import convert_area_to_hdf, main
-
 
 # =====================================================================
 # Helpers
@@ -74,9 +72,7 @@ def _minimal_area_file(
             lines.append("C  Comment between timesteps")
 
         for eid in range(1, n_elements + 1):
-            vals = "  ".join(
-                f"{100.0 + eid + ts_idx * 10 + c:.1f}" for c in range(n_crops)
-            )
+            vals = "  ".join(f"{100.0 + eid + ts_idx * 10 + c:.1f}" for c in range(n_crops))
             if date_on_every_row or eid == 1:
                 lines.append(f"   {date}   {eid}   {vals}")
             else:

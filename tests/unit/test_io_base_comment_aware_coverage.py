@@ -17,14 +17,11 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 from pyiwfm.io.base import CommentAwareReader, CommentAwareWriter
-from pyiwfm.io.comment_metadata import CommentMetadata, PreserveMode, SectionComments
+from pyiwfm.io.comment_metadata import CommentMetadata, SectionComments
 from pyiwfm.io.comment_writer import CommentWriter
-
 
 # =============================================================================
 # Concrete implementations for testing abstract classes
@@ -102,9 +99,7 @@ class TestCommentAwareReaderInit:
 class TestCommentAwareReaderProperty:
     """Test comment_metadata property."""
 
-    def test_comment_metadata_property_returns_none_initially(
-        self, tmp_path: Path
-    ) -> None:
+    def test_comment_metadata_property_returns_none_initially(self, tmp_path: Path) -> None:
         """comment_metadata property returns None before extraction."""
         test_file = tmp_path / "test.in"
         test_file.write_text("C  comment\n100\n")
@@ -113,9 +108,7 @@ class TestCommentAwareReaderProperty:
 
         assert reader.comment_metadata is None
 
-    def test_comment_metadata_property_after_extraction(
-        self, tmp_path: Path
-    ) -> None:
+    def test_comment_metadata_property_after_extraction(self, tmp_path: Path) -> None:
         """comment_metadata property returns metadata after extract_comments()."""
         test_file = tmp_path / "test.in"
         test_file.write_text("C  comment\n100\n")
@@ -123,9 +116,7 @@ class TestCommentAwareReaderProperty:
         reader = _ConcreteCommentReader(test_file, preserve_comments=True)
 
         mock_metadata = CommentMetadata(source_file="test.in")
-        with patch(
-            "pyiwfm.io.comment_extractor.CommentExtractor"
-        ) as MockExtractor:
+        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 
@@ -150,9 +141,7 @@ class TestCommentAwareReaderExtract:
         reader = _ConcreteCommentReader(test_file)
 
         mock_metadata = CommentMetadata(source_file="test.in")
-        with patch(
-            "pyiwfm.io.comment_extractor.CommentExtractor"
-        ) as MockExtractor:
+        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 
@@ -174,9 +163,7 @@ class TestCommentAwareReaderExtract:
             source_file="test.in",
             header_block=["C  preserved header"],
         )
-        with patch(
-            "pyiwfm.io.comment_extractor.CommentExtractor"
-        ) as MockExtractor:
+        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 
@@ -194,9 +181,7 @@ class TestCommentAwareReaderExtract:
 class TestEnsureCommentsExtracted:
     """Test _ensure_comments_extracted triggers extraction when needed."""
 
-    def test_ensure_comments_extracted_with_preserve_true(
-        self, tmp_path: Path
-    ) -> None:
+    def test_ensure_comments_extracted_with_preserve_true(self, tmp_path: Path) -> None:
         """preserve_comments=True and no metadata -> triggers extraction."""
         test_file = tmp_path / "test.in"
         test_file.write_text("C  comment\n100\n")
@@ -204,9 +189,7 @@ class TestEnsureCommentsExtracted:
         reader = _ConcreteCommentReader(test_file, preserve_comments=True)
 
         mock_metadata = CommentMetadata(source_file="test.in")
-        with patch(
-            "pyiwfm.io.comment_extractor.CommentExtractor"
-        ) as MockExtractor:
+        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 
@@ -215,9 +198,7 @@ class TestEnsureCommentsExtracted:
         instance.extract.assert_called_once_with(test_file)
         assert reader._comment_metadata is mock_metadata
 
-    def test_ensure_comments_extracted_with_preserve_false(
-        self, tmp_path: Path
-    ) -> None:
+    def test_ensure_comments_extracted_with_preserve_false(self, tmp_path: Path) -> None:
         """preserve_comments=False -> does NOT trigger extraction."""
         test_file = tmp_path / "test.in"
         test_file.write_text("C  comment\n100\n")
@@ -229,9 +210,7 @@ class TestEnsureCommentsExtracted:
 
         assert reader._comment_metadata is None
 
-    def test_ensure_comments_extracted_already_extracted(
-        self, tmp_path: Path
-    ) -> None:
+    def test_ensure_comments_extracted_already_extracted(self, tmp_path: Path) -> None:
         """Already extracted -> does NOT extract again."""
         test_file = tmp_path / "test.in"
         test_file.write_text("data\n")
@@ -242,9 +221,7 @@ class TestEnsureCommentsExtracted:
         existing_metadata = CommentMetadata(source_file="test.in")
         reader._comment_metadata = existing_metadata
 
-        with patch(
-            "pyiwfm.io.comment_extractor.CommentExtractor"
-        ) as MockExtractor:
+        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
             reader._ensure_comments_extracted()
 
         MockExtractor.assert_not_called()
@@ -258,9 +235,7 @@ class TestEnsureCommentsExtracted:
         reader = _ConcreteCommentReader(test_file, preserve_comments=True)
 
         mock_metadata = CommentMetadata(source_file="test.in")
-        with patch(
-            "pyiwfm.io.comment_extractor.CommentExtractor"
-        ) as MockExtractor:
+        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 
@@ -327,9 +302,7 @@ class TestHasPreservedComments:
     def test_has_preserved_comments_empty_metadata(self, tmp_path: Path) -> None:
         """With empty metadata (no comments) -> returns False."""
         metadata = CommentMetadata(source_file="test.in")
-        writer = _ConcreteCommentWriter(
-            tmp_path / "out.in", comment_metadata=metadata
-        )
+        writer = _ConcreteCommentWriter(tmp_path / "out.in", comment_metadata=metadata)
         assert writer.has_preserved_comments() is False
 
     def test_has_preserved_comments_with_header(self, tmp_path: Path) -> None:
@@ -338,9 +311,7 @@ class TestHasPreservedComments:
             source_file="test.in",
             header_block=["C  preserved header"],
         )
-        writer = _ConcreteCommentWriter(
-            tmp_path / "out.in", comment_metadata=metadata
-        )
+        writer = _ConcreteCommentWriter(tmp_path / "out.in", comment_metadata=metadata)
         assert writer.has_preserved_comments() is True
 
     def test_has_preserved_comments_with_section(self, tmp_path: Path) -> None:
@@ -350,9 +321,7 @@ class TestHasPreservedComments:
             section_name="NODES",
             header_comments=["C  node section"],
         )
-        writer = _ConcreteCommentWriter(
-            tmp_path / "out.in", comment_metadata=metadata
-        )
+        writer = _ConcreteCommentWriter(tmp_path / "out.in", comment_metadata=metadata)
         assert writer.has_preserved_comments() is True
 
 

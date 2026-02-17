@@ -11,7 +11,11 @@ from pathlib import Path
 from pyiwfm.io.gw_boundary import GWBoundaryConfig
 from pyiwfm.io.iwfm_writer import (
     ensure_parent_dir as _ensure_parent_dir,
+)
+from pyiwfm.io.iwfm_writer import (
     write_comment as _write_comment,
+)
+from pyiwfm.io.iwfm_writer import (
     write_value as _write_value,
 )
 
@@ -48,9 +52,7 @@ def write_bc_main(config: GWBoundaryConfig, filepath: Path | str) -> Path:
     return filepath
 
 
-def write_specified_flow_bc(
-    config: GWBoundaryConfig, filepath: Path | str
-) -> Path:
+def write_specified_flow_bc(config: GWBoundaryConfig, filepath: Path | str) -> Path:
     """Write specified flow BC sub-file."""
     filepath = Path(filepath)
     _ensure_parent_dir(filepath)
@@ -62,18 +64,17 @@ def write_specified_flow_bc(
             _write_value(f, config.sp_flow_factor, "FACT")
             _write_value(f, config.sp_flow_time_unit, "TUNIT")
             for bc in config.specified_flow_bcs:
-                flow = bc.base_flow / config.sp_flow_factor if config.sp_flow_factor else bc.base_flow
+                flow = (
+                    bc.base_flow / config.sp_flow_factor if config.sp_flow_factor else bc.base_flow
+                )
                 f.write(
-                    f"     {bc.node_id:>6d}  {bc.layer:>3d}  "
-                    f"{bc.ts_column:>4d}  {flow:>12.4f}\n"
+                    f"     {bc.node_id:>6d}  {bc.layer:>3d}  {bc.ts_column:>4d}  {flow:>12.4f}\n"
                 )
 
     return filepath
 
 
-def write_specified_head_bc(
-    config: GWBoundaryConfig, filepath: Path | str
-) -> Path:
+def write_specified_head_bc(config: GWBoundaryConfig, filepath: Path | str) -> Path:
     """Write specified head BC sub-file."""
     filepath = Path(filepath)
     _ensure_parent_dir(filepath)
@@ -84,18 +85,19 @@ def write_specified_head_bc(
         if config.specified_head_bcs:
             _write_value(f, config.sp_head_factor, "FACT")
             for bc in config.specified_head_bcs:
-                head = bc.head_value / config.sp_head_factor if config.sp_head_factor else bc.head_value
+                head = (
+                    bc.head_value / config.sp_head_factor
+                    if config.sp_head_factor
+                    else bc.head_value
+                )
                 f.write(
-                    f"     {bc.node_id:>6d}  {bc.layer:>3d}  "
-                    f"{bc.ts_column:>4d}  {head:>12.4f}\n"
+                    f"     {bc.node_id:>6d}  {bc.layer:>3d}  {bc.ts_column:>4d}  {head:>12.4f}\n"
                 )
 
     return filepath
 
 
-def write_general_head_bc(
-    config: GWBoundaryConfig, filepath: Path | str
-) -> Path:
+def write_general_head_bc(config: GWBoundaryConfig, filepath: Path | str) -> Path:
     """Write general head BC sub-file."""
     filepath = Path(filepath)
     _ensure_parent_dir(filepath)
@@ -108,8 +110,16 @@ def write_general_head_bc(
             _write_value(f, config.gh_conductance_factor, "FACTC")
             _write_value(f, config.gh_time_unit, "TUNIT")
             for bc in config.general_head_bcs:
-                head = bc.external_head / config.gh_head_factor if config.gh_head_factor else bc.external_head
-                cond = bc.conductance / config.gh_conductance_factor if config.gh_conductance_factor else bc.conductance
+                head = (
+                    bc.external_head / config.gh_head_factor
+                    if config.gh_head_factor
+                    else bc.external_head
+                )
+                cond = (
+                    bc.conductance / config.gh_conductance_factor
+                    if config.gh_conductance_factor
+                    else bc.conductance
+                )
                 f.write(
                     f"     {bc.node_id:>6d}  {bc.layer:>3d}  "
                     f"{bc.ts_column:>4d}  {head:>12.4f}  {cond:>12.6f}\n"
@@ -118,9 +128,7 @@ def write_general_head_bc(
     return filepath
 
 
-def write_constrained_gh_bc(
-    config: GWBoundaryConfig, filepath: Path | str
-) -> Path:
+def write_constrained_gh_bc(config: GWBoundaryConfig, filepath: Path | str) -> Path:
     """Write constrained general head BC sub-file."""
     filepath = Path(filepath)
     _ensure_parent_dir(filepath)
@@ -135,10 +143,26 @@ def write_constrained_gh_bc(
             _write_value(f, config.cgh_conductance_factor, "FACTC")
             _write_value(f, config.cgh_conductance_time_unit, "TUNITC")
             for bc in config.constrained_gh_bcs:
-                head = bc.external_head / config.cgh_head_factor if config.cgh_head_factor else bc.external_head
-                cond = bc.conductance / config.cgh_conductance_factor if config.cgh_conductance_factor else bc.conductance
-                ch = bc.constraining_head / config.cgh_head_factor if config.cgh_head_factor else bc.constraining_head
-                mf = bc.max_flow / config.cgh_max_flow_factor if config.cgh_max_flow_factor else bc.max_flow
+                head = (
+                    bc.external_head / config.cgh_head_factor
+                    if config.cgh_head_factor
+                    else bc.external_head
+                )
+                cond = (
+                    bc.conductance / config.cgh_conductance_factor
+                    if config.cgh_conductance_factor
+                    else bc.conductance
+                )
+                ch = (
+                    bc.constraining_head / config.cgh_head_factor
+                    if config.cgh_head_factor
+                    else bc.constraining_head
+                )
+                mf = (
+                    bc.max_flow / config.cgh_max_flow_factor
+                    if config.cgh_max_flow_factor
+                    else bc.max_flow
+                )
                 f.write(
                     f"     {bc.node_id:>6d}  {bc.layer:>3d}  "
                     f"{bc.ts_column:>4d}  {head:>12.4f}  {cond:>12.6f}  "

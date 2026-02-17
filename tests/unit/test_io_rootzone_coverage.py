@@ -11,28 +11,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 
-from pyiwfm.io.rootzone import (
-    RootZoneFileConfig,
-    RootZoneWriter,
-    RootZoneReader,
-    write_rootzone,
-    read_crop_types,
-    read_soil_params,
-    _is_comment_line,
-    _strip_comment,
-)
 from pyiwfm.components.rootzone import (
-    RootZone,
     CropType,
+    RootZone,
     SoilParameters,
-    ElementLandUse,
-    LandUseType,
 )
 from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.rootzone import (
+    RootZoneFileConfig,
+    RootZoneReader,
+    RootZoneWriter,
+    read_crop_types,
+    write_rootzone,
+)
 
 # =============================================================================
 # RootZoneWriter Additional Tests

@@ -24,16 +24,15 @@ import pytest
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 pydantic = pytest.importorskip("pydantic", reason="Pydantic not available")
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
-from pyiwfm.core.mesh import AppGrid, Element, Node
-from pyiwfm.visualization.webapi.config import model_state
-from pyiwfm.visualization.webapi.routes.properties import (
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.visualization.webapi.config import model_state  # noqa: E402
+from pyiwfm.visualization.webapi.routes.properties import (  # noqa: E402
     _compute_property_values,
     _node_to_element_values,
 )
-from pyiwfm.visualization.webapi.server import create_app
-
+from pyiwfm.visualization.webapi.server import create_app  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -59,9 +58,17 @@ def _reset_model_state():
     model_state._observations = {}
     model_state._results_dir = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
 
@@ -108,14 +115,12 @@ def _make_mock_stratigraphy(n_nodes=4, n_layers=2):
     strat = MagicMock()
     strat.n_layers = n_layers
     # Shape: (n_nodes, n_layers)
-    strat.top_elev = np.array([
-        [100.0 + i * 10 + lay * 5 for lay in range(n_layers)]
-        for i in range(n_nodes)
-    ])
-    strat.bottom_elev = np.array([
-        [50.0 + i * 10 + lay * 5 for lay in range(n_layers)]
-        for i in range(n_nodes)
-    ])
+    strat.top_elev = np.array(
+        [[100.0 + i * 10 + lay * 5 for lay in range(n_layers)] for i in range(n_nodes)]
+    )
+    strat.bottom_elev = np.array(
+        [[50.0 + i * 10 + lay * 5 for lay in range(n_layers)] for i in range(n_nodes)]
+    )
     return strat
 
 
@@ -419,8 +424,8 @@ class TestGetProperty:
         result = _compute_property_values("layer", layer=1)
         assert result is not None
         assert len(result) == 2  # 1 element * 2 layers
-        assert result[0] == 1.0         # layer 1 kept
-        assert np.isnan(result[1])      # layer 2 masked to NaN
+        assert result[0] == 1.0  # layer 1 kept
+        assert np.isnan(result[1])  # layer 2 masked to NaN
 
     def test_thickness_property(self, client_with_stratigraphy):
         """Thickness property computed from stratigraphy."""
@@ -463,8 +468,8 @@ class TestGetProperty:
         result = _compute_property_values("top_elev", layer=2)
         assert result is not None
         assert len(result) == 2
-        assert np.isnan(result[0])       # layer 1 masked
-        assert not np.isnan(result[1])   # layer 2 has value
+        assert np.isnan(result[0])  # layer 1 masked
+        assert not np.isnan(result[1])  # layer 2 has value
 
     def test_kh_property(self):
         """Kh property from aquifer params (2D node data)."""
@@ -632,12 +637,14 @@ class TestNodeToElementValues:
         """2D node data (n_nodes, n_layers) averaged per layer."""
         grid = _make_grid()
         # 4 nodes, 2 layers
-        node_data = np.array([
-            [10.0, 100.0],
-            [20.0, 200.0],
-            [30.0, 300.0],
-            [40.0, 400.0],
-        ])
+        node_data = np.array(
+            [
+                [10.0, 100.0],
+                [20.0, 200.0],
+                [30.0, 300.0],
+                [40.0, 400.0],
+            ]
+        )
         result = _node_to_element_values(node_data, grid, n_elements=1, n_layers=2)
         # Layer 0: avg([10, 20, 30, 40]) = 25
         # Layer 1: avg([100, 200, 300, 400]) = 250
@@ -734,7 +741,7 @@ class TestComputePropertyValues:
         assert len(result) == 3
         # Only layer 2 cells should have values; others are NaN
         assert np.isnan(result[0])  # layer 1
-        assert result[1] == 2.0     # layer 2
+        assert result[1] == 2.0  # layer 2
         assert np.isnan(result[2])  # layer 3
 
     def test_unknown_property_returns_none(self):
@@ -882,7 +889,7 @@ class TestComputePropertyValues:
         assert result is not None
         # 1 element * 2 layers = 2 values; only layer 1 cells are valid
         assert not np.isnan(result[0])  # layer 1 has value
-        assert np.isnan(result[1])      # layer 2 is masked
+        assert np.isnan(result[1])  # layer 2 is masked
 
 
 # ===========================================================================

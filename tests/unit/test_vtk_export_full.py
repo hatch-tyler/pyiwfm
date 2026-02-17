@@ -9,12 +9,10 @@ Tests cover:
 - PyVista mesh conversion
 """
 
-import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
-import numpy as np
-import sys
+from unittest.mock import MagicMock, patch
 
+import numpy as np
+import pytest
 
 # =============================================================================
 # Fixtures
@@ -56,24 +54,28 @@ def mock_pyvista():
 @pytest.fixture
 def mock_node():
     """Create a mock node."""
+
     def _create_node(node_id, x, y):
         node = MagicMock()
         node.id = node_id
         node.x = x
         node.y = y
         return node
+
     return _create_node
 
 
 @pytest.fixture
 def mock_element():
     """Create a mock element."""
+
     def _create_element(elem_id, vertices, is_triangle=False):
         elem = MagicMock()
         elem.id = elem_id
         elem.vertices = vertices
         elem.is_triangle = is_triangle
         return elem
+
     return _create_element
 
 
@@ -127,18 +129,22 @@ def mock_stratigraphy():
     strat.n_layers = 2
 
     # 4 nodes, 2 layers
-    strat.top_elev = np.array([
-        [100.0, 80.0],  # Node 1
-        [105.0, 85.0],  # Node 2
-        [110.0, 90.0],  # Node 3
-        [102.0, 82.0],  # Node 4
-    ])
-    strat.bottom_elev = np.array([
-        [80.0, 50.0],   # Node 1
-        [85.0, 55.0],   # Node 2
-        [90.0, 60.0],   # Node 3
-        [82.0, 52.0],   # Node 4
-    ])
+    strat.top_elev = np.array(
+        [
+            [100.0, 80.0],  # Node 1
+            [105.0, 85.0],  # Node 2
+            [110.0, 90.0],  # Node 3
+            [102.0, 82.0],  # Node 4
+        ]
+    )
+    strat.bottom_elev = np.array(
+        [
+            [80.0, 50.0],  # Node 1
+            [85.0, 55.0],  # Node 2
+            [90.0, 60.0],  # Node 3
+            [82.0, 52.0],  # Node 4
+        ]
+    )
 
     return strat
 
@@ -155,7 +161,7 @@ class TestVTKExporterInit:
         """Test initialization checks for VTK import."""
         # We test that the VTKExporter __init__ tries to import vtk
         # by verifying it works with a mock vtk
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             # Should work with mock vtk
@@ -164,7 +170,7 @@ class TestVTKExporterInit:
 
     def test_init_with_grid_only(self, mock_grid, mock_vtk):
         """Test initialization with grid only."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -174,7 +180,7 @@ class TestVTKExporterInit:
 
     def test_init_with_stratigraphy(self, mock_grid, mock_stratigraphy, mock_vtk):
         """Test initialization with stratigraphy."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid, mock_stratigraphy)
@@ -193,11 +199,11 @@ class TestVTKExporterCreate2DMesh:
 
     def test_create_2d_mesh_basic(self, mock_grid, mock_vtk):
         """Test basic 2D mesh creation."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
-            result = exporter.create_2d_mesh()
+            exporter.create_2d_mesh()
 
             # Should have created points and cells
             mock_vtk.vtkUnstructuredGrid.assert_called()
@@ -205,7 +211,7 @@ class TestVTKExporterCreate2DMesh:
 
     def test_create_2d_mesh_with_quad(self, mock_grid, mock_vtk):
         """Test 2D mesh with quad element."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -216,7 +222,7 @@ class TestVTKExporterCreate2DMesh:
 
     def test_create_2d_mesh_with_triangle(self, mock_grid_with_triangles, mock_vtk):
         """Test 2D mesh with triangle element."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid_with_triangles)
@@ -236,7 +242,7 @@ class TestVTKExporterCreate3DMesh:
 
     def test_create_3d_mesh_requires_stratigraphy(self, mock_grid, mock_vtk):
         """Test 3D mesh creation requires stratigraphy."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -248,11 +254,11 @@ class TestVTKExporterCreate3DMesh:
 
     def test_create_3d_mesh_with_stratigraphy(self, mock_grid, mock_stratigraphy, mock_vtk):
         """Test 3D mesh creation with stratigraphy."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid, mock_stratigraphy)
-            result = exporter.create_3d_mesh()
+            exporter.create_3d_mesh()
 
             # Should have created grid with points
             mock_vtk.vtkUnstructuredGrid.assert_called()
@@ -260,7 +266,7 @@ class TestVTKExporterCreate3DMesh:
 
     def test_create_3d_mesh_adds_layer_data(self, mock_grid, mock_stratigraphy, mock_vtk):
         """Test 3D mesh adds layer cell data."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid, mock_stratigraphy)
@@ -280,7 +286,7 @@ class TestVTKExporterScalarData:
 
     def test_add_node_scalar(self, mock_grid, mock_vtk):
         """Test adding scalar data to nodes."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -294,7 +300,7 @@ class TestVTKExporterScalarData:
 
     def test_add_cell_scalar(self, mock_grid, mock_vtk):
         """Test adding scalar data to cells."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -317,7 +323,7 @@ class TestVTKExporterExport:
 
     def test_export_vtu_2d(self, mock_grid, mock_vtk, tmp_path):
         """Test VTU export in 2D mode."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -330,7 +336,7 @@ class TestVTKExporterExport:
 
     def test_export_vtu_3d(self, mock_grid, mock_stratigraphy, mock_vtk, tmp_path):
         """Test VTU export in 3D mode."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid, mock_stratigraphy)
@@ -342,7 +348,7 @@ class TestVTKExporterExport:
 
     def test_export_vtu_with_scalars(self, mock_grid, mock_vtk, tmp_path):
         """Test VTU export with scalar data."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -352,9 +358,7 @@ class TestVTKExporterExport:
             cell_scalars = {"property": np.array([5.0])}
 
             exporter.export_vtu(
-                output_path, mode="2d",
-                node_scalars=node_scalars,
-                cell_scalars=cell_scalars
+                output_path, mode="2d", node_scalars=node_scalars, cell_scalars=cell_scalars
             )
 
             # Should have added scalars
@@ -362,7 +366,7 @@ class TestVTKExporterExport:
 
     def test_export_vtk_2d(self, mock_grid, mock_vtk, tmp_path):
         """Test legacy VTK export in 2D mode."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -375,7 +379,7 @@ class TestVTKExporterExport:
 
     def test_export_vtk_3d(self, mock_grid, mock_stratigraphy, mock_vtk, tmp_path):
         """Test legacy VTK export in 3D mode."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid, mock_stratigraphy)
@@ -387,7 +391,7 @@ class TestVTKExporterExport:
 
     def test_export_vtk_with_scalars(self, mock_grid, mock_vtk, tmp_path):
         """Test legacy VTK export with scalar data."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -410,7 +414,7 @@ class TestVTKExporterPyVista:
 
     def test_to_pyvista_3d_with_pyvista(self, mock_grid, mock_vtk, mock_pyvista):
         """Test PyVista conversion works with pyvista available."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk, 'pyvista': mock_pyvista}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk, "pyvista": mock_pyvista}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -421,41 +425,43 @@ class TestVTKExporterPyVista:
 
     def test_to_pyvista_3d_without_stratigraphy_uses_2d(self, mock_grid, mock_vtk, mock_pyvista):
         """Test to_pyvista_3d falls back to 2D without stratigraphy."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk, 'pyvista': mock_pyvista}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk, "pyvista": mock_pyvista}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
 
-            result = exporter.to_pyvista_3d()
+            exporter.to_pyvista_3d()
 
             # Should create UnstructuredGrid
             mock_pyvista.UnstructuredGrid.assert_called()
 
-    def test_to_pyvista_3d_with_stratigraphy(self, mock_grid, mock_stratigraphy, mock_vtk, mock_pyvista):
+    def test_to_pyvista_3d_with_stratigraphy(
+        self, mock_grid, mock_stratigraphy, mock_vtk, mock_pyvista
+    ):
         """Test to_pyvista_3d with stratigraphy creates 3D mesh."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk, 'pyvista': mock_pyvista}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk, "pyvista": mock_pyvista}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid, mock_stratigraphy)
 
-            result = exporter.to_pyvista_3d()
+            exporter.to_pyvista_3d()
 
             mock_pyvista.UnstructuredGrid.assert_called()
 
     def test_to_pyvista_2d_basic(self, mock_grid, mock_vtk, mock_pyvista):
         """Test _to_pyvista_2d creates 2D mesh."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk, 'pyvista': mock_pyvista}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk, "pyvista": mock_pyvista}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
 
-            result = exporter._to_pyvista_2d()
+            exporter._to_pyvista_2d()
 
             mock_pyvista.UnstructuredGrid.assert_called()
 
     def test_to_pyvista_2d_with_scalars(self, mock_grid, mock_vtk, mock_pyvista):
         """Test _to_pyvista_2d with scalar data."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk, 'pyvista': mock_pyvista}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk, "pyvista": mock_pyvista}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -466,17 +472,16 @@ class TestVTKExporterPyVista:
             mesh = MagicMock()
             mock_pyvista.UnstructuredGrid.return_value = mesh
 
-            result = exporter._to_pyvista_2d(
-                node_scalars=node_scalars,
-                cell_scalars=cell_scalars
-            )
+            exporter._to_pyvista_2d(node_scalars=node_scalars, cell_scalars=cell_scalars)
 
             # Should set point_data and cell_data
             assert mesh.point_data.__setitem__.called or mesh.cell_data.__setitem__.called
 
-    def test_to_pyvista_3d_impl_adds_layer_data(self, mock_grid, mock_stratigraphy, mock_vtk, mock_pyvista):
+    def test_to_pyvista_3d_impl_adds_layer_data(
+        self, mock_grid, mock_stratigraphy, mock_vtk, mock_pyvista
+    ):
         """Test _to_pyvista_3d_impl adds layer cell data."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk, 'pyvista': mock_pyvista}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk, "pyvista": mock_pyvista}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid, mock_stratigraphy)
@@ -484,14 +489,16 @@ class TestVTKExporterPyVista:
             mesh = MagicMock()
             mock_pyvista.UnstructuredGrid.return_value = mesh
 
-            result = exporter._to_pyvista_3d_impl()
+            exporter._to_pyvista_3d_impl()
 
             # Should add layer data to cell_data
             assert mesh.cell_data.__setitem__.called
 
-    def test_to_pyvista_3d_impl_with_scalars(self, mock_grid, mock_stratigraphy, mock_vtk, mock_pyvista):
+    def test_to_pyvista_3d_impl_with_scalars(
+        self, mock_grid, mock_stratigraphy, mock_vtk, mock_pyvista
+    ):
         """Test _to_pyvista_3d_impl with scalar data."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk, 'pyvista': mock_pyvista}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk, "pyvista": mock_pyvista}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid, mock_stratigraphy)
@@ -502,10 +509,7 @@ class TestVTKExporterPyVista:
             mesh = MagicMock()
             mock_pyvista.UnstructuredGrid.return_value = mesh
 
-            result = exporter._to_pyvista_3d_impl(
-                node_scalars=node_scalars,
-                cell_scalars=cell_scalars
-            )
+            exporter._to_pyvista_3d_impl(node_scalars=node_scalars, cell_scalars=cell_scalars)
 
             assert mesh.point_data.__setitem__.called or mesh.cell_data.__setitem__.called
 
@@ -520,7 +524,7 @@ class TestVTKExporterEdgeCases:
 
     def test_mixed_elements(self, mock_node, mock_element, mock_vtk):
         """Test grid with mixed triangle and quad elements."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             grid = MagicMock()
@@ -536,13 +540,13 @@ class TestVTKExporterEdgeCases:
 
             elements = [
                 mock_element(1, [1, 2, 3, 4], is_triangle=False),  # Quad
-                mock_element(2, [3, 4, 5], is_triangle=True),     # Triangle
+                mock_element(2, [3, 4, 5], is_triangle=True),  # Triangle
             ]
             grid.iter_elements.return_value = iter(elements)
             grid.iter_nodes.return_value = iter(nodes.values())
 
             exporter = VTKExporter(grid)
-            result = exporter.create_2d_mesh()
+            exporter.create_2d_mesh()
 
             # Should create both quad and triangle cells
             mock_vtk.vtkQuad.assert_called()
@@ -550,7 +554,7 @@ class TestVTKExporterEdgeCases:
 
     def test_string_path_conversion(self, mock_grid, mock_vtk, tmp_path):
         """Test export handles string paths."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
@@ -561,15 +565,11 @@ class TestVTKExporterEdgeCases:
 
     def test_empty_scalars_dict(self, mock_grid, mock_vtk, tmp_path):
         """Test export with empty scalar dictionaries."""
-        with patch.dict('sys.modules', {'vtk': mock_vtk}):
+        with patch.dict("sys.modules", {"vtk": mock_vtk}):
             from pyiwfm.visualization.vtk_export import VTKExporter
 
             exporter = VTKExporter(mock_grid)
             output_path = tmp_path / "test.vtu"
 
             # Should not raise with empty dicts
-            exporter.export_vtu(
-                output_path,
-                node_scalars={},
-                cell_scalars={}
-            )
+            exporter.export_vtu(output_path, node_scalars={}, cell_scalars={})

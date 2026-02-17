@@ -9,7 +9,7 @@ import math
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from pyiwfm.visualization.webapi.config import model_state
+from pyiwfm.visualization.webapi.config import model_state, require_model
 
 router = APIRouter(prefix="/api/groundwater", tags=["groundwater"])
 
@@ -51,10 +51,7 @@ def get_wells() -> WellsResponse:
     Returns well locations, pump rates, and screen information
     for display on the 2D Results Map.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if model.groundwater is None:
         return WellsResponse(n_wells=0, wells=[])
 
@@ -107,14 +104,13 @@ def get_boundary_conditions() -> BCResponse:
     Returns BC nodes with type, value, and layer for display on
     the 2D Results Map. Each node in each BC is returned separately.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if model.groundwater is None:
         return BCResponse(n_conditions=0, nodes=[])
 
     grid = model.grid
+    if grid is None:
+        return BCResponse(n_conditions=0, nodes=[])
     nodes: list[BCNodeInfo] = []
 
     for bc in model.groundwater.boundary_conditions:
@@ -167,10 +163,7 @@ def get_subsidence_locations() -> SubsidenceLocationsResponse:
     Returns InSAR, extensometer, and other subsidence observation points
     parsed from the subsidence file's NOUTS section.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if model.groundwater is None:
         return SubsidenceLocationsResponse(n_locations=0, locations=[])
 
@@ -196,9 +189,7 @@ def get_subsidence_locations() -> SubsidenceLocationsResponse:
             )
         )
 
-    return SubsidenceLocationsResponse(
-        n_locations=len(locations), locations=locations
-    )
+    return SubsidenceLocationsResponse(n_locations=len(locations), locations=locations)
 
 
 def _well_function(u: float) -> float:
@@ -223,22 +214,17 @@ def _well_function(u: float) -> float:
         # Asymptotic: W(u) ≈ e^-u * (1/u - 1/u^2 + 2/u^3 - ...)
         # Use rational approximation
         eu = math.exp(-u)
-        return eu * (1.0 / u) * (u + 0.2677737343) / (
-            u * u + 1.0354508440 * u + 0.2360599665
-        )
+        return eu * (1.0 / u) * (u + 0.2677737343) / (u * u + 1.0354508440 * u + 0.2360599665)
 
 
 @router.get("/well-impact")
 def get_well_impact(
     well_id: int = Query(..., description="Well ID"),
-    time: float = Query(
-        default=365.0, ge=0, description="Time since pumping started (days)"
-    ),
-    n_rings: int = Query(
-        default=10, ge=3, le=50, description="Number of contour rings"
-    ),
+    time: float = Query(default=365.0, ge=0, description="Time since pumping started (days)"),
+    n_rings: int = Query(default=10, ge=3, le=50, description="Number of contour rings"),
     max_radius: float = Query(
-        default=0, ge=0,
+        default=0,
+        ge=0,
         description="Maximum radius (model units). 0 = auto-compute.",
     ),
 ) -> dict:
@@ -249,10 +235,7 @@ def get_well_impact(
     Uses aquifer properties (Kh, Sy) from the model to estimate
     transmissivity and storativity.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if model.groundwater is None:
         raise HTTPException(status_code=404, detail="No groundwater data")
 
@@ -264,18 +247,14 @@ def get_well_impact(
             break
 
     if target_well is None:
-        raise HTTPException(
-            status_code=404, detail=f"Well {well_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Well {well_id} not found")
 
     pump_rate = abs(target_well.pump_rate)
     if pump_rate < 1e-10:
         return {
             "well_id": well_id,
             "name": target_well.name or f"Well {well_id}",
-            "center": model_state.reproject_coords(
-                target_well.x, target_well.y
-            ),
+            "center": model_state.reproject_coords(target_well.x, target_well.y),
             "contours": [],
             "message": "Well has zero pumping rate",
         }
@@ -287,7 +266,7 @@ def get_well_impact(
 
     if hasattr(model.groundwater, "aquifer_params"):
         params = model.groundwater.aquifer_params
-        if hasattr(params, "get_element_params"):
+        if params is not None and hasattr(params, "get_element_params"):
             try:
                 ep = params.get_element_params(elem_id, layer=1)
                 kh = ep.get("kh", kh)
@@ -323,9 +302,7 @@ def get_well_impact(
 
     # Generate contour rings
     contours: list[dict] = []
-    well_lng, well_lat = model_state.reproject_coords(
-        target_well.x, target_well.y
-    )
+    well_lng, well_lat = model_state.reproject_coords(target_well.x, target_well.y)
 
     for i in range(1, n_rings + 1):
         r = (i / n_rings) * max_radius
@@ -343,12 +320,14 @@ def get_well_impact(
         # 1 degree ≈ 364,000 ft at mid-latitudes
         r_deg = r / 364000.0
 
-        contours.append({
-            "radius_ft": round(r, 0),
-            "radius_deg": round(r_deg, 6),
-            "drawdown_ft": round(drawdown, 3),
-            "u": round(u, 6),
-        })
+        contours.append(
+            {
+                "radius_ft": round(r, 0),
+                "radius_deg": round(r_deg, 6),
+                "drawdown_ft": round(drawdown, 3),
+                "u": round(u, 6),
+            }
+        )
 
     return {
         "well_id": well_id,

@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 from pyiwfm.runner.pest_postprocessor import (
-    PestPostProcessor,
     CalibrationResults,
+    PestPostProcessor,
     ResidualData,
     SensitivityData,
 )
@@ -201,12 +201,7 @@ class TestLoadResults:
     def test_load_sensitivity_file(self):
         """Test loading .sen sensitivity file."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            sen_content = (
-                "Parameter_Name CSS\n"
-                "hk_z1 10.5\n"
-                "sy_z1 2.3\n"
-                "pump 45.2\n"
-            )
+            sen_content = "Parameter_Name CSS\nhk_z1 10.5\nsy_z1 2.3\npump 45.2\n"
             sen_path = Path(tmpdir) / "test.sen"
             sen_path.write_text(sen_content)
 
@@ -221,13 +216,7 @@ class TestLoadResults:
     def test_load_iteration_history(self):
         """Test loading .iobj iteration file."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            iobj_content = (
-                "iteration total_phi\n"
-                "0 1000.0\n"
-                "1 500.0\n"
-                "2 250.0\n"
-                "3 200.0\n"
-            )
+            iobj_content = "iteration total_phi\n0 1000.0\n1 500.0\n2 250.0\n3 200.0\n"
             iobj_path = Path(tmpdir) / "test.iobj"
             iobj_path.write_text(iobj_content)
 
@@ -241,10 +230,7 @@ class TestLoadResults:
     def test_load_calibrated_parameters(self):
         """Test loading .par parameter file."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            par_content = (
-                "hk_z1 1.5e-04 1.0 0.0\n"
-                "sy_z1 1.8e-01 1.0 0.0\n"
-            )
+            par_content = "hk_z1 1.5e-04 1.0 0.0\nsy_z1 1.8e-01 1.0 0.0\n"
             par_path = Path(tmpdir) / "test.par"
             par_path.write_text(par_content)
 
@@ -299,12 +285,7 @@ class TestExportAndAnalysis:
     def test_identifiability_with_data(self):
         """Test identifiability with sensitivity data."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            sen_content = (
-                "Parameter_Name CSS\n"
-                "hk_z1 10.0\n"
-                "sy_z1 5.0\n"
-                "pump 2.0\n"
-            )
+            sen_content = "Parameter_Name CSS\nhk_z1 10.0\nsy_z1 5.0\npump 2.0\n"
             (Path(tmpdir) / "test.sen").write_text(sen_content)
 
             pp = PestPostProcessor(pest_dir=tmpdir, case_name="test")
@@ -320,8 +301,7 @@ class TestExportAndAnalysis:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create minimal output files
             rei_content = (
-                "Name Group Measured Modelled Residual Weight\n"
-                "obs1 head 100.0 98.0 2.0 1.0\n"
+                "Name Group Measured Modelled Residual Weight\nobs1 head 100.0 98.0 2.0 1.0\n"
             )
             (Path(tmpdir) / "test.rei").write_text(rei_content)
 
@@ -518,8 +498,7 @@ class TestPestPostProcessorFileLoading:
         """Test loading .res file when .rei doesn't exist."""
         with tempfile.TemporaryDirectory() as tmpdir:
             res_content = (
-                "Name Group Measured Modelled Residual Weight\n"
-                "obs1 head 100.0 98.0 2.0 1.0\n"
+                "Name Group Measured Modelled Residual Weight\nobs1 head 100.0 98.0 2.0 1.0\n"
             )
             (Path(tmpdir) / "test.res").write_text(res_content)
             pp = PestPostProcessor(pest_dir=tmpdir, case_name="test")
@@ -536,8 +515,7 @@ class TestPestPostProcessorFileLoading:
                 "rei_obs2 head 200.0 195.0 5.0 1.0\n"
             )
             res_content = (
-                "Name Group Measured Modelled Residual Weight\n"
-                "res_obs flow 50.0 48.0 2.0 0.5\n"
+                "Name Group Measured Modelled Residual Weight\nres_obs flow 50.0 48.0 2.0 0.5\n"
             )
             (Path(tmpdir) / "test.rei").write_text(rei_content)
             (Path(tmpdir) / "test.res").write_text(res_content)
@@ -550,11 +528,7 @@ class TestPestPostProcessorFileLoading:
     def test_sensitivity_file_with_name_header(self):
         """Test loading sensitivity file where header starts with 'name'."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            sen_content = (
-                "name sensitivity\n"
-                "param1 10.0\n"
-                "param2 5.0\n"
-            )
+            sen_content = "name sensitivity\nparam1 10.0\nparam2 5.0\n"
             (Path(tmpdir) / "test.sen").write_text(sen_content)
             pp = PestPostProcessor(pest_dir=tmpdir, case_name="test")
             results = pp.load_results()
@@ -573,12 +547,7 @@ class TestPestPostProcessorFileLoading:
     def test_iteration_history_with_invalid_lines(self):
         """Test loading iteration file with non-numeric lines."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            iobj_content = (
-                "iteration total_phi\n"
-                "0 1000.0\n"
-                "1 bad_value\n"
-                "2 500.0\n"
-            )
+            iobj_content = "iteration total_phi\n0 1000.0\n1 bad_value\n2 500.0\n"
             (Path(tmpdir) / "test.iobj").write_text(iobj_content)
             pp = PestPostProcessor(pest_dir=tmpdir, case_name="test")
             results = pp.load_results()
@@ -590,10 +559,7 @@ class TestPestPostProcessorFileLoading:
         """Test loading .par file with non-numeric value lines."""
         with tempfile.TemporaryDirectory() as tmpdir:
             par_content = (
-                "single point\n"
-                "hk_z1 1.5e-04 1.0 0.0\n"
-                "bad_line not_a_number\n"
-                "sy_z1 0.18 1.0 0.0\n"
+                "single point\nhk_z1 1.5e-04 1.0 0.0\nbad_line not_a_number\nsy_z1 0.18 1.0 0.0\n"
             )
             (Path(tmpdir) / "test.par").write_text(par_content)
             pp = PestPostProcessor(pest_dir=tmpdir, case_name="test")
@@ -625,16 +591,8 @@ class TestPestPostProcessorFileLoading:
                 "obs1 head 100.0 98.0 2.0 1.0\n"
                 "obs2 flow 50.0 48.0 2.0 0.5\n"
             )
-            sen_content = (
-                "Parameter_Name CSS\n"
-                "hk_z1 10.0\n"
-                "sy_z1 5.0\n"
-            )
-            iobj_content = (
-                "iteration total_phi\n"
-                "0 1000.0\n"
-                "1 200.0\n"
-            )
+            sen_content = "Parameter_Name CSS\nhk_z1 10.0\nsy_z1 5.0\n"
+            iobj_content = "iteration total_phi\n0 1000.0\n1 200.0\n"
             par_content = "hk_z1 1.5e-04 1.0 0.0\nsy_z1 0.18 1.0 0.0\n"
 
             (Path(tmpdir) / "test.rei").write_text(rei_content)
@@ -658,11 +616,7 @@ class TestPestPostProcessorAnalysisEdgeCases:
     def test_identifiability_zero_max_sensitivity(self):
         """Test identifiability when all sensitivities are zero."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            sen_content = (
-                "Parameter_Name CSS\n"
-                "param1 0.0\n"
-                "param2 0.0\n"
-            )
+            sen_content = "Parameter_Name CSS\nparam1 0.0\nparam2 0.0\n"
             (Path(tmpdir) / "test.sen").write_text(sen_content)
             pp = PestPostProcessor(pest_dir=tmpdir, case_name="test")
             ident = pp.compute_identifiability()
@@ -703,17 +657,8 @@ class TestPestPostProcessorAnalysisEdgeCases:
                 "obs2 head 200.0 195.0 5.0 1.0\n"
                 "obs3 flow 50.0 48.0 2.0 0.5\n"
             )
-            sen_content = (
-                "Parameter_Name CSS\n"
-                "hk_z1 10.0\n"
-                "sy_z1 5.0\n"
-            )
-            iobj_content = (
-                "iteration total_phi\n"
-                "0 1000.0\n"
-                "1 500.0\n"
-                "2 250.0\n"
-            )
+            sen_content = "Parameter_Name CSS\nhk_z1 10.0\nsy_z1 5.0\n"
+            iobj_content = "iteration total_phi\n0 1000.0\n1 500.0\n2 250.0\n"
             par_content = "hk_z1 1.5e-04 1.0 0.0\nsy_z1 0.18 1.0 0.0\n"
 
             (Path(tmpdir) / "test.rei").write_text(rei_content)
@@ -738,11 +683,7 @@ class TestPestPostProcessorAnalysisEdgeCases:
     def test_summary_report_with_iterations_only(self):
         """Test summary report with iteration history but no residuals."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            iobj_content = (
-                "iteration total_phi\n"
-                "0 500.0\n"
-                "1 250.0\n"
-            )
+            iobj_content = "iteration total_phi\n0 500.0\n1 250.0\n"
             (Path(tmpdir) / "test.iobj").write_text(iobj_content)
             pp = PestPostProcessor(pest_dir=tmpdir, case_name="test")
             report = pp.summary_report()
@@ -752,11 +693,7 @@ class TestPestPostProcessorAnalysisEdgeCases:
     def test_summary_report_iteration_zero_initial_phi(self):
         """Test summary report when initial phi is 0 (edge case for reduction)."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            iobj_content = (
-                "iteration total_phi\n"
-                "0 0.0\n"
-                "1 0.0\n"
-            )
+            iobj_content = "iteration total_phi\n0 0.0\n1 0.0\n"
             (Path(tmpdir) / "test.iobj").write_text(iobj_content)
             pp = PestPostProcessor(pest_dir=tmpdir, case_name="test")
             report = pp.summary_report()
@@ -781,14 +718,10 @@ class TestPestPostProcessorAnalysisEdgeCases:
             (Path(tmpdir) / "test.par").write_text(par_content)
             pp = PestPostProcessor(pest_dir=tmpdir, case_name="test")
 
-            csv_path = pp.export_calibrated_parameters(
-                Path(tmpdir) / "out.csv", format="csv"
-            )
+            csv_path = pp.export_calibrated_parameters(Path(tmpdir) / "out.csv", format="csv")
             assert isinstance(csv_path, Path)
 
-            pest_path = pp.export_calibrated_parameters(
-                Path(tmpdir) / "out.par", format="pest"
-            )
+            pest_path = pp.export_calibrated_parameters(Path(tmpdir) / "out.par", format="pest")
             assert isinstance(pest_path, Path)
 
     def test_string_pest_dir(self):

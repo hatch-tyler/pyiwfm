@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence, TextIO
+from typing import TYPE_CHECKING, Any, TextIO
 
 import numpy as np
 from numpy.typing import NDArray
@@ -24,7 +25,6 @@ from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.core.timeseries import TimeSeries
     from pyiwfm.io.comment_metadata import CommentMetadata
     from pyiwfm.io.comment_writer import CommentWriter
 
@@ -36,14 +36,14 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 try:
-    from pyiwfm.io.dss import DSSFile, write_timeseries_to_dss
+    from pyiwfm.io.dss import DSSFile, write_timeseries_to_dss  # noqa: F401
 
     HAS_DSS = True
 except ImportError:
     HAS_DSS = False
 
 
-def _check_dss():
+def _check_dss() -> None:
     """Check if DSS support is available."""
     if not HAS_DSS:
         raise ImportError(
@@ -73,7 +73,7 @@ class TemplateWriter(ABC):
         self,
         output_dir: Path | str,
         template_engine: TemplateEngine | None = None,
-        comment_metadata: "CommentMetadata | None" = None,
+        comment_metadata: CommentMetadata | None = None,
     ) -> None:
         """
         Initialize the template writer.
@@ -86,14 +86,14 @@ class TemplateWriter(ABC):
         self.output_dir = Path(output_dir)
         self._engine = template_engine or TemplateEngine()
         self.comment_metadata = comment_metadata
-        self._comment_writer: "CommentWriter | None" = None
+        self._comment_writer: CommentWriter | None = None
 
     def _ensure_dir(self, path: Path) -> None:
         """Ensure parent directory exists."""
         ensure_parent_dir(path)
 
     @property
-    def comment_writer(self) -> "CommentWriter":
+    def comment_writer(self) -> CommentWriter:
         """Get or create the comment writer.
 
         Returns:
@@ -101,6 +101,7 @@ class TemplateWriter(ABC):
         """
         if self._comment_writer is None:
             from pyiwfm.io.comment_writer import CommentWriter
+
             self._comment_writer = CommentWriter(
                 self.comment_metadata,
                 use_fallback=True,
@@ -109,12 +110,9 @@ class TemplateWriter(ABC):
 
     def has_preserved_comments(self) -> bool:
         """Check if preserved comments are available."""
-        return (
-            self.comment_metadata is not None
-            and self.comment_metadata.has_comments()
-        )
+        return self.comment_metadata is not None and self.comment_metadata.has_comments()
 
-    def render_header(self, template_name: str, **context) -> str:
+    def render_header(self, template_name: str, **context: Any) -> str:
         """
         Render a template header.
 
@@ -131,7 +129,7 @@ class TemplateWriter(ABC):
         self,
         template_name: str,
         section_name: str | None = None,
-        **context,
+        **context: Any,
     ) -> str:
         """
         Render a template header with preserved comments.
@@ -156,7 +154,7 @@ class TemplateWriter(ABC):
         # Fall back to template
         return self._engine.render_template(template_name, **context)
 
-    def render_string(self, template_str: str, **context) -> str:
+    def render_string(self, template_str: str, **context: Any) -> str:
         """
         Render a template from a string.
 
@@ -340,6 +338,7 @@ class TimeSeriesWriter:
 
             # Write data rows
             from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+
             for i, dt in enumerate(dates):
                 ts_str = format_iwfm_timestamp(dt)
                 f.write(f"{ts_str:<21}")
@@ -370,7 +369,8 @@ class TimeSeriesWriter:
 
             # Data
             from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
-            for dt, val in zip(ts_spec.dates, ts_spec.values):
+
+            for dt, val in zip(ts_spec.dates, ts_spec.values, strict=False):
                 ts_str = format_iwfm_timestamp(dt)
                 f.write(f"{ts_str:<21} {val:>14.6f}\n")
 
@@ -397,11 +397,16 @@ class TimeSeriesWriter:
         dates = ts_spec.dates
         values = np.asarray(ts_spec.values)
 
-        write_timeseries_to_dss(
+        from pyiwfm.core.timeseries import TimeSeries
+
+        ts_obj = TimeSeries(
+            times=np.asarray(dates, dtype="datetime64[ns]"),
+            values=values,
+        )
+        write_timeseries_to_dss(  # type: ignore[arg-type]
             str(dss_path),
+            ts_obj,
             pathname,
-            dates,
-            values,
             units=ts_spec.units,
         )
 
@@ -434,7 +439,7 @@ class ComponentWriter(TemplateWriter):
         output_dir: Path | str,
         ts_config: TimeSeriesOutputConfig | None = None,
         template_engine: TemplateEngine | None = None,
-        comment_metadata: "CommentMetadata | None" = None,
+        comment_metadata: CommentMetadata | None = None,
     ) -> None:
         """
         Initialize the component writer.
@@ -552,11 +557,11 @@ class IWFMModelWriter(ABC):
 
     def __init__(
         self,
-        model: "IWFMModel",
+        model: IWFMModel,
         output_dir: Path | str,
         ts_format: OutputFormat = OutputFormat.TEXT,
         template_engine: TemplateEngine | None = None,
-        comment_metadata: "CommentMetadata | None" = None,
+        comment_metadata: CommentMetadata | None = None,
     ) -> None:
         """
         Initialize the model writer.

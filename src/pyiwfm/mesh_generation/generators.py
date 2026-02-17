@@ -8,20 +8,22 @@ and the MeshResult class for holding generated meshes.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
+    from shapely.geometry import Polygon
+
+    from pyiwfm.core.mesh import AppGrid
     from pyiwfm.mesh_generation.constraints import (
         Boundary,
-        StreamConstraint,
-        RefinementZone,
         PointConstraint,
+        RefinementZone,
+        StreamConstraint,
     )
-    from pyiwfm.core.mesh import AppGrid
 
 
 @dataclass
@@ -84,8 +86,7 @@ class MeshResult:
                 v1 = self.nodes[elem[1]]
                 v2 = self.nodes[elem[2]]
                 areas[i] = 0.5 * abs(
-                    (v1[0] - v0[0]) * (v2[1] - v0[1])
-                    - (v2[0] - v0[0]) * (v1[1] - v0[1])
+                    (v1[0] - v0[0]) * (v2[1] - v0[1]) - (v2[0] - v0[0]) * (v1[1] - v0[1])
                 )
             else:
                 # Quadrilateral - split into two triangles
@@ -95,13 +96,11 @@ class MeshResult:
                 v3 = self.nodes[elem[3]]
                 # Triangle 0-1-2
                 a1 = 0.5 * abs(
-                    (v1[0] - v0[0]) * (v2[1] - v0[1])
-                    - (v2[0] - v0[0]) * (v1[1] - v0[1])
+                    (v1[0] - v0[0]) * (v2[1] - v0[1]) - (v2[0] - v0[0]) * (v1[1] - v0[1])
                 )
                 # Triangle 0-2-3
                 a2 = 0.5 * abs(
-                    (v2[0] - v0[0]) * (v3[1] - v0[1])
-                    - (v3[0] - v0[0]) * (v2[1] - v0[1])
+                    (v2[0] - v0[0]) * (v3[1] - v0[1]) - (v3[0] - v0[0]) * (v2[1] - v0[1])
                 )
                 areas[i] = a1 + a2
 
@@ -129,14 +128,14 @@ class MeshResult:
 
         return centroids
 
-    def to_appgrid(self) -> "AppGrid":
+    def to_appgrid(self) -> AppGrid:
         """
         Convert mesh result to AppGrid.
 
         Returns:
             AppGrid instance
         """
-        from pyiwfm.core.mesh import AppGrid, Node, Element
+        from pyiwfm.core.mesh import AppGrid, Element, Node
 
         # Create nodes
         nodes = {}
@@ -176,9 +175,9 @@ class MeshResult:
         # Create AppGrid
         grid = AppGrid(nodes=nodes, elements=elements)
 
-        # Set coordinate arrays
-        grid._x = self.nodes[:, 0].copy()
-        grid._y = self.nodes[:, 1].copy()
+        # Set coordinate arrays (pre-populate cache)
+        grid._x_cache = self.nodes[:, 0].copy()
+        grid._y_cache = self.nodes[:, 1].copy()
 
         # Build connectivity
         grid.compute_connectivity()
@@ -200,12 +199,12 @@ class MeshGenerator(ABC):
     @abstractmethod
     def generate(
         self,
-        boundary: "Boundary",
+        boundary: Boundary,
         max_area: float | None = None,
         min_angle: float | None = None,
-        streams: list["StreamConstraint"] | None = None,
-        refinement_zones: list["RefinementZone"] | None = None,
-        points: list["PointConstraint"] | None = None,
+        streams: list[StreamConstraint] | None = None,
+        refinement_zones: list[RefinementZone] | None = None,
+        points: list[PointConstraint] | None = None,
     ) -> MeshResult:
         """
         Generate a mesh within the boundary.
@@ -225,7 +224,7 @@ class MeshGenerator(ABC):
 
     def generate_from_shapely(
         self,
-        polygon: "Polygon",  # type: ignore
+        polygon: Polygon,  # type: ignore
         max_area: float | None = None,
         min_angle: float | None = None,
     ) -> MeshResult:

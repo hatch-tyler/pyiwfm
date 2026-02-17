@@ -8,14 +8,12 @@ import pytest
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     LineBuffer,
     is_comment_line,
     next_data_line,
     next_data_value,
     strip_inline_comment,
 )
-
 
 # ── is_comment_line ─────────────────────────────────────────────────
 

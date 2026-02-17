@@ -15,20 +15,16 @@ from pathlib import Path
 
 import pytest
 
+from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.core.timeseries import TimeUnit
 from pyiwfm.io.simulation import (
     SimulationConfig,
     SimulationFileConfig,
-    SimulationWriter,
     SimulationReader,
-    write_simulation,
+    SimulationWriter,
     read_simulation,
-    _is_comment_line,
-    _strip_comment,
-    _format_iwfm_datetime,
+    write_simulation,
 )
-from pyiwfm.core.timeseries import TimeUnit
-from pyiwfm.core.exceptions import FileFormatError
-
 
 # =============================================================================
 # Additional Component File Tests
@@ -271,9 +267,7 @@ class TestConvenienceFunctionEdgeCases:
         content = filepath.read_text()
         assert "StringPath" in content
 
-    def test_write_simulation_updates_file_config_output_dir(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_simulation_updates_file_config_output_dir(self, tmp_path: Path) -> None:
         """Test that write_simulation updates file_config output_dir."""
         config = SimulationConfig(model_name="UpdateTest")
         file_config = SimulationFileConfig(

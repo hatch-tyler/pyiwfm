@@ -11,12 +11,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TextIO
 
-import numpy as np
-
 from pyiwfm.io.groundwater import GWMainFileConfig
 from pyiwfm.io.iwfm_writer import (
     ensure_parent_dir as _ensure_parent_dir,
+)
+from pyiwfm.io.iwfm_writer import (
     write_comment as _write_comment,
+)
+from pyiwfm.io.iwfm_writer import (
     write_value as _write_value,
 )
 
@@ -44,7 +46,7 @@ def write_gw_main_file(config: GWMainFileConfig, filepath: Path | str) -> Path:
 
     with open(filepath, "w") as f:
         _write_comment(f, "IWFM Groundwater Component Main File")
-        _write_comment(f, f"Written by pyiwfm GWMainFileWriter")
+        _write_comment(f, "Written by pyiwfm GWMainFileWriter")
         _write_comment(f, "")
 
         # Version header
@@ -109,12 +111,20 @@ def write_gw_main_file(config: GWMainFileConfig, filepath: Path | str) -> Path:
                 for layer in range(params.n_layers):
                     kh = params.kh[i, layer] if params.kh is not None else 0.0
                     kv = params.kv[i, layer] if params.kv is not None else 0.0
-                    ss = params.specific_storage[i, layer] if params.specific_storage is not None else 0.0
-                    sy = params.specific_yield[i, layer] if params.specific_yield is not None else 0.0
+                    ss = (
+                        params.specific_storage[i, layer]
+                        if params.specific_storage is not None
+                        else 0.0
+                    )
+                    sy = (
+                        params.specific_yield[i, layer]
+                        if params.specific_yield is not None
+                        else 0.0
+                    )
                     akv = params.aquitard_kv[i, layer] if params.aquitard_kv is not None else 0.0
                     if layer == 0:
                         f.write(
-                            f"     {i+1:>6d}  {kh:>12.6g}  {ss:>12.6g}  "
+                            f"     {i + 1:>6d}  {kh:>12.6g}  {ss:>12.6g}  "
                             f"{sy:>12.6g}  {kv:>12.6g}  {akv:>12.6g}\n"
                         )
                     else:
@@ -136,6 +146,6 @@ def write_gw_main_file(config: GWMainFileConfig, filepath: Path | str) -> Path:
             n_nodes, n_layers = heads.shape
             for i in range(n_nodes):
                 vals = "  ".join(f"{heads[i, j]:>12.4f}" for j in range(n_layers))
-                f.write(f"     {i+1:>6d}  {vals}\n")
+                f.write(f"     {i + 1:>6d}  {vals}\n")
 
     return filepath

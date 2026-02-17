@@ -2,36 +2,36 @@
 
 from __future__ import annotations
 
-from pyiwfm.core.mesh import AppGrid, Element, Face, Node, Subregion
-from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.core.model import IWFMModel
+from pyiwfm.core.aggregation import AggregationMethod, DataAggregator, create_aggregator_from_grid
+
+# Cross-section support
+from pyiwfm.core.cross_section import CrossSection, CrossSectionExtractor
 from pyiwfm.core.exceptions import (
-    PyIWFMError,
+    IWFMIOError,
     MeshError,
+    PyIWFMError,
     StratigraphyError,
     ValidationError,
-    IWFMIOError,
 )
-
-# Zone and aggregation support
-from pyiwfm.core.zones import Zone, ZoneDefinition
-from pyiwfm.core.aggregation import DataAggregator, AggregationMethod, create_aggregator_from_grid
-from pyiwfm.core.query import ModelQueryAPI, TimeSeries
 
 # Interpolation support
 from pyiwfm.core.interpolation import (
     FEInterpolator,
-    ParametricGrid,
     InterpolationResult,
-    point_in_element,
-    find_containing_element,
-    interpolation_coefficients,
+    ParametricGrid,
     fe_interpolate,
     fe_interpolate_at_element,
+    find_containing_element,
+    interpolation_coefficients,
+    point_in_element,
 )
+from pyiwfm.core.mesh import AppGrid, Element, Face, Node, Subregion
+from pyiwfm.core.model import IWFMModel
+from pyiwfm.core.query import ModelQueryAPI, TimeSeries
+from pyiwfm.core.stratigraphy import Stratigraphy
 
-# Cross-section support
-from pyiwfm.core.cross_section import CrossSection, CrossSectionExtractor
+# Zone and aggregation support
+from pyiwfm.core.zones import Zone, ZoneDefinition
 
 __all__ = [
     # Mesh classes

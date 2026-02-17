@@ -9,25 +9,22 @@ Covers:
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from pyiwfm.io.config import ModelWriteConfig, OutputFormat
 from pyiwfm.io.model_writer import (
+    TS_KEY_MAPPING,
+    CompleteModelWriter,
     ModelWriteResult,
     TimeSeriesCopier,
-    CompleteModelWriter,
+    _iso_to_iwfm_date,
+    save_model_with_comments,
     write_model,
     write_model_with_comments,
-    save_model_with_comments,
-    _iso_to_iwfm_date,
-    TS_KEY_MAPPING,
-    TS_DSS_PARAMS,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -93,9 +90,7 @@ class TestTimeSeriesCopierCopyAll:
         source_file = src_dir / "precip.dat"
         source_file.write_text("data")
 
-        model = _make_mock_model(
-            source_files={"precipitation_ts": source_file}
-        )
+        model = _make_mock_model(source_files={"precipitation_ts": source_file})
         config = _make_config(tmp_path)
 
         copier = TimeSeriesCopier(model, config)
@@ -235,8 +230,9 @@ class TestTimeSeriesCopierConvertTextToDss:
 
     def test_convert_with_dss_available(self, tmp_path: Path) -> None:
         """When DSS library is importable, writes DSS data and stub file."""
-        import numpy as np
         from datetime import datetime
+
+        import numpy as np
 
         model = _make_mock_model()
         config = _make_config(tmp_path, ts_format=OutputFormat.DSS)
@@ -254,9 +250,7 @@ class TestTimeSeriesCopierConvertTextToDss:
         mock_reader_instance.read.return_value = (times, values, ts_config_val)
 
         mock_dss_writer_instance = MagicMock()
-        mock_dss_writer_instance.__enter__ = MagicMock(
-            return_value=mock_dss_writer_instance
-        )
+        mock_dss_writer_instance.__enter__ = MagicMock(return_value=mock_dss_writer_instance)
         mock_dss_writer_instance.__exit__ = MagicMock(return_value=False)
 
         mock_ts_writer_instance = MagicMock()
@@ -291,8 +285,9 @@ class TestTimeSeriesCopierConvertTextToDss:
 
     def test_convert_falls_back_on_import_error(self, tmp_path: Path) -> None:
         """When DSS library import fails, falls back to shutil.copy2."""
-        import numpy as np
         from datetime import datetime
+
+        import numpy as np
 
         model = _make_mock_model()
         config = _make_config(tmp_path, ts_format=OutputFormat.DSS)
@@ -312,6 +307,7 @@ class TestTimeSeriesCopierConvertTextToDss:
         # Make DSS import fail inside _convert_text_to_dss by patching
         # the module so the local import raises ImportError.
         import builtins
+
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
@@ -433,9 +429,7 @@ class TestCompleteModelWriterWriteAll:
         assert len(result.files) == 0
         assert len(result.errors) == 0
 
-    def test_handles_component_write_errors_gracefully(
-        self, tmp_path: Path
-    ) -> None:
+    def test_handles_component_write_errors_gracefully(self, tmp_path: Path) -> None:
         """write_all stores component errors in result.errors, not raising."""
         model = _make_mock_model()
         config = _make_config(tmp_path)
@@ -465,9 +459,7 @@ class TestCompleteModelWriterWriteAll:
         assert "PP failed" in result.errors["preprocessor"]
         assert result.success is False
 
-    def test_copies_timeseries_when_config_copy_source_ts(
-        self, tmp_path: Path
-    ) -> None:
+    def test_copies_timeseries_when_config_copy_source_ts(self, tmp_path: Path) -> None:
         """write_all copies time series when config.copy_source_ts is True."""
         model = _make_mock_model()
         config = _make_config(tmp_path, copy_source_ts=True)
@@ -508,9 +500,7 @@ class TestCompleteModelWriterSmallWatersheds:
         result = ModelWriteResult()
 
         mock_sw_writer = MagicMock()
-        mock_sw_writer.write_all.return_value = {
-            "main": config.get_path("swshed_main")
-        }
+        mock_sw_writer.write_all.return_value = {"main": config.get_path("swshed_main")}
 
         with patch(
             "pyiwfm.io.small_watershed_writer.SmallWatershedComponentWriter",
@@ -561,9 +551,7 @@ class TestCompleteModelWriterUnsaturatedZone:
         result = ModelWriteResult()
 
         mock_uz_writer = MagicMock()
-        mock_uz_writer.write_all.return_value = {
-            "main": config.get_path("unsatzone_main")
-        }
+        mock_uz_writer.write_all.return_value = {"main": config.get_path("unsatzone_main")}
 
         with patch(
             "pyiwfm.io.unsaturated_zone_writer.UnsatZoneComponentWriter",
@@ -587,9 +575,7 @@ class TestCompleteModelWriterSupplyAdjustment:
         writer = CompleteModelWriter(model, config)
         result = ModelWriteResult()
 
-        with patch(
-            "pyiwfm.io.supply_adjust.write_supply_adjustment"
-        ) as mock_write_sa:
+        with patch("pyiwfm.io.supply_adjust.write_supply_adjustment") as mock_write_sa:
             writer._write_supply_adjustment(result)
 
         mock_write_sa.assert_called_once()
@@ -680,13 +666,9 @@ class TestWriteModelConvenience:
         """write_model creates config + writer, returns write_all result."""
         model = _make_mock_model(metadata={})
 
-        mock_result = ModelWriteResult(
-            files={"simulation_main": tmp_path / "sim.in"}
-        )
+        mock_result = ModelWriteResult(files={"simulation_main": tmp_path / "sim.in"})
 
-        with patch(
-            "pyiwfm.io.model_writer.CompleteModelWriter"
-        ) as MockWriter:
+        with patch("pyiwfm.io.model_writer.CompleteModelWriter") as MockWriter:
             MockWriter.return_value.write_all.return_value = mock_result
             result = write_model(model, tmp_path)
 
@@ -1026,9 +1008,7 @@ class TestWriteRootZoneComponent:
 class TestWriteModelConvenienceVersions:
     """Tests for write_model() version propagation (lines 966-971)."""
 
-    def test_write_model_propagates_version_from_metadata(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_model_propagates_version_from_metadata(self, tmp_path: Path) -> None:
         """write_model() propagates gw_version from model.metadata to config."""
         model = _make_mock_model(
             metadata={
@@ -1038,31 +1018,23 @@ class TestWriteModelConvenienceVersions:
         )
         mock_result = ModelWriteResult(files={"sim": tmp_path / "sim.in"})
 
-        with patch(
-            "pyiwfm.io.model_writer.CompleteModelWriter"
-        ) as MockWriter:
+        with patch("pyiwfm.io.model_writer.CompleteModelWriter") as MockWriter:
             MockWriter.return_value.write_all.return_value = mock_result
-            result = write_model(model, tmp_path)
+            write_model(model, tmp_path)
 
         # Verify ModelWriteConfig received the version defaults
         config_arg = MockWriter.call_args[0][1]
         assert config_arg.gw_version == "4.2"
         assert config_arg.stream_version == "5.0"
 
-    def test_write_model_kwargs_override_metadata_version(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_model_kwargs_override_metadata_version(self, tmp_path: Path) -> None:
         """write_model() explicit kwargs override metadata versions."""
-        model = _make_mock_model(
-            metadata={"gw_version": "4.2"}
-        )
+        model = _make_mock_model(metadata={"gw_version": "4.2"})
         mock_result = ModelWriteResult(files={"sim": tmp_path / "sim.in"})
 
-        with patch(
-            "pyiwfm.io.model_writer.CompleteModelWriter"
-        ) as MockWriter:
+        with patch("pyiwfm.io.model_writer.CompleteModelWriter") as MockWriter:
             MockWriter.return_value.write_all.return_value = mock_result
-            result = write_model(model, tmp_path, gw_version="3.0")
+            write_model(model, tmp_path, gw_version="3.0")
 
         config_arg = MockWriter.call_args[0][1]
         assert config_arg.gw_version == "3.0"
@@ -1071,24 +1043,16 @@ class TestWriteModelConvenienceVersions:
 class TestWriteModelWithCommentsFunction:
     """Tests for write_model_with_comments() (lines 989-1063)."""
 
-    def test_write_model_with_comments_passes_metadata(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_model_with_comments_passes_metadata(self, tmp_path: Path) -> None:
         """write_model_with_comments passes comment_metadata to CompleteModelWriter."""
         model = _make_mock_model(metadata={})
         mock_comments = {"gw_main": MagicMock()}
         mock_result = ModelWriteResult(files={"sim": tmp_path / "sim.in"})
 
-        with patch(
-            "pyiwfm.io.model_writer.CompleteModelWriter"
-        ) as MockWriter:
+        with patch("pyiwfm.io.model_writer.CompleteModelWriter") as MockWriter:
             MockWriter.return_value.write_all.return_value = mock_result
-            with patch(
-                "pyiwfm.io.model_writer._save_comment_sidecars"
-            ) as mock_save:
-                result = write_model_with_comments(
-                    model, tmp_path, comment_metadata=mock_comments
-                )
+            with patch("pyiwfm.io.model_writer._save_comment_sidecars") as mock_save:
+                write_model_with_comments(model, tmp_path, comment_metadata=mock_comments)
 
         # Verify CompleteModelWriter received comment metadata
         assert MockWriter.call_args[1]["comment_metadata"] is mock_comments
@@ -1101,15 +1065,12 @@ class TestWriteModelWithCommentsFunction:
         model = _make_mock_model(metadata={})
         mock_result = ModelWriteResult(files={"sim": tmp_path / "sim.in"})
 
-        with patch(
-            "pyiwfm.io.model_writer.CompleteModelWriter"
-        ) as MockWriter:
+        with patch("pyiwfm.io.model_writer.CompleteModelWriter") as MockWriter:
             MockWriter.return_value.write_all.return_value = mock_result
-            with patch(
-                "pyiwfm.io.model_writer._save_comment_sidecars"
-            ) as mock_save:
+            with patch("pyiwfm.io.model_writer._save_comment_sidecars") as mock_save:
                 write_model_with_comments(
-                    model, tmp_path,
+                    model,
+                    tmp_path,
                     comment_metadata={"gw_main": MagicMock()},
                     save_sidecars=False,
                 )
@@ -1212,9 +1173,7 @@ class TestIsoToIwfmDateAdditional:
 class TestUnsaturatedZoneFallbacks:
     """Tests for unsaturated zone fallback paths (lines 703-757)."""
 
-    def test_unsatzone_writer_failure_falls_back_to_copy(
-        self, tmp_path: Path
-    ) -> None:
+    def test_unsatzone_writer_failure_falls_back_to_copy(self, tmp_path: Path) -> None:
         """_write_unsaturated_zone falls back to copy when writer fails."""
         src_file = tmp_path / "uz_source.dat"
         src_file.write_text("uz data")
@@ -1325,9 +1284,7 @@ class TestSupplyAdjustmentAdditional:
 
         assert any("source not found" in w for w in result.warnings)
 
-    def test_supply_adjust_write_from_data_failure_falls_through(
-        self, tmp_path: Path
-    ) -> None:
+    def test_supply_adjust_write_from_data_failure_falls_through(self, tmp_path: Path) -> None:
         """_write_supply_adjustment falls to copy when write_supply_adjustment fails."""
         src_file = tmp_path / "sa_source.dat"
         src_file.write_text("sa data")

@@ -10,38 +10,37 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
-from pyiwfm.io.supply_adjust import (
-    SupplyAdjustment,
-    read_supply_adjustment,
-    write_supply_adjustment,
-    _is_fortran_comment,
-)
 from pyiwfm.io.parametric_grid import (
-    ParamNode,
     ParamElement,
     ParametricGrid,
+    ParamNode,
 )
 from pyiwfm.io.preprocessor_binary import (
-    AppNodeData,
     AppElementData,
     AppFaceData,
-    SubregionData,
-    StratigraphyData,
-    StreamGWConnectorData,
-    LakeGWConnectorData,
-    StreamLakeConnectorData,
-    StreamData,
+    AppNodeData,
     LakeData,
+    LakeGWConnectorData,
     PreprocessorBinaryData,
     PreprocessorBinaryReader,
+    StratigraphyData,
+    StreamData,
+    StreamGWConnectorData,
+    StreamLakeConnectorData,
+    SubregionData,
     read_preprocessor_binary,
 )
-
+from pyiwfm.io.supply_adjust import (
+    SupplyAdjustment,
+    _is_fortran_comment,
+    read_supply_adjustment,
+    write_supply_adjustment,
+)
 
 # =============================================================================
 # SupplyAdjustment extended tests
@@ -184,7 +183,7 @@ class TestParametricGrid:
 
     def _make_triangle_grid(self) -> ParametricGrid:
         """Create a simple triangle grid with known values."""
-        vals = np.array([[1.0]])
+        np.array([[1.0]])
         nodes = [
             ParamNode(node_id=1, x=0.0, y=0.0, values=np.array([[10.0]])),
             ParamNode(node_id=2, x=10.0, y=0.0, values=np.array([[20.0]])),
@@ -261,8 +260,7 @@ class TestParametricGrid:
     def test_element_with_5_vertices_skipped(self) -> None:
         """Elements with unsupported vertex count are skipped."""
         nodes = [
-            ParamNode(node_id=i, x=float(i), y=float(i), values=np.array([[1.0]]))
-            for i in range(5)
+            ParamNode(node_id=i, x=float(i), y=float(i), values=np.array([[1.0]])) for i in range(5)
         ]
         elements = [ParamElement(elem_id=1, vertices=(0, 1, 2, 3, 4))]
         grid = ParametricGrid(nodes=nodes, elements=elements)
@@ -286,8 +284,11 @@ class TestPreprocessorBinaryDataClasses:
 
     def test_app_node_data(self) -> None:
         nd = AppNodeData(
-            id=1, area=100.0, boundary_node=True,
-            n_connected_node=2, n_face_id=3,
+            id=1,
+            area=100.0,
+            boundary_node=True,
+            n_connected_node=2,
+            n_face_id=3,
             surrounding_elements=np.array([1, 2], dtype=np.int32),
             connected_nodes=np.array([3, 4], dtype=np.int32),
             face_ids=np.array([1, 2, 3], dtype=np.int32),
@@ -300,7 +301,9 @@ class TestPreprocessorBinaryDataClasses:
 
     def test_app_element_data(self) -> None:
         ed = AppElementData(
-            id=1, subregion=1, area=500.0,
+            id=1,
+            subregion=1,
+            area=500.0,
             face_ids=np.array([1, 2, 3], dtype=np.int32),
             vertex_areas=np.array([100.0, 200.0, 200.0]),
             vertex_area_fractions=np.array([0.2, 0.4, 0.4]),
@@ -322,8 +325,11 @@ class TestPreprocessorBinaryDataClasses:
 
     def test_subregion_data(self) -> None:
         sd = SubregionData(
-            id=1, name="Region A", n_elements=3,
-            n_neighbor_regions=1, area=1000.0,
+            id=1,
+            name="Region A",
+            n_elements=3,
+            n_neighbor_regions=1,
+            area=1000.0,
             region_elements=np.array([1, 2, 3], dtype=np.int32),
             neighbor_region_ids=np.array([2], dtype=np.int32),
             neighbor_n_boundary_faces=np.array([2], dtype=np.int32),
@@ -372,7 +378,8 @@ class TestPreprocessorBinaryDataClasses:
 
     def test_stream_data(self) -> None:
         sd = StreamData(
-            n_reaches=2, n_stream_nodes=10,
+            n_reaches=2,
+            n_stream_nodes=10,
             reach_ids=np.array([1, 2], dtype=np.int32),
             reach_names=["Reach A", "Reach B"],
             reach_upstream_nodes=np.array([1, 6], dtype=np.int32),

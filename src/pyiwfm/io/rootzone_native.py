@@ -18,12 +18,14 @@ from pathlib import Path
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     LineBuffer as _LineBuffer,
+)
+from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
 )
-
 
 # ── Data classes ──────────────────────────────────────────────────────
 
@@ -96,9 +98,7 @@ class NativeRiparianConfig:
     riparian_root_depth: float = 0.0
     curve_numbers: list[NativeRiparianCNRow] = field(default_factory=list)
     etc_pointers: list[NativeRiparianEtcRow] = field(default_factory=list)
-    initial_conditions: list[NativeRiparianInitialRow] = field(
-        default_factory=list
-    )
+    initial_conditions: list[NativeRiparianInitialRow] = field(default_factory=list)
 
 
 # ── Reader ────────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ class NativeRiparianReader:
         if base_dir is None:
             base_dir = filepath.parent
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             lines = f.readlines()
         buf = _LineBuffer(lines)
         config = NativeRiparianConfig()
@@ -196,9 +196,7 @@ class NativeRiparianReader:
             return p
         return base_dir / p
 
-    def _read_rows(
-        self, buf: _LineBuffer, min_cols: int
-    ) -> list[list[str]]:
+    def _read_rows(self, buf: _LineBuffer, min_cols: int) -> list[list[str]]:
         """Read tabular data rows with comment-based section boundaries."""
         rows: list[list[str]] = []
         n_expected = self._n_sub
@@ -273,9 +271,7 @@ class NativeRiparianReader:
                 break
         return result
 
-    def _read_initial_conditions(
-        self, buf: _LineBuffer
-    ) -> list[NativeRiparianInitialRow]:
+    def _read_initial_conditions(self, buf: _LineBuffer) -> list[NativeRiparianInitialRow]:
         """Read initial soil-moisture conditions.
 
         Each row: ``subregion_id  native1 riparian1 native2 riparian2 …``

@@ -10,38 +10,27 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 
+from pyiwfm.io.stream_bypass import (
+    BYPASS_DEST_LAKE,
+    BYPASS_DEST_STREAM,
+    BypassSpecReader,
+    read_bypass_spec,
+)
+from pyiwfm.io.stream_diversion import (
+    DEST_ELEMENT,
+    DEST_OUTSIDE,
+    DiversionSpecConfig,
+    DiversionSpecReader,
+    read_diversion_spec,
+)
 from pyiwfm.io.stream_inflow import (
-    InflowReader,
     InflowConfig,
+    InflowReader,
     InflowSpec,
     read_stream_inflow,
 )
-from pyiwfm.io.stream_bypass import (
-    BypassSpecReader,
-    BypassSpecConfig,
-    BypassSpec,
-    BypassRatingTable,
-    BypassSeepageZone,
-    read_bypass_spec,
-    BYPASS_DEST_STREAM,
-    BYPASS_DEST_LAKE,
-)
-from pyiwfm.io.stream_diversion import (
-    DiversionSpecReader,
-    DiversionSpecConfig,
-    DiversionSpec,
-    ElementGroup,
-    RechargeZoneDest,
-    read_diversion_spec,
-    DEST_ELEMENT,
-    DEST_SUBREGION,
-    DEST_OUTSIDE,
-)
-from pyiwfm.core.exceptions import FileFormatError
-
 
 # =============================================================================
 # InflowReader Tests
@@ -246,10 +235,7 @@ class TestBypassSpecReader:
 
     def test_read_zero_bypasses(self, tmp_path: Path) -> None:
         """Read file with zero bypasses."""
-        content = (
-            "C Empty bypass file\n"
-            "    0                              / NBypass\n"
-        )
+        content = "C Empty bypass file\n    0                              / NBypass\n"
         filepath = self._write_bypass_file(tmp_path, content)
         config = BypassSpecReader().read(filepath)
 
@@ -281,9 +267,7 @@ class TestBypassSpecReader:
 
     def test_convenience_function(self, tmp_path: Path) -> None:
         """Test read_bypass_spec convenience function."""
-        content = (
-            "    0                              / NBypass\n"
-        )
+        content = "    0                              / NBypass\n"
         filepath = self._write_bypass_file(tmp_path, content)
         config = read_bypass_spec(filepath)
         assert config.n_bypasses == 0
@@ -398,10 +382,7 @@ class TestDiversionSpecReader:
 
     def test_read_zero_diversions(self, tmp_path: Path) -> None:
         """Read file with zero diversions."""
-        content = (
-            "C Empty diversion file\n"
-            "    0                              / NDiver\n"
-        )
+        content = "C Empty diversion file\n    0                              / NDiver\n"
         filepath = self._write_div_file(tmp_path, content)
         config = DiversionSpecReader().read(filepath)
 
@@ -425,9 +406,7 @@ class TestDiversionSpecReader:
 
     def test_convenience_function(self, tmp_path: Path) -> None:
         """Test read_diversion_spec convenience function."""
-        content = (
-            "    0                              / NDiver\n"
-        )
+        content = "    0                              / NDiver\n"
         filepath = self._write_div_file(tmp_path, content)
         config = read_diversion_spec(filepath)
         assert config.n_diversions == 0

@@ -10,16 +10,13 @@ Tests:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 
-from pyiwfm.core.model import IWFMModel
 from pyiwfm.core.exceptions import ValidationError
-
+from pyiwfm.core.model import IWFMModel
 
 # =============================================================================
 # Test IWFMModel Basics
@@ -540,25 +537,19 @@ class TestFromPreprocessorBinary:
         from unittest.mock import patch
 
         with patch("pyiwfm.core.model.Path", wraps=Path):
-            with patch(
-                "pyiwfm.io.binary.FortranBinaryReader"
-            ) as mock_reader_cls, patch(
-                "pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh
-            ) as mock_read_mesh, patch(
-                "pyiwfm.io.binary.read_binary_stratigraphy"
+            with (
+                patch("pyiwfm.io.binary.FortranBinaryReader") as mock_reader_cls,
+                patch(
+                    "pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh
+                ) as mock_read_mesh,
+                patch("pyiwfm.io.binary.read_binary_stratigraphy"),
             ):
                 # Mock context manager
                 mock_reader_inst = MagicMock()
-                mock_reader_cls.return_value.__enter__ = MagicMock(
-                    return_value=mock_reader_inst
-                )
-                mock_reader_cls.return_value.__exit__ = MagicMock(
-                    return_value=False
-                )
+                mock_reader_cls.return_value.__enter__ = MagicMock(return_value=mock_reader_inst)
+                mock_reader_cls.return_value.__exit__ = MagicMock(return_value=False)
 
-                model = IWFMModel.from_preprocessor_binary(
-                    binary_file, name="TestBinary"
-                )
+                model = IWFMModel.from_preprocessor_binary(binary_file, name="TestBinary")
 
                 assert model.name == "TestBinary"
                 assert model.mesh is mock_mesh
@@ -575,12 +566,10 @@ class TestFromPreprocessorBinary:
 
         from unittest.mock import patch
 
-        with patch(
-            "pyiwfm.io.binary.FortranBinaryReader"
-        ) as mock_reader_cls, patch(
-            "pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh
-        ), patch(
-            "pyiwfm.io.binary.read_binary_stratigraphy"
+        with (
+            patch("pyiwfm.io.binary.FortranBinaryReader") as mock_reader_cls,
+            patch("pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh),
+            patch("pyiwfm.io.binary.read_binary_stratigraphy"),
         ):
             mock_reader_cls.return_value.__enter__ = MagicMock()
             mock_reader_cls.return_value.__exit__ = MagicMock(return_value=False)
@@ -589,9 +578,7 @@ class TestFromPreprocessorBinary:
 
             assert model.name == "my_model"
 
-    def test_from_preprocessor_binary_with_stratigraphy(
-        self, tmp_path: Path
-    ) -> None:
+    def test_from_preprocessor_binary_with_stratigraphy(self, tmp_path: Path) -> None:
         """Test loading with companion stratigraphy binary file."""
         binary_file = tmp_path / "model.bin"
         binary_file.write_bytes(b"\x00")
@@ -603,13 +590,13 @@ class TestFromPreprocessorBinary:
 
         from unittest.mock import patch
 
-        with patch(
-            "pyiwfm.io.binary.FortranBinaryReader"
-        ) as mock_reader_cls, patch(
-            "pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh
-        ), patch(
-            "pyiwfm.io.binary.read_binary_stratigraphy",
-            return_value=mock_strat,
+        with (
+            patch("pyiwfm.io.binary.FortranBinaryReader") as mock_reader_cls,
+            patch("pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh),
+            patch(
+                "pyiwfm.io.binary.read_binary_stratigraphy",
+                return_value=mock_strat,
+            ),
         ):
             mock_reader_cls.return_value.__enter__ = MagicMock()
             mock_reader_cls.return_value.__exit__ = MagicMock(return_value=False)
@@ -648,13 +635,13 @@ class TestFromPreprocessor:
         mock_config.elements_file = "elems.dat"
         mock_config.model_name = "test"
 
-        with patch(
-            "pyiwfm.io.preprocessor.read_preprocessor_main",
-            return_value=mock_config,
-        ), patch(
-            "pyiwfm.io.ascii.read_nodes"
-        ), patch(
-            "pyiwfm.io.ascii.read_elements"
+        with (
+            patch(
+                "pyiwfm.io.preprocessor.read_preprocessor_main",
+                return_value=mock_config,
+            ),
+            patch("pyiwfm.io.ascii.read_nodes"),
+            patch("pyiwfm.io.ascii.read_elements"),
         ):
             from pyiwfm.core.exceptions import FileFormatError
 
@@ -672,14 +659,16 @@ class TestFromPreprocessor:
 
         mock_nodes = {1: MagicMock(), 2: MagicMock()}
 
-        with patch(
-            "pyiwfm.io.preprocessor.read_preprocessor_main",
-            return_value=mock_config,
-        ), patch(
-            "pyiwfm.io.ascii.read_nodes",
-            return_value=mock_nodes,
-        ), patch(
-            "pyiwfm.io.ascii.read_elements"
+        with (
+            patch(
+                "pyiwfm.io.preprocessor.read_preprocessor_main",
+                return_value=mock_config,
+            ),
+            patch(
+                "pyiwfm.io.ascii.read_nodes",
+                return_value=mock_nodes,
+            ),
+            patch("pyiwfm.io.ascii.read_elements"),
         ):
             from pyiwfm.core.exceptions import FileFormatError
 
@@ -842,7 +831,8 @@ class TestModelExport:
             files = model.to_simulation(tmp_path)
 
             mock_save.assert_called_once_with(
-                model, tmp_path,
+                model,
+                tmp_path,
                 timeseries_format="text",
                 file_paths=None,
             )
@@ -855,9 +845,7 @@ class TestModelExport:
         model = IWFMModel(name="HDF5Export")
         output_file = tmp_path / "model.h5"
 
-        with patch(
-            "pyiwfm.io.hdf5.write_model_hdf5"
-        ) as mock_write:
+        with patch("pyiwfm.io.hdf5.write_model_hdf5") as mock_write:
             model.to_hdf5(output_file)
 
             mock_write.assert_called_once_with(output_file, model)
@@ -872,11 +860,10 @@ class TestModelExport:
 
         output_file = tmp_path / "model.bin"
 
-        with patch(
-            "pyiwfm.io.binary.write_binary_mesh"
-        ) as mock_write_mesh, patch(
-            "pyiwfm.io.binary.write_binary_stratigraphy"
-        ) as mock_write_strat:
+        with (
+            patch("pyiwfm.io.binary.write_binary_mesh") as mock_write_mesh,
+            patch("pyiwfm.io.binary.write_binary_stratigraphy") as mock_write_strat,
+        ):
             model.to_binary(output_file)
 
             mock_write_mesh.assert_called_once_with(output_file, model.mesh)
@@ -895,11 +882,10 @@ class TestModelExport:
 
         output_file = tmp_path / "model.bin"
 
-        with patch(
-            "pyiwfm.io.binary.write_binary_mesh"
-        ) as mock_write_mesh, patch(
-            "pyiwfm.io.binary.write_binary_stratigraphy"
-        ) as mock_write_strat:
+        with (
+            patch("pyiwfm.io.binary.write_binary_mesh") as mock_write_mesh,
+            patch("pyiwfm.io.binary.write_binary_stratigraphy") as mock_write_strat,
+        ):
             model.to_binary(output_file)
 
             mock_write_mesh.assert_called_once()
@@ -915,11 +901,10 @@ class TestModelExport:
 
         output_file = tmp_path / "model.bin"
 
-        with patch(
-            "pyiwfm.io.binary.write_binary_mesh"
-        ) as mock_write_mesh, patch(
-            "pyiwfm.io.binary.write_binary_stratigraphy"
-        ) as mock_write_strat:
+        with (
+            patch("pyiwfm.io.binary.write_binary_mesh") as mock_write_mesh,
+            patch("pyiwfm.io.binary.write_binary_stratigraphy") as mock_write_strat,
+        ):
             model.to_binary(output_file)
 
             mock_write_mesh.assert_not_called()
@@ -932,11 +917,10 @@ class TestModelExport:
         model = IWFMModel(name="Empty")
         output_file = tmp_path / "model.bin"
 
-        with patch(
-            "pyiwfm.io.binary.write_binary_mesh"
-        ) as mock_write_mesh, patch(
-            "pyiwfm.io.binary.write_binary_stratigraphy"
-        ) as mock_write_strat:
+        with (
+            patch("pyiwfm.io.binary.write_binary_mesh") as mock_write_mesh,
+            patch("pyiwfm.io.binary.write_binary_stratigraphy") as mock_write_strat,
+        ):
             model.to_binary(output_file)
 
             mock_write_mesh.assert_not_called()

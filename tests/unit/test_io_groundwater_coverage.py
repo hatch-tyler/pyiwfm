@@ -14,18 +14,16 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.groundwater import (
-    GWFileConfig,
-    GWMainFileConfig,
-    GWMainFileReader,
     GroundwaterReader,
+    GWFileConfig,
+    GWMainFileReader,
     KhAnomalyEntry,
     ParametricGridData,
     _is_comment_line,
     _strip_comment,
 )
-from pyiwfm.core.exceptions import FileFormatError
-
 
 # ---------------------------------------------------------------------------
 # Helper function tests
@@ -172,10 +170,7 @@ class TestReadWells:
     def test_wells_with_comments_between_rows(self, tmp_path: Path) -> None:
         filepath = tmp_path / "wells.dat"
         filepath.write_text(
-            "C  Header\n"
-            "1  / NWELLS\n"
-            "C  Data follows\n"
-            "1  100.0  200.0  1  10.0  20.0  300.0  W1\n"
+            "C  Header\n1  / NWELLS\nC  Data follows\n1  100.0  200.0  1  10.0  20.0  300.0  W1\n"
         )
         reader = GroundwaterReader()
         wells = reader.read_wells(filepath)
@@ -436,19 +431,18 @@ class TestGWMainFileReaderInitialHeads:
 # ===========================================================================
 
 
-from pyiwfm.io.groundwater import (
-    FaceFlowSpec,
-    GroundwaterWriter,
-)
-from pyiwfm.components.groundwater import (
+from pyiwfm.components.groundwater import (  # noqa: E402
     AppGW,
     AquiferParameters,
     BoundaryCondition,
-    TileDrain,
     Subsidence,
+    TileDrain,
     Well,
 )
-
+from pyiwfm.io.groundwater import (  # noqa: E402
+    FaceFlowSpec,
+    GroundwaterWriter,
+)
 
 # ---------------------------------------------------------------------------
 # GWMainFileReader._read_version edge cases
@@ -1270,12 +1264,26 @@ class TestWriteWells:
         writer = GroundwaterWriter(config)
         gw = _make_gw_component()
         gw.wells = {
-            1: Well(id=1, x=100.0, y=200.0, element=1,
-                     top_screen=50.0, bottom_screen=10.0,
-                     max_pump_rate=500.0, name="Well_A"),
-            2: Well(id=2, x=300.0, y=400.0, element=2,
-                     top_screen=60.0, bottom_screen=20.0,
-                     max_pump_rate=750.0, name="Well_B"),
+            1: Well(
+                id=1,
+                x=100.0,
+                y=200.0,
+                element=1,
+                top_screen=50.0,
+                bottom_screen=10.0,
+                max_pump_rate=500.0,
+                name="Well_A",
+            ),
+            2: Well(
+                id=2,
+                x=300.0,
+                y=400.0,
+                element=2,
+                top_screen=60.0,
+                bottom_screen=20.0,
+                max_pump_rate=750.0,
+                name="Well_B",
+            ),
         }
         result = writer.write_wells(gw)
         assert result.exists()
@@ -1289,9 +1297,16 @@ class TestWriteWells:
         writer = GroundwaterWriter(config)
         gw = _make_gw_component()
         gw.wells = {
-            1: Well(id=1, x=100.0, y=200.0, element=1,
-                     top_screen=50.0, bottom_screen=10.0,
-                     max_pump_rate=500.0, name="W1"),
+            1: Well(
+                id=1,
+                x=100.0,
+                y=200.0,
+                element=1,
+                top_screen=50.0,
+                bottom_screen=10.0,
+                max_pump_rate=500.0,
+                name="W1",
+            ),
         }
         result = writer.write_wells(gw, header="My Custom Header")
         content = result.read_text()
@@ -1303,9 +1318,16 @@ class TestWriteWells:
         writer = GroundwaterWriter(config)
         gw = _make_gw_component()
         gw.wells = {
-            1: Well(id=1, x=1000.0, y=2000.0, element=1,
-                     top_screen=50.0, bottom_screen=10.0,
-                     max_pump_rate=500.0, name="Well_1"),
+            1: Well(
+                id=1,
+                x=1000.0,
+                y=2000.0,
+                element=1,
+                top_screen=50.0,
+                bottom_screen=10.0,
+                max_pump_rate=500.0,
+                name="Well_1",
+            ),
         }
         filepath = writer.write_wells(gw)
 
@@ -1385,16 +1407,26 @@ class TestWriteBoundaryConditions:
         gw = _make_gw_component()
         gw.boundary_conditions = [
             BoundaryCondition(
-                id=1, bc_type="specified_head", nodes=[1, 2],
-                values=[100.0, 105.0], layer=1,
+                id=1,
+                bc_type="specified_head",
+                nodes=[1, 2],
+                values=[100.0, 105.0],
+                layer=1,
             ),
             BoundaryCondition(
-                id=2, bc_type="specified_flow", nodes=[3],
-                values=[-50.0], layer=1,
+                id=2,
+                bc_type="specified_flow",
+                nodes=[3],
+                values=[-50.0],
+                layer=1,
             ),
             BoundaryCondition(
-                id=3, bc_type="general_head", nodes=[1],
-                values=[110.0], layer=1, conductance=[0.01],
+                id=3,
+                bc_type="general_head",
+                nodes=[1],
+                values=[110.0],
+                layer=1,
+                conductance=[0.01],
             ),
         ]
         result = writer.write_boundary_conditions(gw)
@@ -1430,12 +1462,22 @@ class TestWriteTileDrains:
         writer = GroundwaterWriter(config)
         gw = _make_gw_component()
         gw.tile_drains = {
-            1: TileDrain(id=1, element=1, elevation=50.0,
-                         conductance=0.01, destination_type="stream",
-                         destination_id=5),
-            2: TileDrain(id=2, element=2, elevation=45.0,
-                         conductance=0.02, destination_type="outside",
-                         destination_id=None),
+            1: TileDrain(
+                id=1,
+                element=1,
+                elevation=50.0,
+                conductance=0.01,
+                destination_type="stream",
+                destination_id=5,
+            ),
+            2: TileDrain(
+                id=2,
+                element=2,
+                elevation=45.0,
+                conductance=0.02,
+                destination_type="outside",
+                destination_id=None,
+            ),
         }
         result = writer.write_tile_drains(gw)
         assert result.exists()
@@ -1449,8 +1491,7 @@ class TestWriteTileDrains:
         writer = GroundwaterWriter(config)
         gw = _make_gw_component()
         gw.tile_drains = {
-            1: TileDrain(id=1, element=1, elevation=50.0,
-                         conductance=0.01),
+            1: TileDrain(id=1, element=1, elevation=50.0, conductance=0.01),
         }
         result = writer.write_tile_drains(gw, header="My Tile Drains")
         content = result.read_text()
@@ -1470,10 +1511,20 @@ class TestWriteSubsidence:
         writer = GroundwaterWriter(config)
         gw = _make_gw_component()
         gw.subsidence = [
-            Subsidence(element=1, layer=1, elastic_storage=1e-5,
-                       inelastic_storage=1e-4, preconsolidation_head=80.0),
-            Subsidence(element=2, layer=1, elastic_storage=2e-5,
-                       inelastic_storage=2e-4, preconsolidation_head=75.0),
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-5,
+                inelastic_storage=1e-4,
+                preconsolidation_head=80.0,
+            ),
+            Subsidence(
+                element=2,
+                layer=1,
+                elastic_storage=2e-5,
+                inelastic_storage=2e-4,
+                preconsolidation_head=75.0,
+            ),
         ]
         result = writer.write_subsidence(gw)
         assert result.exists()
@@ -1485,8 +1536,13 @@ class TestWriteSubsidence:
         writer = GroundwaterWriter(config)
         gw = _make_gw_component()
         gw.subsidence = [
-            Subsidence(element=1, layer=1, elastic_storage=1e-5,
-                       inelastic_storage=1e-4, preconsolidation_head=80.0),
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-5,
+                inelastic_storage=1e-4,
+                preconsolidation_head=80.0,
+            ),
         ]
         result = writer.write_subsidence(gw, header="Subsidence Data")
         content = result.read_text()
@@ -1559,12 +1615,20 @@ class TestWriteDispatch:
         writer = GroundwaterWriter(config)
         gw = _make_gw_component(n_nodes=2, n_layers=1)
         gw.wells = {
-            1: Well(id=1, x=100.0, y=200.0, element=1,
-                     top_screen=50.0, bottom_screen=10.0,
-                     max_pump_rate=500.0, name="W1"),
+            1: Well(
+                id=1,
+                x=100.0,
+                y=200.0,
+                element=1,
+                top_screen=50.0,
+                bottom_screen=10.0,
+                max_pump_rate=500.0,
+                name="W1",
+            ),
         }
         gw.aquifer_params = AquiferParameters(
-            n_nodes=2, n_layers=1,
+            n_nodes=2,
+            n_layers=1,
             kh=np.array([[10.0], [12.0]]),
             kv=np.array([[5.0], [6.0]]),
             specific_storage=np.array([[0.001], [0.002]]),
@@ -1572,16 +1636,24 @@ class TestWriteDispatch:
         )
         gw.boundary_conditions = [
             BoundaryCondition(
-                id=1, bc_type="specified_head", nodes=[1],
-                values=[100.0], layer=1,
+                id=1,
+                bc_type="specified_head",
+                nodes=[1],
+                values=[100.0],
+                layer=1,
             ),
         ]
         gw.tile_drains = {
             1: TileDrain(id=1, element=1, elevation=50.0, conductance=0.01),
         }
         gw.subsidence = [
-            Subsidence(element=1, layer=1, elastic_storage=1e-5,
-                       inelastic_storage=1e-4, preconsolidation_head=80.0),
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-5,
+                inelastic_storage=1e-4,
+                preconsolidation_head=80.0,
+            ),
         ]
         gw.heads = np.array([[100.0], [105.0]])
 

@@ -242,7 +242,7 @@ class ComparisonMetrics:
         cls,
         observed: NDArray[np.float64],
         simulated: NDArray[np.float64],
-    ) -> "ComparisonMetrics":
+    ) -> ComparisonMetrics:
         """
         Compute all metrics from observed and simulated data.
 

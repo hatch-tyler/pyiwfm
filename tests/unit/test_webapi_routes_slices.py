@@ -29,7 +29,6 @@ from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.visualization.webapi.config import model_state
 from pyiwfm.visualization.webapi.server import create_app
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -231,14 +230,16 @@ class TestGetSlice:
         mock_slicer = _make_mock_slicer(mock_mesh)
         fake_vtu = b"<VTKFile>mock vtu data</VTKFile>"
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch(
-            "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
-            return_value=fake_vtu,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch(
+                "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
+                return_value=fake_vtu,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
             resp = client.get("/api/slice?axis=x&position=0.5")
@@ -256,14 +257,16 @@ class TestGetSlice:
         mock_slicer = _make_mock_slicer(mock_mesh)
         fake_vtu = b"<VTKFile>vtu</VTKFile>"
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch(
-            "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
-            return_value=fake_vtu,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch(
+                "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
+                return_value=fake_vtu,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
             resp = client.get("/api/slice?axis=y&position=0.3")
@@ -279,14 +282,16 @@ class TestGetSlice:
         mock_slicer = _make_mock_slicer(mock_mesh)
         fake_vtu = b"<VTKFile>vtu</VTKFile>"
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch(
-            "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
-            return_value=fake_vtu,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch(
+                "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
+                return_value=fake_vtu,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
             resp = client.get("/api/slice?axis=z&position=0.8")
@@ -301,11 +306,12 @@ class TestGetSlice:
         empty_mesh = _make_mock_slice_mesh(n_cells=0, n_points=0)
         mock_slicer = _make_mock_slicer(empty_mesh)
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
             resp = client.get("/api/slice?axis=x&position=0.0")
@@ -321,14 +327,16 @@ class TestGetSlice:
         mock_slicer = _make_mock_slicer(mock_mesh)
         fake_vtu = b"<VTKFile/>"
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch(
-            "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
-            return_value=fake_vtu,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch(
+                "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
+                return_value=fake_vtu,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
             resp = client.get("/api/slice?axis=x&position=0.5")
@@ -428,9 +436,7 @@ class TestGetSliceJson:
             "polys": [3, 0, 1, 2],
             "layer": [1],
         }
-        with patch.object(
-            model_state, "get_slice_json", return_value=mock_data
-        ) as mock_get:
+        with patch.object(model_state, "get_slice_json", return_value=mock_data) as mock_get:
             resp = client.get("/api/slice/json")
         assert resp.status_code == 200
         mock_get.assert_called_once_with(0.0, 0.5)
@@ -445,9 +451,7 @@ class TestGetCrossSection:
     """Tests for GET /api/slice/cross-section (VTU response)."""
 
     def test_no_model_returns_404(self, client):
-        resp = client.get(
-            "/api/slice/cross-section?start_x=0&start_y=0&end_x=100&end_y=100"
-        )
+        resp = client.get("/api/slice/cross-section?start_x=0&start_y=0&end_x=100&end_y=100")
         assert resp.status_code == 404
         assert "No model loaded" in resp.json()["detail"]
 
@@ -456,10 +460,7 @@ class TestGetCrossSection:
         model = _make_mock_model(stratigraphy=MagicMock())
         _set_model(model)
         with patch.dict(sys.modules, {"pyvista": None}):
-            resp = client.get(
-                "/api/slice/cross-section?"
-                "start_x=0&start_y=0&end_x=100&end_y=100"
-            )
+            resp = client.get("/api/slice/cross-section?start_x=0&start_y=0&end_x=100&end_y=100")
         assert resp.status_code == 500
         assert "PyVista required" in resp.json()["detail"]
 
@@ -467,10 +468,7 @@ class TestGetCrossSection:
         """400 when model has no stratigraphy."""
         model = _make_mock_model(stratigraphy=None)
         _set_model(model)
-        resp = client.get(
-            "/api/slice/cross-section?"
-            "start_x=0&start_y=0&end_x=100&end_y=100"
-        )
+        resp = client.get("/api/slice/cross-section?start_x=0&start_y=0&end_x=100&end_y=100")
         assert resp.status_code == 400
         assert "Stratigraphy required" in resp.json()["detail"]
 
@@ -482,20 +480,19 @@ class TestGetCrossSection:
         mock_slicer = _make_mock_slicer(mock_mesh)
         fake_vtu = b"<VTKFile>cross section</VTKFile>"
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch(
-            "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
-            return_value=fake_vtu,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch(
+                "pyiwfm.visualization.webapi.routes.slices._pyvista_to_vtu",
+                return_value=fake_vtu,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
-            resp = client.get(
-                "/api/slice/cross-section?"
-                "start_x=10&start_y=20&end_x=80&end_y=90"
-            )
+            resp = client.get("/api/slice/cross-section?start_x=10&start_y=20&end_x=80&end_y=90")
 
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/xml"
@@ -511,17 +508,15 @@ class TestGetCrossSection:
         empty_mesh = _make_mock_slice_mesh(n_cells=0, n_points=0)
         mock_slicer = _make_mock_slicer(empty_mesh)
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
-            resp = client.get(
-                "/api/slice/cross-section?"
-                "start_x=0&start_y=0&end_x=100&end_y=100"
-            )
+            resp = client.get("/api/slice/cross-section?start_x=0&start_y=0&end_x=100&end_y=100")
 
         assert resp.status_code == 404
         assert "Empty cross-section" in resp.json()["detail"]
@@ -572,11 +567,12 @@ class TestGetCrossSectionJson:
 
         mock_pv_mesh = MagicMock()
 
-        with patch.object(
-            model_state, "get_pyvista_3d", return_value=mock_pv_mesh
-        ), patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
+        with (
+            patch.object(model_state, "get_pyvista_3d", return_value=mock_pv_mesh),
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
         ):
             resp = client.get(
                 "/api/slice/cross-section/json?"
@@ -632,13 +628,13 @@ class TestGetCrossSectionJson:
         mock_pyproj = MagicMock()
         mock_pyproj.Transformer = mock_transformer_cls
 
-        with patch.object(
-            model_state, "get_pyvista_3d", return_value=mock_pv_mesh
-        ), patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch.dict(
-            sys.modules, {"pyproj": mock_pyproj}
+        with (
+            patch.object(model_state, "get_pyvista_3d", return_value=mock_pv_mesh),
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch.dict(sys.modules, {"pyproj": mock_pyproj}),
         ):
             resp = client.get(
                 "/api/slice/cross-section/json?"
@@ -689,13 +685,13 @@ class TestGetCrossSectionJson:
 
         mock_pv_mesh = MagicMock()
 
-        with patch.object(
-            model_state, "get_pyvista_3d", return_value=mock_pv_mesh
-        ), patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch.dict(
-            sys.modules, {"pyproj": None}
+        with (
+            patch.object(model_state, "get_pyvista_3d", return_value=mock_pv_mesh),
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch.dict(sys.modules, {"pyproj": None}),
         ):
             resp = client.get(
                 "/api/slice/cross-section/json?"
@@ -731,9 +727,7 @@ class TestGetCrossSectionJson:
             ],
             dtype=np.float64,
         )
-        mock_mesh.faces = np.array(
-            [3, 0, 1, 2, 3, 1, 2, 3, 3, 0, 2, 3], dtype=np.int32
-        )
+        mock_mesh.faces = np.array([3, 0, 1, 2, 3, 1, 2, 3, 3, 0, 2, 3], dtype=np.int32)
         mock_mesh.cell_data = {}  # No layer data
 
         mock_slicer = MagicMock()
@@ -741,17 +735,16 @@ class TestGetCrossSectionJson:
 
         mock_pv_mesh = MagicMock()
 
-        with patch.object(
-            model_state, "get_pyvista_3d", return_value=mock_pv_mesh
-        ), patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch.dict(
-            sys.modules, {"pyproj": None}
+        with (
+            patch.object(model_state, "get_pyvista_3d", return_value=mock_pv_mesh),
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch.dict(sys.modules, {"pyproj": None}),
         ):
             resp = client.get(
-                "/api/slice/cross-section/json?"
-                "start_lng=0.0&start_lat=0.0&end_lng=30.0&end_lat=0.0"
+                "/api/slice/cross-section/json?start_lng=0.0&start_lat=0.0&end_lng=30.0&end_lat=0.0"
             )
 
         assert resp.status_code == 200
@@ -785,17 +778,16 @@ class TestGetCrossSectionJson:
 
         mock_pv_mesh = MagicMock()
 
-        with patch.object(
-            model_state, "get_pyvista_3d", return_value=mock_pv_mesh
-        ), patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch.dict(
-            sys.modules, {"pyproj": None}
+        with (
+            patch.object(model_state, "get_pyvista_3d", return_value=mock_pv_mesh),
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch.dict(sys.modules, {"pyproj": None}),
         ):
             resp = client.get(
-                "/api/slice/cross-section/json?"
-                "start_lng=0.0&start_lat=0.0&end_lng=10.0&end_lat=0.0"
+                "/api/slice/cross-section/json?start_lng=0.0&start_lat=0.0&end_lng=10.0&end_lat=0.0"
             )
 
         assert resp.status_code == 200
@@ -811,9 +803,7 @@ class TestGetCrossSectionJson:
         mock_mesh = MagicMock()
         mock_mesh.n_cells = 1
         mock_mesh.n_points = 2
-        mock_mesh.points = np.array(
-            [[0.0, 0.0, 0.0], [100.0, 0.0, 0.0]], dtype=np.float64
-        )
+        mock_mesh.points = np.array([[0.0, 0.0, 0.0], [100.0, 0.0, 0.0]], dtype=np.float64)
         mock_mesh.faces = np.array([2, 0, 1], dtype=np.int32)
         mock_mesh.cell_data = {"layer": np.array([1])}
 
@@ -822,19 +812,18 @@ class TestGetCrossSectionJson:
 
         mock_pv_mesh = MagicMock()
 
-        with patch.object(
-            model_state, "get_pyvista_3d", return_value=mock_pv_mesh
-        ), patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch.dict(
-            sys.modules, {"pyproj": None}
+        with (
+            patch.object(model_state, "get_pyvista_3d", return_value=mock_pv_mesh),
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch.dict(sys.modules, {"pyproj": None}),
         ):
             # start=(3.0, 0.0), end=(7.0, 3.0)
             # total_distance = sqrt(16 + 9) = 5.0
             resp = client.get(
-                "/api/slice/cross-section/json?"
-                "start_lng=3.0&start_lat=0.0&end_lng=7.0&end_lat=3.0"
+                "/api/slice/cross-section/json?start_lng=3.0&start_lat=0.0&end_lng=7.0&end_lat=3.0"
             )
 
         assert resp.status_code == 200
@@ -867,13 +856,13 @@ class TestGetCrossSectionJson:
         mock_slicer.create_cross_section.return_value = mock_mesh
         mock_pv_mesh = MagicMock()
 
-        with patch.object(
-            model_state, "get_pyvista_3d", return_value=mock_pv_mesh
-        ), patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
-        ), patch.dict(
-            sys.modules, {"pyproj": None}
+        with (
+            patch.object(model_state, "get_pyvista_3d", return_value=mock_pv_mesh),
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
+            patch.dict(sys.modules, {"pyproj": None}),
         ):
             resp = client.get(
                 "/api/slice/cross-section/json?"
@@ -922,11 +911,12 @@ class TestGetSliceInfo:
         mock_mesh = _make_mock_slice_mesh(n_cells=4, n_points=6)
         mock_slicer = _make_mock_slicer(mock_mesh)
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
             resp = client.get("/api/slice/info?axis=x&position=0.5")
@@ -951,11 +941,12 @@ class TestGetSliceInfo:
             "bounds": [0.0, 100.0, 50.0, 50.0, 0.0, 50.0],
         }
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
             resp = client.get("/api/slice/info?axis=y&position=0.7")
@@ -978,11 +969,12 @@ class TestGetSliceInfo:
             "bounds": [0.0, 100.0, 0.0, 100.0, 25.0, 25.0],
         }
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
             resp = client.get("/api/slice/info?axis=z&position=0.5")
@@ -1004,11 +996,12 @@ class TestGetSliceInfo:
             "bounds": None,
         }
 
-        with patch(
-            "pyiwfm.visualization.vtk_export.VTKExporter"
-        ) as MockExporter, patch(
-            "pyiwfm.visualization.webapi.slicing.SlicingController",
-            return_value=mock_slicer,
+        with (
+            patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
+            patch(
+                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                return_value=mock_slicer,
+            ),
         ):
             MockExporter.return_value.to_pyvista_3d.return_value = MagicMock()
             resp = client.get("/api/slice/info?axis=x&position=0.0")
@@ -1049,7 +1042,6 @@ class TestPyvistaToVtu:
     def test_unstructured_grid_input(self):
         """UnstructuredGrid input is used directly (not cast)."""
         import pyvista as pv
-        import vtk
 
         from pyiwfm.visualization.webapi.routes.slices import _pyvista_to_vtu
 

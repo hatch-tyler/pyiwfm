@@ -25,15 +25,15 @@ from typing import TextIO
 import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
-    is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty,
-    resolve_path as _resolve_path_f,
-    strip_inline_comment as _strip_comment,
 )
-
+from pyiwfm.io.iwfm_reader import (
+    next_data_or_empty as _next_data_or_empty,
+)
+from pyiwfm.io.iwfm_reader import (
+    resolve_path as _resolve_path_f,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +84,7 @@ class UnsatZoneMainConfig:
         initial_soil_moisture: Initial soil moisture per element per layer.
             Maps element_id -> moisture array. Key 0 means uniform for all.
     """
+
     version: str = ""
     n_layers: int = 0
     solver_tolerance: float = 1e-8
@@ -103,9 +104,7 @@ class UnsatZoneMainConfig:
     element_data: list[UnsatZoneElementData] = field(default_factory=list)
 
     # Initial conditions: element_id -> moisture per layer
-    initial_soil_moisture: dict[int, NDArray[np.float64]] = field(
-        default_factory=dict
-    )
+    initial_soil_moisture: dict[int, NDArray[np.float64]] = field(default_factory=dict)
 
 
 class UnsatZoneMainReader:
@@ -118,9 +117,7 @@ class UnsatZoneMainReader:
     def __init__(self) -> None:
         self._line_num = 0
 
-    def read(
-        self, filepath: Path | str, base_dir: Path | None = None
-    ) -> UnsatZoneMainConfig:
+    def read(self, filepath: Path | str, base_dir: Path | None = None) -> UnsatZoneMainConfig:
         """Read unsaturated zone main file.
 
         Args:
@@ -137,7 +134,7 @@ class UnsatZoneMainReader:
         config = UnsatZoneMainConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Version header
             config.version = self._read_version(f)
 
@@ -203,18 +200,18 @@ class UnsatZoneMainReader:
                 except Exception as exc:
                     logger.warning(
                         "Failed to read element parameters at line %d: %s",
-                        self._line_num, exc,
+                        self._line_num,
+                        exc,
                     )
 
             # Initial conditions
             try:
-                config.initial_soil_moisture = self._read_initial_conditions(
-                    f, config
-                )
+                config.initial_soil_moisture = self._read_initial_conditions(f, config)
             except Exception as exc:
                 logger.warning(
                     "Failed to read initial conditions at line %d: %s",
-                    self._line_num, exc,
+                    self._line_num,
+                    exc,
                 )
 
         return config
@@ -252,18 +249,21 @@ class UnsatZoneMainReader:
                 elem_id = int(parts[0])
                 vals = [float(v) for v in parts[1:]]
                 n = config.n_layers
-                elements.append(UnsatZoneElementData(
-                    element_id=elem_id,
-                    thickness_max=np.array(vals[0::5][:n]) * config.thickness_factor,
-                    total_porosity=np.array(vals[1::5][:n]),
-                    lambda_param=np.array(vals[2::5][:n]),
-                    hyd_cond=np.array(vals[3::5][:n]) * config.hyd_cond_factor,
-                    kunsat_method=np.array(vals[4::5][:n], dtype=np.int32),
-                ))
+                elements.append(
+                    UnsatZoneElementData(
+                        element_id=elem_id,
+                        thickness_max=np.array(vals[0::5][:n]) * config.thickness_factor,
+                        total_porosity=np.array(vals[1::5][:n]),
+                        lambda_param=np.array(vals[2::5][:n]),
+                        hyd_cond=np.array(vals[3::5][:n]) * config.hyd_cond_factor,
+                        kunsat_method=np.array(vals[4::5][:n], dtype=np.int32),
+                    )
+                )
             except (ValueError, IndexError) as exc:
                 logger.warning(
                     "Skipping malformed element data at line %d: %s",
-                    self._line_num, exc,
+                    self._line_num,
+                    exc,
                 )
                 continue
         return elements
@@ -294,9 +294,7 @@ class UnsatZoneMainReader:
 
         try:
             elem_id = int(parts[0])
-            moisture = np.array(
-                [float(v) for v in parts[1:1 + config.n_layers]]
-            )
+            moisture = np.array([float(v) for v in parts[1 : 1 + config.n_layers]])
         except (ValueError, IndexError):
             return ic
 
@@ -317,9 +315,7 @@ class UnsatZoneMainReader:
                 break
             try:
                 elem_id = int(parts[0])
-                moisture = np.array(
-                    [float(v) for v in parts[1:1 + config.n_layers]]
-                )
+                moisture = np.array([float(v) for v in parts[1 : 1 + config.n_layers]])
                 ic[elem_id] = moisture
             except (ValueError, IndexError):
                 continue
@@ -338,7 +334,6 @@ class UnsatZoneMainReader:
                 continue
             break
         return ""
-
 
 
 def read_unsaturated_zone_main(

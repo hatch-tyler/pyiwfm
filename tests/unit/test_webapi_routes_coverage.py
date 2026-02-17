@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
 
 pytest.importorskip("fastapi", reason="FastAPI not available")
@@ -16,10 +15,9 @@ pytest.importorskip("pydantic", reason="Pydantic not available")
 
 from fastapi.testclient import TestClient
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.visualization.webapi.config import ModelState, model_state
+from pyiwfm.core.mesh import AppGrid, Element, Node
+from pyiwfm.visualization.webapi.config import ModelState
 from pyiwfm.visualization.webapi.server import create_app
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -66,12 +64,14 @@ def client_no_model():
     """TestClient with no model loaded."""
     state = ModelState()
     app = create_app()
-    with patch("pyiwfm.visualization.webapi.routes.model.model_state", state), \
-         patch("pyiwfm.visualization.webapi.routes.mesh.model_state", state), \
-         patch("pyiwfm.visualization.webapi.routes.results.model_state", state), \
-         patch("pyiwfm.visualization.webapi.routes.budgets.model_state", state), \
-         patch("pyiwfm.visualization.webapi.routes.observations.model_state", state), \
-         patch("pyiwfm.visualization.webapi.routes.streams.model_state", state):
+    with (
+        patch("pyiwfm.visualization.webapi.routes.model.model_state", state),
+        patch("pyiwfm.visualization.webapi.routes.mesh.model_state", state),
+        patch("pyiwfm.visualization.webapi.routes.results.model_state", state),
+        patch("pyiwfm.visualization.webapi.routes.budgets.model_state", state),
+        patch("pyiwfm.visualization.webapi.routes.observations.model_state", state),
+        patch("pyiwfm.visualization.webapi.routes.streams.model_state", state),
+    ):
         yield TestClient(app)
 
 

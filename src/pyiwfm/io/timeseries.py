@@ -24,6 +24,7 @@ from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 
 class TimeSeriesFileType(Enum):
     """Supported time series file formats."""
+
     ASCII = "ascii"
     DSS = "dss"
     HDF5 = "hdf5"
@@ -32,6 +33,7 @@ class TimeSeriesFileType(Enum):
 
 class TimeUnit(Enum):
     """Standard time units for IWFM."""
+
     SECOND = "second"
     MINUTE = "minute"
     HOUR = "hour"
@@ -61,6 +63,7 @@ class TimeSeriesMetadata:
         n_timesteps: Number of timesteps
         source_path: Original file path
     """
+
     file_type: TimeSeriesFileType = TimeSeriesFileType.ASCII
     n_columns: int = 0
     column_ids: list[str | int] = field(default_factory=list)
@@ -96,6 +99,7 @@ class UnifiedTimeSeriesConfig:
         dss_pathname: DSS pathname pattern (for DSS files)
         hdf5_dataset: HDF5 dataset path (for HDF5 files)
     """
+
     filepath: Path
     file_type: TimeSeriesFileType | None = None
     n_columns: int | None = None
@@ -258,8 +262,8 @@ class DssTimeSeriesAdapter(BaseTimeSeriesReader):
             ) from e
 
         pathname = kwargs.get("pathname", "")
-        reader = DSSTimeSeriesReader()
-        times, values = reader.read(filepath, pathname)
+        reader = DSSTimeSeriesReader()  # type: ignore[call-arg]
+        times, values = reader.read(filepath, pathname)  # type: ignore[attr-defined]
 
         metadata = TimeSeriesMetadata(
             file_type=TimeSeriesFileType.DSS,
@@ -282,7 +286,7 @@ class DssTimeSeriesAdapter(BaseTimeSeriesReader):
                 "Check that pyiwfm.io.dss is importable."
             ) from e
 
-        pathname = kwargs.get("pathname", "")
+        pathname = kwargs.get("pathname", "")  # noqa: F841
 
         with DSSFile(filepath, "r") as dss:
             catalog = dss.catalog()
@@ -381,6 +385,7 @@ class UnifiedTimeSeriesReader:
         # DSS adapter: bundled ctypes library may fail to load on some platforms
         try:
             from pyiwfm.io.dss import HAS_DSS_LIBRARY
+
             if HAS_DSS_LIBRARY:
                 self._adapters[TimeSeriesFileType.DSS] = DssTimeSeriesAdapter()
         except ImportError:
@@ -599,10 +604,9 @@ class RecyclingTimeSeriesReader:
         result = np.zeros((len(target_times), values.shape[1] if values.ndim > 1 else 1))
 
         # Convert times to month indices
-        source_months = np.array([
-            (t.astype("datetime64[M]") - t.astype("datetime64[Y]")).astype(int)
-            for t in times
-        ])
+        source_months = np.array(
+            [(t.astype("datetime64[M]") - t.astype("datetime64[Y]")).astype(int) for t in times]
+        )
 
         for i, target_time in enumerate(target_times):
             target_month = (
@@ -618,6 +622,7 @@ class RecyclingTimeSeriesReader:
 
 
 # Convenience functions
+
 
 def detect_timeseries_format(filepath: Path | str) -> TimeSeriesFileType:
     """

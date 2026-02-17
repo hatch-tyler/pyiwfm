@@ -12,14 +12,13 @@ from pathlib import Path
 
 import pytest
 
+from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.groundwater import (
-    GWFileConfig,
     GroundwaterReader,
+    GWFileConfig,
     _is_comment_line,
     _strip_comment,
 )
-from pyiwfm.core.exceptions import FileFormatError
-
 
 # =============================================================================
 # Test Helper Functions

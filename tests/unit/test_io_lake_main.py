@@ -14,14 +14,13 @@ from pathlib import Path
 import pytest
 
 from pyiwfm.io.lakes import (
-    LakeMainFileReader,
     LakeMainFileConfig,
+    LakeMainFileReader,
+    LakeOutflowRating,
     LakeParamSpec,
     OutflowRatingPoint,
-    LakeOutflowRating,
     read_lake_main_file,
 )
-
 
 # =============================================================================
 # LakeMainFileConfig defaults

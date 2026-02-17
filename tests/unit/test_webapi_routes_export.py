@@ -23,12 +23,11 @@ import pytest
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 pydantic = pytest.importorskip("pydantic", reason="Pydantic not available")
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
-from pyiwfm.core.mesh import AppGrid, Element, Node
-from pyiwfm.visualization.webapi.config import model_state
-from pyiwfm.visualization.webapi.server import create_app
-
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.visualization.webapi.config import model_state  # noqa: E402
+from pyiwfm.visualization.webapi.server import create_app  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -126,9 +125,7 @@ def _make_mock_gw_hydrograph_reader(n_columns=2, n_timesteps=10):
     base_time = datetime(2020, 1, 1)
 
     def get_time_series(col_idx):
-        times_list = [
-            (base_time + timedelta(days=30 * i)).isoformat() for i in range(n_timesteps)
-        ]
+        times_list = [(base_time + timedelta(days=30 * i)).isoformat() for i in range(n_timesteps)]
         values_list = (np.arange(n_timesteps, dtype=float) + col_idx).tolist()
         return times_list, values_list
 
@@ -152,9 +149,7 @@ def _make_mock_stream_hydrograph_reader(n_columns=3, n_timesteps=10):
     reader.find_column_by_node_id = find_column_by_node_id
 
     def get_time_series(col_idx):
-        times_list = [
-            (base_time + timedelta(days=30 * i)).isoformat() for i in range(n_timesteps)
-        ]
+        times_list = [(base_time + timedelta(days=30 * i)).isoformat() for i in range(n_timesteps)]
         values_list = (np.arange(n_timesteps, dtype=float) * 10 + col_idx).tolist()
         return times_list, values_list
 
@@ -225,9 +220,17 @@ def _reset_model_state():
     model_state._observations = {}
     model_state._results_dir = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
 
@@ -407,7 +410,10 @@ class TestExportMeshGeojson:
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    },
                     "properties": {"element_id": 1},
                 }
             ],
@@ -479,9 +485,7 @@ class TestExportBudgetCsv:
     def test_success_with_monthly_timestep(self, client_with_model):
         """Export budget CSV with monthly (MON) timestep uses relativedelta."""
         client, _ = client_with_model
-        budget_reader = _make_mock_budget_reader(
-            use_months=True, has_start_dt=True, n_timesteps=3
-        )
+        budget_reader = _make_mock_budget_reader(use_months=True, has_start_dt=True, n_timesteps=3)
         with patch.object(model_state, "get_budget_reader", return_value=budget_reader):
             resp = client.get("/api/export/budget-csv?budget_type=gw")
         assert resp.status_code == 200
@@ -499,9 +503,7 @@ class TestExportBudgetCsv:
     def test_success_with_non_monthly_timestep(self, client_with_model):
         """Export budget CSV with non-MON timestep uses timedelta."""
         client, _ = client_with_model
-        budget_reader = _make_mock_budget_reader(
-            use_months=False, has_start_dt=True, n_timesteps=3
-        )
+        budget_reader = _make_mock_budget_reader(use_months=False, has_start_dt=True, n_timesteps=3)
         with patch.object(model_state, "get_budget_reader", return_value=budget_reader):
             resp = client.get("/api/export/budget-csv?budget_type=lwu")
         assert resp.status_code == 200
@@ -515,9 +517,7 @@ class TestExportBudgetCsv:
     def test_success_without_start_datetime(self, client_with_model):
         """When start_datetime is None, use raw time array values as strings."""
         client, _ = client_with_model
-        budget_reader = _make_mock_budget_reader(
-            has_start_dt=False, n_timesteps=3
-        )
+        budget_reader = _make_mock_budget_reader(has_start_dt=False, n_timesteps=3)
         with patch.object(model_state, "get_budget_reader", return_value=budget_reader):
             resp = client.get("/api/export/budget-csv?budget_type=rz")
         assert resp.status_code == 200
@@ -531,22 +531,16 @@ class TestExportBudgetCsv:
     def test_success_with_location_param(self, client_with_model):
         """Export budget CSV with explicit location parameter."""
         client, _ = client_with_model
-        budget_reader = _make_mock_budget_reader(
-            locations=["Region 1", "Region 2"], n_timesteps=2
-        )
+        budget_reader = _make_mock_budget_reader(locations=["Region 1", "Region 2"], n_timesteps=2)
         with patch.object(model_state, "get_budget_reader", return_value=budget_reader):
-            resp = client.get(
-                "/api/export/budget-csv?budget_type=gw&location=Region%201"
-            )
+            resp = client.get("/api/export/budget-csv?budget_type=gw&location=Region%201")
         assert resp.status_code == 200
         assert "budget_gw_Region_1.csv" in resp.headers["content-disposition"]
 
     def test_default_location_uses_first(self, client_with_model):
         """When location is empty, filename uses reader.locations[0]."""
         client, _ = client_with_model
-        budget_reader = _make_mock_budget_reader(
-            locations=["My Region/A", "Other"], n_timesteps=2
-        )
+        budget_reader = _make_mock_budget_reader(locations=["My Region/A", "Other"], n_timesteps=2)
         with patch.object(model_state, "get_budget_reader", return_value=budget_reader):
             resp = client.get("/api/export/budget-csv?budget_type=gw")
         assert resp.status_code == 200
@@ -590,9 +584,7 @@ class TestExportBudgetCsv:
         client, _ = client_with_model
         budget_reader = _make_mock_budget_reader(n_timesteps=1)
         with patch.object(model_state, "get_budget_reader", return_value=budget_reader):
-            resp = client.get(
-                "/api/export/budget-csv?budget_type=gw&location=My%20Region/Area"
-            )
+            resp = client.get("/api/export/budget-csv?budget_type=gw&location=My%20Region/Area")
         assert resp.status_code == 200
         assert "My_Region_Area" in resp.headers["content-disposition"]
 
@@ -665,9 +657,7 @@ class TestExportHydrographCsv:
     def test_unknown_type_returns_400(self, client_with_model):
         """Return 400 for unknown hydrograph type."""
         client, _ = client_with_model
-        resp = client.get(
-            "/api/export/hydrograph-csv?type=unknown&location_id=1"
-        )
+        resp = client.get("/api/export/hydrograph-csv?type=unknown&location_id=1")
         assert resp.status_code == 400
         assert "Unknown type: unknown" in resp.json()["detail"]
 
@@ -676,12 +666,8 @@ class TestExportHydrographCsv:
     def test_gw_no_reader_returns_404(self, client_with_model):
         """Return 404 when GW hydrograph reader is None."""
         client, _ = client_with_model
-        with patch.object(
-            model_state, "get_gw_hydrograph_reader", return_value=None
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=gw&location_id=1"
-            )
+        with patch.object(model_state, "get_gw_hydrograph_reader", return_value=None):
+            resp = client.get("/api/export/hydrograph-csv?type=gw&location_id=1")
         assert resp.status_code == 404
         assert "No GW hydrograph data available" in resp.json()["detail"]
 
@@ -690,12 +676,8 @@ class TestExportHydrographCsv:
         client, _ = client_with_model
         reader = _make_mock_gw_hydrograph_reader(n_timesteps=0)
         reader.n_timesteps = 0
-        with patch.object(
-            model_state, "get_gw_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=gw&location_id=1"
-            )
+        with patch.object(model_state, "get_gw_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=gw&location_id=1")
         assert resp.status_code == 404
         assert "No GW hydrograph data available" in resp.json()["detail"]
 
@@ -703,13 +685,9 @@ class TestExportHydrographCsv:
         """Return 404 when location_id is out of column range."""
         client, _ = client_with_model
         reader = _make_mock_gw_hydrograph_reader(n_columns=2, n_timesteps=5)
-        with patch.object(
-            model_state, "get_gw_hydrograph_reader", return_value=reader
-        ):
+        with patch.object(model_state, "get_gw_hydrograph_reader", return_value=reader):
             # location_id=5 -> column_index=4, but n_columns=2
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=gw&location_id=5"
-            )
+            resp = client.get("/api/export/hydrograph-csv?type=gw&location_id=5")
         assert resp.status_code == 404
         assert "GW hydrograph 5 out of range" in resp.json()["detail"]
 
@@ -717,12 +695,8 @@ class TestExportHydrographCsv:
         """location_id=0 means column_index=-1, which is out of range."""
         client, _ = client_with_model
         reader = _make_mock_gw_hydrograph_reader(n_columns=2, n_timesteps=5)
-        with patch.object(
-            model_state, "get_gw_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=gw&location_id=0"
-            )
+        with patch.object(model_state, "get_gw_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=gw&location_id=0")
         assert resp.status_code == 404
         assert "GW hydrograph 0 out of range" in resp.json()["detail"]
 
@@ -730,12 +704,8 @@ class TestExportHydrographCsv:
         """Successful GW hydrograph CSV export."""
         client, _ = client_with_model
         reader = _make_mock_gw_hydrograph_reader(n_columns=2, n_timesteps=5)
-        with patch.object(
-            model_state, "get_gw_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=gw&location_id=1"
-            )
+        with patch.object(model_state, "get_gw_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=gw&location_id=1")
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "text/csv; charset=utf-8"
         assert "hydrograph_gw_1.csv" in resp.headers["content-disposition"]
@@ -748,12 +718,8 @@ class TestExportHydrographCsv:
         """GW export for location_id=2 uses column_index=1."""
         client, _ = client_with_model
         reader = _make_mock_gw_hydrograph_reader(n_columns=3, n_timesteps=3)
-        with patch.object(
-            model_state, "get_gw_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=gw&location_id=2"
-            )
+        with patch.object(model_state, "get_gw_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=gw&location_id=2")
         assert resp.status_code == 200
         assert "hydrograph_gw_2.csv" in resp.headers["content-disposition"]
 
@@ -761,12 +727,8 @@ class TestExportHydrographCsv:
         """GW hydrograph values are rounded to 3 decimal places."""
         client, _ = client_with_model
         reader = _make_mock_gw_hydrograph_reader(n_columns=2, n_timesteps=3)
-        with patch.object(
-            model_state, "get_gw_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=gw&location_id=1"
-            )
+        with patch.object(model_state, "get_gw_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=gw&location_id=1")
         csv_reader = csv.reader(io.StringIO(resp.text))
         rows = list(csv_reader)
         for row in rows[1:]:
@@ -780,12 +742,8 @@ class TestExportHydrographCsv:
     def test_stream_no_reader_returns_404(self, client_with_model):
         """Return 404 when stream hydrograph reader is None."""
         client, _ = client_with_model
-        with patch.object(
-            model_state, "get_stream_hydrograph_reader", return_value=None
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=stream&location_id=1"
-            )
+        with patch.object(model_state, "get_stream_hydrograph_reader", return_value=None):
+            resp = client.get("/api/export/hydrograph-csv?type=stream&location_id=1")
         assert resp.status_code == 404
         assert "No stream hydrograph data available" in resp.json()["detail"]
 
@@ -794,24 +752,16 @@ class TestExportHydrographCsv:
         client, _ = client_with_model
         reader = _make_mock_stream_hydrograph_reader(n_timesteps=0)
         reader.n_timesteps = 0
-        with patch.object(
-            model_state, "get_stream_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=stream&location_id=1"
-            )
+        with patch.object(model_state, "get_stream_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=stream&location_id=1")
         assert resp.status_code == 404
 
     def test_stream_node_not_found_returns_404(self, client_with_model):
         """Return 404 when stream node ID is not in hydrograph_ids."""
         client, _ = client_with_model
         reader = _make_mock_stream_hydrograph_reader(n_columns=3, n_timesteps=5)
-        with patch.object(
-            model_state, "get_stream_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=stream&location_id=999"
-            )
+        with patch.object(model_state, "get_stream_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=stream&location_id=999")
         assert resp.status_code == 404
         assert "Stream node 999 not found" in resp.json()["detail"]
 
@@ -819,12 +769,8 @@ class TestExportHydrographCsv:
         """Successful stream hydrograph export when find_column_by_node_id finds it."""
         client, _ = client_with_model
         reader = _make_mock_stream_hydrograph_reader(n_columns=3, n_timesteps=5)
-        with patch.object(
-            model_state, "get_stream_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=stream&location_id=2"
-            )
+        with patch.object(model_state, "get_stream_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=stream&location_id=2")
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "text/csv; charset=utf-8"
         assert "hydrograph_stream_2.csv" in resp.headers["content-disposition"]
@@ -841,12 +787,8 @@ class TestExportHydrographCsv:
         # Override find_column_by_node_id to always return None
         reader.find_column_by_node_id = MagicMock(return_value=None)
         # hydrograph_ids = [1, 2, 3], so location_id=2 should be found at index 1
-        with patch.object(
-            model_state, "get_stream_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=stream&location_id=2"
-            )
+        with patch.object(model_state, "get_stream_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=stream&location_id=2")
         assert resp.status_code == 200
         assert "hydrograph_stream_2.csv" in resp.headers["content-disposition"]
 
@@ -856,12 +798,8 @@ class TestExportHydrographCsv:
         reader = _make_mock_stream_hydrograph_reader(n_columns=3, n_timesteps=5)
         reader.find_column_by_node_id = MagicMock(return_value=None)
         reader.hydrograph_ids = [10, 20, 30]  # location_id=5 not in this list
-        with patch.object(
-            model_state, "get_stream_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=stream&location_id=5"
-            )
+        with patch.object(model_state, "get_stream_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=stream&location_id=5")
         assert resp.status_code == 404
         assert "Stream node 5 not found" in resp.json()["detail"]
 
@@ -869,12 +807,8 @@ class TestExportHydrographCsv:
         """Stream hydrograph values are rounded to 3 decimal places."""
         client, _ = client_with_model
         reader = _make_mock_stream_hydrograph_reader(n_columns=3, n_timesteps=3)
-        with patch.object(
-            model_state, "get_stream_hydrograph_reader", return_value=reader
-        ):
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=stream&location_id=1"
-            )
+        with patch.object(model_state, "get_stream_hydrograph_reader", return_value=reader):
+            resp = client.get("/api/export/hydrograph-csv?type=stream&location_id=1")
         csv_reader = csv.reader(io.StringIO(resp.text))
         rows = list(csv_reader)
         for row in rows[1:]:
@@ -888,11 +822,7 @@ class TestExportHydrographCsv:
         client, _ = client_with_model
         reader = _make_mock_stream_hydrograph_reader(n_columns=3, n_timesteps=3)
         for loc_id in [1, 2, 3]:
-            with patch.object(
-                model_state, "get_stream_hydrograph_reader", return_value=reader
-            ):
-                resp = client.get(
-                    f"/api/export/hydrograph-csv?type=stream&location_id={loc_id}"
-                )
+            with patch.object(model_state, "get_stream_hydrograph_reader", return_value=reader):
+                resp = client.get(f"/api/export/hydrograph-csv?type=stream&location_id={loc_id}")
             assert resp.status_code == 200
             assert f"hydrograph_stream_{loc_id}.csv" in resp.headers["content-disposition"]

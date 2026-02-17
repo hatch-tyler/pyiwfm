@@ -24,6 +24,7 @@ class TestGISExporterImportFallback:
             # Remove cached module
             sys.modules.pop("pyiwfm.visualization", None)
             import pyiwfm.visualization as viz
+
             importlib.reload(viz)
             assert viz.GISExporter is None
 
@@ -40,6 +41,7 @@ class TestVTKExporterImportFallback:
         with patch.dict(sys.modules, blocked):
             sys.modules.pop("pyiwfm.visualization", None)
             import pyiwfm.visualization as viz
+
             importlib.reload(viz)
             assert viz.VTKExporter is None
 
@@ -55,6 +57,7 @@ class TestPlottingImportFallback:
         with patch.dict(sys.modules, blocked):
             sys.modules.pop("pyiwfm.visualization", None)
             import pyiwfm.visualization as viz
+
             importlib.reload(viz)
             # Mesh plotting
             assert viz.MeshPlotter is None

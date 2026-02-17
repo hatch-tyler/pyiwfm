@@ -13,21 +13,20 @@ orchestrating the writing of all stream-related input files including:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.io.writer_base import TemplateWriter
 from pyiwfm.io.streams import parse_stream_version
+from pyiwfm.io.writer_base import TemplateWriter
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
+    from pyiwfm.components.stream import AppStream
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.components.stream import AppStream, CrossSectionData
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +45,7 @@ class StreamWriterConfig:
     version : str
         IWFM stream component version
     """
+
     output_dir: Path
     stream_subdir: str = "Stream"
     version: str = "4.0"
@@ -116,7 +116,7 @@ class StreamComponentWriter(TemplateWriter):
 
     def __init__(
         self,
-        model: "IWFMModel",
+        model: IWFMModel,
         config: StreamWriterConfig,
         template_engine: TemplateEngine | None = None,
     ) -> None:
@@ -164,7 +164,7 @@ class StreamComponentWriter(TemplateWriter):
         # Ensure output directory exists
         self.config.stream_dir.mkdir(parents=True, exist_ok=True)
 
-        results = {}
+        results: dict[str, Path] = {}
 
         # Get stream component
         streams = self.model.streams
@@ -222,16 +222,19 @@ class StreamComponentWriter(TemplateWriter):
 
         # Determine which files to reference
         has_inflows = (
-            (streams is not None and hasattr(streams, 'inflows') and streams.inflows)
-            or bool(self.model.source_files.get("stream_inflow_ts"))
-        )
+            streams is not None and hasattr(streams, "inflows") and streams.inflows
+        ) or bool(self.model.source_files.get("stream_inflow_ts"))
         has_diversions = streams is not None and streams.diversions
         has_bypasses = streams is not None and streams.bypasses
 
+        if streams is None:
+            from pyiwfm.components.stream import AppStream
+
+            streams = AppStream()
         content = self._render_stream_main(
             has_inflows=has_inflows,
-            has_diversions=has_diversions,
-            has_bypasses=has_bypasses,
+            has_diversions=bool(has_diversions),
+            has_bypasses=bool(has_bypasses),
             stream_nodes=stream_nodes,
             n_stream_nodes=n_stream_nodes,
             streams=streams,
@@ -248,14 +251,12 @@ class StreamComponentWriter(TemplateWriter):
         has_bypasses: bool,
         stream_nodes: list[int],
         n_stream_nodes: int,
-        streams: "AppStream",
+        streams: AppStream | None,
     ) -> str:
         """Render the main stream file using inline template."""
         version = parse_stream_version(self.config.version)
 
-        content = self._render_header_and_paths(
-            has_inflows, has_diversions, has_bypasses
-        )
+        content = self._render_header_and_paths(has_inflows, has_diversions, has_bypasses)
 
         # Hydrograph output section
         content += self._render_hydrograph_section(stream_nodes, n_stream_nodes)
@@ -293,10 +294,12 @@ class StreamComponentWriter(TemplateWriter):
         bypass_file = f"{prefix}{self.config.bypass_specs_file}" if has_bypasses else ""
         div_data_file = f"{prefix}{self.config.diversions_file}" if has_diversions else ""
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         version = parse_stream_version(self.config.version)
 
-        template_name = "streams/stream_main_v50.j2" if version >= (5, 0) else "streams/stream_main_v40.j2"
+        template_name = (
+            "streams/stream_main_v50.j2" if version >= (5, 0) else "streams/stream_main_v40.j2"
+        )
 
         context = {
             "version": self.config.version,
@@ -312,9 +315,7 @@ class StreamComponentWriter(TemplateWriter):
 
         return self._engine.render_template(template_name, **context)
 
-    def _render_hydrograph_section(
-        self, stream_nodes: list[int], n_stream_nodes: int
-    ) -> str:
+    def _render_hydrograph_section(self, stream_nodes: list[int], n_stream_nodes: int) -> str:
         """Render hydrograph output section."""
         content = f"""C*******************************************************************************
 C                       Stream Flow Hydrograph Output Data
@@ -334,14 +335,14 @@ C    IOUTR       NAME
 C-------------------------------------------------------------------------------
 """
         for i, node_id in enumerate(stream_nodes):
-            content += f"       {node_id:<6}      StrmHyd_{i+1}\n"
+            content += f"       {node_id:<6}      StrmHyd_{i + 1}\n"
         return content
 
     def _render_node_budget_section(
         self,
         stream_nodes: list[int],
         n_stream_nodes: int,
-        streams: "AppStream | None",
+        streams: AppStream | None,
     ) -> str:
         """Render stream node budget section."""
         # Use model data if available, otherwise default to first 3 nodes
@@ -353,7 +354,7 @@ C-------------------------------------------------------------------------------
                 model_budget_count = 0
         except AttributeError:
             model_budget_count = 0
-        if model_budget_count > 0:
+        if model_budget_count > 0 and streams is not None:
             budget_count = model_budget_count
             try:
                 budget_ids = streams.budget_node_ids
@@ -384,7 +385,7 @@ C-------------------------------------------------------------------------------
     def _render_bed_params_section(
         self,
         stream_nodes: list[int],
-        streams: "AppStream | None",
+        streams: AppStream | None,
         version: tuple[int, int],
     ) -> str:
         """Render stream bed parameters with correct column count for version."""
@@ -471,13 +472,12 @@ C------------------------------------------------------------------------------
                 content += f"{node_id:<8}   {cstrm:.3f}   {dstrm:.0f}\n"
             else:
                 content += (
-                    f"{node_id:<8}{wetpr:>7.0f}     {gw_node:>5d}"
-                    f"   {cstrm:.3f}   {dstrm:.0f}\n"
+                    f"{node_id:<8}{wetpr:>7.0f}     {gw_node:>5d}   {cstrm:.3f}   {dstrm:.0f}\n"
                 )
 
         return content
 
-    def _render_disconnection(self, streams: "AppStream | None") -> str:
+    def _render_disconnection(self, streams: AppStream | None) -> str:
         """Render hydraulic disconnection type."""
         intrc = self.config.interaction_type
         if streams is not None:
@@ -496,9 +496,7 @@ C------------------------------------------------------------------------------
      {intrc}                            / INTRCTYPE
 """
 
-    def _render_cross_section(
-        self, streams: "AppStream | None", stream_nodes: list[int]
-    ) -> str:
+    def _render_cross_section(self, streams: AppStream | None, stream_nodes: list[int]) -> str:
         """Render v5.0 cross-section data."""
         roughness_factor = self.config.roughness_factor
         cs_length_factor = self.config.cross_section_length_factor
@@ -542,15 +540,10 @@ C------------------------------------------------------------------------------
                     f"  {cs.max_flow_depth:>8.2f}\n"
                 )
             else:
-                content += (
-                    f"     {node_id:<6}        0.00      0.00"
-                    f"   0.000  0.0400     10.00\n"
-                )
+                content += f"     {node_id:<6}        0.00      0.00   0.000  0.0400     10.00\n"
         return content
 
-    def _render_initial_conditions(
-        self, streams: "AppStream | None", stream_nodes: list[int]
-    ) -> str:
+    def _render_initial_conditions(self, streams: AppStream | None, stream_nodes: list[int]) -> str:
         """Render v5.0 initial conditions."""
         ic_type = self.config.ic_type
         ic_time_unit = self.config.ic_time_unit or "1day"
@@ -594,9 +587,7 @@ C------------------------------------------------------------------------------
             content += f"     {node_id:<6}    {ic:>10.4f}\n"
         return content
 
-    def _render_evaporation(
-        self, streams: "AppStream | None", stream_nodes: list[int]
-    ) -> str:
+    def _render_evaporation(self, streams: AppStream | None, stream_nodes: list[int]) -> str:
         """Render stream evaporation section.
 
         If no evaporation surface area file (STARFL) is available, all
@@ -605,6 +596,7 @@ C------------------------------------------------------------------------------
         """
         import os
         from pathlib import Path as _Path
+
         evap_file = self.config.evap_area_file
         if streams is not None:
             try:
@@ -661,7 +653,9 @@ C------------------------------------------------------------------------------
         if evap_specs:
             for spec in evap_specs:
                 if has_evap_file:
-                    content += f"     {spec.node_id:<6}    {spec.et_column:>5}    {spec.area_column:>5}\n"
+                    content += (
+                        f"     {spec.node_id:<6}    {spec.et_column:>5}    {spec.area_column:>5}\n"
+                    )
                 else:
                     # Zero out evap columns when no surface area file
                     content += f"     {spec.node_id:<6}        0        0\n"
@@ -687,7 +681,7 @@ C------------------------------------------------------------------------------
         streams = self.model.streams
         diversions = streams.diversions if streams else {}
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         content = f"""C*******************************************************************************
 C                  DIVERSION SPECIFICATIONS FILE
@@ -802,7 +796,7 @@ C-------------------------------------------------------------------------------
                 rz = rz_map.get(div_id)
                 if rz and rz.n_zones > 0:
                     content += f"    {div_id:>5} {rz.n_zones:>8} {rz.zone_ids[0]:>8} {rz.zone_fractions[0]:>8.4f}\n"
-                    for zid, zfrac in zip(rz.zone_ids[1:], rz.zone_fractions[1:]):
+                    for zid, zfrac in zip(rz.zone_ids[1:], rz.zone_fractions[1:], strict=False):
                         content += f"                    {zid:>8} {zfrac:>8.4f}\n"
                 else:
                     content += f"    {div_id:>5}        0         0       0\n"
@@ -824,7 +818,7 @@ C-------------------------------------------------------------------------------
                     sz = sz_map.get(div_id)
                     if sz and sz.n_zones > 0:
                         content += f"    {div_id:>5} {sz.n_zones:>8} {sz.zone_ids[0]:>8} {sz.zone_fractions[0]:>8.4f}\n"
-                        for zid, zfrac in zip(sz.zone_ids[1:], sz.zone_fractions[1:]):
+                        for zid, zfrac in zip(sz.zone_ids[1:], sz.zone_fractions[1:], strict=False):
                             content += f"                    {zid:>8} {zfrac:>8.4f}\n"
                     else:
                         content += f"    {div_id:>5}        0         0       0\n"
@@ -854,7 +848,7 @@ C-------------------------------------------------------------------------------
         streams = self.model.streams
         bypasses = streams.bypasses if streams else {}
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         content = f"""C*******************************************************************************
 C                  BYPASS SPECIFICATIONS FILE
@@ -911,7 +905,7 @@ C-------------------------------------------------------------------------------
                 # Write inline rating table if IDIVC < 0
                 if idivc < 0 and bp.rating_table_flows:
                     for flow_val, spill_val in zip(
-                        bp.rating_table_flows, bp.rating_table_spills
+                        bp.rating_table_flows, bp.rating_table_spills, strict=False
                     ):
                         content += f"                    {flow_val:<16.0f}{spill_val:.0f}\n"
 
@@ -928,12 +922,14 @@ C-------------------------------------------------------------------------------
                 if bp.seepage_locations:
                     # Write first seepage zone (typically only one per bypass)
                     sl = bp.seepage_locations[0]
-                    n_elems = getattr(sl, 'n_elements', 0)
-                    elem_ids = getattr(sl, 'element_ids', [])
-                    elem_fracs = getattr(sl, 'element_fractions', [])
+                    n_elems = getattr(sl, "n_elements", 0)
+                    elem_ids = getattr(sl, "element_ids", [])
+                    elem_fracs = getattr(sl, "element_fractions", [])
                     if n_elems > 0 and elem_ids:
-                        content += f"    {bp.id:<5} {n_elems:>8} {elem_ids[0]:>8} {elem_fracs[0]:>8.4f}\n"
-                        for eid, efrac in zip(elem_ids[1:], elem_fracs[1:]):
+                        content += (
+                            f"    {bp.id:<5} {n_elems:>8} {elem_ids[0]:>8} {elem_fracs[0]:>8.4f}\n"
+                        )
+                        for eid, efrac in zip(elem_ids[1:], elem_fracs[1:], strict=False):
                             content += f"                    {eid:>8} {efrac:>8.4f}\n"
                     else:
                         content += f"    {bp.id:<5}        0         0       0\n"
@@ -944,7 +940,6 @@ C-------------------------------------------------------------------------------
         output_path.write_text(content)
         logger.info(f"Wrote bypass specs file: {output_path}")
         return output_path
-
 
     def write_stream_inflow_ts(
         self,
@@ -1067,7 +1062,7 @@ C-------------------------------------------------------------------------------
 
 
 def write_stream_component(
-    model: "IWFMModel",
+    model: IWFMModel,
     output_dir: Path | str,
     config: StreamWriterConfig | None = None,
 ) -> dict[str, Path]:

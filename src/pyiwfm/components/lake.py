@@ -8,8 +8,8 @@ class. It mirrors IWFM's Package_AppLake.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Iterator
 
 import numpy as np
 from numpy.typing import NDArray
@@ -54,9 +54,7 @@ class LakeRating:
 
         if elevation >= self.elevations[-1]:
             # Linear extrapolation above max
-            slope = (self.areas[-1] - self.areas[-2]) / (
-                self.elevations[-1] - self.elevations[-2]
-            )
+            slope = (self.areas[-1] - self.areas[-2]) / (self.elevations[-1] - self.elevations[-2])
             return float(self.areas[-1] + slope * (elevation - self.elevations[-1]))
 
         return float(np.interp(elevation, self.elevations, self.areas))
@@ -143,7 +141,9 @@ class LakeOutflow:
     max_rate: float = float("inf")
 
     def __repr__(self) -> str:
-        return f"LakeOutflow(lake={self.lake_id}, dst={self.destination_type}:{self.destination_id})"
+        return (
+            f"LakeOutflow(lake={self.lake_id}, dst={self.destination_type}:{self.destination_id})"
+        )
 
 
 @dataclass
@@ -287,8 +287,7 @@ class AppLake:
         for elem in self.lake_elements:
             if elem.lake_id not in self.lakes:
                 raise ComponentError(
-                    f"Lake element {elem.element_id} references "
-                    f"non-existent lake {elem.lake_id}"
+                    f"Lake element {elem.element_id} references non-existent lake {elem.lake_id}"
                 )
 
         # Check outflow references
@@ -311,9 +310,7 @@ class AppLake:
         sorted_ids = sorted(self.lakes.keys())
 
         lake_ids = np.array(sorted_ids, dtype=np.int32)
-        elevations = np.array(
-            [self.current_elevations.get(lid, 0.0) for lid in sorted_ids]
-        )
+        elevations = np.array([self.current_elevations.get(lid, 0.0) for lid in sorted_ids])
 
         return {
             "lake_ids": lake_ids,
@@ -326,7 +323,7 @@ class AppLake:
         lake_ids: NDArray[np.int32],
         names: list[str],
         max_elevations: NDArray[np.float64] | None = None,
-    ) -> "AppLake":
+    ) -> AppLake:
         """
         Create lake component from arrays.
 

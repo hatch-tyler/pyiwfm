@@ -25,10 +25,10 @@ from pyiwfm.io.unsaturated_zone_writer import (
     write_unsaturated_zone_component,
 )
 
-
 # ---------------------------------------------------------------------------
 # Component class tests
 # ---------------------------------------------------------------------------
+
 
 class TestUnsatZoneLayer:
     def test_defaults(self):
@@ -106,9 +106,7 @@ class TestAppUnsatZone:
 
     def test_validate_layer_mismatch(self):
         comp = AppUnsatZone(n_layers=2)
-        comp.add_element(
-            UnsatZoneElement(element_id=1, layers=[UnsatZoneLayer()])
-        )
+        comp.add_element(UnsatZoneElement(element_id=1, layers=[UnsatZoneLayer()]))
         with pytest.raises(Exception, match="1 layers.*expects 2"):
             comp.validate()
 
@@ -151,14 +149,13 @@ class TestFromConfig:
         assert elem.layers[0].thickness_max == 10.0
         assert elem.layers[1].hyd_cond == 0.005
         assert elem.initial_moisture is not None
-        np.testing.assert_array_almost_equal(
-            elem.initial_moisture, [0.2, 0.25]
-        )
+        np.testing.assert_array_almost_equal(elem.initial_moisture, [0.2, 0.25])
 
 
 # ---------------------------------------------------------------------------
 # Reader tests
 # ---------------------------------------------------------------------------
+
 
 class TestUnsatZoneReader:
     def test_read_disabled(self, tmp_path):
@@ -219,6 +216,7 @@ class TestUnsatZoneReader:
 # ---------------------------------------------------------------------------
 # Writer tests
 # ---------------------------------------------------------------------------
+
 
 class TestUnsatZoneWriter:
     def test_write_main(self, tmp_path):
@@ -297,6 +295,7 @@ class TestUnsatZoneWriter:
 # Round-trip test
 # ---------------------------------------------------------------------------
 
+
 class TestUnsatZoneRoundTrip:
     def test_read_write_read(self, tmp_path):
         """Build config -> component -> write -> re-read."""
@@ -351,6 +350,7 @@ class TestUnsatZoneRoundTrip:
 # ---------------------------------------------------------------------------
 # Additional writer coverage tests
 # ---------------------------------------------------------------------------
+
 
 class TestUnsatZoneWriterConfig:
     def test_unsatzone_dir_empty_subdir(self, tmp_path):
@@ -464,12 +464,18 @@ class TestUnsatZoneWriterCoverage:
             element_id=1,
             layers=[
                 UnsatZoneLayer(
-                    thickness_max=10.0, total_porosity=0.35,
-                    lambda_param=0.5, hyd_cond=0.01, kunsat_method=1,
+                    thickness_max=10.0,
+                    total_porosity=0.35,
+                    lambda_param=0.5,
+                    hyd_cond=0.01,
+                    kunsat_method=1,
                 ),
                 UnsatZoneLayer(
-                    thickness_max=20.0, total_porosity=0.30,
-                    lambda_param=0.4, hyd_cond=0.005, kunsat_method=1,
+                    thickness_max=20.0,
+                    total_porosity=0.30,
+                    lambda_param=0.4,
+                    hyd_cond=0.005,
+                    kunsat_method=1,
                 ),
             ],
             initial_moisture=np.array([0.2, 0.25]),
@@ -479,12 +485,18 @@ class TestUnsatZoneWriterCoverage:
             element_id=2,
             layers=[
                 UnsatZoneLayer(
-                    thickness_max=12.0, total_porosity=0.33,
-                    lambda_param=0.5, hyd_cond=0.01, kunsat_method=1,
+                    thickness_max=12.0,
+                    total_porosity=0.33,
+                    lambda_param=0.5,
+                    hyd_cond=0.01,
+                    kunsat_method=1,
                 ),
                 UnsatZoneLayer(
-                    thickness_max=18.0, total_porosity=0.28,
-                    lambda_param=0.4, hyd_cond=0.005, kunsat_method=1,
+                    thickness_max=18.0,
+                    total_porosity=0.28,
+                    lambda_param=0.4,
+                    hyd_cond=0.005,
+                    kunsat_method=1,
                 ),
             ],
             initial_moisture=np.array([0.22, 0.27]),
@@ -521,8 +533,11 @@ class TestUnsatZoneWriterCoverage:
             element_id=0,
             layers=[
                 UnsatZoneLayer(
-                    thickness_max=10.0, total_porosity=0.35,
-                    lambda_param=0.5, hyd_cond=0.01, kunsat_method=1,
+                    thickness_max=10.0,
+                    total_porosity=0.35,
+                    lambda_param=0.5,
+                    hyd_cond=0.01,
+                    kunsat_method=1,
                 ),
             ],
             initial_moisture=np.array([0.30]),
@@ -560,8 +575,11 @@ class TestUnsatZoneWriterCoverage:
             element_id=1,
             layers=[
                 UnsatZoneLayer(
-                    thickness_max=10.0, total_porosity=0.35,
-                    lambda_param=0.5, hyd_cond=0.01, kunsat_method=1,
+                    thickness_max=10.0,
+                    total_porosity=0.35,
+                    lambda_param=0.5,
+                    hyd_cond=0.01,
+                    kunsat_method=1,
                 ),
             ],
         )
@@ -596,8 +614,11 @@ class TestUnsatZoneWriterCoverage:
             element_id=1,
             layers=[
                 UnsatZoneLayer(
-                    thickness_max=10.0, total_porosity=0.35,
-                    lambda_param=0.5, hyd_cond=0.01, kunsat_method=1,
+                    thickness_max=10.0,
+                    total_porosity=0.35,
+                    lambda_param=0.5,
+                    hyd_cond=0.01,
+                    kunsat_method=1,
                 ),
             ],
         )
@@ -623,8 +644,11 @@ class TestUnsatZoneWriterCoverage:
             element_id=1,
             layers=[
                 UnsatZoneLayer(
-                    thickness_max=10.0, total_porosity=0.35,
-                    lambda_param=0.5, hyd_cond=0.01, kunsat_method=1,
+                    thickness_max=10.0,
+                    total_porosity=0.35,
+                    lambda_param=0.5,
+                    hyd_cond=0.01,
+                    kunsat_method=1,
                 ),
             ],
         )
@@ -635,9 +659,7 @@ class TestUnsatZoneWriterCoverage:
             output_dir=Path("/dummy"),  # Will be overridden
             unsatzone_subdir="CustomUZ",
         )
-        results = write_unsaturated_zone_component(
-            model, tmp_path, config=custom_config
-        )
+        results = write_unsaturated_zone_component(model, tmp_path, config=custom_config)
         assert "main" in results
         # Verify the config's output_dir was overridden to tmp_path
         assert custom_config.output_dir == tmp_path

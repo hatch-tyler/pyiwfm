@@ -23,7 +23,6 @@ from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.visualization.webapi.config import model_state
 from pyiwfm.visualization.webapi.server import create_app
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -53,9 +52,17 @@ def _reset_model_state() -> None:
     model_state._node_id_to_idx = None
     model_state._sorted_elem_ids = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
 
@@ -161,9 +168,7 @@ def _make_head_loader(
     return loader
 
 
-def _make_gw_hydro_reader(
-    n_columns: int = 3, n_timesteps: int = 10
-) -> MagicMock:
+def _make_gw_hydro_reader(n_columns: int = 3, n_timesteps: int = 10) -> MagicMock:
     """Create a mock GW hydrograph reader."""
     reader = MagicMock()
     reader.n_columns = n_columns
@@ -171,10 +176,7 @@ def _make_gw_hydro_reader(
     base = datetime(2020, 1, 1)
 
     def _get_ts(col_idx: int):
-        times = [
-            (base + timedelta(days=30 * i)).isoformat()
-            for i in range(n_timesteps)
-        ]
+        times = [(base + timedelta(days=30 * i)).isoformat() for i in range(n_timesteps)]
         values = (np.arange(n_timesteps, dtype=float) + col_idx).tolist()
         return times, values
 
@@ -207,10 +209,7 @@ def _make_stream_hydro_reader(
     reader.find_column_by_node_id = MagicMock(side_effect=_find)
 
     def _get_ts(col_idx: int):
-        times = [
-            (base + timedelta(days=30 * i)).isoformat()
-            for i in range(n_timesteps)
-        ]
+        times = [(base + timedelta(days=30 * i)).isoformat() for i in range(n_timesteps)]
         values = (np.arange(n_timesteps, dtype=float) * 10 + col_idx).tolist()
         return times, values
 
@@ -218,9 +217,7 @@ def _make_stream_hydro_reader(
     return reader
 
 
-def _make_subsidence_reader(
-    n_columns: int = 3, n_timesteps: int = 10
-) -> MagicMock:
+def _make_subsidence_reader(n_columns: int = 3, n_timesteps: int = 10) -> MagicMock:
     """Create a mock subsidence hydrograph reader."""
     reader = MagicMock()
     reader.n_columns = n_columns
@@ -228,10 +225,7 @@ def _make_subsidence_reader(
     base = datetime(2020, 1, 1)
 
     def _get_ts(col_idx: int):
-        times = [
-            (base + timedelta(days=30 * i)).isoformat()
-            for i in range(n_timesteps)
-        ]
+        times = [(base + timedelta(days=30 * i)).isoformat() for i in range(n_timesteps)]
         values = (np.arange(n_timesteps, dtype=float) * 0.01 + col_idx * 0.001).tolist()
         return times, values
 
@@ -613,9 +607,7 @@ class TestHydrograph:
     def test_stream_fallback_to_hydrograph_ids(self, client: TestClient) -> None:
         """When find_column_by_node_id returns None, fall back to hydrograph_ids."""
         model_state._model = _make_mock_model()
-        reader = _make_stream_hydro_reader(
-            hydrograph_ids=[10, 20, 30], find_returns_none=True
-        )
+        reader = _make_stream_hydro_reader(hydrograph_ids=[10, 20, 30], find_returns_none=True)
         model_state._stream_hydrograph_reader = reader
         resp = client.get("/api/results/hydrograph?type=stream&location_id=20")
         assert resp.status_code == 200
@@ -626,9 +618,7 @@ class TestHydrograph:
     def test_stream_not_found(self, client: TestClient) -> None:
         """When node_id is not in either lookup, 404."""
         model_state._model = _make_mock_model()
-        reader = _make_stream_hydro_reader(
-            hydrograph_ids=[10, 20, 30], find_returns_none=True
-        )
+        reader = _make_stream_hydro_reader(hydrograph_ids=[10, 20, 30], find_returns_none=True)
         model_state._stream_hydrograph_reader = reader
         resp = client.get("/api/results/hydrograph?type=stream&location_id=999")
         assert resp.status_code == 404
@@ -684,9 +674,7 @@ class TestHydrograph:
     def test_stream_no_model_metadata(self, client: TestClient) -> None:
         """When model is truthy but metadata has no specs, default name is used."""
         model_state._model = _make_mock_model(metadata={})
-        model_state._stream_hydrograph_reader = _make_stream_hydro_reader(
-            hydrograph_ids=[10, 20]
-        )
+        model_state._stream_hydrograph_reader = _make_stream_hydro_reader(hydrograph_ids=[10, 20])
         resp = client.get("/api/results/hydrograph?type=stream&location_id=10")
         assert resp.status_code == 200
         data = resp.json()
@@ -1021,10 +1009,12 @@ class TestHydrographsMulti:
 
     def test_stream_multi_success(self, client: TestClient) -> None:
         model_state._model = _make_mock_model(
-            metadata={"stream_hydrograph_specs": [
-                {"node_id": 10, "name": "SR-10"},
-                {"node_id": 20, "name": "SR-20"},
-            ]}
+            metadata={
+                "stream_hydrograph_specs": [
+                    {"node_id": 10, "name": "SR-10"},
+                    {"node_id": 20, "name": "SR-20"},
+                ]
+            }
         )
         model_state._stream_hydrograph_reader = _make_stream_hydro_reader(
             hydrograph_ids=[10, 20, 30]
@@ -1041,9 +1031,7 @@ class TestHydrographsMulti:
     def test_stream_multi_fallback_to_hydrograph_ids(self, client: TestClient) -> None:
         """When find_column_by_node_id returns None, try hydrograph_ids."""
         model_state._model = _make_mock_model()
-        reader = _make_stream_hydro_reader(
-            hydrograph_ids=[10, 20], find_returns_none=True
-        )
+        reader = _make_stream_hydro_reader(hydrograph_ids=[10, 20], find_returns_none=True)
         model_state._stream_hydrograph_reader = reader
         resp = client.get("/api/results/hydrographs-multi?type=stream&ids=10,20")
         assert resp.status_code == 200
@@ -1053,9 +1041,7 @@ class TestHydrographsMulti:
     def test_stream_multi_not_found_skipped(self, client: TestClient) -> None:
         """IDs not found in either lookup are silently skipped."""
         model_state._model = _make_mock_model()
-        reader = _make_stream_hydro_reader(
-            hydrograph_ids=[10, 20], find_returns_none=True
-        )
+        reader = _make_stream_hydro_reader(hydrograph_ids=[10, 20], find_returns_none=True)
         model_state._stream_hydrograph_reader = reader
         resp = client.get("/api/results/hydrographs-multi?type=stream&ids=10,999")
         assert resp.status_code == 200
@@ -1066,9 +1052,7 @@ class TestHydrographsMulti:
     def test_stream_multi_no_model_metadata(self, client: TestClient) -> None:
         """When model metadata has no specs, default name used."""
         model_state._model = _make_mock_model(metadata={})
-        model_state._stream_hydrograph_reader = _make_stream_hydro_reader(
-            hydrograph_ids=[10]
-        )
+        model_state._stream_hydrograph_reader = _make_stream_hydro_reader(hydrograph_ids=[10])
         resp = client.get("/api/results/hydrographs-multi?type=stream&ids=10")
         assert resp.status_code == 200
         assert resp.json()["series"][0]["name"] == "Stream Node 10"
@@ -1218,12 +1202,14 @@ class TestHeadsByElement:
         loader.n_frames = 2
         loader.times = [datetime(2020, 1, 1), datetime(2020, 2, 1)]
         # 4 nodes, 2 layers; all values > -9000
-        frame = np.array([
-            [10.0, 20.0],
-            [30.0, 40.0],
-            [50.0, 60.0],
-            [70.0, 80.0],
-        ])
+        frame = np.array(
+            [
+                [10.0, 20.0],
+                [30.0, 40.0],
+                [50.0, 60.0],
+                [70.0, 80.0],
+            ]
+        )
         loader.get_frame = MagicMock(return_value=frame)
         model_state._head_loader = loader
 
@@ -1268,12 +1254,14 @@ class TestHeadsByElement:
         loader = MagicMock()
         loader.n_frames = 1
         loader.times = [datetime(2020, 1, 1)]
-        frame = np.array([
-            [-10000.0, 20.0],  # node 1 dry in layer 1
-            [30.0, 40.0],
-            [50.0, 60.0],
-            [70.0, 80.0],
-        ])
+        frame = np.array(
+            [
+                [-10000.0, 20.0],  # node 1 dry in layer 1
+                [30.0, 40.0],
+                [50.0, 60.0],
+                [70.0, 80.0],
+            ]
+        )
         loader.get_frame = MagicMock(return_value=frame)
         model_state._head_loader = loader
 
@@ -1324,14 +1312,16 @@ class TestHeadsByElement:
         loader.n_frames = 1
         loader.times = [datetime(2020, 1, 1)]
         # 6 nodes, 1 layer
-        frame = np.array([
-            [10.0],  # node 1 idx 0
-            [20.0],  # node 2 idx 1
-            [30.0],  # node 3 idx 2
-            [40.0],  # node 4 idx 3
-            [50.0],  # node 5 idx 4
-            [60.0],  # node 6 idx 5
-        ])
+        frame = np.array(
+            [
+                [10.0],  # node 1 idx 0
+                [20.0],  # node 2 idx 1
+                [30.0],  # node 3 idx 2
+                [40.0],  # node 4 idx 3
+                [50.0],  # node 5 idx 4
+                [60.0],  # node 6 idx 5
+            ]
+        )
         loader.get_frame = MagicMock(return_value=frame)
         model_state._head_loader = loader
 

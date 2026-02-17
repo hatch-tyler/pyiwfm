@@ -17,19 +17,15 @@ import pytest
 
 from pyiwfm.components.groundwater import (
     AppGW,
-    Well,
     BoundaryCondition,
-    TileDrain,
     Subsidence,
-    ElementPumping,
-    AquiferParameters,
+    TileDrain,
 )
 from pyiwfm.io.groundwater import (
-    GWFileConfig,
-    GroundwaterWriter,
     GroundwaterReader,
+    GroundwaterWriter,
+    GWFileConfig,
 )
-
 
 # =============================================================================
 # GroundwaterWriter Additional Tests
@@ -83,18 +79,24 @@ class TestGroundwaterWriterSubsidenceOnly:
     def test_write_subsidence_only_model(self, tmp_path: Path) -> None:
         """Test writing GW model with only subsidence data."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
-        gw.add_subsidence(Subsidence(
-            element=1, layer=1,
-            elastic_storage=1e-5,
-            inelastic_storage=1e-4,
-            preconsolidation_head=90.0,
-        ))
-        gw.add_subsidence(Subsidence(
-            element=2, layer=1,
-            elastic_storage=2e-5,
-            inelastic_storage=2e-4,
-            preconsolidation_head=85.0,
-        ))
+        gw.add_subsidence(
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-5,
+                inelastic_storage=1e-4,
+                preconsolidation_head=90.0,
+            )
+        )
+        gw.add_subsidence(
+            Subsidence(
+                element=2,
+                layer=1,
+                elastic_storage=2e-5,
+                inelastic_storage=2e-4,
+                preconsolidation_head=85.0,
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -113,10 +115,15 @@ class TestGroundwaterWriterBoundaryConditions:
     def test_write_specified_head_bc(self, tmp_path: Path) -> None:
         """Test writing specified head boundary condition."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
-        gw.add_boundary_condition(BoundaryCondition(
-            id=1, bc_type="specified_head",
-            nodes=[1, 2, 3], values=[100.0, 95.0, 90.0], layer=1,
-        ))
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=1,
+                bc_type="specified_head",
+                nodes=[1, 2, 3],
+                values=[100.0, 95.0, 90.0],
+                layer=1,
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -129,11 +136,16 @@ class TestGroundwaterWriterBoundaryConditions:
     def test_write_general_head_bc(self, tmp_path: Path) -> None:
         """Test writing general head boundary condition with conductance."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
-        gw.add_boundary_condition(BoundaryCondition(
-            id=1, bc_type="general_head",
-            nodes=[5, 6], values=[80.0, 75.0], layer=2,
-            conductance=[0.01, 0.02],
-        ))
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=1,
+                bc_type="general_head",
+                nodes=[5, 6],
+                values=[80.0, 75.0],
+                layer=2,
+                conductance=[0.01, 0.02],
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -145,19 +157,34 @@ class TestGroundwaterWriterBoundaryConditions:
     def test_write_mixed_bc_types(self, tmp_path: Path) -> None:
         """Test writing multiple boundary condition types."""
         gw = AppGW(n_nodes=20, n_layers=2, n_elements=10)
-        gw.add_boundary_condition(BoundaryCondition(
-            id=1, bc_type="specified_head",
-            nodes=[1, 2], values=[100.0, 95.0], layer=1,
-        ))
-        gw.add_boundary_condition(BoundaryCondition(
-            id=2, bc_type="specified_flow",
-            nodes=[10, 11], values=[-50.0, -60.0], layer=1,
-        ))
-        gw.add_boundary_condition(BoundaryCondition(
-            id=3, bc_type="general_head",
-            nodes=[20], values=[70.0], layer=2,
-            conductance=[0.05],
-        ))
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=1,
+                bc_type="specified_head",
+                nodes=[1, 2],
+                values=[100.0, 95.0],
+                layer=1,
+            )
+        )
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=2,
+                bc_type="specified_flow",
+                nodes=[10, 11],
+                values=[-50.0, -60.0],
+                layer=1,
+            )
+        )
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=3,
+                bc_type="general_head",
+                nodes=[20],
+                values=[70.0],
+                layer=2,
+                conductance=[0.05],
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -173,10 +200,16 @@ class TestGroundwaterWriterTileDrains:
     def test_write_tile_drain_with_destination(self, tmp_path: Path) -> None:
         """Test writing tile drain with stream destination."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
-        gw.add_tile_drain(TileDrain(
-            id=1, element=3, elevation=50.0, conductance=0.01,
-            destination_type="stream", destination_id=5,
-        ))
+        gw.add_tile_drain(
+            TileDrain(
+                id=1,
+                element=3,
+                elevation=50.0,
+                conductance=0.01,
+                destination_type="stream",
+                destination_id=5,
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -188,10 +221,15 @@ class TestGroundwaterWriterTileDrains:
     def test_write_tile_drain_outside(self, tmp_path: Path) -> None:
         """Test writing tile drain with outside destination."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
-        gw.add_tile_drain(TileDrain(
-            id=1, element=2, elevation=45.0, conductance=0.005,
-            destination_type="outside",
-        ))
+        gw.add_tile_drain(
+            TileDrain(
+                id=1,
+                element=2,
+                elevation=45.0,
+                conductance=0.005,
+                destination_type="outside",
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -207,13 +245,15 @@ class TestGroundwaterWriterInitialHeads:
     def test_write_initial_heads_multi_layer(self, tmp_path: Path) -> None:
         """Test writing initial heads for multiple layers."""
         gw = AppGW(n_nodes=5, n_layers=3, n_elements=3)
-        gw.heads = np.array([
-            [100.0, 90.0, 80.0],
-            [95.0, 85.0, 75.0],
-            [90.0, 80.0, 70.0],
-            [85.0, 75.0, 65.0],
-            [80.0, 70.0, 60.0],
-        ])
+        gw.heads = np.array(
+            [
+                [100.0, 90.0, 80.0],
+                [95.0, 85.0, 75.0],
+                [90.0, 80.0, 70.0],
+                [85.0, 75.0, 65.0],
+                [80.0, 70.0, 60.0],
+            ]
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -226,11 +266,13 @@ class TestGroundwaterWriterInitialHeads:
     def test_write_read_initial_heads_roundtrip(self, tmp_path: Path) -> None:
         """Test initial heads write-read roundtrip."""
         gw = AppGW(n_nodes=3, n_layers=2, n_elements=2)
-        gw.heads = np.array([
-            [100.0, 80.0],
-            [95.0, 75.0],
-            [90.0, 70.0],
-        ])
+        gw.heads = np.array(
+            [
+                [100.0, 80.0],
+                [95.0, 75.0],
+                [90.0, 70.0],
+            ]
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -249,8 +291,8 @@ class TestGroundwaterWriterInitialHeads:
 # =============================================================================
 
 
-from types import SimpleNamespace
-from unittest.mock import patch
+from types import SimpleNamespace  # noqa: E402
+from unittest.mock import patch  # noqa: E402
 
 
 class TestGWComponentWriterWriteMain:
@@ -455,7 +497,7 @@ class TestGWComponentWriterWritePumpMain:
 
         config = GWWriterConfig(output_dir=tmp_path)
         writer = GWComponentWriter(model, config, template_engine=mock_engine)
-        path = writer.write_pump_main()
+        writer.write_pump_main()
 
         call_kwargs = mock_engine.render_template.call_args[1]
         assert call_kwargs["pump_flag"] == 2  # wells only
@@ -470,8 +512,12 @@ class TestGWComponentWriterWriteTileDrains:
 
         model = MagicMock()
         drain = SimpleNamespace(
-            id=1, elevation=50.0, conductance=0.01,
-            dest_type="stream", destination_id=5, gw_node=3,
+            id=1,
+            elevation=50.0,
+            conductance=0.01,
+            dest_type="stream",
+            destination_id=5,
+            gw_node=3,
         )
         gw = MagicMock()
         gw.tile_drains = {1: drain}
@@ -505,8 +551,12 @@ class TestGWComponentWriterWriteTileDrains:
 
         model = MagicMock()
         drain = SimpleNamespace(
-            id=1, elevation=100.0, conductance=0.02,
-            dest_type=0, destination_id=0, element=3,
+            id=1,
+            elevation=100.0,
+            conductance=0.02,
+            dest_type=0,
+            destination_id=0,
+            element=3,
         )
         gw = MagicMock()
         gw.tile_drains = {1: drain}
@@ -709,9 +759,7 @@ class TestGWComponentWriterSpecBCFiles:
 class TestGWComponentWriterHydrographAndFaceFlow:
     """Tests for write_hydrograph_specs / write_face_flow_specs (lines 820-833)."""
 
-    def test_write_hydrograph_specs_delegates_to_write_main(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_hydrograph_specs_delegates_to_write_main(self, tmp_path: Path) -> None:
         """write_hydrograph_specs() delegates to write_main()."""
         from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
 
@@ -733,9 +781,7 @@ class TestGWComponentWriterHydrographAndFaceFlow:
         mock_wm.assert_called_once()
         assert result == tmp_path / "gw.dat"
 
-    def test_write_face_flow_specs_delegates_to_write_main(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_face_flow_specs_delegates_to_write_main(self, tmp_path: Path) -> None:
         """write_face_flow_specs() delegates to write_main()."""
         from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
 
@@ -763,7 +809,7 @@ class TestGWComponentWriterConvenience:
 
     def test_write_gw_component_default_config(self, tmp_path: Path) -> None:
         """write_gw_component() creates default config when none provided."""
-        from pyiwfm.io.gw_writer import write_gw_component, GWComponentWriter
+        from pyiwfm.io.gw_writer import write_gw_component
 
         model = MagicMock()
         model.groundwater = None
@@ -785,7 +831,7 @@ class TestGWComponentWriterConvenience:
 
     def test_write_gw_component_with_config(self, tmp_path: Path) -> None:
         """write_gw_component() uses provided config."""
-        from pyiwfm.io.gw_writer import write_gw_component, GWWriterConfig, GWComponentWriter
+        from pyiwfm.io.gw_writer import GWWriterConfig, write_gw_component
 
         model = MagicMock()
         model.groundwater = None

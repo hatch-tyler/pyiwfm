@@ -11,24 +11,22 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
+from pyiwfm.core.timeseries import TimeUnit
+from pyiwfm.io.model_loader import (
+    CompleteModelLoader,
+    ModelLoadResult,
+)
 from pyiwfm.io.simulation import (
+    IWFMSimulationReader,
     SimulationConfig,
     SimulationReader,
-    IWFMSimulationReader,
-    read_iwfm_simulation,
     _parse_iwfm_datetime,
+    read_iwfm_simulation,
 )
-from pyiwfm.io.model_loader import (
-    ModelLoadResult,
-    CompleteModelLoader,
-    load_complete_model,
-)
-from pyiwfm.core.timeseries import TimeUnit
-
 
 # =============================================================================
 # Test _parse_iwfm_datetime helper

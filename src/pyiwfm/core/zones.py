@@ -30,12 +30,15 @@ Create a simple zone definition:
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Iterator
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from pyiwfm.core.mesh import AppGrid
 
 
 @dataclass
@@ -221,7 +224,7 @@ class ZoneDefinition:
             yield self.zones[zone_id]
 
     @classmethod
-    def from_subregions(cls, grid: "AppGrid") -> "ZoneDefinition":
+    def from_subregions(cls, grid: AppGrid) -> ZoneDefinition:
         """
         Create a ZoneDefinition from model subregions.
 
@@ -235,7 +238,6 @@ class ZoneDefinition:
         ZoneDefinition
             Zone definition with one zone per subregion.
         """
-        from pyiwfm.core.mesh import AppGrid
 
         zones: dict[int, Zone] = {}
 
@@ -284,7 +286,7 @@ class ZoneDefinition:
         element_areas: dict[int, float] | None = None,
         name: str = "",
         description: str = "",
-    ) -> "ZoneDefinition":
+    ) -> ZoneDefinition:
         """
         Create a ZoneDefinition from a list of (element_id, zone_id) pairs.
 
@@ -387,7 +389,7 @@ class ZoneDefinition:
             self.element_zones[self.element_zones == zone_id] = 0
         return zone
 
-    def compute_areas(self, grid: "AppGrid") -> None:
+    def compute_areas(self, grid: AppGrid) -> None:
         """
         Recompute zone areas from element areas.
 
@@ -397,9 +399,7 @@ class ZoneDefinition:
             The model grid with computed element areas.
         """
         for zone in self.zones.values():
-            zone.area = sum(
-                grid.elements[e].area for e in zone.elements if e in grid.elements
-            )
+            zone.area = sum(grid.elements[e].area for e in zone.elements if e in grid.elements)
 
     def validate(self, n_elements: int) -> list[str]:
         """

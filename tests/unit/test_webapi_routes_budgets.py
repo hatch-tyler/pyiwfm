@@ -12,9 +12,8 @@ location-geometry (subregion, stream_node, error), and water-balance
 
 from __future__ import annotations
 
-import math
 from datetime import datetime
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock
 
 import numpy as np
 import pytest
@@ -22,12 +21,10 @@ import pytest
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 pydantic = pytest.importorskip("pydantic", reason="Pydantic not available")
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
-from pyiwfm.visualization.webapi.config import ModelState, model_state
-from pyiwfm.visualization.webapi.routes.budgets import (
-    BUDGET_GLOSSARY,
-    _DATA_TYPE_UNITS,
+from pyiwfm.visualization.webapi.config import model_state  # noqa: E402
+from pyiwfm.visualization.webapi.routes.budgets import (  # noqa: E402
     _detect_budget_category,
     _get_budget_units_metadata,
     _get_column_units,
@@ -35,8 +32,9 @@ from pyiwfm.visualization.webapi.routes.budgets import (
     _safe_float,
     _sanitize_values,
 )
-from pyiwfm.visualization.webapi.server import create_app
+from pyiwfm.visualization.webapi.server import create_app  # noqa: E402
 
+_rng = np.random.default_rng(42)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -63,9 +61,17 @@ def _reset_model_state():
     model_state._results_dir = None
     model_state._area_manager = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
 
@@ -94,7 +100,7 @@ def _make_mock_reader(
         times_arr, values_arr = values
     else:
         times_arr = np.arange(n_times, dtype=float)
-        values_arr = np.random.rand(n_times, n_cols)
+        values_arr = _rng.random((n_times, n_cols))
 
     reader.get_values.return_value = (times_arr, values_arr)
     reader.get_location_index.return_value = 0
@@ -349,31 +355,34 @@ class TestParseTitleUnits:
 class TestDetectBudgetCategory:
     """Tests for _detect_budget_category()."""
 
-    @pytest.mark.parametrize("btype,expected", [
-        ("gw", "gw"),
-        ("GW_Budget", "gw"),
-        ("groundwater", "gw"),
-        ("Groundwater Budget", "gw"),
-        ("lwu", "lwu"),
-        ("land_and_water_use", "lwu"),
-        ("rootzone", "rootzone"),
-        ("Root Zone Budget", "rootzone"),
-        ("unsaturated", "unsaturated"),
-        ("Unsat Zone Budget", "unsaturated"),
-        ("stream_node", "stream_node"),
-        ("Stream Node Budget", "stream_node"),
-        ("stream_node_budget", "stream_node"),
-        ("stream", "stream"),
-        ("Stream Budget", "stream"),
-        ("diversion", "diversion"),
-        ("Diversion Budget", "diversion"),
-        ("lake", "lake"),
-        ("Lake Budget", "lake"),
-        ("small_watershed", "small_watershed"),
-        ("Small Watershed Budget", "small_watershed"),
-        ("something_else", "other"),
-        ("unknown_type", "other"),
-    ])
+    @pytest.mark.parametrize(
+        "btype,expected",
+        [
+            ("gw", "gw"),
+            ("GW_Budget", "gw"),
+            ("groundwater", "gw"),
+            ("Groundwater Budget", "gw"),
+            ("lwu", "lwu"),
+            ("land_and_water_use", "lwu"),
+            ("rootzone", "rootzone"),
+            ("Root Zone Budget", "rootzone"),
+            ("unsaturated", "unsaturated"),
+            ("Unsat Zone Budget", "unsaturated"),
+            ("stream_node", "stream_node"),
+            ("Stream Node Budget", "stream_node"),
+            ("stream_node_budget", "stream_node"),
+            ("stream", "stream"),
+            ("Stream Budget", "stream"),
+            ("diversion", "diversion"),
+            ("Diversion Budget", "diversion"),
+            ("lake", "lake"),
+            ("Lake Budget", "lake"),
+            ("small_watershed", "small_watershed"),
+            ("Small Watershed Budget", "small_watershed"),
+            ("something_else", "other"),
+            ("unknown_type", "other"),
+        ],
+    )
     def test_category_detection(self, btype, expected):
         assert _detect_budget_category(btype) == expected
 
@@ -388,12 +397,14 @@ class TestGetBudgetUnitsMetadata:
 
     def test_gw_category_with_metadata(self):
         """GW budget derives volume unit from length_unit (FT→FT3)."""
-        model = _make_mock_model(metadata={
-            "gw_volume_output_unit": "TAF",  # ignored — HDF stores sim units
-            "gw_length_output_unit": "FT",   # ignored
-            "length_unit": "FT",
-            "area_unit": "SQ_MI",
-        })
+        model = _make_mock_model(
+            metadata={
+                "gw_volume_output_unit": "TAF",  # ignored — HDF stores sim units
+                "gw_length_output_unit": "FT",  # ignored
+                "length_unit": "FT",
+                "area_unit": "SQ_MI",
+            }
+        )
         model_state._model = model
         reader = _make_mock_reader(column_types=[1, 4, 5])
 
@@ -409,11 +420,13 @@ class TestGetBudgetUnitsMetadata:
 
     def test_non_gw_category_uses_generic_metadata(self):
         """Non-GW budgets derive volume unit from length_unit (M→M3)."""
-        model = _make_mock_model(metadata={
-            "volume_unit": "CCF",  # ignored — HDF stores sim units
-            "area_unit": "HA",
-            "length_unit": "M",
-        })
+        model = _make_mock_model(
+            metadata={
+                "volume_unit": "CCF",  # ignored — HDF stores sim units
+                "area_unit": "HA",
+                "length_unit": "M",
+            }
+        )
         model_state._model = model
         reader = _make_mock_reader(column_types=[1, 1, 1])
 
@@ -426,11 +439,13 @@ class TestGetBudgetUnitsMetadata:
 
     def test_gw_volume_derived_from_length_unit(self):
         """GW budget derives volume from length_unit, ignoring volume_unit."""
-        model = _make_mock_model(metadata={
-            "volume_unit": "TAF",  # ignored
-            "length_unit": "FT",
-            "area_unit": "ACRES",
-        })
+        model = _make_mock_model(
+            metadata={
+                "volume_unit": "TAF",  # ignored
+                "length_unit": "FT",
+                "area_unit": "ACRES",
+            }
+        )
         model_state._model = model
         reader = _make_mock_reader(column_types=[1])
 
@@ -508,9 +523,7 @@ class TestGetBudgetUnitsMetadata:
         model_state._model = model
         reader = _make_mock_reader(column_types=[1])
         # Make location_data access raise
-        reader.header.location_data = MagicMock(
-            __getitem__=MagicMock(side_effect=AttributeError)
-        )
+        reader.header.location_data = MagicMock(__getitem__=MagicMock(side_effect=AttributeError))
 
         result = _get_budget_units_metadata("gw", reader)
         assert result["has_volume_columns"] is True
@@ -566,13 +579,16 @@ class TestGetBudgetUnitsMetadata:
         loc = reader.header.location_data[0]
         loc.column_types = []
         loc.column_headers = [
-            "Deep Percolation", "Pumping", "AG_AREA", "CUM_SUBSIDENCE",
+            "Deep Percolation",
+            "Pumping",
+            "AG_AREA",
+            "CUM_SUBSIDENCE",
         ]
 
         result = _get_budget_units_metadata("gw", reader)
-        assert result["has_volume_columns"] is True   # Deep Percolation, Pumping, CUM_SUBSIDENCE
-        assert result["has_area_columns"] is True      # AG_AREA
-        assert result["has_length_columns"] is False   # subsidence is volumetric in GW budgets
+        assert result["has_volume_columns"] is True  # Deep Percolation, Pumping, CUM_SUBSIDENCE
+        assert result["has_area_columns"] is True  # AG_AREA
+        assert result["has_length_columns"] is False  # subsidence is volumetric in GW budgets
 
     def test_empty_column_types_volume_only_headers(self):
         """When column_types empty + no area/length keywords → volume only."""
@@ -584,7 +600,9 @@ class TestGetBudgetUnitsMetadata:
         loc = reader.header.location_data[0]
         loc.column_types = []
         loc.column_headers = [
-            "Pumping", "Recharge", "Net Deep Percolation",
+            "Pumping",
+            "Recharge",
+            "Net Deep Percolation",
         ]
 
         result = _get_budget_units_metadata("gw", reader)
@@ -624,9 +642,7 @@ class TestGetBudgetTypes:
         model = _make_mock_model()
         model_state._model = model
         # Patch get_available_budgets to return known types
-        model_state.get_available_budgets = MagicMock(
-            return_value=["gw", "stream"]
-        )
+        model_state.get_available_budgets = MagicMock(return_value=["gw", "stream"])
         app = create_app()
         client = TestClient(app)
 
@@ -932,7 +948,7 @@ class TestGetBudgetData:
         model = _make_mock_model()
         model_state._model = model
         times = np.arange(3, dtype=float)
-        vals = np.random.rand(3, 4)
+        vals = _rng.random((3, 4))
         reader = _make_mock_reader(
             headers=["A", "B", "C", "D"],
             values=(times, vals),
@@ -1052,9 +1068,7 @@ class TestGetBudgetSpatial:
     def test_stat_total(self, client_with_model):
         client, model, reader = client_with_model
 
-        resp = client.get(
-            "/api/budgets/gw/spatial?column=Deep+Percolation&stat=total"
-        )
+        resp = client.get("/api/budgets/gw/spatial?column=Deep+Percolation&stat=total")
         assert resp.status_code == 200
         data = resp.json()
         assert data["stat"] == "total"
@@ -1063,9 +1077,7 @@ class TestGetBudgetSpatial:
     def test_stat_average(self, client_with_model):
         client, model, reader = client_with_model
 
-        resp = client.get(
-            "/api/budgets/gw/spatial?column=Deep+Percolation&stat=average"
-        )
+        resp = client.get("/api/budgets/gw/spatial?column=Deep+Percolation&stat=average")
         assert resp.status_code == 200
         data = resp.json()
         assert data["stat"] == "average"
@@ -1094,9 +1106,7 @@ class TestGetBudgetSpatial:
         """Unknown stat value falls through to nansum (same as total)."""
         client, model, reader = client_with_model
 
-        resp = client.get(
-            "/api/budgets/gw/spatial?column=Deep+Percolation&stat=xyz"
-        )
+        resp = client.get("/api/budgets/gw/spatial?column=Deep+Percolation&stat=xyz")
         assert resp.status_code == 200
         data = resp.json()
         assert data["stat"] == "xyz"
@@ -1151,9 +1161,7 @@ class TestGetBudgetSpatial:
         assert resp.status_code == 200
         data = resp.json()
         assert "available_columns" in data
-        assert data["available_columns"] == [
-            "Deep Percolation", "Pumping", "Recharge"
-        ]
+        assert data["available_columns"] == ["Deep Percolation", "Pumping", "Recharge"]
 
     def test_spatial_column_case_insensitive(self, client_with_model):
         """Column matching is case-insensitive."""
@@ -1484,9 +1492,7 @@ class TestGetBudgetLocationGeometry:
         app = create_app()
         client = TestClient(app)
 
-        resp = client.get(
-            "/api/budgets/gw/location-geometry?location=bad_location"
-        )
+        resp = client.get("/api/budgets/gw/location-geometry?location=bad_location")
         assert resp.status_code == 200
         data = resp.json()
         assert data["location_index"] == 0
@@ -1533,11 +1539,13 @@ class TestGetWaterBalance:
         model_state._model = model
 
         times = np.arange(3, dtype=float)
-        vals = np.array([
-            [100.0, 50.0, 30.0],
-            [110.0, 55.0, 35.0],
-            [120.0, 60.0, 40.0],
-        ])
+        vals = np.array(
+            [
+                [100.0, 50.0, 30.0],
+                [110.0, 55.0, 35.0],
+                [120.0, 60.0, 40.0],
+            ]
+        )
         reader = _make_mock_reader(
             headers=["Deep Percolation", "Pumping", "Recharge"],
             values=(times, vals),
@@ -1567,11 +1575,13 @@ class TestGetWaterBalance:
         model_state._model = model
 
         times = np.arange(3, dtype=float)
-        vals = np.array([
-            [200.0, 100.0],
-            [210.0, 110.0],
-            [220.0, 120.0],
-        ])
+        vals = np.array(
+            [
+                [200.0, 100.0],
+                [210.0, 110.0],
+                [220.0, 120.0],
+            ]
+        )
         reader = _make_mock_reader(
             headers=["Upstream Inflow", "Downstream Outflow"],
             values=(times, vals),
@@ -1601,9 +1611,7 @@ class TestGetWaterBalance:
             values=(times, vals),
         )
         model_state._budget_readers["rootzone"] = reader
-        model_state.get_available_budgets = MagicMock(
-            return_value=["rootzone"]
-        )
+        model_state.get_available_budgets = MagicMock(return_value=["rootzone"])
         model_state.get_budget_reader = MagicMock(return_value=reader)
         app = create_app()
         client = TestClient(app)
@@ -1636,10 +1644,7 @@ class TestGetWaterBalance:
         assert resp.status_code == 200
         data = resp.json()
         # Should create inflow link: source = "Some Random Inflow", target = "Groundwater"
-        inflow_links = [
-            l for l in data["links"]
-            if l["label"] == "Some Random Inflow"
-        ]
+        inflow_links = [link for link in data["links"] if link["label"] == "Some Random Inflow"]
         assert len(inflow_links) == 1
         # The target should be the component node
         target_idx = inflow_links[0]["target"]
@@ -1665,10 +1670,7 @@ class TestGetWaterBalance:
         resp = client.get("/api/budgets/water-balance")
         assert resp.status_code == 200
         data = resp.json()
-        outflow_links = [
-            l for l in data["links"]
-            if l["label"] == "Tile Drain Outflow"
-        ]
+        outflow_links = [link for link in data["links"] if link["label"] == "Tile Drain Outflow"]
         assert len(outflow_links) == 1
         source_idx = outflow_links[0]["source"]
         assert data["nodes"][source_idx] == "Groundwater"
@@ -1693,7 +1695,7 @@ class TestGetWaterBalance:
         resp = client.get("/api/budgets/water-balance")
         assert resp.status_code == 200
         data = resp.json()
-        links = [l for l in data["links"] if l["label"] == "Subsurface Drain"]
+        links = [link for link in data["links"] if link["label"] == "Subsurface Drain"]
         assert len(links) == 1
         # Ends in "in" -> treated as inflow -> target is component
         target_idx = links[0]["target"]
@@ -1735,12 +1737,8 @@ class TestGetWaterBalance:
         bad_reader.get_column_headers.side_effect = KeyError("corrupted")
 
         call_map = {"gw": good_reader, "stream": bad_reader}
-        model_state.get_available_budgets = MagicMock(
-            return_value=["gw", "stream"]
-        )
-        model_state.get_budget_reader = MagicMock(
-            side_effect=lambda btype: call_map.get(btype)
-        )
+        model_state.get_available_budgets = MagicMock(return_value=["gw", "stream"])
+        model_state.get_budget_reader = MagicMock(side_effect=lambda btype: call_map.get(btype))
         app = create_app()
         client = TestClient(app)
 
@@ -1749,7 +1747,7 @@ class TestGetWaterBalance:
         data = resp.json()
         # Only GW links should be present, stream skipped due to error
         assert len(data["links"]) >= 1
-        link_labels = [l["label"] for l in data["links"]]
+        link_labels = [link["label"] for link in data["links"]]
         assert "Recharge" in link_labels
 
     def test_reader_returns_none_skipped(self):
@@ -1817,9 +1815,7 @@ class TestGetWaterBalance:
                 return stream_reader
             return None
 
-        model_state.get_available_budgets = MagicMock(
-            return_value=["gw", "stream"]
-        )
+        model_state.get_available_budgets = MagicMock(return_value=["gw", "stream"])
         model_state.get_budget_reader = MagicMock(side_effect=get_reader)
         app = create_app()
         client = TestClient(app)
@@ -1843,9 +1839,7 @@ class TestGetWaterBalance:
             values=(times, vals),
         )
 
-        model_state.get_available_budgets = MagicMock(
-            return_value=["diversion"]
-        )
+        model_state.get_available_budgets = MagicMock(return_value=["diversion"])
         model_state.get_budget_reader = MagicMock(return_value=reader)
         app = create_app()
         client = TestClient(app)
@@ -1869,9 +1863,7 @@ class TestGetWaterBalance:
             values=(times, vals),
         )
 
-        model_state.get_available_budgets = MagicMock(
-            return_value=["lake"]
-        )
+        model_state.get_available_budgets = MagicMock(return_value=["lake"])
         model_state.get_budget_reader = MagicMock(return_value=reader)
         app = create_app()
         client = TestClient(app)

@@ -4,15 +4,17 @@ Cross-section slice API routes.
 
 from __future__ import annotations
 
-import io
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from pyiwfm.visualization.webapi.config import model_state
+if TYPE_CHECKING:
+    import pyvista as pv
+
+from pyiwfm.visualization.webapi.config import model_state, require_model
 from pyiwfm.visualization.webapi.routes.mesh import SurfaceMeshData
 
 router = APIRouter(prefix="/api/slice", tags=["slices"])
@@ -45,28 +47,19 @@ def get_slice(
     -------
     VTU file data
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
     try:
-        import pyvista as pv
+        import pyvista as pv  # noqa: F401
     except ImportError:
-        raise HTTPException(
-            status_code=500, detail="PyVista required for slicing"
-        )
+        raise HTTPException(status_code=500, detail="PyVista required for slicing") from None
 
-    model = model_state.model
-    if model.stratigraphy is None:
-        raise HTTPException(
-            status_code=400, detail="Stratigraphy required for 3D slicing"
-        )
+    model = require_model()
+    if model.stratigraphy is None or model.grid is None:
+        raise HTTPException(status_code=400, detail="Stratigraphy required for 3D slicing")
 
     from pyiwfm.visualization.vtk_export import VTKExporter
     from pyiwfm.visualization.webapi.slicing import SlicingController
 
-    exporter = VTKExporter(
-        grid=model.grid, stratigraphy=model.stratigraphy
-    )
+    exporter = VTKExporter(grid=model.grid, stratigraphy=model.stratigraphy)
     mesh = exporter.to_pyvista_3d()
     slicer = SlicingController(mesh)
 
@@ -94,11 +87,15 @@ def get_slice(
 @router.get("/json", response_model=SurfaceMeshData)
 def get_slice_json(
     angle: float = Query(
-        default=0.0, ge=0, le=180,
+        default=0.0,
+        ge=0,
+        le=180,
         description="Angle in degrees from N-S face (0=N-S, 90=E-W)",
     ),
     position: float = Query(
-        default=0.5, ge=0, le=1,
+        default=0.5,
+        ge=0,
+        le=1,
         description="Normalized position (0-1) along slice normal",
     ),
 ) -> SurfaceMeshData:
@@ -112,13 +109,12 @@ def get_slice_json(
     Returns the same flat-array format as /api/mesh/json so the client
     can render the slice as a PolyData actor.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    require_model()
 
     try:
         data = model_state.get_slice_json(angle, position)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     if data["n_cells"] == 0:
         raise HTTPException(status_code=404, detail="Empty slice")
@@ -147,28 +143,19 @@ def get_cross_section(
     -------
     VTU file data
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
     try:
-        import pyvista as pv
+        import pyvista as pv  # noqa: F401
     except ImportError:
-        raise HTTPException(
-            status_code=500, detail="PyVista required for slicing"
-        )
+        raise HTTPException(status_code=500, detail="PyVista required for slicing") from None
 
-    model = model_state.model
-    if model.stratigraphy is None:
-        raise HTTPException(
-            status_code=400, detail="Stratigraphy required for cross-sections"
-        )
+    model = require_model()
+    if model.stratigraphy is None or model.grid is None:
+        raise HTTPException(status_code=400, detail="Stratigraphy required for cross-sections")
 
     from pyiwfm.visualization.vtk_export import VTKExporter
     from pyiwfm.visualization.webapi.slicing import SlicingController
 
-    exporter = VTKExporter(
-        grid=model.grid, stratigraphy=model.stratigraphy
-    )
+    exporter = VTKExporter(grid=model.grid, stratigraphy=model.stratigraphy)
     mesh = exporter.to_pyvista_3d()
     slicer = SlicingController(mesh)
 
@@ -203,14 +190,9 @@ def get_cross_section_json(
     to model CRS, performs the slice, and returns flat arrays for
     visualization in a Plotly chart.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if model.stratigraphy is None:
-        raise HTTPException(
-            status_code=400, detail="Stratigraphy required for cross-sections"
-        )
+        raise HTTPException(status_code=400, detail="Stratigraphy required for cross-sections")
 
     # Convert WGS84 coordinates to model CRS
     try:
@@ -228,9 +210,13 @@ def get_cross_section_json(
         start_x, start_y = start_lng, start_lat
         end_x, end_y = end_lng, end_lat
 
+    from typing import cast
+
+    import pyvista as pv
+
     from pyiwfm.visualization.webapi.slicing import SlicingController
 
-    pv_mesh = model_state.get_pyvista_3d()
+    pv_mesh = cast(pv.UnstructuredGrid, model_state.get_pyvista_3d())
     slicer = SlicingController(pv_mesh)
 
     slice_mesh = slicer.create_cross_section(
@@ -276,9 +262,7 @@ def get_cross_section_json(
         "distance": distances,
         "start": {"lng": start_lng, "lat": start_lat, "x": start_x, "y": start_y},
         "end": {"lng": end_lng, "lat": end_lat, "x": end_x, "y": end_y},
-        "total_distance": round(
-            math.sqrt((end_x - start_x) ** 2 + (end_y - start_y) ** 2), 2
-        ),
+        "total_distance": round(math.sqrt((end_x - start_x) ** 2 + (end_y - start_y) ** 2), 2),
     }
 
 
@@ -297,14 +281,9 @@ def get_cross_section_heads(
     Returns per-layer head elevations clipped to layer geometry, with
     NaN where layers are dry or outside the mesh.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
-    if model is None or model.stratigraphy is None:
-        raise HTTPException(
-            status_code=400, detail="Stratigraphy required for cross-sections"
-        )
+    model = require_model()
+    if model.stratigraphy is None or model.grid is None:
+        raise HTTPException(status_code=400, detail="Stratigraphy required for cross-sections")
 
     loader = model_state.get_head_loader()
     if loader is None or loader.n_frames == 0:
@@ -321,7 +300,9 @@ def get_cross_section_heads(
         from pyproj import Transformer
 
         transformer = Transformer.from_crs(
-            "EPSG:4326", model_state._crs, always_xy=True,
+            "EPSG:4326",
+            model_state._crs,
+            always_xy=True,
         )
         start_x, start_y = transformer.transform(start_lng, start_lat)
         end_x, end_y = transformer.transform(end_lng, end_lat)
@@ -333,7 +314,9 @@ def get_cross_section_heads(
 
     extractor = CrossSectionExtractor(model.grid, model.stratigraphy)
     xs = extractor.extract(
-        start=(start_x, start_y), end=(end_x, end_y), n_samples=n_samples,
+        start=(start_x, start_y),
+        end=(end_x, end_y),
+        n_samples=n_samples,
     )
 
     # Get head frame: shape (n_nodes, n_layers)
@@ -364,12 +347,14 @@ def get_cross_section_heads(
                 # Confine head to layer top for display
                 head_vals[j] = min(head_vals[j], top_vals[j])
 
-        layers_out.append({
-            "layer": layer_idx + 1,
-            "top": [round(float(v), 2) if not np.isnan(v) else None for v in top_vals],
-            "bottom": [round(float(v), 2) if not np.isnan(v) else None for v in bot_vals],
-            "head": [round(float(v), 2) if not np.isnan(v) else None for v in head_vals],
-        })
+        layers_out.append(
+            {
+                "layer": layer_idx + 1,
+                "top": [round(float(v), 2) if not np.isnan(v) else None for v in top_vals],
+                "bottom": [round(float(v), 2) if not np.isnan(v) else None for v in bot_vals],
+                "head": [round(float(v), 2) if not np.isnan(v) else None for v in head_vals],
+            }
+        )
 
     return {
         "n_samples": n_samples,
@@ -378,9 +363,7 @@ def get_cross_section_heads(
         "timestep": timestep,
         "datetime": dt.isoformat() if dt else None,
         "layers": layers_out,
-        "gs_elev": [
-            round(float(v), 2) if not np.isnan(v) else None for v in xs.gs_elev
-        ],
+        "gs_elev": [round(float(v), 2) if not np.isnan(v) else None for v in xs.gs_elev],
         "mask": xs.mask.tolist(),
     }
 
@@ -391,28 +374,19 @@ def get_slice_info(
     position: float = Query(default=0.5, ge=0, le=1),
 ) -> SliceInfo:
     """Get metadata about a slice without returning the full mesh."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
     try:
-        import pyvista as pv
+        import pyvista as pv  # noqa: F401
     except ImportError:
-        raise HTTPException(
-            status_code=500, detail="PyVista required for slicing"
-        )
+        raise HTTPException(status_code=500, detail="PyVista required for slicing") from None
 
-    model = model_state.model
-    if model.stratigraphy is None:
-        raise HTTPException(
-            status_code=400, detail="Stratigraphy required for 3D slicing"
-        )
+    model = require_model()
+    if model.stratigraphy is None or model.grid is None:
+        raise HTTPException(status_code=400, detail="Stratigraphy required for 3D slicing")
 
     from pyiwfm.visualization.vtk_export import VTKExporter
     from pyiwfm.visualization.webapi.slicing import SlicingController
 
-    exporter = VTKExporter(
-        grid=model.grid, stratigraphy=model.stratigraphy
-    )
+    exporter = VTKExporter(grid=model.grid, stratigraphy=model.stratigraphy)
     mesh = exporter.to_pyvista_3d()
     slicer = SlicingController(mesh)
 
@@ -434,7 +408,7 @@ def get_slice_info(
     )
 
 
-def _pyvista_to_vtu(mesh: "pv.PolyData | pv.UnstructuredGrid") -> bytes:
+def _pyvista_to_vtu(mesh: pv.PolyData | pv.UnstructuredGrid) -> bytes:
     """Convert a PyVista mesh to VTU bytes."""
     import pyvista as pv
     import vtk
@@ -449,4 +423,5 @@ def _pyvista_to_vtu(mesh: "pv.PolyData | pv.UnstructuredGrid") -> bytes:
     writer.SetInputData(vtk_mesh)
     writer.Write()
 
-    return writer.GetOutputString().encode("utf-8")
+    output: str = writer.GetOutputString()
+    return output.encode("utf-8")

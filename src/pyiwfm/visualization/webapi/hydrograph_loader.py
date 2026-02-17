@@ -68,10 +68,7 @@ class LazyHydrographDataLoader:
 
                 if "times" in f:
                     raw = f["times"][:]
-                    self._times = [
-                        t.decode() if isinstance(t, bytes) else str(t)
-                        for t in raw
-                    ]
+                    self._times = [t.decode() if isinstance(t, bytes) else str(t) for t in raw]
 
                 if "hydrograph_ids" in f:
                     self._hydrograph_ids = f["hydrograph_ids"][:].tolist()
@@ -82,7 +79,9 @@ class LazyHydrographDataLoader:
 
             logger.info(
                 "Hydrograph HDF5 loaded: %d timesteps, %d columns from %s",
-                self._n_timesteps, self._n_columns, self._file_path.name,
+                self._n_timesteps,
+                self._n_columns,
+                self._file_path.name,
             )
         except Exception as e:
             logger.error("Failed to load hydrograph HDF5 metadata: %s", e)
@@ -123,7 +122,8 @@ class LazyHydrographDataLoader:
         """Load a single row from the HDF5 dataset."""
         with h5py.File(self._file_path, "r") as f:
             ds = f["data"]
-            return ds[row_idx].astype(np.float64)
+            result: NDArray[np.float64] = ds[row_idx].astype(np.float64)
+            return result
 
     def _evict_if_needed(self) -> None:
         while len(self._cache) >= self._cache_size:

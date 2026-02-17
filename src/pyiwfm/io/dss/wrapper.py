@@ -18,13 +18,12 @@ from __future__ import annotations
 
 import ctypes
 import os
+from collections.abc import Sequence
 from ctypes import (
     CDLL,
     POINTER,
     Structure,
-    byref,
     c_char_p,
-    c_double,
     c_float,
     c_int,
     c_int32,
@@ -34,11 +33,11 @@ from ctypes import (
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Sequence
+from types import TracebackType
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-
 
 # Environment variable for DSS library path
 HECDSS_LIB_ENV = "HECDSS_LIB"
@@ -73,6 +72,7 @@ def _get_library_path() -> Path | None:
     if package_lib_dir.exists():
         # Platform-specific library name
         import platform
+
         if platform.system() == "Windows":
             lib_name = "hecdss.dll"
         elif platform.system() == "Darwin":
@@ -127,6 +127,7 @@ HAS_DSS_LIBRARY = _dss_lib is not None
 # HEC-DSS 7 zStructTimeSeries partial definition (first 19 fields)
 # ---------------------------------------------------------------------------
 
+
 class _zStructTimeSeries(Structure):
     """Partial ctypes definition of zStructTimeSeries for field access.
 
@@ -180,15 +181,24 @@ def _configure_argtypes(lib: CDLL) -> None:
     # zstructTsNewRegFloats(pathname, floatValues, numberValues,
     #     startDate, startTime, units, type) -> zStructTimeSeries*
     lib.zstructTsNewRegFloats.argtypes = [
-        c_char_p, POINTER(c_float), c_int,
-        c_char_p, c_char_p, c_char_p, c_char_p,
+        c_char_p,
+        POINTER(c_float),
+        c_int,
+        c_char_p,
+        c_char_p,
+        c_char_p,
+        c_char_p,
     ]
     lib.zstructTsNewRegFloats.restype = c_void_p
 
     # zstructTsNewTimes(pathname, startDate, startTime,
     #     endDate, endTime) -> zStructTimeSeries*
     lib.zstructTsNewTimes.argtypes = [
-        c_char_p, c_char_p, c_char_p, c_char_p, c_char_p,
+        c_char_p,
+        c_char_p,
+        c_char_p,
+        c_char_p,
+        c_char_p,
     ]
     lib.zstructTsNewTimes.restype = c_void_p
 
@@ -201,7 +211,11 @@ def _configure_argtypes(lib: CDLL) -> None:
     #     int retrieveFlag, int retrieveDoublesFlag,
     #     int boolRetrieveQualityNotes) -> int
     lib.ztsRetrieve.argtypes = [
-        POINTER(c_int64), c_void_p, c_int, c_int, c_int,
+        POINTER(c_int64),
+        c_void_p,
+        c_int,
+        c_int,
+        c_int,
     ]
     lib.ztsRetrieve.restype = c_int
 
@@ -277,12 +291,17 @@ class DSSFile:
         self._ifltab: NDArray[np.int64] | None = None
         self._is_open = False
 
-    def __enter__(self) -> "DSSFile":
+    def __enter__(self) -> DSSFile:
         """Open the DSS file."""
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         """Close the DSS file."""
         self.close()
 
@@ -296,13 +315,14 @@ class DSSFile:
 
         # Determine access mode
         if self.mode == "r":
-            access = 0  # Read only
+            pass  # Read only
         elif self.mode == "w":
-            access = 1  # Write (create new)
+            pass  # Write (create new)
         else:
-            access = 2  # Read/write
+            pass  # Read/write
 
         # Open via zopenExtended (Windows DLL) or hec_dss_zopen (Linux upstream)
+        assert _dss_lib is not None  # guaranteed by check_dss_available() in __init__
         filepath_bytes = str(self.filepath).encode("utf-8")
         zopen_func = getattr(_dss_lib, "zopenExtended", None) or _dss_lib.hec_dss_zopen
         status = zopen_func(
@@ -320,7 +340,7 @@ class DSSFile:
         if not self._is_open:
             return
 
-        if self._ifltab is not None:
+        if self._ifltab is not None and _dss_lib is not None:
             _dss_lib.zclose(self._ifltab.ctypes.data_as(POINTER(c_int64)))
 
         self._ifltab = None
@@ -353,6 +373,9 @@ class DSSFile:
         if "w" not in self.mode:
             raise DSSFileError("DSS file not open for writing")
 
+        assert _dss_lib is not None  # guaranteed by check_dss_available() in __init__
+        assert self._ifltab is not None  # guaranteed by open()
+
         values_f32 = np.asarray(values, dtype=np.float32)
         n_values = len(values_f32)
 
@@ -372,9 +395,7 @@ class DSSFile:
         )
 
         if not tss:
-            raise DSSFileError(
-                f"Failed to create time series struct for: {pathname}"
-            )
+            raise DSSFileError(f"Failed to create time series struct for: {pathname}")
 
         try:
             status = _dss_lib.ztsStore(
@@ -384,9 +405,7 @@ class DSSFile:
             )
 
             if status != 0:
-                raise DSSFileError(
-                    f"Failed to write time series: {pathname} (status={status})"
-                )
+                raise DSSFileError(f"Failed to write time series: {pathname} (status={status})")
         finally:
             _dss_lib.zstructFree(tss)
 
@@ -414,49 +433,38 @@ class DSSFile:
         if not self._is_open:
             raise DSSFileError("DSS file not open")
 
+        assert _dss_lib is not None  # guaranteed by check_dss_available() in __init__
+        assert self._ifltab is not None  # guaranteed by open()
+
         # Format date range
-        start_str = (
-            start_date.strftime("%d%b%Y").upper().encode("utf-8")
-            if start_date else b""
-        )
-        start_time = (
-            start_date.strftime("%H%M").encode("utf-8")
-            if start_date else b"0000"
-        )
-        end_str = (
-            end_date.strftime("%d%b%Y").upper().encode("utf-8")
-            if end_date else b""
-        )
-        end_time = (
-            end_date.strftime("%H%M").encode("utf-8")
-            if end_date else b"2400"
-        )
+        start_str = start_date.strftime("%d%b%Y").upper().encode("utf-8") if start_date else b""
+        start_time = start_date.strftime("%H%M").encode("utf-8") if start_date else b"0000"
+        end_str = end_date.strftime("%d%b%Y").upper().encode("utf-8") if end_date else b""
+        end_time = end_date.strftime("%H%M").encode("utf-8") if end_date else b"2400"
 
         # Create time series struct for retrieval
         tss = _dss_lib.zstructTsNewTimes(
             pathname.encode("utf-8"),
-            start_str, start_time,
-            end_str, end_time,
+            start_str,
+            start_time,
+            end_str,
+            end_time,
         )
 
         if not tss:
-            raise DSSFileError(
-                f"Failed to create time series struct for: {pathname}"
-            )
+            raise DSSFileError(f"Failed to create time series struct for: {pathname}")
 
         try:
             status = _dss_lib.ztsRetrieve(
                 self._ifltab.ctypes.data_as(POINTER(c_int64)),
                 tss,
                 c_int(-1),  # retrieveFlag: -1 = retrieve all
-                c_int(0),   # retrieveDoublesFlag: 0 = use floats
-                c_int(0),   # boolRetrieveQualityNotes: 0 = skip
+                c_int(0),  # retrieveDoublesFlag: 0 = use floats
+                c_int(0),  # boolRetrieveQualityNotes: 0 = skip
             )
 
             # Cast to struct for field access
-            tss_struct = ctypes.cast(
-                tss, POINTER(_zStructTimeSeries)
-            ).contents
+            tss_struct = ctypes.cast(tss, POINTER(_zStructTimeSeries)).contents
 
             n_values = tss_struct.numberValues
 
@@ -465,14 +473,10 @@ class DSSFile:
                 return [], np.array([], dtype=np.float64)
 
             if status != 0:
-                raise DSSFileError(
-                    f"Failed to read time series: {pathname} (status={status})"
-                )
+                raise DSSFileError(f"Failed to read time series: {pathname} (status={status})")
 
             # Extract float values from struct
-            float_ptr = ctypes.cast(
-                tss_struct.floatValues, POINTER(c_float * n_values)
-            )
+            float_ptr = ctypes.cast(tss_struct.floatValues, POINTER(c_float * n_values))
             values = np.array(float_ptr.contents[:], dtype=np.float64)
 
             # Build datetimes from struct fields
@@ -484,21 +488,14 @@ class DSSFile:
             interval_secs = tss_struct.timeIntervalSeconds
 
             if interval_secs > 0:
-                times = [
-                    start_dt + timedelta(seconds=i * interval_secs)
-                    for i in range(n_values)
-                ]
+                times = [start_dt + timedelta(seconds=i * interval_secs) for i in range(n_values)]
             else:
                 # Irregular time series - use times array
                 if tss_struct.times:
                     granularity = max(tss_struct.timeGranularitySeconds, 1)
-                    times_ptr = ctypes.cast(
-                        tss_struct.times, POINTER(c_int32 * n_values)
-                    )
+                    times_ptr = ctypes.cast(tss_struct.times, POINTER(c_int32 * n_values))
                     times = [
-                        base_date + timedelta(
-                            seconds=int(t) * granularity
-                        )
+                        base_date + timedelta(seconds=int(t) * granularity)
                         for t in times_ptr.contents
                     ]
                 else:
@@ -524,10 +521,16 @@ class DSSFile:
         if not self._is_open:
             raise DSSFileError("DSS file not open")
 
+        assert _dss_lib is not None  # guaranteed by check_dss_available() in __init__
+        assert self._ifltab is not None  # guaranteed by open()
+
         # Create struct for retrieval (no date window = retrieve all)
         tss = _dss_lib.zstructTsNewTimes(
             pathname.encode("utf-8"),
-            b"", b"0000", b"", b"2400",
+            b"",
+            b"0000",
+            b"",
+            b"2400",
         )
 
         if not tss:
@@ -538,13 +541,11 @@ class DSSFile:
                 self._ifltab.ctypes.data_as(POINTER(c_int64)),
                 tss,
                 c_int(-1),  # retrieve all
-                c_int(0),   # floats
-                c_int(0),   # no quality notes
+                c_int(0),  # floats
+                c_int(0),  # no quality notes
             )
 
-            tss_struct = ctypes.cast(
-                tss, POINTER(_zStructTimeSeries)
-            ).contents
+            tss_struct = ctypes.cast(tss, POINTER(_zStructTimeSeries)).contents
 
             n_values = tss_struct.numberValues
 
@@ -608,7 +609,7 @@ class DSSFile:
         base_date = datetime(1899, 12, 31)  # DSS epoch
         return [
             base_date + timedelta(days=int(jd), minutes=int(mins))
-            for jd, mins in zip(julian_days, minutes)
+            for jd, mins in zip(julian_days, minutes, strict=False)
         ]
 
 
@@ -625,10 +626,15 @@ class DSSFileMock:
         self.filepath = Path(filepath)
         self.mode = mode
 
-    def __enter__(self) -> "DSSFileMock":
+    def __enter__(self) -> DSSFileMock:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         pass
 
     def open(self) -> None:
@@ -637,10 +643,10 @@ class DSSFileMock:
     def close(self) -> None:
         pass
 
-    def write_regular_timeseries(self, *args, **kwargs) -> None:
+    def write_regular_timeseries(self, *args: Any, **kwargs: Any) -> None:
         raise DSSLibraryError("HEC-DSS library not available")
 
-    def read_regular_timeseries(self, *args, **kwargs) -> tuple:
+    def read_regular_timeseries(self, *args: Any, **kwargs: Any) -> tuple[Any, ...]:
         raise DSSLibraryError("HEC-DSS library not available")
 
 

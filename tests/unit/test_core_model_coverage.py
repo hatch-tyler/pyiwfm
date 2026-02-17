@@ -9,10 +9,9 @@ Covers:
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
 
 
@@ -44,12 +43,16 @@ class TestFromPreprocessorStreamLoadError:
         mock_mesh.n_nodes = 1
         mock_mesh.n_elements = 1
 
-        with patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config), \
-             patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes), \
-             patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements), \
-             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh), \
-             patch("pyiwfm.io.streams.StreamReader") as MockStreamReader:
-            MockStreamReader.return_value.read_stream_nodes.side_effect = Exception("Stream parse error")
+        with (
+            patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
+            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
+            patch("pyiwfm.io.streams.StreamReader") as MockStreamReader,
+        ):
+            MockStreamReader.return_value.read_stream_nodes.side_effect = Exception(
+                "Stream parse error"
+            )
             model = IWFMModel.from_preprocessor(tmp_path / "preprocessor.in", load_streams=True)
             assert "streams_load_error" in model.metadata
             assert "Stream parse error" in model.metadata["streams_load_error"]
@@ -82,12 +85,16 @@ class TestFromPreprocessorLakeLoadError:
         mock_mesh.n_nodes = 1
         mock_mesh.n_elements = 1
 
-        with patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config), \
-             patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes), \
-             patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements), \
-             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh), \
-             patch("pyiwfm.io.lakes.LakeReader") as MockLakeReader:
-            MockLakeReader.return_value.read_lake_definitions.side_effect = Exception("Lake parse error")
+        with (
+            patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
+            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
+            patch("pyiwfm.io.lakes.LakeReader") as MockLakeReader,
+        ):
+            MockLakeReader.return_value.read_lake_definitions.side_effect = Exception(
+                "Lake parse error"
+            )
             model = IWFMModel.from_preprocessor(tmp_path / "preprocessor.in", load_lakes=True)
             assert "lakes_load_error" in model.metadata
             assert "Lake parse error" in model.metadata["lakes_load_error"]
@@ -98,8 +105,8 @@ class TestFromPreprocessorMissingNodes:
 
     def test_from_preprocessor_missing_nodes(self, tmp_path: Path) -> None:
         """Missing nodes file -> FileFormatError."""
-        from pyiwfm.core.model import IWFMModel
         from pyiwfm.core.exceptions import FileFormatError
+        from pyiwfm.core.model import IWFMModel
 
         mock_config = MagicMock()
         mock_config.nodes_file = None
@@ -114,16 +121,18 @@ class TestFromPreprocessorMissingElements:
 
     def test_from_preprocessor_missing_elements(self, tmp_path: Path) -> None:
         """Missing elements file -> FileFormatError."""
-        from pyiwfm.core.model import IWFMModel
         from pyiwfm.core.exceptions import FileFormatError
+        from pyiwfm.core.model import IWFMModel
 
         mock_config = MagicMock()
         mock_config.nodes_file = tmp_path / "nodes.dat"
         mock_config.elements_file = None
         mock_nodes = {1: SimpleNamespace(id=1, x=0.0, y=0.0)}
 
-        with patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config), \
-             patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes):
+        with (
+            patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
+            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
+        ):
             with pytest.raises(FileFormatError, match="Elements file"):
                 IWFMModel.from_preprocessor(tmp_path / "preprocessor.in")
 
@@ -139,8 +148,10 @@ class TestFromPreprocessorBinary:
         mock_mesh.n_nodes = 10
         mock_mesh.n_elements = 5
 
-        with patch("pyiwfm.io.binary.FortranBinaryReader") as MockReader, \
-             patch("pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh):
+        with (
+            patch("pyiwfm.io.binary.FortranBinaryReader") as MockReader,
+            patch("pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh),
+        ):
             # Mock the context manager
             MockReader.return_value.__enter__ = MagicMock(return_value=MockReader.return_value)
             MockReader.return_value.__exit__ = MagicMock(return_value=False)
@@ -180,12 +191,16 @@ class TestFromPreprocessorSubregionsAndStratigraphy:
         mock_mesh = MagicMock()
         mock_subregions = {1: SimpleNamespace(id=1, name="Region1")}
 
-        with patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config), \
-             patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes), \
-             patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements), \
-             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh), \
-             patch("pyiwfm.io.preprocessor.read_subregions_file", return_value=mock_subregions) as mock_read_sub:
-            model = IWFMModel.from_preprocessor(tmp_path / "pp.in")
+        with (
+            patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
+            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
+            patch(
+                "pyiwfm.io.preprocessor.read_subregions_file", return_value=mock_subregions
+            ) as mock_read_sub,
+        ):
+            IWFMModel.from_preprocessor(tmp_path / "pp.in")
             mock_read_sub.assert_called_once_with(sub_file)
 
     def test_from_preprocessor_with_stratigraphy(self, tmp_path: Path) -> None:
@@ -212,11 +227,13 @@ class TestFromPreprocessorSubregionsAndStratigraphy:
         mock_mesh = MagicMock()
         mock_strat = MagicMock()
 
-        with patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config), \
-             patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes), \
-             patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements), \
-             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh), \
-             patch("pyiwfm.io.ascii.read_stratigraphy", return_value=mock_strat) as mock_read_strat:
+        with (
+            patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
+            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
+            patch("pyiwfm.io.ascii.read_stratigraphy", return_value=mock_strat) as mock_read_strat,
+        ):
             model = IWFMModel.from_preprocessor(tmp_path / "pp.in")
             mock_read_strat.assert_called_once_with(strat_file)
             assert model.stratigraphy is mock_strat
@@ -252,12 +269,14 @@ class TestFromPreprocessorSuccessfulStreamLoading:
         mock_stream_nodes = {1: mock_stream_node}
         mock_app_stream = MagicMock()
 
-        with patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config), \
-             patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes), \
-             patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements), \
-             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh), \
-             patch("pyiwfm.io.streams.StreamReader") as MockReader, \
-             patch("pyiwfm.components.stream.AppStream", return_value=mock_app_stream):
+        with (
+            patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
+            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
+            patch("pyiwfm.io.streams.StreamReader") as MockReader,
+            patch("pyiwfm.components.stream.AppStream", return_value=mock_app_stream),
+        ):
             MockReader.return_value.read_stream_nodes.return_value = mock_stream_nodes
             model = IWFMModel.from_preprocessor(tmp_path / "pp.in", load_streams=True)
             assert model.streams is mock_app_stream
@@ -294,12 +313,14 @@ class TestFromPreprocessorSuccessfulLakeLoading:
         mock_lakes_dict = {1: mock_lake}
         mock_app_lake = MagicMock()
 
-        with patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config), \
-             patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes), \
-             patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements), \
-             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh), \
-             patch("pyiwfm.io.lakes.LakeReader") as MockReader, \
-             patch("pyiwfm.components.lake.AppLake", return_value=mock_app_lake):
+        with (
+            patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
+            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
+            patch("pyiwfm.io.lakes.LakeReader") as MockReader,
+            patch("pyiwfm.components.lake.AppLake", return_value=mock_app_lake),
+        ):
             MockReader.return_value.read_lake_definitions.return_value = mock_lakes_dict
             model = IWFMModel.from_preprocessor(tmp_path / "pp.in", load_lakes=True)
             assert model.lakes is mock_app_lake
@@ -330,9 +351,14 @@ class TestFromSimulationWithPreprocessor:
         pp_file = tmp_path / "preprocessor.in"
 
         # Create files so .exists() returns True
-        for f in [sim_file, pp_file,
-                  tmp_path / "gw.dat", tmp_path / "streams.dat",
-                  tmp_path / "lakes.dat", tmp_path / "rootzone.dat"]:
+        for f in [
+            sim_file,
+            pp_file,
+            tmp_path / "gw.dat",
+            tmp_path / "streams.dat",
+            tmp_path / "lakes.dat",
+            tmp_path / "rootzone.dat",
+        ]:
             f.write_text("fake")
 
         mock_model = MagicMock(spec=IWFMModel)
@@ -352,17 +378,19 @@ class TestFromSimulationWithPreprocessor:
         mock_lake_defs = {1: MagicMock()}
         mock_crops = {1: MagicMock()}
 
-        with patch.object(IWFMModel, "from_preprocessor", return_value=mock_model), \
-             patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader, \
-             patch("pyiwfm.io.groundwater.GroundwaterReader") as MockGWReader, \
-             patch("pyiwfm.io.streams.StreamReader") as MockStreamReader, \
-             patch("pyiwfm.io.lakes.LakeReader") as MockLakeReader, \
-             patch("pyiwfm.io.rootzone.RootZoneReader") as MockRZReader, \
-             patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)), \
-             patch("pyiwfm.components.groundwater.AppGW") as MockAppGW, \
-             patch("pyiwfm.components.stream.AppStream") as MockAppStream, \
-             patch("pyiwfm.components.lake.AppLake") as MockAppLake, \
-             patch("pyiwfm.components.rootzone.RootZone") as MockRootZone:
+        with (
+            patch.object(IWFMModel, "from_preprocessor", return_value=mock_model),
+            patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader,
+            patch("pyiwfm.io.groundwater.GroundwaterReader") as MockGWReader,
+            patch("pyiwfm.io.streams.StreamReader") as MockStreamReader,
+            patch("pyiwfm.io.lakes.LakeReader") as MockLakeReader,
+            patch("pyiwfm.io.rootzone.RootZoneReader") as MockRZReader,
+            patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)),
+            patch("pyiwfm.components.groundwater.AppGW"),
+            patch("pyiwfm.components.stream.AppStream"),
+            patch("pyiwfm.components.lake.AppLake"),
+            patch("pyiwfm.components.rootzone.RootZone"),
+        ):
             MockSimReader.return_value.read.return_value = sim_config
             MockGWReader.return_value.read_wells.return_value = mock_wells
             MockStreamReader.return_value.read_stream_nodes.return_value = mock_stream_nodes
@@ -405,17 +433,19 @@ class TestFromSimulationWithPreprocessor:
         sim_config.lakes_file = None
         sim_config.rootzone_file = None
 
-        with patch.object(IWFMModel, "from_preprocessor", return_value=mock_model), \
-             patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader, \
-             patch("pyiwfm.io.groundwater.GWMainFileReader") as MockGWMainReader, \
-             patch("pyiwfm.io.groundwater.GroundwaterReader") as MockGWReader, \
-             patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)):
+        with (
+            patch.object(IWFMModel, "from_preprocessor", return_value=mock_model),
+            patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader,
+            patch("pyiwfm.io.groundwater.GWMainFileReader") as MockGWMainReader,
+            patch("pyiwfm.io.groundwater.GroundwaterReader") as MockGWReader,
+            patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)),
+        ):
             MockSimReader.return_value.read.return_value = sim_config
             # Make hierarchical reader fail, triggering fallback to direct reader
             MockGWMainReader.return_value.read.side_effect = Exception("GW main file error")
             MockGWReader.return_value.read_wells.side_effect = Exception("GW error")
 
-            result = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
+            IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
 
         # Since both readers fail, but we catch exceptions, check that
         # the gw component is created but with no wells
@@ -448,17 +478,19 @@ class TestFromSimulationWithPreprocessor:
         sim_config.lakes_file = None
         sim_config.rootzone_file = None
 
-        with patch.object(IWFMModel, "from_preprocessor", return_value=mock_model), \
-             patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader, \
-             patch("pyiwfm.io.streams.StreamMainFileReader") as MockStreamMainReader, \
-             patch("pyiwfm.io.streams.StreamReader") as MockStreamReader, \
-             patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)):
+        with (
+            patch.object(IWFMModel, "from_preprocessor", return_value=mock_model),
+            patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader,
+            patch("pyiwfm.io.streams.StreamMainFileReader") as MockStreamMainReader,
+            patch("pyiwfm.io.streams.StreamReader") as MockStreamReader,
+            patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)),
+        ):
             MockSimReader.return_value.read.return_value = sim_config
             # Make hierarchical reader fail, triggering fallback to direct reader
             MockStreamMainReader.return_value.read.side_effect = Exception("Stream main file error")
             MockStreamReader.return_value.read_stream_nodes.side_effect = Exception("Stream error")
 
-            result = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
+            IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
 
         # Since both readers fail, but we catch exceptions, check that
         # the stream component is created but empty or load_error is set
@@ -491,16 +523,18 @@ class TestFromSimulationWithPreprocessor:
         sim_config.lakes_file = lake_file
         sim_config.rootzone_file = None
 
-        with patch.object(IWFMModel, "from_preprocessor", return_value=mock_model), \
-             patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader, \
-             patch("pyiwfm.io.lakes.LakeMainFileReader") as MockLakeMainReader, \
-             patch("pyiwfm.io.lakes.LakeReader") as MockLakeReader, \
-             patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)):
+        with (
+            patch.object(IWFMModel, "from_preprocessor", return_value=mock_model),
+            patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader,
+            patch("pyiwfm.io.lakes.LakeMainFileReader") as MockLakeMainReader,
+            patch("pyiwfm.io.lakes.LakeReader") as MockLakeReader,
+            patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)),
+        ):
             MockSimReader.return_value.read.return_value = sim_config
             MockLakeMainReader.return_value.read.side_effect = Exception("Lake main file error")
             MockLakeReader.return_value.read_lake_definitions.side_effect = Exception("Lake error")
 
-            result = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
+            IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
 
         # Lakes component is created but empty, or error stored as metadata
         assert mock_model.lakes is not None or "lakes_load_error" in mock_model.metadata
@@ -533,17 +567,19 @@ class TestFromSimulationWithPreprocessor:
         sim_config.lakes_file = None
         sim_config.rootzone_file = rz_file
 
-        with patch.object(IWFMModel, "from_preprocessor", return_value=mock_model), \
-             patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader, \
-             patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as MockRZMainReader, \
-             patch("pyiwfm.io.rootzone.RootZoneReader") as MockRZReader, \
-             patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)):
+        with (
+            patch.object(IWFMModel, "from_preprocessor", return_value=mock_model),
+            patch("pyiwfm.io.simulation.SimulationReader") as MockSimReader,
+            patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as MockRZMainReader,
+            patch("pyiwfm.io.rootzone.RootZoneReader") as MockRZReader,
+            patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)),
+        ):
             MockSimReader.return_value.read.return_value = sim_config
             # Make hierarchical reader fail, triggering fallback to direct reader
             MockRZMainReader.return_value.read.side_effect = Exception("RZ main file error")
             MockRZReader.return_value.read_crop_types.side_effect = Exception("RZ error")
 
-            result = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
+            IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
 
         # Since both readers fail, but we catch exceptions, check that
         # the rootzone component is created but empty or load_error is set

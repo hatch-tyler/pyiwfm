@@ -13,13 +13,15 @@ from pathlib import Path
 
 import pytest
 
+from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.io.rootzone_native import (
+    NativeRiparianConfig,
+    NativeRiparianReader,
+    read_native_riparian,
+)
 from pyiwfm.io.rootzone_nonponded import (
     NonPondedCropConfig,
     NonPondedCropReader,
-    CurveNumberRow,
-    EtcPointerRow,
-    SupplyReturnReuseRow,
-    InitialConditionRow,
     read_nonponded_crop,
 )
 from pyiwfm.io.rootzone_ponded import (
@@ -30,21 +32,8 @@ from pyiwfm.io.rootzone_ponded import (
 from pyiwfm.io.rootzone_urban import (
     UrbanLandUseConfig,
     UrbanLandUseReader,
-    UrbanManagementRow,
-    SurfaceFlowDestRow,
-    UrbanInitialConditionRow,
     read_urban_landuse,
 )
-from pyiwfm.io.rootzone_native import (
-    NativeRiparianConfig,
-    NativeRiparianReader,
-    NativeRiparianCNRow,
-    NativeRiparianEtcRow,
-    NativeRiparianInitialRow,
-    read_native_riparian,
-)
-from pyiwfm.core.exceptions import FileFormatError
-
 
 # =====================================================================
 # Fixtures – minimal sample files
@@ -256,12 +245,8 @@ class TestNonPondedCropReader:
 
         assert len(config.initial_conditions) == 2
         assert config.initial_conditions[0].subregion_id == 1
-        assert config.initial_conditions[0].precip_fractions == pytest.approx(
-            [0.5, 0.4]
-        )
-        assert config.initial_conditions[0].moisture_contents == pytest.approx(
-            [0.3, 0.25]
-        )
+        assert config.initial_conditions[0].precip_fractions == pytest.approx([0.5, 0.4])
+        assert config.initial_conditions[0].moisture_contents == pytest.approx([0.3, 0.25])
 
     def test_invalid_ncrops_raises(self, tmp_path: Path) -> None:
         """Non-integer NCrops raises FileFormatError."""
@@ -523,9 +508,7 @@ class TestNativeRiparianReader:
         f.write_text("C bad\nArea.dat\n1.0\n5.0\nabc\n")
 
         reader = NativeRiparianReader()
-        with pytest.raises(
-            FileFormatError, match="Invalid riparian root depth"
-        ):
+        with pytest.raises(FileFormatError, match="Invalid riparian root depth"):
             reader.read(f)
 
     def test_convenience_function(self, tmp_path: Path) -> None:
@@ -562,12 +545,8 @@ C  Initial (sub_id  native  riparian)
         assert config.curve_numbers[0].native_cn == [65.0]
         assert config.curve_numbers[0].riparian_cn == [58.0]
         assert len(config.initial_conditions) == 1
-        assert config.initial_conditions[0].native_moisture == [
-            pytest.approx(0.35)
-        ]
-        assert config.initial_conditions[0].riparian_moisture == [
-            pytest.approx(0.50)
-        ]
+        assert config.initial_conditions[0].native_moisture == [pytest.approx(0.35)]
+        assert config.initial_conditions[0].riparian_moisture == [pytest.approx(0.50)]
 
 
 # =====================================================================
@@ -608,14 +587,6 @@ class TestImportExports:
     def test_nonponded_imports(self) -> None:
         from pyiwfm.io import (
             NonPondedCropConfig,
-            NonPondedCropReader,
-            CurveNumberRow,
-            EtcPointerRow,
-            IrrigationPointerRow,
-            SoilMoisturePointerRow,
-            SupplyReturnReuseRow,
-            InitialConditionRow,
-            read_nonponded_crop,
         )
 
         assert NonPondedCropConfig is not None
@@ -623,8 +594,6 @@ class TestImportExports:
     def test_ponded_imports(self) -> None:
         from pyiwfm.io import (
             PondedCropConfig,
-            PondedCropReader,
-            read_ponded_crop,
         )
 
         assert PondedCropConfig is not None
@@ -632,12 +601,6 @@ class TestImportExports:
     def test_urban_imports(self) -> None:
         from pyiwfm.io import (
             UrbanLandUseConfig,
-            UrbanLandUseReader,
-            UrbanCurveNumberRow,
-            UrbanManagementRow,
-            SurfaceFlowDestRow,
-            UrbanInitialConditionRow,
-            read_urban_landuse,
         )
 
         assert UrbanLandUseConfig is not None
@@ -645,11 +608,6 @@ class TestImportExports:
     def test_native_imports(self) -> None:
         from pyiwfm.io import (
             NativeRiparianConfig,
-            NativeRiparianReader,
-            NativeRiparianCNRow,
-            NativeRiparianEtcRow,
-            NativeRiparianInitialRow,
-            read_native_riparian,
         )
 
         assert NativeRiparianConfig is not None

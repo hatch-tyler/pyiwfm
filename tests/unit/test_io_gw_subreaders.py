@@ -11,43 +11,34 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 
-from pyiwfm.io.gw_tiledrain import (
-    TileDrainReader,
-    TileDrainConfig,
-    TileDrainSpec,
-    SubIrrigationSpec,
-    read_gw_tiledrain,
-    TD_DEST_OUTSIDE,
-    TD_DEST_STREAM,
-)
 from pyiwfm.io.gw_boundary import (
-    GWBoundaryReader,
+    GeneralHeadBC,
     GWBoundaryConfig,
+    GWBoundaryReader,
     SpecifiedFlowBC,
     SpecifiedHeadBC,
-    GeneralHeadBC,
-    ConstrainedGeneralHeadBC,
     read_gw_boundary,
 )
 from pyiwfm.io.gw_pumping import (
-    PumpingReader,
-    PumpingConfig,
-    WellSpec,
-    WellPumpingSpec,
     ElementPumpingSpec,
-    ElementGroup,
+    PumpingConfig,
+    PumpingReader,
+    WellSpec,
     read_gw_pumping,
 )
 from pyiwfm.io.gw_subsidence import (
-    SubsidenceReader,
     SubsidenceConfig,
+    SubsidenceReader,
     read_gw_subsidence,
 )
-from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.gw_tiledrain import (
+    TD_DEST_OUTSIDE,
+    TD_DEST_STREAM,
+    TileDrainReader,
+    read_gw_tiledrain,
+)
 
 # =============================================================================
 # TileDrainReader Tests

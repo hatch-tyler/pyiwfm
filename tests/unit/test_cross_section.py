@@ -271,17 +271,13 @@ class TestCrossSectionExtractor:
         extractor = CrossSectionExtractor(quad_mesh, stratigraphy)
         # Node 1 is at (0, 0), node index 0
         node = quad_mesh.nodes[1]
-        xs = extractor.extract(
-            start=(node.x, node.y), end=(node.x + 1e-6, node.y), n_samples=1
-        )
+        xs = extractor.extract(start=(node.x, node.y), end=(node.x + 1e-6, node.y), n_samples=1)
         if xs.mask[0]:
             sorted_ids = sorted(quad_mesh.nodes.keys())
             idx = sorted_ids.index(1)
             assert xs.gs_elev[0] == pytest.approx(stratigraphy.gs_elev[idx], abs=0.5)
 
-    def test_linear_stratigraphy_exact_reproduction(
-        self, quad_mesh: AppGrid
-    ) -> None:
+    def test_linear_stratigraphy_exact_reproduction(self, quad_mesh: AppGrid) -> None:
         """
         Linear stratigraphy should be exactly reproduced by FE interpolation
         on bilinear quads.
@@ -316,9 +312,7 @@ class TestCrossSectionExtractor:
             bots = xs.bottom_elev[valid, layer]
             assert np.all(tops >= bots)
 
-    def test_scalar_interpolation(
-        self, quad_mesh: AppGrid, stratigraphy: Stratigraphy
-    ) -> None:
+    def test_scalar_interpolation(self, quad_mesh: AppGrid, stratigraphy: Stratigraphy) -> None:
         """Interpolate a synthetic scalar field."""
         extractor = CrossSectionExtractor(quad_mesh, stratigraphy)
         xs = extractor.extract(start=(50, 250), end=(450, 250), n_samples=20)
@@ -360,9 +354,7 @@ class TestCrossSectionExtractor:
         np.testing.assert_allclose(result[valid, 1], 50.0, atol=1e-6)
         np.testing.assert_allclose(result[valid, 2], 10.0, atol=1e-6)
 
-    def test_layer_property_linear_reproduction(
-        self, quad_mesh: AppGrid
-    ) -> None:
+    def test_layer_property_linear_reproduction(self, quad_mesh: AppGrid) -> None:
         """Linear Kh field should be exactly reproduced."""
         strat = _make_linear_stratigraphy(quad_mesh, n_layers=2, gs_base=200.0)
         extractor = CrossSectionExtractor(quad_mesh, strat)
@@ -567,18 +559,14 @@ class TestCrossSectionExtractor:
 class TestTriangleMesh:
     """Tests for cross-section extraction on triangle meshes."""
 
-    def test_extraction_on_triangle_mesh(
-        self, tri_extractor: CrossSectionExtractor
-    ) -> None:
+    def test_extraction_on_triangle_mesh(self, tri_extractor: CrossSectionExtractor) -> None:
         """FE interpolation should work with barycentric coordinates on triangles."""
         xs = tri_extractor.extract(start=(50, 250), end=(450, 250), n_samples=30)
         assert xs.fraction_inside > 0.5
         valid = xs.mask
         assert not np.any(np.isnan(xs.gs_elev[valid]))
 
-    def test_linear_reproduction_triangle(
-        self, tri_mesh: AppGrid
-    ) -> None:
+    def test_linear_reproduction_triangle(self, tri_mesh: AppGrid) -> None:
         """Linear stratigraphy should be exactly reproduced on triangle meshes."""
         strat = _make_linear_stratigraphy(
             tri_mesh, n_layers=2, gs_base=200.0, gs_slope_x=-0.05, layer_thickness=30.0
@@ -636,6 +624,7 @@ class TestPlotCrossSection:
         assert fig is not None
         assert ax is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     def test_plot_with_existing_axes(self, extractor: CrossSectionExtractor) -> None:
@@ -650,9 +639,7 @@ class TestPlotCrossSection:
         assert ax2 is ax
         plt.close(fig)
 
-    def test_scalar_overlay(
-        self, quad_mesh: AppGrid, stratigraphy: Stratigraphy
-    ) -> None:
+    def test_scalar_overlay(self, quad_mesh: AppGrid, stratigraphy: Stratigraphy) -> None:
         """Scalar overlay renders without error."""
         from pyiwfm.visualization.plotting import plot_cross_section
 
@@ -666,11 +653,10 @@ class TestPlotCrossSection:
         fig, ax = plot_cross_section(xs, scalar_name="head")
         assert fig is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
-    def test_layer_property_colorfill(
-        self, quad_mesh: AppGrid, stratigraphy: Stratigraphy
-    ) -> None:
+    def test_layer_property_colorfill(self, quad_mesh: AppGrid, stratigraphy: Stratigraphy) -> None:
         """Layer property color-fill rendering works."""
         from pyiwfm.visualization.plotting import plot_cross_section
 
@@ -684,6 +670,7 @@ class TestPlotCrossSection:
         fig, ax = plot_cross_section(xs, layer_property_name="kh")
         assert fig is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     def test_combined_scalar_and_property(
@@ -704,11 +691,10 @@ class TestPlotCrossSection:
         kh = np.ones((n_nodes, stratigraphy.n_layers)) * 50.0
         ext.interpolate_layer_property(xs, kh, "kh")
 
-        fig, ax = plot_cross_section(
-            xs, scalar_name="head", layer_property_name="kh"
-        )
+        fig, ax = plot_cross_section(xs, scalar_name="head", layer_property_name="kh")
         assert fig is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     def test_custom_colors_labels(self, extractor: CrossSectionExtractor) -> None:
@@ -724,6 +710,7 @@ class TestPlotCrossSection:
         )
         assert ax.get_title() == "Custom Test"
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     def test_nan_handling(self, extractor: CrossSectionExtractor) -> None:
@@ -735,6 +722,7 @@ class TestPlotCrossSection:
         fig, ax = plot_cross_section(xs)
         assert fig is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     def test_plot_cross_section_location(
@@ -747,6 +735,7 @@ class TestPlotCrossSection:
         fig, ax = plot_cross_section_location(quad_mesh, xs)
         assert fig is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     def test_plot_location_polyline(
@@ -760,6 +749,7 @@ class TestPlotCrossSection:
         fig, ax = plot_cross_section_location(quad_mesh, xs)
         assert fig is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     # -------------------------------------------------------------------
@@ -788,6 +778,7 @@ class TestPlotCrossSection:
         fig, ax = plot_cross_section(xs, layer_property_name="kh")
         assert fig is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     # -------------------------------------------------------------------
@@ -828,6 +819,7 @@ class TestPlotCrossSection:
         fig, ax = plot_cross_section(xs, layer_property_name="kh_nan")
         assert fig is not None
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     # -------------------------------------------------------------------
@@ -847,6 +839,7 @@ class TestPlotCrossSection:
         labels = [line.get_label() for line in ax.get_lines()]
         assert "Ground Surface" not in labels
         import matplotlib.pyplot as plt
+
         plt.close(fig)
 
     # -------------------------------------------------------------------
@@ -868,4 +861,5 @@ class TestPlotCrossSection:
         assert "A" not in texts
         assert "A'" not in texts
         import matplotlib.pyplot as plt
+
         plt.close(fig)

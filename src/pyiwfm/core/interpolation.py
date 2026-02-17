@@ -93,13 +93,14 @@ class InterpolationResult:
             raise ValueError("Point was not found in any element")
 
         result = 0.0
-        for node_id, coeff in zip(self.node_ids, self.coefficients):
+        for node_id, coeff in zip(self.node_ids, self.coefficients, strict=False):
             result += coeff * node_values[node_id]
         return result
 
 
-def _xpoint(x1: float, y1: float, x2: float, y2: float,
-            xp: float, yp: float) -> tuple[float, float]:
+def _xpoint(
+    x1: float, y1: float, x2: float, y2: float, xp: float, yp: float
+) -> tuple[float, float]:
     """
     Find intersection between a line and its perpendicular through a point.
 
@@ -207,7 +208,7 @@ def point_in_element(
 
 
 def find_containing_element(
-    grid: "AppGrid",
+    grid: AppGrid,
     xp: float,
     yp: float,
 ) -> int:
@@ -244,7 +245,7 @@ def find_containing_element(
     0
     """
     for elem_id, elem in grid.elements.items():
-        n_vertex = len(elem.vertices)
+        len(elem.vertices)
         x = np.array([grid.nodes[vid].x for vid in elem.vertices])
         y = np.array([grid.nodes[vid].y for vid in elem.vertices])
 
@@ -384,7 +385,7 @@ def interpolation_coefficients(
 
 
 def fe_interpolate_at_element(
-    grid: "AppGrid",
+    grid: AppGrid,
     element_id: int,
     xp: float,
     yp: float,
@@ -423,7 +424,7 @@ def fe_interpolate_at_element(
 
 
 def fe_interpolate(
-    grid: "AppGrid",
+    grid: AppGrid,
     xp: float,
     yp: float,
 ) -> InterpolationResult:
@@ -515,7 +516,7 @@ class FEInterpolator:
     150.0  # approximately
     """
 
-    def __init__(self, grid: "AppGrid") -> None:
+    def __init__(self, grid: AppGrid) -> None:
         self._grid = grid
         self._build_cache()
 
@@ -532,15 +533,11 @@ class FEInterpolator:
         for eid in self._elem_ids:
             elem = self._grid.elements[eid]
             self._elem_vertices[eid] = elem.vertices
-            self._elem_x[eid] = np.array(
-                [self._grid.nodes[vid].x for vid in elem.vertices]
-            )
-            self._elem_y[eid] = np.array(
-                [self._grid.nodes[vid].y for vid in elem.vertices]
-            )
+            self._elem_x[eid] = np.array([self._grid.nodes[vid].x for vid in elem.vertices])
+            self._elem_y[eid] = np.array([self._grid.nodes[vid].y for vid in elem.vertices])
 
     @property
-    def grid(self) -> "AppGrid":
+    def grid(self) -> AppGrid:
         """Return the underlying mesh."""
         return self._grid
 
@@ -589,9 +586,7 @@ class FEInterpolator:
                 return eid
         return 0
 
-    def interpolate(
-        self, xp: float, yp: float
-    ) -> tuple[int, tuple[int, ...], NDArray[np.float64]]:
+    def interpolate(self, xp: float, yp: float) -> tuple[int, tuple[int, ...], NDArray[np.float64]]:
         """
         Find containing element and compute interpolation coefficients.
 
@@ -620,9 +615,7 @@ class FEInterpolator:
 
         return elem_id, self._elem_vertices[elem_id], coeffs
 
-    def interpolate_at_element(
-        self, xp: float, yp: float, element_id: int
-    ) -> NDArray[np.float64]:
+    def interpolate_at_element(self, xp: float, yp: float, element_id: int) -> NDArray[np.float64]:
         """
         Compute interpolation coefficients at a known element.
 
@@ -674,7 +667,7 @@ class FEInterpolator:
             return None
 
         result = 0.0
-        for nid, coeff in zip(node_ids, coeffs):
+        for nid, coeff in zip(node_ids, coeffs, strict=False):
             result += coeff * node_values[nid]
         return result
 
@@ -708,7 +701,7 @@ class FEInterpolator:
             return None
 
         result = 0.0
-        for nid, coeff in zip(node_ids, coeffs):
+        for nid, coeff in zip(node_ids, coeffs, strict=False):
             # Assume 1-indexed nodes, array is 0-indexed
             result += coeff * node_values[nid - 1]
         return result
@@ -781,11 +774,11 @@ class ParametricGrid:
     >>> pgrid.set_value(node_id=1, layer=0, param=0, value=100.0)
     """
 
-    grid: "AppGrid"
+    grid: AppGrid
     n_layers: int
     n_params: int
-    _values: NDArray[np.float64] = field(default=None, repr=False)
-    _interpolator: FEInterpolator = field(default=None, repr=False)
+    _values: NDArray[np.float64] = field(init=False, repr=False)
+    _interpolator: FEInterpolator = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize storage arrays."""
@@ -924,7 +917,7 @@ class ParametricGrid:
             return None
 
         result = 0.0
-        for nid, coeff in zip(node_ids, coeffs):
+        for nid, coeff in zip(node_ids, coeffs, strict=False):
             idx = self._node_to_idx[nid]
             result += coeff * self._values[idx, layer, param]
 
@@ -959,7 +952,7 @@ class ParametricGrid:
             return None
 
         result = np.zeros(self.n_params)
-        for nid, coeff in zip(node_ids, coeffs):
+        for nid, coeff in zip(node_ids, coeffs, strict=False):
             idx = self._node_to_idx[nid]
             result += coeff * self._values[idx, layer, :]
 
@@ -994,7 +987,7 @@ class ParametricGrid:
             return None
 
         result = np.zeros(self.n_layers)
-        for nid, coeff in zip(node_ids, coeffs):
+        for nid, coeff in zip(node_ids, coeffs, strict=False):
             idx = self._node_to_idx[nid]
             result += coeff * self._values[idx, :, param]
 

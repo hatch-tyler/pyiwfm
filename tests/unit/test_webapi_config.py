@@ -8,14 +8,14 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
 
 pytest.importorskip("pydantic", reason="Pydantic not available")
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.visualization.webapi.config import ModelState, ViewerSettings
+from pydantic import ValidationError  # noqa: E402
 
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.visualization.webapi.config import ModelState, ViewerSettings  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -76,11 +76,11 @@ class TestViewerSettings:
         assert s.debug is True
 
     def test_invalid_port(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ViewerSettings(port=99999)
 
     def test_extra_fields_forbidden(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ViewerSettings(unknown_field="test")
 
 
@@ -178,14 +178,17 @@ class TestModelState:
         state = ModelState()
         assert state.list_observations() == []
 
-        state.add_observation("obs1", {
-            "filename": "test.csv",
-            "location_id": 1,
-            "type": "gw",
-            "n_records": 10,
-            "times": [],
-            "values": [],
-        })
+        state.add_observation(
+            "obs1",
+            {
+                "filename": "test.csv",
+                "location_id": 1,
+                "type": "gw",
+                "n_records": 10,
+                "times": [],
+                "values": [],
+            },
+        )
 
         obs_list = state.list_observations()
         assert len(obs_list) == 1

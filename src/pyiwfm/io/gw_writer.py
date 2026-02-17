@@ -18,20 +18,19 @@ orchestrating the writing of all groundwater-related input files including:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.io.writer_base import TemplateWriter
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
-    from pyiwfm.core.model import IWFMModel
     from pyiwfm.components.groundwater import AppGW
+    from pyiwfm.core.model import IWFMModel
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +49,7 @@ class GWWriterConfig:
     version : str
         IWFM groundwater component version
     """
+
     output_dir: Path
     gw_subdir: str = "GW"
     version: str = "4.0"
@@ -126,7 +126,7 @@ class GWComponentWriter(TemplateWriter):
 
     def __init__(
         self,
-        model: "IWFMModel",
+        model: IWFMModel,
         config: GWWriterConfig,
         template_engine: TemplateEngine | None = None,
     ) -> None:
@@ -213,14 +213,16 @@ class GWComponentWriter(TemplateWriter):
         self._ensure_dir(output_path)
 
         gw = self.model.groundwater
-        n_layers = self.model.stratigraphy.n_layers
+        strat = self.model.stratigraphy
+        assert strat is not None, "Stratigraphy must be loaded to write GW main file"
+        n_layers = strat.n_layers
         n_nodes = self.model.n_nodes
 
         # Determine which files to reference
-        has_bc = gw is not None and gw.boundary_conditions
-        has_pumping = gw is not None and (gw.wells or gw.element_pumping)
-        has_tile_drains = gw is not None and gw.tile_drains
-        has_subsidence = gw is not None and gw.subsidence
+        has_bc = bool(gw is not None and gw.boundary_conditions)
+        has_pumping = bool(gw is not None and (gw.wells or gw.element_pumping))
+        has_tile_drains = bool(gw is not None and gw.tile_drains)
+        has_subsidence = bool(gw is not None and gw.subsidence)
 
         content = self._render_gw_main(
             has_bc=has_bc,
@@ -244,7 +246,7 @@ class GWComponentWriter(TemplateWriter):
         has_subsidence: bool,
         n_layers: int,
         n_nodes: int,
-        gw: "AppGW",
+        gw: AppGW | None,
     ) -> str:
         """Render the main groundwater file using Jinja2 template + numpy."""
         subdir = self.config.gw_subdir
@@ -254,17 +256,17 @@ class GWComponentWriter(TemplateWriter):
         pump_file = f"{prefix}{self.config.pump_main_file}" if has_pumping else ""
         subs_file = f"{prefix}{self.config.subsidence_file}" if has_subsidence else ""
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Build hydrograph location list
         hydrograph_locations = []
-        if gw is not None and hasattr(gw, 'hydrograph_locations'):
+        if gw is not None and hasattr(gw, "hydrograph_locations"):
             hydrograph_locations = list(gw.hydrograph_locations)
 
         # Build face flow spec list
-        face_flow_specs = []
-        if gw is not None and hasattr(gw, 'face_flow_specs'):
-            face_flow_specs = getattr(gw, 'face_flow_specs', [])
+        face_flow_specs: list[Any] = []
+        if gw is not None and hasattr(gw, "face_flow_specs"):
+            face_flow_specs = getattr(gw, "face_flow_specs", [])
             if not isinstance(face_flow_specs, list):
                 face_flow_specs = []
 
@@ -323,8 +325,16 @@ class GWComponentWriter(TemplateWriter):
                 for layer in range(n_layers):
                     kh = params.kh[node_idx, layer] if params.kh is not None else 1.0
                     kv = params.kv[node_idx, layer] if params.kv is not None else 0.1
-                    ss = params.specific_storage[node_idx, layer] if params.specific_storage is not None else 1e-6
-                    sy = params.specific_yield[node_idx, layer] if params.specific_yield is not None else 0.1
+                    ss = (
+                        params.specific_storage[node_idx, layer]
+                        if params.specific_storage is not None
+                        else 1e-6
+                    )
+                    sy = (
+                        params.specific_yield[node_idx, layer]
+                        if params.specific_yield is not None
+                        else 0.1
+                    )
                     kaq = 0.1
                     line += f"  {kh:10.4f}  {kv:10.4f}  {ss:12.6e}  {sy:8.4f}  {kaq:10.4f}"
                 lines.append(line)
@@ -332,23 +342,27 @@ class GWComponentWriter(TemplateWriter):
             for node_idx in range(n_nodes):
                 node_id = node_idx + 1
                 line = f"    {node_id:<5}"
-                for layer in range(n_layers):
+                for _layer in range(n_layers):
                     line += f"  {1.0:10.4f}  {0.1:10.4f}  {1e-6:12.6e}  {0.1:8.4f}  {0.1:10.4f}"
                 lines.append(line)
 
         # Kh anomaly section
         n_kh_anomalies = 0
-        kh_anomalies = []
-        if gw is not None and hasattr(gw, 'kh_anomalies'):
-            kh_anomalies = getattr(gw, 'kh_anomalies', [])
+        kh_anomalies: list[Any] = []
+        if gw is not None and hasattr(gw, "kh_anomalies"):
+            kh_anomalies = getattr(gw, "kh_anomalies", [])
             if not isinstance(kh_anomalies, list):
                 kh_anomalies = []
             n_kh_anomalies = len(kh_anomalies)
 
         if n_kh_anomalies > 0:
-            lines.append("C*******************************************************************************")
+            lines.append(
+                "C*******************************************************************************"
+            )
             lines.append("C                       Kh Anomaly Data")
-            lines.append("C-------------------------------------------------------------------------------")
+            lines.append(
+                "C-------------------------------------------------------------------------------"
+            )
             lines.append(f"    {n_kh_anomalies}                           / NEBK")
             lines.append("    1.0                         / FACT")
             lines.append("    DAY                         / TUNITH")
@@ -357,14 +371,18 @@ class GWComponentWriter(TemplateWriter):
 
         # GW return flows
         return_flow_flag = 0
-        if gw is not None and hasattr(gw, 'return_flow_destinations'):
-            return_dests = getattr(gw, 'return_flow_destinations', {})
+        if gw is not None and hasattr(gw, "return_flow_destinations"):
+            return_dests = getattr(gw, "return_flow_destinations", {})
             if isinstance(return_dests, dict) and return_dests:
                 return_flow_flag = 1
 
-        lines.append("C*******************************************************************************")
+        lines.append(
+            "C*******************************************************************************"
+        )
         lines.append("C                       GW Return Flows")
-        lines.append("C-------------------------------------------------------------------------------")
+        lines.append(
+            "C-------------------------------------------------------------------------------"
+        )
         lines.append(f"    {return_flow_flag}                           / IFLAGRF")
 
         if return_flow_flag and isinstance(return_dests, dict):
@@ -373,17 +391,25 @@ class GWComponentWriter(TemplateWriter):
                 lines.append(f"    {node_id:<6} {dest_type:>4} {dest_id:>6}")
 
         # Initial heads section
-        lines.append("C*******************************************************************************")
+        lines.append(
+            "C*******************************************************************************"
+        )
         lines.append("C                       Initial Groundwater Heads")
         lines.append("C")
         lines.append("C   FACTHINI ; Conversion factor for initial heads")
-        lines.append("C-------------------------------------------------------------------------------")
+        lines.append(
+            "C-------------------------------------------------------------------------------"
+        )
         lines.append("    1.0                         / FACTHINI")
-        lines.append("C-------------------------------------------------------------------------------")
+        lines.append(
+            "C-------------------------------------------------------------------------------"
+        )
         lines.append("C   ID      ; Node ID")
         lines.append("C   For each layer:")
         lines.append("C     HEAD  ; Initial head [L]")
-        lines.append("C-------------------------------------------------------------------------------")
+        lines.append(
+            "C-------------------------------------------------------------------------------"
+        )
 
         if gw and gw.heads is not None:
             for node_idx in range(n_nodes):
@@ -394,12 +420,16 @@ class GWComponentWriter(TemplateWriter):
                     line += f"  {head:12.4f}"
                 lines.append(line)
         else:
-            strat = self.model.stratigraphy
+            init_strat = self.model.stratigraphy
+            assert init_strat is not None, "Stratigraphy must be loaded to write initial heads"
             for node_idx in range(n_nodes):
                 node_id = node_idx + 1
                 line = f"    {node_id:<5}"
                 for layer in range(n_layers):
-                    head = (strat.top_elev[node_idx, layer] + strat.bottom_elev[node_idx, layer]) / 2
+                    head = (
+                        init_strat.top_elev[node_idx, layer]
+                        + init_strat.bottom_elev[node_idx, layer]
+                    ) / 2
                     line += f"  {head:12.4f}"
                 lines.append(line)
 
@@ -426,7 +456,7 @@ class GWComponentWriter(TemplateWriter):
         gen_head = [bc for bc in bcs if bc.bc_type == "general_head"]
         constrained_gh = [bc for bc in bcs if bc.bc_type == "constrained_general_head"]
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         subdir = self.config.gw_subdir
         prefix = (subdir + "\\") if subdir else ""
 
@@ -474,7 +504,7 @@ class GWComponentWriter(TemplateWriter):
         has_wells = gw is not None and gw.wells
         has_elem_pump = gw is not None and gw.element_pumping
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         subdir = self.config.gw_subdir
         prefix = (subdir + "\\") if subdir else ""
 
@@ -510,12 +540,12 @@ class GWComponentWriter(TemplateWriter):
         gw = self.model.groundwater
         drains = gw.tile_drains if gw else {}
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Get conversion factors from model or use defaults
-        td_elev_factor = getattr(gw, 'td_elev_factor', 1.0) if gw else 1.0
-        td_cond_factor = getattr(gw, 'td_cond_factor', 1.0) if gw else 1.0
-        td_time_unit = getattr(gw, 'td_time_unit', '1DAY') if gw else '1DAY'
+        td_elev_factor = getattr(gw, "td_elev_factor", 1.0) if gw else 1.0
+        td_cond_factor = getattr(gw, "td_cond_factor", 1.0) if gw else 1.0
+        td_time_unit = getattr(gw, "td_time_unit", "1DAY") if gw else "1DAY"
 
         # Build drain data for template.
         # The reader multiplies raw values by the factor, so we divide here
@@ -524,29 +554,31 @@ class GWComponentWriter(TemplateWriter):
         for drain_id in sorted(drains.keys()):
             drain = drains[drain_id]
             # Map destination type to integer (0=outside, 1=stream node)
-            dest_type_val = getattr(drain, 'dest_type', 0)
+            dest_type_val = getattr(drain, "dest_type", 0)
             if isinstance(dest_type_val, str):
-                dest_type_val = 0 if dest_type_val.lower() in ('outside', 'none', '') else 1
+                dest_type_val = 0 if dest_type_val.lower() in ("outside", "none", "") else 1
             elev = drain.elevation
             cond = drain.conductance
             if td_elev_factor != 0.0 and td_elev_factor != 1.0:
                 elev = elev / td_elev_factor
             if td_cond_factor != 0.0 and td_cond_factor != 1.0:
                 cond = cond / td_cond_factor
-            drain_data.append({
-                "id": drain.id,
-                "gw_node": getattr(drain, 'gw_node', getattr(drain, 'element', 0)),
-                "elevation": elev,
-                "conductance": cond,
-                "dest_type": int(dest_type_val),
-                "dest_id": getattr(drain, 'destination_id', getattr(drain, 'dest_id', 0)) or 0,
-            })
+            drain_data.append(
+                {
+                    "id": drain.id,
+                    "gw_node": getattr(drain, "gw_node", getattr(drain, "element", 0)),
+                    "elevation": elev,
+                    "conductance": cond,
+                    "dest_type": int(dest_type_val),
+                    "dest_id": getattr(drain, "destination_id", getattr(drain, "dest_id", 0)) or 0,
+                }
+            )
 
         # Build sub-irrigation data
-        si_elev_factor = getattr(gw, 'si_elev_factor', 1.0) if gw else 1.0
-        si_cond_factor = getattr(gw, 'si_cond_factor', 1.0) if gw else 1.0
-        si_time_unit = getattr(gw, 'si_time_unit', '1MON') if gw else '1MON'
-        sub_irrigations = getattr(gw, 'sub_irrigations', []) if gw else []
+        si_elev_factor = getattr(gw, "si_elev_factor", 1.0) if gw else 1.0
+        si_cond_factor = getattr(gw, "si_cond_factor", 1.0) if gw else 1.0
+        si_time_unit = getattr(gw, "si_time_unit", "1MON") if gw else "1MON"
+        sub_irrigations = getattr(gw, "sub_irrigations", []) if gw else []
         si_data = []
         for si in sub_irrigations:
             elev = si.elevation
@@ -555,12 +587,14 @@ class GWComponentWriter(TemplateWriter):
                 elev = elev / si_elev_factor
             if si_cond_factor != 0.0 and si_cond_factor != 1.0:
                 cond = cond / si_cond_factor
-            si_data.append({
-                "id": si.id,
-                "gw_node": si.gw_node,
-                "elevation": elev,
-                "conductance": cond,
-            })
+            si_data.append(
+                {
+                    "id": si.id,
+                    "gw_node": si.gw_node,
+                    "elevation": elev,
+                    "conductance": cond,
+                }
+            )
 
         context = {
             "generation_time": generation_time,
@@ -600,9 +634,9 @@ class GWComponentWriter(TemplateWriter):
         gw = self.model.groundwater
         subsidence = gw.subsidence if gw else []
         node_subsidence = gw.node_subsidence if gw else []
-        subs_config = getattr(gw, 'subsidence_config', None) if gw else None
+        subs_config = getattr(gw, "subsidence_config", None) if gw else None
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         context = {
             "generation_time": generation_time,
@@ -610,8 +644,10 @@ class GWComponentWriter(TemplateWriter):
             "subsidence_data": subsidence,
             "n_node_subsidence": len(node_subsidence),
             "node_subsidence": node_subsidence,
-            "subs_version": getattr(subs_config, 'version', '') if subs_config else '',
-            "n_hydrograph_outputs": getattr(subs_config, 'n_hydrograph_outputs', 0) if subs_config else 0,
+            "subs_version": getattr(subs_config, "version", "") if subs_config else "",
+            "n_hydrograph_outputs": getattr(subs_config, "n_hydrograph_outputs", 0)
+            if subs_config
+            else 0,
         }
 
         content = self._engine.render_template("groundwater/subsidence.j2", **context)
@@ -636,12 +672,12 @@ class GWComponentWriter(TemplateWriter):
         bcs = gw.boundary_conditions if gw else []
         spec_head = [bc for bc in bcs if bc.bc_type == "specified_head"]
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         bc_nodes = []
         col = 1
         for bc in spec_head:
-            for i, node in enumerate(bc.nodes):
+            for _i, node in enumerate(bc.nodes):
                 bc_nodes.append({"node": node, "layer": bc.layer, "column": col})
                 col += 1
 
@@ -652,9 +688,7 @@ class GWComponentWriter(TemplateWriter):
             "bc_nodes": bc_nodes,
         }
 
-        content = self._engine.render_template(
-            "groundwater/spec_head_bc.j2", **context
-        )
+        content = self._engine.render_template("groundwater/spec_head_bc.j2", **context)
 
         output_path.write_text(content)
         logger.info(f"Wrote spec head BC file: {output_path}")
@@ -676,12 +710,12 @@ class GWComponentWriter(TemplateWriter):
         bcs = gw.boundary_conditions if gw else []
         spec_flow = [bc for bc in bcs if bc.bc_type == "specified_flow"]
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         bc_nodes = []
         col = 1
         for bc in spec_flow:
-            for i, node in enumerate(bc.nodes):
+            for _i, node in enumerate(bc.nodes):
                 bc_nodes.append({"node": node, "layer": bc.layer, "column": col})
                 col += 1
 
@@ -692,9 +726,7 @@ class GWComponentWriter(TemplateWriter):
             "bc_nodes": bc_nodes,
         }
 
-        content = self._engine.render_template(
-            "groundwater/spec_flow_bc.j2", **context
-        )
+        content = self._engine.render_template("groundwater/spec_flow_bc.j2", **context)
 
         output_path.write_text(content)
         logger.info(f"Wrote spec flow BC file: {output_path}")
@@ -715,13 +747,13 @@ class GWComponentWriter(TemplateWriter):
         gw = self.model.groundwater
         wells = gw.wells if gw else {}
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         lines = [
             "C*******************************************************************************",
             "C                  WELL SPECIFICATION FILE",
             "C",
-            f"C             Generated by pyiwfm",
+            "C             Generated by pyiwfm",
             f"C             {generation_time}",
             "C*******************************************************************************",
             "C",
@@ -763,13 +795,13 @@ class GWComponentWriter(TemplateWriter):
         gw = self.model.groundwater
         elem_pumping = gw.element_pumping if gw else []
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         lines = [
             "C*******************************************************************************",
             "C                  ELEMENT PUMPING SPECIFICATION FILE",
             "C",
-            f"C             Generated by pyiwfm",
+            "C             Generated by pyiwfm",
             f"C             {generation_time}",
             "C*******************************************************************************",
             "C",
@@ -783,8 +815,7 @@ class GWComponentWriter(TemplateWriter):
         col = 1
         for ep in elem_pumping:
             lines.append(
-                f"    {ep.element_id:<5} {ep.layer:>5}"
-                f"  {ep.layer_fraction:>10.4f}  {col:>5}"
+                f"    {ep.element_id:<5} {ep.layer:>5}  {ep.layer_fraction:>10.4f}  {col:>5}"
             )
             col += 1
 
@@ -861,7 +892,7 @@ class GWComponentWriter(TemplateWriter):
 
 
 def write_gw_component(
-    model: "IWFMModel",
+    model: IWFMModel,
     output_dir: Path | str,
     config: GWWriterConfig | None = None,
 ) -> dict[str, Path]:

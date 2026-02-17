@@ -115,9 +115,7 @@ class SmallWatershedComponentWriter(TemplateWriter):
 
         sw = self.model.small_watersheds
         if sw is None and not write_defaults:
-            logger.warning(
-                "No small watershed component in model and write_defaults=False"
-            )
+            logger.warning("No small watershed component in model and write_defaults=False")
             return results
 
         results["main"] = self.write_main()
@@ -177,13 +175,15 @@ class SmallWatershedComponentWriter(TemplateWriter):
                 raw_rate = gn.max_perc_rate
                 if gn.is_baseflow:
                     raw_rate = -float(gn.layer)
-                gw_nodes_data.append({
-                    "gw_node_id": gn.gw_node_id,
-                    "max_perc_rate": gn.max_perc_rate,
-                    "is_baseflow": gn.is_baseflow,
-                    "layer": gn.layer,
-                    "perc_rate_raw": raw_rate,
-                })
+                gw_nodes_data.append(
+                    {
+                        "gw_node_id": gn.gw_node_id,
+                        "max_perc_rate": gn.max_perc_rate,
+                        "is_baseflow": gn.is_baseflow,
+                        "layer": gn.layer,
+                        "perc_rate_raw": raw_rate,
+                    }
+                )
 
             entry = {
                 "id": ws.id,
@@ -201,37 +201,21 @@ class SmallWatershedComponentWriter(TemplateWriter):
                 "lambda_param": ws.lambda_param,
                 "kunsat_method": ws.kunsat_method,
                 # Reverse the conversion factors for writing
-                "root_depth_raw": (
-                    ws.root_depth / rz_length if rz_length else ws.root_depth
-                ),
-                "hydraulic_cond_raw": (
-                    ws.hydraulic_cond / rz_k if rz_k else ws.hydraulic_cond
-                ),
-                "curve_number_raw": (
-                    ws.curve_number / rz_cn if rz_cn else ws.curve_number
-                ),
-                "gw_threshold_raw": (
-                    ws.gw_threshold / aq_gw if aq_gw else ws.gw_threshold
-                ),
-                "max_gw_storage_raw": (
-                    ws.max_gw_storage / aq_gw if aq_gw else ws.max_gw_storage
-                ),
+                "root_depth_raw": (ws.root_depth / rz_length if rz_length else ws.root_depth),
+                "hydraulic_cond_raw": (ws.hydraulic_cond / rz_k if rz_k else ws.hydraulic_cond),
+                "curve_number_raw": (ws.curve_number / rz_cn if rz_cn else ws.curve_number),
+                "gw_threshold_raw": (ws.gw_threshold / aq_gw if aq_gw else ws.gw_threshold),
+                "max_gw_storage_raw": (ws.max_gw_storage / aq_gw if aq_gw else ws.max_gw_storage),
                 "surface_flow_coeff_raw": (
-                    ws.surface_flow_coeff / aq_time
-                    if aq_time
-                    else ws.surface_flow_coeff
+                    ws.surface_flow_coeff / aq_time if aq_time else ws.surface_flow_coeff
                 ),
                 "baseflow_coeff_raw": (
-                    ws.baseflow_coeff / aq_time
-                    if aq_time
-                    else ws.baseflow_coeff
+                    ws.baseflow_coeff / aq_time if aq_time else ws.baseflow_coeff
                 ),
                 # Initial conditions
                 "initial_soil_moisture": ws.initial_soil_moisture,
                 "initial_gw_storage_raw": (
-                    ws.initial_gw_storage / ic_fac
-                    if ic_fac
-                    else ws.initial_gw_storage
+                    ws.initial_gw_storage / ic_fac if ic_fac else ws.initial_gw_storage
                 ),
             }
             ws_data.append(entry)
@@ -267,9 +251,7 @@ class SmallWatershedComponentWriter(TemplateWriter):
             "ic_factor": sw.ic_factor if sw else 1.0,
         }
 
-        return self._engine.render_template(
-            "small_watershed/small_watershed_main.j2", **context
-        )
+        return self._engine.render_template("small_watershed/small_watershed_main.j2", **context)
 
 
 def write_small_watershed_component(

@@ -10,41 +10,40 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 
-from pyiwfm.io.stream_inflow import (
-    InflowReader,
-    InflowConfig,
-    InflowSpec,
-    read_stream_inflow,
-    _is_comment_line as inflow_is_comment,
-    _strip_comment as inflow_parse_value,
+from pyiwfm.io.iwfm_reader import strip_inline_comment as inflow_parse_value
+from pyiwfm.io.stream_bypass import (
+    BYPASS_DEST_LAKE,
+    BYPASS_DEST_STREAM,
+    BypassRatingTable,
+    BypassSeepageZone,
+    BypassSpec,
+    BypassSpecConfig,
+    BypassSpecReader,
+    read_bypass_spec,
 )
 from pyiwfm.io.stream_diversion import (
-    DiversionSpecReader,
-    DiversionSpecConfig,
+    DEST_ELEMENT,
+    DEST_ELEMENT_SET,
+    DEST_OUTSIDE,
+    DEST_SUBREGION,
     DiversionSpec,
+    DiversionSpecConfig,
+    DiversionSpecReader,
     ElementGroup,
     RechargeZoneDest,
     read_diversion_spec,
-    DEST_ELEMENT,
-    DEST_SUBREGION,
-    DEST_OUTSIDE,
-    DEST_ELEMENT_SET,
 )
-from pyiwfm.io.stream_bypass import (
-    BypassSpecReader,
-    BypassSpecConfig,
-    BypassSpec,
-    BypassRatingTable,
-    BypassSeepageZone,
-    read_bypass_spec,
-    BYPASS_DEST_STREAM,
-    BYPASS_DEST_LAKE,
+from pyiwfm.io.stream_inflow import (
+    InflowConfig,
+    InflowReader,
+    InflowSpec,
+    read_stream_inflow,
 )
-from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.stream_inflow import (
+    _is_comment_line as inflow_is_comment,
+)
 
 # =============================================================================
 # InflowReader extended tests
@@ -105,12 +104,14 @@ class TestInflowDataClasses:
         assert config.inflow_nodes == []
 
     def test_inflow_nodes_filters_zeros(self) -> None:
-        config = InflowConfig(inflow_specs=[
-            InflowSpec(inflow_id=1, stream_node=0),
-            InflowSpec(inflow_id=2, stream_node=5),
-            InflowSpec(inflow_id=3, stream_node=0),
-            InflowSpec(inflow_id=4, stream_node=10),
-        ])
+        config = InflowConfig(
+            inflow_specs=[
+                InflowSpec(inflow_id=1, stream_node=0),
+                InflowSpec(inflow_id=2, stream_node=5),
+                InflowSpec(inflow_id=3, stream_node=0),
+                InflowSpec(inflow_id=4, stream_node=10),
+            ]
+        )
         assert config.inflow_nodes == [5, 10]
 
 
@@ -131,11 +132,7 @@ class TestInflowReaderExtended:
 
     def test_only_comments(self, tmp_path: Path) -> None:
         """File with only comments."""
-        content = (
-            "C comment 1\n"
-            "C comment 2\n"
-            "* comment 3\n"
-        )
+        content = "C comment 1\nC comment 2\n* comment 3\n"
         filepath = self._write(tmp_path, content)
         config = InflowReader().read(filepath)
         assert config.n_inflows == 0
@@ -171,11 +168,7 @@ class TestInflowReaderExtended:
 
     def test_read_accepts_string_path(self, tmp_path: Path) -> None:
         """Reader accepts string paths."""
-        content = (
-            "    1.0\n"
-            "    1DAY\n"
-            "    0\n"
-        )
+        content = "    1.0\n    1DAY\n    0\n"
         filepath = self._write(tmp_path, content)
         config = read_stream_inflow(str(filepath))
         assert config.n_inflows == 0
@@ -333,9 +326,7 @@ class TestDiversionReaderExtended:
         rz = config.recharge_zones[0]
         assert rz.n_zones == 3
         assert rz.zone_ids == [50, 51, 52]
-        assert rz.zone_fractions == [
-            pytest.approx(0.5), pytest.approx(0.3), pytest.approx(0.2)
-        ]
+        assert rz.zone_fractions == [pytest.approx(0.5), pytest.approx(0.3), pytest.approx(0.2)]
 
     def test_read_accepts_string_path(self, tmp_path: Path) -> None:
         """Reader accepts string paths."""

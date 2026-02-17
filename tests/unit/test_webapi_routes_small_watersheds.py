@@ -15,12 +15,11 @@ import pytest
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 pydantic = pytest.importorskip("pydantic", reason="Pydantic not available")
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
-from pyiwfm.core.mesh import AppGrid, Element, Node
-from pyiwfm.visualization.webapi.config import model_state
-from pyiwfm.visualization.webapi.server import create_app
-
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.visualization.webapi.config import model_state  # noqa: E402
+from pyiwfm.visualization.webapi.server import create_app  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -46,9 +45,17 @@ def _reset_model_state():
     model_state._observations = {}
     model_state._results_dir = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
 
@@ -293,9 +300,7 @@ class TestSmallWatershedsBaseflowPercolation:
 
     def test_baseflow_node_raw_qmaxwb(self):
         """Baseflow node: raw_qmaxwb = -layer."""
-        gwn = _make_mock_gw_node(
-            gw_node_id=1, is_baseflow=True, layer=3, max_perc_rate=0.0
-        )
+        gwn = _make_mock_gw_node(gw_node_id=1, is_baseflow=True, layer=3, max_perc_rate=0.0)
         ws = _make_mock_watershed(ws_id=1, gw_nodes=[gwn])
         sw_comp = _make_mock_small_watersheds([ws])
         model = _make_mock_model(small_watersheds=sw_comp)
@@ -313,9 +318,7 @@ class TestSmallWatershedsBaseflowPercolation:
 
     def test_percolation_node_raw_qmaxwb(self):
         """Percolation node: raw_qmaxwb = max_perc_rate."""
-        gwn = _make_mock_gw_node(
-            gw_node_id=2, is_baseflow=False, layer=0, max_perc_rate=1.5
-        )
+        gwn = _make_mock_gw_node(gw_node_id=2, is_baseflow=False, layer=0, max_perc_rate=1.5)
         ws = _make_mock_watershed(ws_id=1, gw_nodes=[gwn])
         sw_comp = _make_mock_small_watersheds([ws])
         model = _make_mock_model(small_watersheds=sw_comp)

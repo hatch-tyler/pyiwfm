@@ -14,6 +14,7 @@ from numpy.typing import NDArray
 
 if TYPE_CHECKING:
     import pyvista as pv
+
     from pyiwfm.core.stratigraphy import Stratigraphy
 
 
@@ -129,8 +130,8 @@ class PropertyVisualizer:
 
     def __init__(
         self,
-        mesh: "pv.UnstructuredGrid",
-        stratigraphy: "Stratigraphy | None" = None,
+        mesh: pv.UnstructuredGrid,
+        stratigraphy: Stratigraphy | None = None,
         aquifer_params: Any | None = None,
     ) -> None:
         """Initialize the property visualizer."""
@@ -203,12 +204,14 @@ class PropertyVisualizer:
                 available.append("kh")
             if hasattr(self.aquifer_params, "kv") and self.aquifer_params.kv is not None:
                 available.append("kv")
-            ss_val = getattr(self.aquifer_params, "specific_storage",
-                             getattr(self.aquifer_params, "ss", None))
+            ss_val = getattr(
+                self.aquifer_params, "specific_storage", getattr(self.aquifer_params, "ss", None)
+            )
             if ss_val is not None:
                 available.append("ss")
-            sy_val = getattr(self.aquifer_params, "specific_yield",
-                             getattr(self.aquifer_params, "sy", None))
+            sy_val = getattr(
+                self.aquifer_params, "specific_yield", getattr(self.aquifer_params, "sy", None)
+            )
             if sy_val is not None:
                 available.append("sy")
 
@@ -236,8 +239,7 @@ class PropertyVisualizer:
         """
         if name not in self._available_properties:
             raise ValueError(
-                f"Property '{name}' not available. "
-                f"Available: {self._available_properties}"
+                f"Property '{name}' not available. Available: {self._available_properties}"
             )
 
         self._active_property = name

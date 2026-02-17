@@ -6,11 +6,11 @@ import numpy as np
 import pytest
 
 from pyiwfm.components.lake import (
+    AppLake,
     Lake,
     LakeElement,
     LakeOutflow,
     LakeRating,
-    AppLake,
 )
 from pyiwfm.core.exceptions import ComponentError
 
@@ -556,9 +556,7 @@ class TestAppLakeEdgeCases:
     def test_validate_outflow_to_nonexistent_lake(self) -> None:
         """Test validation catches outflow to non-existent lake."""
         app = AppLake()
-        outflow = LakeOutflow(
-            lake_id=1, destination_type="lake", destination_id=99
-        )
+        outflow = LakeOutflow(lake_id=1, destination_type="lake", destination_id=99)
         app.add_lake(Lake(id=1, name="Source", outflow=outflow))
 
         with pytest.raises(ComponentError, match="non-existent lake"):
@@ -567,9 +565,7 @@ class TestAppLakeEdgeCases:
     def test_validate_outflow_to_stream_ok(self) -> None:
         """Test validation passes for outflow to stream (not validated)."""
         app = AppLake()
-        outflow = LakeOutflow(
-            lake_id=1, destination_type="stream", destination_id=5
-        )
+        outflow = LakeOutflow(lake_id=1, destination_type="stream", destination_id=5)
         app.add_lake(Lake(id=1, name="Source", outflow=outflow))
         # Should not raise
         app.validate()

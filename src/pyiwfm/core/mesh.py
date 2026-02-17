@@ -31,8 +31,8 @@ Mesh: 3 nodes, 1 elements
 from __future__ import annotations
 
 import math
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Iterator
 
 import numpy as np
 from numpy.typing import NDArray
@@ -399,6 +399,7 @@ class AppGrid:
         """
         if self._vertex_cache is None:
             self._build_node_mapping()
+            assert self._node_id_to_idx is not None
             sorted_elem_ids = sorted(self.elements.keys())
             n_elem = len(sorted_elem_ids)
             self._vertex_cache = np.zeros((n_elem, 4), dtype=np.int32)
@@ -445,9 +446,7 @@ class AppGrid:
 
     def get_elements_in_subregion(self, subregion_id: int) -> list[int]:
         """Return list of element IDs in a subregion."""
-        return [
-            eid for eid, elem in self.elements.items() if elem.subregion == subregion_id
-        ]
+        return [eid for eid, elem in self.elements.items() if elem.subregion == subregion_id]
 
     def get_elements_by_subregion(self) -> dict[int, list[int]]:
         """
@@ -484,7 +483,7 @@ class AppGrid:
             areas[sr_id] += elem.area
         return areas
 
-    def get_element_areas_array(self) -> "NDArray":
+    def get_element_areas_array(self) -> NDArray:
         """
         Get array of element areas in element ID order.
 
@@ -494,6 +493,7 @@ class AppGrid:
             Array of areas where index i corresponds to element (i+1).
         """
         import numpy as np
+
         max_id = max(self.elements.keys()) if self.elements else 0
         areas = np.zeros(max_id)
         for eid, elem in self.elements.items():
@@ -587,9 +587,7 @@ class AppGrid:
         for (n1, n2), elems in edge_to_elements.items():
             if len(elems) == 1:
                 # Boundary face
-                self.faces[face_id] = Face(
-                    id=face_id, nodes=(n1, n2), elements=(elems[0], None)
-                )
+                self.faces[face_id] = Face(id=face_id, nodes=(n1, n2), elements=(elems[0], None))
             else:
                 # Interior face
                 self.faces[face_id] = Face(
@@ -611,7 +609,7 @@ class AppGrid:
             elem.area = 0.0
 
         # Compute element areas using shoelace formula
-        for eid, elem in self.elements.items():
+        for _eid, elem in self.elements.items():
             coords = [(self.nodes[vid].x, self.nodes[vid].y) for vid in elem.vertices]
             area = self._polygon_area(coords)
             elem.area = area
@@ -655,9 +653,7 @@ class AppGrid:
         for eid, elem in self.elements.items():
             for vid in elem.vertices:
                 if vid not in node_ids:
-                    raise MeshError(
-                        f"Element {eid} has invalid vertex reference: {vid}"
-                    )
+                    raise MeshError(f"Element {eid} has invalid vertex reference: {vid}")
 
             # Check for duplicate vertices
             if len(set(elem.vertices)) != len(elem.vertices):

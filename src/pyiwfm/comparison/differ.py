@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -81,7 +81,7 @@ class MeshDiff:
         return len(self.items) == 0
 
     @classmethod
-    def compare(cls, mesh1: "AppGrid", mesh2: "AppGrid") -> "MeshDiff":
+    def compare(cls, mesh1: AppGrid, mesh2: AppGrid) -> MeshDiff:
         """
         Compare two meshes and return their differences.
 
@@ -101,21 +101,25 @@ class MeshDiff:
         # Added nodes
         for nid in node_ids2 - node_ids1:
             node = mesh2.nodes[nid]
-            diff.items.append(DiffItem(
-                path=f"mesh.nodes.{nid}",
-                diff_type=DiffType.ADDED,
-                new_value={"x": node.x, "y": node.y, "is_boundary": node.is_boundary},
-            ))
+            diff.items.append(
+                DiffItem(
+                    path=f"mesh.nodes.{nid}",
+                    diff_type=DiffType.ADDED,
+                    new_value={"x": node.x, "y": node.y, "is_boundary": node.is_boundary},
+                )
+            )
             diff.nodes_added += 1
 
         # Removed nodes
         for nid in node_ids1 - node_ids2:
             node = mesh1.nodes[nid]
-            diff.items.append(DiffItem(
-                path=f"mesh.nodes.{nid}",
-                diff_type=DiffType.REMOVED,
-                old_value={"x": node.x, "y": node.y, "is_boundary": node.is_boundary},
-            ))
+            diff.items.append(
+                DiffItem(
+                    path=f"mesh.nodes.{nid}",
+                    diff_type=DiffType.REMOVED,
+                    old_value={"x": node.x, "y": node.y, "is_boundary": node.is_boundary},
+                )
+            )
             diff.nodes_removed += 1
 
         # Modified nodes
@@ -124,29 +128,35 @@ class MeshDiff:
             node2 = mesh2.nodes[nid]
 
             if not np.isclose(node1.x, node2.x):
-                diff.items.append(DiffItem(
-                    path=f"mesh.nodes.{nid}.x",
-                    diff_type=DiffType.MODIFIED,
-                    old_value=node1.x,
-                    new_value=node2.x,
-                ))
+                diff.items.append(
+                    DiffItem(
+                        path=f"mesh.nodes.{nid}.x",
+                        diff_type=DiffType.MODIFIED,
+                        old_value=node1.x,
+                        new_value=node2.x,
+                    )
+                )
                 diff.nodes_modified += 1
 
             if not np.isclose(node1.y, node2.y):
-                diff.items.append(DiffItem(
-                    path=f"mesh.nodes.{nid}.y",
-                    diff_type=DiffType.MODIFIED,
-                    old_value=node1.y,
-                    new_value=node2.y,
-                ))
+                diff.items.append(
+                    DiffItem(
+                        path=f"mesh.nodes.{nid}.y",
+                        diff_type=DiffType.MODIFIED,
+                        old_value=node1.y,
+                        new_value=node2.y,
+                    )
+                )
 
             if node1.is_boundary != node2.is_boundary:
-                diff.items.append(DiffItem(
-                    path=f"mesh.nodes.{nid}.is_boundary",
-                    diff_type=DiffType.MODIFIED,
-                    old_value=node1.is_boundary,
-                    new_value=node2.is_boundary,
-                ))
+                diff.items.append(
+                    DiffItem(
+                        path=f"mesh.nodes.{nid}.is_boundary",
+                        diff_type=DiffType.MODIFIED,
+                        old_value=node1.is_boundary,
+                        new_value=node2.is_boundary,
+                    )
+                )
 
         # Compare elements
         elem_ids1 = set(mesh1.elements.keys())
@@ -155,27 +165,31 @@ class MeshDiff:
         # Added elements
         for eid in elem_ids2 - elem_ids1:
             elem = mesh2.elements[eid]
-            diff.items.append(DiffItem(
-                path=f"mesh.elements.{eid}",
-                diff_type=DiffType.ADDED,
-                new_value={
-                    "vertices": elem.vertices,
-                    "subregion": elem.subregion,
-                },
-            ))
+            diff.items.append(
+                DiffItem(
+                    path=f"mesh.elements.{eid}",
+                    diff_type=DiffType.ADDED,
+                    new_value={
+                        "vertices": elem.vertices,
+                        "subregion": elem.subregion,
+                    },
+                )
+            )
             diff.elements_added += 1
 
         # Removed elements
         for eid in elem_ids1 - elem_ids2:
             elem = mesh1.elements[eid]
-            diff.items.append(DiffItem(
-                path=f"mesh.elements.{eid}",
-                diff_type=DiffType.REMOVED,
-                old_value={
-                    "vertices": elem.vertices,
-                    "subregion": elem.subregion,
-                },
-            ))
+            diff.items.append(
+                DiffItem(
+                    path=f"mesh.elements.{eid}",
+                    diff_type=DiffType.REMOVED,
+                    old_value={
+                        "vertices": elem.vertices,
+                        "subregion": elem.subregion,
+                    },
+                )
+            )
             diff.elements_removed += 1
 
         # Modified elements
@@ -184,21 +198,25 @@ class MeshDiff:
             elem2 = mesh2.elements[eid]
 
             if elem1.vertices != elem2.vertices:
-                diff.items.append(DiffItem(
-                    path=f"mesh.elements.{eid}.vertices",
-                    diff_type=DiffType.MODIFIED,
-                    old_value=elem1.vertices,
-                    new_value=elem2.vertices,
-                ))
+                diff.items.append(
+                    DiffItem(
+                        path=f"mesh.elements.{eid}.vertices",
+                        diff_type=DiffType.MODIFIED,
+                        old_value=elem1.vertices,
+                        new_value=elem2.vertices,
+                    )
+                )
                 diff.elements_modified += 1
 
             if elem1.subregion != elem2.subregion:
-                diff.items.append(DiffItem(
-                    path=f"mesh.elements.{eid}.subregion",
-                    diff_type=DiffType.MODIFIED,
-                    old_value=elem1.subregion,
-                    new_value=elem2.subregion,
-                ))
+                diff.items.append(
+                    DiffItem(
+                        path=f"mesh.elements.{eid}.subregion",
+                        diff_type=DiffType.MODIFIED,
+                        old_value=elem1.subregion,
+                        new_value=elem2.subregion,
+                    )
+                )
 
         return diff
 
@@ -222,10 +240,10 @@ class StratigraphyDiff:
     @classmethod
     def compare(
         cls,
-        strat1: "Stratigraphy",
-        strat2: "Stratigraphy",
+        strat1: Stratigraphy,
+        strat2: Stratigraphy,
         tolerance: float = 1e-6,
-    ) -> "StratigraphyDiff":
+    ) -> StratigraphyDiff:
         """
         Compare two stratigraphy definitions.
 
@@ -241,33 +259,39 @@ class StratigraphyDiff:
 
         # Check layer count
         if strat1.n_layers != strat2.n_layers:
-            diff.items.append(DiffItem(
-                path="stratigraphy.n_layers",
-                diff_type=DiffType.MODIFIED,
-                old_value=strat1.n_layers,
-                new_value=strat2.n_layers,
-            ))
+            diff.items.append(
+                DiffItem(
+                    path="stratigraphy.n_layers",
+                    diff_type=DiffType.MODIFIED,
+                    old_value=strat1.n_layers,
+                    new_value=strat2.n_layers,
+                )
+            )
 
         # Check node count
         if strat1.n_nodes != strat2.n_nodes:
-            diff.items.append(DiffItem(
-                path="stratigraphy.n_nodes",
-                diff_type=DiffType.MODIFIED,
-                old_value=strat1.n_nodes,
-                new_value=strat2.n_nodes,
-            ))
+            diff.items.append(
+                DiffItem(
+                    path="stratigraphy.n_nodes",
+                    diff_type=DiffType.MODIFIED,
+                    old_value=strat1.n_nodes,
+                    new_value=strat2.n_nodes,
+                )
+            )
             return diff  # Can't compare arrays if sizes differ
 
         # Compare ground surface elevations
         gs_diff = np.abs(strat1.gs_elev - strat2.gs_elev)
         modified_gs = np.where(gs_diff > tolerance)[0]
         for idx in modified_gs:
-            diff.items.append(DiffItem(
-                path=f"stratigraphy.gs_elev[{idx}]",
-                diff_type=DiffType.MODIFIED,
-                old_value=float(strat1.gs_elev[idx]),
-                new_value=float(strat2.gs_elev[idx]),
-            ))
+            diff.items.append(
+                DiffItem(
+                    path=f"stratigraphy.gs_elev[{idx}]",
+                    diff_type=DiffType.MODIFIED,
+                    old_value=float(strat1.gs_elev[idx]),
+                    new_value=float(strat2.gs_elev[idx]),
+                )
+            )
 
         # Compare top elevations
         if strat1.n_layers == strat2.n_layers:
@@ -275,36 +299,42 @@ class StratigraphyDiff:
             modified_top = np.argwhere(top_diff > tolerance)
             for idx in modified_top:
                 node_idx, layer_idx = idx
-                diff.items.append(DiffItem(
-                    path=f"stratigraphy.top_elev[{node_idx},{layer_idx}]",
-                    diff_type=DiffType.MODIFIED,
-                    old_value=float(strat1.top_elev[node_idx, layer_idx]),
-                    new_value=float(strat2.top_elev[node_idx, layer_idx]),
-                ))
+                diff.items.append(
+                    DiffItem(
+                        path=f"stratigraphy.top_elev[{node_idx},{layer_idx}]",
+                        diff_type=DiffType.MODIFIED,
+                        old_value=float(strat1.top_elev[node_idx, layer_idx]),
+                        new_value=float(strat2.top_elev[node_idx, layer_idx]),
+                    )
+                )
 
             # Compare bottom elevations
             bot_diff = np.abs(strat1.bottom_elev - strat2.bottom_elev)
             modified_bot = np.argwhere(bot_diff > tolerance)
             for idx in modified_bot:
                 node_idx, layer_idx = idx
-                diff.items.append(DiffItem(
-                    path=f"stratigraphy.bottom_elev[{node_idx},{layer_idx}]",
-                    diff_type=DiffType.MODIFIED,
-                    old_value=float(strat1.bottom_elev[node_idx, layer_idx]),
-                    new_value=float(strat2.bottom_elev[node_idx, layer_idx]),
-                ))
+                diff.items.append(
+                    DiffItem(
+                        path=f"stratigraphy.bottom_elev[{node_idx},{layer_idx}]",
+                        diff_type=DiffType.MODIFIED,
+                        old_value=float(strat1.bottom_elev[node_idx, layer_idx]),
+                        new_value=float(strat2.bottom_elev[node_idx, layer_idx]),
+                    )
+                )
 
             # Compare active node flags
             active_diff = strat1.active_node != strat2.active_node
             modified_active = np.argwhere(active_diff)
             for idx in modified_active:
                 node_idx, layer_idx = idx
-                diff.items.append(DiffItem(
-                    path=f"stratigraphy.active_node[{node_idx},{layer_idx}]",
-                    diff_type=DiffType.MODIFIED,
-                    old_value=bool(strat1.active_node[node_idx, layer_idx]),
-                    new_value=bool(strat2.active_node[node_idx, layer_idx]),
-                ))
+                diff.items.append(
+                    DiffItem(
+                        path=f"stratigraphy.active_node[{node_idx},{layer_idx}]",
+                        diff_type=DiffType.MODIFIED,
+                        old_value=bool(strat1.active_node[node_idx, layer_idx]),
+                        new_value=bool(strat2.active_node[node_idx, layer_idx]),
+                    )
+                )
 
         return diff
 
@@ -336,9 +366,7 @@ class ModelDiff:
     def is_identical(self) -> bool:
         """Check if models are identical."""
         mesh_identical = self.mesh_diff is None or self.mesh_diff.is_identical
-        strat_identical = (
-            self.stratigraphy_diff is None or self.stratigraphy_diff.is_identical
-        )
+        strat_identical = self.stratigraphy_diff is None or self.stratigraphy_diff.is_identical
         return mesh_identical and strat_identical
 
     def summary(self) -> str:
@@ -363,12 +391,16 @@ class ModelDiff:
 
         if self.mesh_diff and not self.mesh_diff.is_identical:
             lines.append("Mesh Changes:")
-            lines.append(f"  Nodes: +{self.mesh_diff.nodes_added} "
-                        f"-{self.mesh_diff.nodes_removed} "
-                        f"~{self.mesh_diff.nodes_modified}")
-            lines.append(f"  Elements: +{self.mesh_diff.elements_added} "
-                        f"-{self.mesh_diff.elements_removed} "
-                        f"~{self.mesh_diff.elements_modified}")
+            lines.append(
+                f"  Nodes: +{self.mesh_diff.nodes_added} "
+                f"-{self.mesh_diff.nodes_removed} "
+                f"~{self.mesh_diff.nodes_modified}"
+            )
+            lines.append(
+                f"  Elements: +{self.mesh_diff.elements_added} "
+                f"-{self.mesh_diff.elements_removed} "
+                f"~{self.mesh_diff.elements_modified}"
+            )
 
         if self.stratigraphy_diff and not self.stratigraphy_diff.is_identical:
             lines.append("Stratigraphy Changes:")
@@ -376,7 +408,7 @@ class ModelDiff:
 
         return "\n".join(lines)
 
-    def filter_by_path(self, prefix: str) -> "ModelDiff":
+    def filter_by_path(self, prefix: str) -> ModelDiff:
         """
         Filter diff items by path prefix.
 
@@ -390,9 +422,7 @@ class ModelDiff:
         filtered_strat = None
 
         if self.mesh_diff:
-            filtered_mesh = MeshDiff(
-                items=[i for i in self.mesh_diff.items if prefix in i.path]
-            )
+            filtered_mesh = MeshDiff(items=[i for i in self.mesh_diff.items if prefix in i.path])
 
         if self.stratigraphy_diff:
             filtered_strat = StratigraphyDiff(
@@ -401,7 +431,7 @@ class ModelDiff:
 
         return ModelDiff(mesh_diff=filtered_mesh, stratigraphy_diff=filtered_strat)
 
-    def filter_by_type(self, diff_type: DiffType) -> "ModelDiff":
+    def filter_by_type(self, diff_type: DiffType) -> ModelDiff:
         """
         Filter diff items by diff type.
 
@@ -506,8 +536,8 @@ class ModelDiffer:
 
     def diff_meshes(
         self,
-        mesh1: "AppGrid",
-        mesh2: "AppGrid",
+        mesh1: AppGrid,
+        mesh2: AppGrid,
     ) -> MeshDiff:
         """
         Compare two meshes.
@@ -523,8 +553,8 @@ class ModelDiffer:
 
     def diff_stratigraphy(
         self,
-        strat1: "Stratigraphy",
-        strat2: "Stratigraphy",
+        strat1: Stratigraphy,
+        strat2: Stratigraphy,
     ) -> StratigraphyDiff:
         """
         Compare two stratigraphy definitions.
@@ -540,10 +570,10 @@ class ModelDiffer:
 
     def diff(
         self,
-        mesh1: "AppGrid | None" = None,
-        mesh2: "AppGrid | None" = None,
-        strat1: "Stratigraphy | None" = None,
-        strat2: "Stratigraphy | None" = None,
+        mesh1: AppGrid | None = None,
+        mesh2: AppGrid | None = None,
+        strat1: Stratigraphy | None = None,
+        strat2: Stratigraphy | None = None,
     ) -> ModelDiff:
         """
         Compare model components.

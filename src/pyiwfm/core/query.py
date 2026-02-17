@@ -21,7 +21,7 @@ Query and export model data:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -29,12 +29,13 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.core.zones import Zone, ZoneDefinition
 from pyiwfm.core.aggregation import DataAggregator, create_aggregator_from_grid
+from pyiwfm.core.zones import ZoneDefinition
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.core.mesh import AppGrid
 
 
 @dataclass
@@ -137,7 +138,7 @@ class ModelQueryAPI:
         "subregion": {"name": "Subregion ID", "units": "", "source": "mesh"},
     }
 
-    def __init__(self, model: "IWFMModel"):
+    def __init__(self, model: IWFMModel):
         self.model = model
         self._aggregator: DataAggregator | None = None
         self._zone_definitions: dict[str, ZoneDefinition] = {}
@@ -319,7 +320,7 @@ class ModelQueryAPI:
         layer: int | None = None,
         time_index: int | None = None,
         aggregation: str = "area_weighted_mean",
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Export values to a pandas DataFrame.
 
@@ -371,7 +372,7 @@ class ModelQueryAPI:
             try:
                 values = self.get_values(var, scale, layer, time_index, aggregation)
                 data[var] = [values.get(loc_id, np.nan) for loc_id in data["id"]]
-            except Exception as e:
+            except Exception:
                 # Variable not available
                 data[var] = [np.nan] * len(data["id"])
 
@@ -518,7 +519,6 @@ class ModelQueryAPI:
         if self.model.mesh is None:
             raise RuntimeError("Model has no mesh")
 
-        n_elements = self.model.mesh.n_elements
         max_elem_id = max(self.model.mesh.elements.keys()) if self.model.mesh.elements else 0
         values = np.full(max_elem_id, np.nan, dtype=np.float64)
 
@@ -540,15 +540,20 @@ class ModelQueryAPI:
 
             if variable == "thickness":
                 # Average thickness per element
+                # Compute thicknesses from top_elev - bottom_elev
+                layer_thicknesses = strat.top_elev - strat.bottom_elev
                 for elem_id, elem in self.model.mesh.elements.items():
                     node_ids = elem.vertices
-                    thicknesses = []
+                    thick_vals = []
                     for nid in node_ids:
                         node_idx = nid - 1
-                        if node_idx < strat.thicknesses.shape[0] and layer_idx < strat.thicknesses.shape[1]:
-                            thicknesses.append(strat.thicknesses[node_idx, layer_idx])
-                    if thicknesses:
-                        values[elem_id - 1] = np.mean(thicknesses)
+                        if (
+                            node_idx < layer_thicknesses.shape[0]
+                            and layer_idx < layer_thicknesses.shape[1]
+                        ):
+                            thick_vals.append(layer_thicknesses[node_idx, layer_idx])
+                    if thick_vals:
+                        values[elem_id - 1] = np.mean(thick_vals)
 
             elif variable == "top_elev":
                 for elem_id, elem in self.model.mesh.elements.items():
@@ -556,7 +561,10 @@ class ModelQueryAPI:
                     elevs = []
                     for nid in node_ids:
                         node_idx = nid - 1
-                        if node_idx < strat.top_elev.shape[0] and layer_idx < strat.top_elev.shape[1]:
+                        if (
+                            node_idx < strat.top_elev.shape[0]
+                            and layer_idx < strat.top_elev.shape[1]
+                        ):
                             elevs.append(strat.top_elev[node_idx, layer_idx])
                     if elevs:
                         values[elem_id - 1] = np.mean(elevs)
@@ -567,18 +575,23 @@ class ModelQueryAPI:
                     elevs = []
                     for nid in node_ids:
                         node_idx = nid - 1
-                        if node_idx < strat.bottom_elev.shape[0] and layer_idx < strat.bottom_elev.shape[1]:
+                        if (
+                            node_idx < strat.bottom_elev.shape[0]
+                            and layer_idx < strat.bottom_elev.shape[1]
+                        ):
                             elevs.append(strat.bottom_elev[node_idx, layer_idx])
                     if elevs:
                         values[elem_id - 1] = np.mean(elevs)
 
         elif variable in ("kh", "kv", "ss", "sy"):
-            if self.model.groundwater is None or not hasattr(self.model.groundwater, "aquifer_params"):
+            if self.model.groundwater is None or not hasattr(
+                self.model.groundwater, "aquifer_params"
+            ):
                 return values
 
             params = self.model.groundwater.aquifer_params
-            if variable in params:
-                param_arr = params[variable]
+            if variable in params:  # type: ignore[operator]
+                param_arr = params[variable]  # type: ignore[index]
                 layer_idx = (layer or 1) - 1
 
                 # Params may be node-based; average to elements

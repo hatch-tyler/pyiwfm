@@ -29,9 +29,8 @@ Covers:
 from __future__ import annotations
 
 import struct
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import h5py
 import numpy as np
@@ -51,7 +50,6 @@ from pyiwfm.io.budget import (
     julian_to_datetime,
     parse_iwfm_datetime,
 )
-
 
 # =============================================================================
 # Helpers to create binary and HDF5 budget files for testing
@@ -206,7 +204,7 @@ def _create_binary_budget(
         _write_fortran_int_array(f, [])  # empty array - but we said 0 items
 
         # Record file position (data starts here)
-        data_start = f.tell()
+        f.tell()
 
         # Write data: n_timesteps * n_locations * n_columns REAL(8)
         if write_data:
@@ -295,11 +293,7 @@ def _create_hdf5_budget(
         if include_n_locations:
             attrs_g.attrs["NLocations"] = n_locations
 
-        enc_names = (
-            [n.encode() for n in location_names]
-            if use_bytes
-            else location_names
-        )
+        enc_names = [n.encode() for n in location_names] if use_bytes else location_names
         attrs_g.attrs["cLocationNames"] = enc_names
 
         # Location data
@@ -309,11 +303,7 @@ def _create_hdf5_budget(
 
         if include_column_headers:
             col_headers = [f"Col {j + 1}" for j in range(n_columns)]
-            enc_headers = (
-                [h.encode() for h in col_headers]
-                if use_bytes
-                else col_headers
-            )
+            enc_headers = [h.encode() for h in col_headers] if use_bytes else col_headers
             attrs_g.attrs["cFullColumnHeaders"] = enc_headers
 
         col_types = [1] * n_columns
@@ -326,7 +316,7 @@ def _create_hdf5_budget(
             for loc_name in location_names:
                 for j in range(n_columns):
                     pathnames.append(
-                        f"/BUDGET/{loc_name}/DATA/01OCT2000/1DAY/DSSCol{j+1}/".encode()
+                        f"/BUDGET/{loc_name}/DATA/01OCT2000/1DAY/DSSCol{j + 1}/".encode()
                     )
             attrs_g.attrs["DSSOutput%cPathNames"] = pathnames
 
@@ -788,7 +778,7 @@ class TestH5Get:
     def test_get_group(self, tmp_path: Path) -> None:
         p = tmp_path / "test.hdf"
         with h5py.File(p, "w") as f:
-            grp = f.create_group("mygroup")
+            f.create_group("mygroup")
             result = BudgetReader._h5_get(f, "mygroup")
             assert isinstance(result, h5py.Group)
 
@@ -835,9 +825,7 @@ class TestReadHeaderBinary:
         _create_binary_budget(p, n_areas=3, areas=[100.0, 200.0, 300.0])
         reader = BudgetReader(p)
         assert reader.header.n_areas == 3
-        np.testing.assert_array_almost_equal(
-            reader.header.areas, [100.0, 200.0, 300.0]
-        )
+        np.testing.assert_array_almost_equal(reader.header.areas, [100.0, 200.0, 300.0])
 
     def test_binary_no_areas(self, tmp_path: Path) -> None:
         p = tmp_path / "budget.bin"
@@ -1082,8 +1070,7 @@ class TestGetValuesHDF5:
 
     def test_get_values_basic(self, tmp_path: Path) -> None:
         p = tmp_path / "budget.hdf"
-        _create_hdf5_budget(p, n_timesteps=3, n_columns=2, n_locations=1,
-                            location_names=["Loc1"])
+        _create_hdf5_budget(p, n_timesteps=3, n_columns=2, n_locations=1, location_names=["Loc1"])
         reader = BudgetReader(p)
         times, values = reader.get_values(0)
         assert times.shape == (3,)
@@ -1109,8 +1096,7 @@ class TestGetValuesHDF5:
     def test_get_values_no_data_in_group(self, tmp_path: Path) -> None:
         """Group exists but has no Dataset children."""
         p = tmp_path / "budget.hdf"
-        _create_hdf5_budget(p, n_locations=1, location_names=["Loc1"],
-                            store_as_group=True)
+        _create_hdf5_budget(p, n_locations=1, location_names=["Loc1"], store_as_group=True)
         reader = BudgetReader(p)
         # Delete the dataset within the group
         with h5py.File(p, "a") as f:
@@ -1232,8 +1218,7 @@ class TestGetDataframe:
 
     def test_basic_dataframe(self, tmp_path: Path) -> None:
         p = tmp_path / "budget.hdf"
-        _create_hdf5_budget(p, n_timesteps=3, n_columns=2, n_locations=1,
-                            location_names=["Loc1"])
+        _create_hdf5_budget(p, n_timesteps=3, n_columns=2, n_locations=1, location_names=["Loc1"])
         reader = BudgetReader(p)
         df = reader.get_dataframe(0)
         assert isinstance(df, pd.DataFrame)
@@ -1243,8 +1228,14 @@ class TestGetDataframe:
     def test_dataframe_no_datetime_index(self, tmp_path: Path) -> None:
         """When no start_datetime, index is numeric."""
         p = tmp_path / "budget.hdf"
-        _create_hdf5_budget(p, include_begin_datetime=False, n_timesteps=3,
-                            n_columns=2, n_locations=1, location_names=["Loc1"])
+        _create_hdf5_budget(
+            p,
+            include_begin_datetime=False,
+            n_timesteps=3,
+            n_columns=2,
+            n_locations=1,
+            location_names=["Loc1"],
+        )
         reader = BudgetReader(p)
         df = reader.get_dataframe(0)
         assert not isinstance(df.index, pd.DatetimeIndex)
@@ -1315,7 +1306,7 @@ class TestGetAllDataframes:
         assert "A" in dfs
         assert "B" in dfs
         assert "C" in dfs
-        for name, df in dfs.items():
+        for _name, df in dfs.items():
             assert isinstance(df, pd.DataFrame)
             assert df.shape == (4, 2)
 
@@ -1453,8 +1444,9 @@ class TestRepr:
 
     def test_repr_hdf5(self, tmp_path: Path) -> None:
         p = tmp_path / "budget.hdf"
-        _create_hdf5_budget(p, descriptor="GW BUDGET", n_locations=3,
-                            location_names=["A", "B", "C"], n_timesteps=10)
+        _create_hdf5_budget(
+            p, descriptor="GW BUDGET", n_locations=3, location_names=["A", "B", "C"], n_timesteps=10
+        )
         reader = BudgetReader(p)
         r = repr(reader)
         assert "budget.hdf" in r

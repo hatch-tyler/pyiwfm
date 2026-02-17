@@ -5,14 +5,14 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyiwfm.mesh_generation.generators import MeshGenerator, MeshResult
 from pyiwfm.mesh_generation.constraints import (
     Boundary,
     BoundarySegment,
-    StreamConstraint,
-    RefinementZone,
     PointConstraint,
+    RefinementZone,
+    StreamConstraint,
 )
+from pyiwfm.mesh_generation.generators import MeshGenerator, MeshResult
 
 
 class TestBoundary:
@@ -20,12 +20,14 @@ class TestBoundary:
 
     def test_boundary_creation(self) -> None:
         """Test basic boundary creation."""
-        vertices = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ])
+        vertices = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+            ]
+        )
         boundary = Boundary(vertices=vertices)
 
         assert len(boundary.vertices) == 4
@@ -33,12 +35,14 @@ class TestBoundary:
 
     def test_boundary_is_closed(self) -> None:
         """Test boundary closure check."""
-        vertices = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ])
+        vertices = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+            ]
+        )
         boundary = Boundary(vertices=vertices)
 
         assert boundary.is_closed
@@ -46,24 +50,28 @@ class TestBoundary:
     def test_boundary_area(self) -> None:
         """Test boundary area calculation."""
         # Simple square 100x100
-        vertices = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ])
+        vertices = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+            ]
+        )
         boundary = Boundary(vertices=vertices)
 
         assert boundary.area == pytest.approx(10000.0)
 
     def test_boundary_centroid(self) -> None:
         """Test boundary centroid calculation."""
-        vertices = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ])
+        vertices = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+            ]
+        )
         boundary = Boundary(vertices=vertices)
 
         cx, cy = boundary.centroid
@@ -72,18 +80,22 @@ class TestBoundary:
 
     def test_boundary_with_hole(self) -> None:
         """Test boundary with interior hole."""
-        outer = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ])
-        hole = np.array([
-            [40.0, 40.0],
-            [60.0, 40.0],
-            [60.0, 60.0],
-            [40.0, 60.0],
-        ])
+        outer = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+            ]
+        )
+        hole = np.array(
+            [
+                [40.0, 40.0],
+                [60.0, 40.0],
+                [60.0, 60.0],
+                [40.0, 60.0],
+            ]
+        )
         boundary = Boundary(vertices=outer, holes=[hole])
 
         assert len(boundary.holes) == 1
@@ -92,12 +104,14 @@ class TestBoundary:
 
     def test_boundary_segments(self) -> None:
         """Test getting boundary segments."""
-        vertices = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ])
+        vertices = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+            ]
+        )
         boundary = Boundary(vertices=vertices)
 
         segments = boundary.get_segments()
@@ -145,13 +159,15 @@ class TestStreamConstraint:
 
     def test_stream_constraint_creation(self) -> None:
         """Test stream constraint creation."""
-        vertices = np.array([
-            [10.0, 50.0],
-            [30.0, 50.0],
-            [50.0, 60.0],
-            [70.0, 50.0],
-            [90.0, 50.0],
-        ])
+        vertices = np.array(
+            [
+                [10.0, 50.0],
+                [30.0, 50.0],
+                [50.0, 60.0],
+                [70.0, 50.0],
+                [90.0, 50.0],
+            ]
+        )
         stream = StreamConstraint(vertices=vertices, stream_id=1)
 
         assert stream.stream_id == 1
@@ -159,22 +175,26 @@ class TestStreamConstraint:
 
     def test_stream_constraint_length(self) -> None:
         """Test stream constraint length."""
-        vertices = np.array([
-            [0.0, 0.0],
-            [50.0, 0.0],
-            [100.0, 0.0],
-        ])
+        vertices = np.array(
+            [
+                [0.0, 0.0],
+                [50.0, 0.0],
+                [100.0, 0.0],
+            ]
+        )
         stream = StreamConstraint(vertices=vertices)
 
         assert stream.length == pytest.approx(100.0)
 
     def test_stream_constraint_segments(self) -> None:
         """Test getting stream segments."""
-        vertices = np.array([
-            [0.0, 0.0],
-            [50.0, 0.0],
-            [100.0, 0.0],
-        ])
+        vertices = np.array(
+            [
+                [0.0, 0.0],
+                [50.0, 0.0],
+                [100.0, 0.0],
+            ]
+        )
         stream = StreamConstraint(vertices=vertices)
 
         segments = stream.get_segments()
@@ -211,12 +231,14 @@ class TestRefinementZone:
     def test_refinement_zone_polygon(self) -> None:
         """Test rectangular refinement zone."""
         zone = RefinementZone(
-            polygon=np.array([
-                [40.0, 40.0],
-                [60.0, 40.0],
-                [60.0, 60.0],
-                [40.0, 60.0],
-            ]),
+            polygon=np.array(
+                [
+                    [40.0, 40.0],
+                    [60.0, 40.0],
+                    [60.0, 60.0],
+                    [40.0, 60.0],
+                ]
+            ),
             max_area=5.0,
         )
 
@@ -253,19 +275,23 @@ class TestMeshResult:
 
     def test_mesh_result_creation(self) -> None:
         """Test mesh result creation."""
-        nodes = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-            [50.0, 50.0],
-        ])
-        elements = np.array([
-            [0, 1, 4],
-            [1, 2, 4],
-            [2, 3, 4],
-            [3, 0, 4],
-        ])
+        nodes = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+                [50.0, 50.0],
+            ]
+        )
+        elements = np.array(
+            [
+                [0, 1, 4],
+                [1, 2, 4],
+                [2, 3, 4],
+                [3, 0, 4],
+            ]
+        )
 
         result = MeshResult(nodes=nodes, elements=elements)
 
@@ -274,19 +300,23 @@ class TestMeshResult:
 
     def test_mesh_result_element_types(self) -> None:
         """Test mesh with mixed element types."""
-        nodes = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-            [50.0, 0.0],
-            [50.0, 100.0],
-        ])
+        nodes = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+                [50.0, 0.0],
+                [50.0, 100.0],
+            ]
+        )
         # Mix of triangles (with -1 padding) and quads
-        elements = np.array([
-            [0, 4, 5, 3],  # quad
-            [4, 1, 2, 5],  # quad
-        ])
+        elements = np.array(
+            [
+                [0, 4, 5, 3],  # quad
+                [4, 1, 2, 5],  # quad
+            ]
+        )
 
         result = MeshResult(nodes=nodes, elements=elements)
 
@@ -295,14 +325,18 @@ class TestMeshResult:
 
     def test_mesh_result_triangles(self) -> None:
         """Test mesh with triangles."""
-        nodes = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [50.0, 100.0],
-        ])
-        elements = np.array([
-            [0, 1, 2, -1],  # triangle with padding
-        ])
+        nodes = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [50.0, 100.0],
+            ]
+        )
+        elements = np.array(
+            [
+                [0, 1, 2, -1],  # triangle with padding
+            ]
+        )
 
         result = MeshResult(nodes=nodes, elements=elements)
 
@@ -311,15 +345,19 @@ class TestMeshResult:
 
     def test_mesh_result_to_appgrid(self) -> None:
         """Test converting mesh result to AppGrid."""
-        nodes = np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ])
-        elements = np.array([
-            [0, 1, 2, 3],  # quad
-        ])
+        nodes = np.array(
+            [
+                [0.0, 0.0],
+                [100.0, 0.0],
+                [100.0, 100.0],
+                [0.0, 100.0],
+            ]
+        )
+        elements = np.array(
+            [
+                [0, 1, 2, 3],  # quad
+            ]
+        )
 
         result = MeshResult(nodes=nodes, elements=elements)
         grid = result.to_appgrid()
@@ -367,12 +405,16 @@ class TestMeshGenerator:
 
         gen = SimpleMeshGenerator()
 
-        boundary = Boundary(vertices=np.array([
-            [0.0, 0.0],
-            [100.0, 0.0],
-            [100.0, 100.0],
-            [0.0, 100.0],
-        ]))
+        boundary = Boundary(
+            vertices=np.array(
+                [
+                    [0.0, 0.0],
+                    [100.0, 0.0],
+                    [100.0, 100.0],
+                    [0.0, 100.0],
+                ]
+            )
+        )
 
         result = gen.generate(boundary)
 

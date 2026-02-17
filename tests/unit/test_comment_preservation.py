@@ -13,24 +13,22 @@ from pathlib import Path
 
 import pytest
 
+from pyiwfm.io.comment_extractor import (
+    CommentExtractor,
+    LineType,
+    extract_and_save_comments,
+    extract_comments,
+)
 from pyiwfm.io.comment_metadata import (
     CommentMetadata,
     FileCommentMetadata,
     PreserveMode,
     SectionComments,
 )
-from pyiwfm.io.comment_extractor import (
-    CommentExtractor,
-    LineType,
-    ParsedLine,
-    extract_comments,
-    extract_and_save_comments,
-)
 from pyiwfm.io.comment_writer import (
-    CommentWriter,
     CommentInjector,
+    CommentWriter,
 )
-
 
 # =============================================================================
 # Test Fixtures
@@ -605,10 +603,12 @@ class TestCommentAwareClasses:
 
     def test_comment_aware_reader_import(self):
         from pyiwfm.io.base import CommentAwareReader
+
         assert CommentAwareReader is not None
 
     def test_comment_aware_writer_import(self):
         from pyiwfm.io.base import CommentAwareWriter
+
         assert CommentAwareWriter is not None
 
     def test_template_writer_with_comments(self, sample_metadata):

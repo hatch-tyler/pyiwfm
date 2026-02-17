@@ -15,17 +15,37 @@ DSS Pathname Format: /A/B/C/D/E/F/
 
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass, field
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterator
-
 
 # Valid DSS time intervals
 VALID_INTERVALS = {
-    "1MIN", "2MIN", "3MIN", "4MIN", "5MIN", "6MIN", "10MIN", "12MIN", "15MIN",
-    "20MIN", "30MIN", "1HOUR", "2HOUR", "3HOUR", "4HOUR", "6HOUR", "8HOUR",
-    "12HOUR", "1DAY", "1WEEK", "1MON", "1YEAR", "IR-DAY", "IR-MON", "IR-YEAR",
+    "1MIN",
+    "2MIN",
+    "3MIN",
+    "4MIN",
+    "5MIN",
+    "6MIN",
+    "10MIN",
+    "12MIN",
+    "15MIN",
+    "20MIN",
+    "30MIN",
+    "1HOUR",
+    "2HOUR",
+    "3HOUR",
+    "4HOUR",
+    "6HOUR",
+    "8HOUR",
+    "12HOUR",
+    "1DAY",
+    "1WEEK",
+    "1MON",
+    "1YEAR",
+    "IR-DAY",
+    "IR-MON",
+    "IR-YEAR",
 }
 
 # Mapping from common names to DSS interval codes
@@ -103,10 +123,12 @@ class DSSPathname:
 
     def __str__(self) -> str:
         """Return the full pathname string."""
-        return f"/{self.a_part}/{self.b_part}/{self.c_part}/{self.d_part}/{self.e_part}/{self.f_part}/"
+        return (
+            f"/{self.a_part}/{self.b_part}/{self.c_part}/{self.d_part}/{self.e_part}/{self.f_part}/"
+        )
 
     @classmethod
-    def from_string(cls, pathname: str) -> "DSSPathname":
+    def from_string(cls, pathname: str) -> DSSPathname:
         """
         Parse a pathname from string.
 
@@ -152,7 +174,7 @@ class DSSPathname:
         date_range: str = "",
         interval: str = "1DAY",
         version: str = "",
-    ) -> "DSSPathname":
+    ) -> DSSPathname:
         """
         Build a pathname with more descriptive parameter names.
 
@@ -184,7 +206,7 @@ class DSSPathname:
             f_part=version,
         )
 
-    def with_location(self, location: str) -> "DSSPathname":
+    def with_location(self, location: str) -> DSSPathname:
         """Return a new pathname with a different location (B part)."""
         return DSSPathname(
             a_part=self.a_part,
@@ -195,7 +217,7 @@ class DSSPathname:
             f_part=self.f_part,
         )
 
-    def with_parameter(self, parameter: str) -> "DSSPathname":
+    def with_parameter(self, parameter: str) -> DSSPathname:
         """Return a new pathname with a different parameter (C part)."""
         param_lower = parameter.lower()
         c_part = PARAMETER_CODES.get(param_lower, parameter.upper())
@@ -208,7 +230,7 @@ class DSSPathname:
             f_part=self.f_part,
         )
 
-    def with_date_range(self, date_range: str) -> "DSSPathname":
+    def with_date_range(self, date_range: str) -> DSSPathname:
         """Return a new pathname with a different date range (D part)."""
         return DSSPathname(
             a_part=self.a_part,
@@ -219,7 +241,7 @@ class DSSPathname:
             f_part=self.f_part,
         )
 
-    def with_version(self, version: str) -> "DSSPathname":
+    def with_version(self, version: str) -> DSSPathname:
         """Return a new pathname with a different version (F part)."""
         return DSSPathname(
             a_part=self.a_part,
@@ -230,7 +252,7 @@ class DSSPathname:
             f_part=version.upper(),
         )
 
-    def matches(self, pattern: "DSSPathname | str") -> bool:
+    def matches(self, pattern: DSSPathname | str) -> bool:
         """
         Check if this pathname matches a pattern.
 
@@ -293,7 +315,7 @@ class DSSPathnameTemplate:
         self,
         location: str | None = None,
         date_range: str | None = None,
-        **kwargs,
+        **kwargs: str,
     ) -> DSSPathname:
         """
         Create a pathname from the template.

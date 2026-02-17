@@ -40,8 +40,11 @@ class TestBCNodesValuesMismatch:
         """nodes and values different lengths -> ValueError."""
         with pytest.raises(ValueError, match="same length"):
             BoundaryCondition(
-                id=1, bc_type="specified_head",
-                nodes=[1, 2, 3], values=[10.0, 20.0], layer=1,
+                id=1,
+                bc_type="specified_head",
+                nodes=[1, 2, 3],
+                values=[10.0, 20.0],
+                layer=1,
             )
 
 
@@ -52,16 +55,22 @@ class TestBCGeneralHeadValidation:
         """General head BC without conductance -> ValueError."""
         with pytest.raises(ValueError, match="conductance"):
             BoundaryCondition(
-                id=1, bc_type="general_head",
-                nodes=[1, 2], values=[10.0, 20.0], layer=1,
+                id=1,
+                bc_type="general_head",
+                nodes=[1, 2],
+                values=[10.0, 20.0],
+                layer=1,
                 conductance=[],  # Empty, should match nodes length
             )
 
     def test_bc_general_head_valid(self) -> None:
         """General head BC with matching conductance -> OK."""
         bc = BoundaryCondition(
-            id=1, bc_type="general_head",
-            nodes=[1, 2], values=[10.0, 20.0], layer=1,
+            id=1,
+            bc_type="general_head",
+            nodes=[1, 2],
+            values=[10.0, 20.0],
+            layer=1,
             conductance=[0.1, 0.2],
         )
         assert len(bc.conductance) == 2
@@ -92,8 +101,11 @@ class TestValidateBCNodeInvalid:
         """BC referencing node > n_nodes -> ComponentError."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
         bc = BoundaryCondition(
-            id=1, bc_type="specified_head",
-            nodes=[1, 999], values=[10.0, 20.0], layer=1,
+            id=1,
+            bc_type="specified_head",
+            nodes=[1, 999],
+            values=[10.0, 20.0],
+            layer=1,
         )
         gw.add_boundary_condition(bc)
         with pytest.raises(ComponentError, match="invalid node"):
@@ -103,8 +115,11 @@ class TestValidateBCNodeInvalid:
         """BC referencing node 0 -> ComponentError."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
         bc = BoundaryCondition(
-            id=1, bc_type="specified_head",
-            nodes=[0], values=[10.0], layer=1,
+            id=1,
+            bc_type="specified_head",
+            nodes=[0],
+            values=[10.0],
+            layer=1,
         )
         gw.add_boundary_condition(bc)
         with pytest.raises(ComponentError, match="invalid node"):
@@ -136,8 +151,12 @@ class TestToArraysWithAquiferParams:
         ss = np.ones((4, 2)) * 0.001
         sy = np.ones((4, 2)) * 0.1
         params = AquiferParameters(
-            n_nodes=4, n_layers=2, kh=kh, kv=kv,
-            specific_storage=ss, specific_yield=sy,
+            n_nodes=4,
+            n_layers=2,
+            kh=kh,
+            kv=kv,
+            specific_storage=ss,
+            specific_yield=sy,
         )
         gw.set_aquifer_parameters(params)
 
@@ -173,8 +192,11 @@ class TestFromArraysMinimal:
         kh = np.ones((4, 2)) * 10.0
 
         gw = AppGW.from_arrays(
-            n_nodes=4, n_layers=2, n_elements=2,
-            heads=heads, kh=kh,
+            n_nodes=4,
+            n_layers=2,
+            n_elements=2,
+            heads=heads,
+            kh=kh,
         )
         assert gw.heads is not None
         assert gw.aquifer_params is not None
@@ -224,8 +246,11 @@ class TestBoundaryConditionRepr:
 
     def test_repr(self) -> None:
         bc = BoundaryCondition(
-            id=3, bc_type="specified_head",
-            nodes=[1, 2], values=[10.0, 20.0], layer=1,
+            id=3,
+            bc_type="specified_head",
+            nodes=[1, 2],
+            values=[10.0, 20.0],
+            layer=1,
         )
         r = repr(bc)
         assert "BoundaryCondition" in r
@@ -246,8 +271,13 @@ class TestSubsidenceRepr:
     """Test Subsidence.__repr__."""
 
     def test_repr(self) -> None:
-        s = Subsidence(element=2, layer=1, elastic_storage=0.001,
-                       inelastic_storage=0.01, preconsolidation_head=50.0)
+        s = Subsidence(
+            element=2,
+            layer=1,
+            elastic_storage=0.001,
+            inelastic_storage=0.01,
+            preconsolidation_head=50.0,
+        )
         r = repr(s)
         assert "Subsidence" in r
         assert "2" in r
@@ -325,8 +355,12 @@ class TestAppGWAdditionalMethods:
     def test_get_total_element_pumping(self) -> None:
         """Total element pumping calculation."""
         gw = AppGW(n_nodes=4, n_layers=2, n_elements=2)
-        gw.add_element_pumping(ElementPumping(element_id=1, layer=1, pump_rate=-100.0, layer_fraction=0.5))
-        gw.add_element_pumping(ElementPumping(element_id=2, layer=1, pump_rate=-200.0, layer_fraction=1.0))
+        gw.add_element_pumping(
+            ElementPumping(element_id=1, layer=1, pump_rate=-100.0, layer_fraction=0.5)
+        )
+        gw.add_element_pumping(
+            ElementPumping(element_id=2, layer=1, pump_rate=-200.0, layer_fraction=1.0)
+        )
         total = gw.get_total_element_pumping()
         assert total == pytest.approx(-250.0)
 

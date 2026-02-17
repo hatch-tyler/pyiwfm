@@ -7,10 +7,10 @@ data to HEC-DSS files, with integration to pyiwfm's TimeSeries class.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Callable, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
@@ -19,15 +19,11 @@ from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.io.dss.pathname import (
     DSSPathname,
     DSSPathnameTemplate,
-    format_dss_date,
     format_dss_date_range,
-    minutes_to_interval,
 )
 from pyiwfm.io.dss.wrapper import (
     DSSFile,
     DSSFileError,
-    DSSLibraryError,
-    HAS_DSS_LIBRARY,
     check_dss_available,
 )
 
@@ -83,12 +79,14 @@ class DSSTimeSeriesWriter:
         self._pathnames_written: list[str] = []
         self._errors: list[str] = []
 
-    def __enter__(self) -> "DSSTimeSeriesWriter":
+    def __enter__(self) -> DSSTimeSeriesWriter:
         """Open the DSS file."""
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: object
+    ) -> None:
         """Close the DSS file."""
         self.close()
 
@@ -150,6 +148,7 @@ class DSSTimeSeriesWriter:
         pathname = pathname.with_date_range(format_dss_date_range(start_date, end_date))
 
         try:
+            assert self._dss is not None
             self._dss.write_regular_timeseries(
                 pathname=str(pathname),
                 values=ts.values,
@@ -222,8 +221,8 @@ class DSSTimeSeriesWriter:
 
             # Get start/end dates
             if isinstance(times[0], np.datetime64):
-                start_date = self._numpy_dt_to_datetime(times[0])
-                end_date = self._numpy_dt_to_datetime(times[-1])
+                start_date = self._numpy_dt_to_datetime(np.datetime64(times[0]))
+                end_date = self._numpy_dt_to_datetime(np.datetime64(times[-1]))
             else:
                 start_date = times[0]
                 end_date = times[-1]
@@ -231,6 +230,7 @@ class DSSTimeSeriesWriter:
             pathname = pathname.with_date_range(format_dss_date_range(start_date, end_date))
 
             try:
+                assert self._dss is not None
                 self._dss.write_regular_timeseries(
                     pathname=str(pathname),
                     values=values,
@@ -277,12 +277,14 @@ class DSSTimeSeriesReader:
         self.filepath = Path(filepath)
         self._dss: DSSFile | None = None
 
-    def __enter__(self) -> "DSSTimeSeriesReader":
+    def __enter__(self) -> DSSTimeSeriesReader:
         """Open the DSS file."""
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: object
+    ) -> None:
         """Close the DSS file."""
         self.close()
 
@@ -328,9 +330,8 @@ class DSSTimeSeriesReader:
             pathname_str = pathname
             location = DSSPathname.from_string(pathname).b_part
 
-        times, values = self._dss.read_regular_timeseries(
-            pathname_str, start_date, end_date
-        )
+        assert self._dss is not None
+        times, values = self._dss.read_regular_timeseries(pathname_str, start_date, end_date)
 
         np_times = np.array(times, dtype="datetime64[s]")
 

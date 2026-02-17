@@ -9,7 +9,6 @@ import pytest
 
 from pyiwfm.visualization.webapi.hydrograph_reader import IWFMHydrographReader
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

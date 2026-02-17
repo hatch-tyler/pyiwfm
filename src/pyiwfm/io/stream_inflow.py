@@ -22,10 +22,10 @@ from typing import TextIO
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
-    strip_inline_comment as _strip_comment,
 )
 
 
@@ -37,6 +37,7 @@ class InflowSpec:
         inflow_id: Inflow identifier (may be auto-numbered)
         stream_node: Stream node receiving inflow (0=no inflow)
     """
+
     inflow_id: int = 0
     stream_node: int = 0
 
@@ -51,6 +52,7 @@ class InflowConfig:
         n_inflows: Number of inflow time series
         inflow_specs: List of inflow specifications (column-to-node mapping)
     """
+
     conversion_factor: float = 1.0
     time_unit: str = ""
     n_inflows: int = 0
@@ -85,7 +87,7 @@ class InflowReader:
         config = InflowConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Conversion factor
             factor_str = _next_data_or_empty(f)
             if factor_str:

@@ -9,11 +9,12 @@ import pytest
 
 pv = pytest.importorskip("pyvista", reason="PyVista not available")
 
-from pyiwfm.visualization.webapi.properties import (
+_rng = np.random.default_rng(42)
+
+from pyiwfm.visualization.webapi.properties import (  # noqa: E402
     PROPERTY_INFO,
     PropertyVisualizer,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -30,7 +31,7 @@ def _make_mock_mesh(n_cells: int = 100, has_layer: bool = True, has_head: bool =
         # 2 layers: first 50 cells are layer 1, second 50 are layer 2
         cell_data["layer"] = np.array([1] * 50 + [2] * 50)
     if has_head:
-        cell_data["head"] = np.random.rand(n_cells) * 100
+        cell_data["head"] = _rng.random(n_cells) * 100
 
     mesh.cell_data = cell_data
     mesh.point_data = {}
@@ -40,10 +41,10 @@ def _make_mock_mesh(n_cells: int = 100, has_layer: bool = True, has_head: bool =
 def _make_mock_aquifer_params(kh=True, kv=True, ss=True, sy=True):
     """Create a mock aquifer parameters object."""
     params = MagicMock()
-    params.kh = np.random.rand(10, 2) if kh else None
-    params.kv = np.random.rand(10, 2) if kv else None
-    params.specific_storage = np.random.rand(10, 2) if ss else None
-    params.specific_yield = np.random.rand(10, 2) if sy else None
+    params.kh = _rng.random((10, 2)) if kh else None
+    params.kv = _rng.random((10, 2)) if kv else None
+    params.specific_storage = _rng.random((10, 2)) if ss else None
+    params.specific_yield = _rng.random((10, 2)) if sy else None
     # Don't fall back to short names since we provide specific_ names
     params.ss = None
     params.sy = None
@@ -54,8 +55,8 @@ def _make_mock_stratigraphy(n_nodes: int = 10, n_layers: int = 2):
     """Create a mock stratigraphy."""
     strat = MagicMock()
     strat.n_layers = n_layers
-    strat.top_elev = np.random.rand(n_nodes, n_layers) * 100
-    strat.bottom_elev = np.random.rand(n_nodes, n_layers) * -50
+    strat.top_elev = _rng.random((n_nodes, n_layers)) * 100
+    strat.bottom_elev = _rng.random((n_nodes, n_layers)) * -50
     return strat
 
 
@@ -369,7 +370,7 @@ class TestAddHeadData:
     def test_1d_matches_n_cells(self) -> None:
         mesh = _make_mock_mesh()
         viz = PropertyVisualizer(mesh)
-        head = np.random.rand(100)
+        head = _rng.random(100)
         viz.add_head_data(head)
         assert "head" in viz.available_properties
         assert np.array_equal(mesh.cell_data["head"], head)
@@ -377,14 +378,14 @@ class TestAddHeadData:
     def test_1d_doesnt_match(self) -> None:
         mesh = _make_mock_mesh()
         viz = PropertyVisualizer(mesh)
-        head = np.random.rand(10)  # doesn't match n_cells=100
+        head = _rng.random(10)  # doesn't match n_cells=100
         viz.add_head_data(head)
         assert mesh.cell_data["head"].shape == (100,)
 
     def test_2d_multi_layer(self) -> None:
         mesh = _make_mock_mesh()
         viz = PropertyVisualizer(mesh)
-        head = np.random.rand(10, 2)
+        head = _rng.random((10, 2))
         viz.add_head_data(head)
         assert "head" in viz.available_properties
 
@@ -393,7 +394,7 @@ class TestAddHeadData:
         viz = PropertyVisualizer(mesh)
         viz.get_property_array("head")
         assert len(viz._property_cache) > 0
-        viz.add_head_data(np.random.rand(100))
+        viz.add_head_data(_rng.random(100))
         assert not any(k.startswith("head") for k in viz._property_cache)
 
 

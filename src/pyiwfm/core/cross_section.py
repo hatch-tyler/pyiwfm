@@ -184,9 +184,7 @@ class CrossSectionExtractor:
 
         # Build node_id → 0-based index mapping matching stratigraphy array layout
         sorted_ids = sorted(grid.nodes.keys())
-        self._node_id_to_idx: dict[int, int] = {
-            nid: idx for idx, nid in enumerate(sorted_ids)
-        }
+        self._node_id_to_idx: dict[int, int] = {nid: idx for idx, nid in enumerate(sorted_ids)}
 
         # Ensure connectivity is computed for neighbor-walk
         grid.compute_connectivity()
@@ -391,9 +389,7 @@ class CrossSectionExtractor:
         top = np.full((n, n_layers), np.nan)
         bot = np.full((n, n_layers), np.nan)
         mask = np.zeros(n, dtype=bool)
-        interp_cache: list[tuple[tuple[int, ...], NDArray[np.float64]] | None] = [
-            None
-        ] * n
+        interp_cache: list[tuple[tuple[int, ...], NDArray[np.float64]] | None] = [None] * n
 
         # Neighbor-walk hint: start with no previous element
         prev_elem_id = 0
@@ -444,9 +440,7 @@ class CrossSectionExtractor:
             _interp_cache=interp_cache,
         )
 
-    def _find_element_with_hint(
-        self, xp: float, yp: float, hint_elem_id: int
-    ) -> int:
+    def _find_element_with_hint(self, xp: float, yp: float, hint_elem_id: int) -> int:
         """
         Find element containing (xp, yp), trying hint element and neighbors first.
 

@@ -10,25 +10,24 @@ from pathlib import Path
 
 import pytest
 
-from pyiwfm.runner.pest_params import (
-    IWFMParameterType,
-    ParameterTransform,
-    Parameter,
-    ParameterGroup,
-    ZoneParameterization,
-    PilotPointParameterization,
-    DirectParameterization,
-)
 from pyiwfm.components.groundwater import (
     AppGW,
     Subsidence,
 )
 from pyiwfm.io.groundwater import (
-    GWFileConfig,
-    GroundwaterWriter,
     GroundwaterReader,
+    GroundwaterWriter,
+    GWFileConfig,
 )
-
+from pyiwfm.runner.pest_params import (
+    DirectParameterization,
+    IWFMParameterType,
+    Parameter,
+    ParameterGroup,
+    ParameterTransform,
+    PilotPointParameterization,
+    ZoneParameterization,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -47,13 +46,15 @@ class TestPESTSubsidenceIntegration:
         gw = AppGW(n_nodes=100, n_layers=2, n_elements=50)
         for elem in range(1, 11):
             for layer in [1, 2]:
-                gw.add_subsidence(Subsidence(
-                    element=elem,
-                    layer=layer,
-                    elastic_storage=1e-5,
-                    inelastic_storage=1e-4,
-                    preconsolidation_head=90.0,
-                ))
+                gw.add_subsidence(
+                    Subsidence(
+                        element=elem,
+                        layer=layer,
+                        elastic_storage=1e-5,
+                        inelastic_storage=1e-4,
+                        preconsolidation_head=90.0,
+                    )
+                )
 
         # Write subsidence file
         config = GWFileConfig(output_dir=tmp_path)
@@ -107,13 +108,15 @@ class TestPESTSubsidenceIntegration:
         # Create model with subsidence
         gw = AppGW(n_nodes=50, n_layers=2, n_elements=25)
         for elem in range(1, 6):
-            gw.add_subsidence(Subsidence(
-                element=elem,
-                layer=1,
-                elastic_storage=1e-5,
-                inelastic_storage=1e-4,
-                preconsolidation_head=90.0,
-            ))
+            gw.add_subsidence(
+                Subsidence(
+                    element=elem,
+                    layer=1,
+                    elastic_storage=1e-5,
+                    inelastic_storage=1e-4,
+                    preconsolidation_head=90.0,
+                )
+            )
 
         # Write subsidence
         config = GWFileConfig(output_dir=tmp_path)

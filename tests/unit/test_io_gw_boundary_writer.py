@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from pyiwfm.io.gw_boundary import (
     ConstrainedGeneralHeadBC,
     GeneralHeadBC,
@@ -28,7 +26,6 @@ from pyiwfm.io.gw_boundary_writer import (
     write_specified_head_bc,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -36,31 +33,31 @@ from pyiwfm.io.gw_boundary_writer import (
 
 def _make_config(**overrides) -> GWBoundaryConfig:
     """Build a GWBoundaryConfig with sensible defaults, overridden by kwargs."""
-    defaults = dict(
-        sp_flow_file=Path("flow.dat"),
-        sp_head_file=Path("head.dat"),
-        gh_file=Path("gh.dat"),
-        cgh_file=Path("cgh.dat"),
-        ts_data_file=Path("ts.dat"),
-        n_bc_output_nodes=0,
-        bc_output_file=None,
-        bc_output_specs=[],
-        specified_flow_bcs=[],
-        sp_flow_factor=1.0,
-        sp_flow_time_unit="1DAY",
-        specified_head_bcs=[],
-        sp_head_factor=1.0,
-        general_head_bcs=[],
-        gh_head_factor=1.0,
-        gh_conductance_factor=1.0,
-        gh_time_unit="1DAY",
-        constrained_gh_bcs=[],
-        cgh_head_factor=1.0,
-        cgh_max_flow_factor=1.0,
-        cgh_head_time_unit="1DAY",
-        cgh_conductance_factor=1.0,
-        cgh_conductance_time_unit="1DAY",
-    )
+    defaults = {
+        "sp_flow_file": Path("flow.dat"),
+        "sp_head_file": Path("head.dat"),
+        "gh_file": Path("gh.dat"),
+        "cgh_file": Path("cgh.dat"),
+        "ts_data_file": Path("ts.dat"),
+        "n_bc_output_nodes": 0,
+        "bc_output_file": None,
+        "bc_output_specs": [],
+        "specified_flow_bcs": [],
+        "sp_flow_factor": 1.0,
+        "sp_flow_time_unit": "1DAY",
+        "specified_head_bcs": [],
+        "sp_head_factor": 1.0,
+        "general_head_bcs": [],
+        "gh_head_factor": 1.0,
+        "gh_conductance_factor": 1.0,
+        "gh_time_unit": "1DAY",
+        "constrained_gh_bcs": [],
+        "cgh_head_factor": 1.0,
+        "cgh_max_flow_factor": 1.0,
+        "cgh_head_time_unit": "1DAY",
+        "cgh_conductance_factor": 1.0,
+        "cgh_conductance_time_unit": "1DAY",
+    }
     defaults.update(overrides)
     return GWBoundaryConfig(**defaults)
 
@@ -316,8 +313,11 @@ class TestWriteGeneralHeadBC:
     def test_with_bcs_factor_one(self, tmp_path: Path) -> None:
         bcs = [
             GeneralHeadBC(
-                node_id=1, layer=1, ts_column=0,
-                external_head=100.0, conductance=0.5,
+                node_id=1,
+                layer=1,
+                ts_column=0,
+                external_head=100.0,
+                conductance=0.5,
             ),
         ]
         cfg = _make_config(
@@ -338,8 +338,11 @@ class TestWriteGeneralHeadBC:
     def test_factor_division(self, tmp_path: Path) -> None:
         bcs = [
             GeneralHeadBC(
-                node_id=1, layer=1, ts_column=0,
-                external_head=200.0, conductance=6.0,
+                node_id=1,
+                layer=1,
+                ts_column=0,
+                external_head=200.0,
+                conductance=6.0,
             ),
         ]
         cfg = _make_config(
@@ -356,8 +359,11 @@ class TestWriteGeneralHeadBC:
     def test_zero_head_factor_fallback(self, tmp_path: Path) -> None:
         bcs = [
             GeneralHeadBC(
-                node_id=1, layer=1, ts_column=0,
-                external_head=77.0, conductance=3.0,
+                node_id=1,
+                layer=1,
+                ts_column=0,
+                external_head=77.0,
+                conductance=3.0,
             ),
         ]
         cfg = _make_config(
@@ -372,8 +378,11 @@ class TestWriteGeneralHeadBC:
     def test_zero_conductance_factor_fallback(self, tmp_path: Path) -> None:
         bcs = [
             GeneralHeadBC(
-                node_id=1, layer=1, ts_column=0,
-                external_head=10.0, conductance=5.5,
+                node_id=1,
+                layer=1,
+                ts_column=0,
+                external_head=10.0,
+                conductance=5.5,
             ),
         ]
         cfg = _make_config(
@@ -423,9 +432,14 @@ class TestWriteConstrainedGhBC:
     def test_with_bcs_all_factors_one(self, tmp_path: Path) -> None:
         bcs = [
             ConstrainedGeneralHeadBC(
-                node_id=1, layer=1, ts_column=0,
-                external_head=100.0, conductance=0.5,
-                constraining_head=50.0, max_flow_ts_column=0, max_flow=10.0,
+                node_id=1,
+                layer=1,
+                ts_column=0,
+                external_head=100.0,
+                conductance=0.5,
+                constraining_head=50.0,
+                max_flow_ts_column=0,
+                max_flow=10.0,
             ),
         ]
         cfg = _make_config(
@@ -452,9 +466,14 @@ class TestWriteConstrainedGhBC:
     def test_factor_division(self, tmp_path: Path) -> None:
         bcs = [
             ConstrainedGeneralHeadBC(
-                node_id=1, layer=1, ts_column=0,
-                external_head=400.0, conductance=9.0,
-                constraining_head=200.0, max_flow_ts_column=0, max_flow=50.0,
+                node_id=1,
+                layer=1,
+                ts_column=0,
+                external_head=400.0,
+                conductance=9.0,
+                constraining_head=200.0,
+                max_flow_ts_column=0,
+                max_flow=50.0,
             ),
         ]
         cfg = _make_config(
@@ -474,9 +493,14 @@ class TestWriteConstrainedGhBC:
     def test_zero_head_factor_fallback(self, tmp_path: Path) -> None:
         bcs = [
             ConstrainedGeneralHeadBC(
-                node_id=1, layer=1, ts_column=0,
-                external_head=77.0, conductance=1.0,
-                constraining_head=33.0, max_flow_ts_column=0, max_flow=5.0,
+                node_id=1,
+                layer=1,
+                ts_column=0,
+                external_head=77.0,
+                conductance=1.0,
+                constraining_head=33.0,
+                max_flow_ts_column=0,
+                max_flow=5.0,
             ),
         ]
         cfg = _make_config(
@@ -494,9 +518,14 @@ class TestWriteConstrainedGhBC:
     def test_zero_conductance_factor_fallback(self, tmp_path: Path) -> None:
         bcs = [
             ConstrainedGeneralHeadBC(
-                node_id=1, layer=1, ts_column=0,
-                external_head=10.0, conductance=4.4,
-                constraining_head=5.0, max_flow_ts_column=0, max_flow=1.0,
+                node_id=1,
+                layer=1,
+                ts_column=0,
+                external_head=10.0,
+                conductance=4.4,
+                constraining_head=5.0,
+                max_flow_ts_column=0,
+                max_flow=1.0,
             ),
         ]
         cfg = _make_config(
@@ -512,9 +541,14 @@ class TestWriteConstrainedGhBC:
     def test_zero_max_flow_factor_fallback(self, tmp_path: Path) -> None:
         bcs = [
             ConstrainedGeneralHeadBC(
-                node_id=1, layer=1, ts_column=0,
-                external_head=10.0, conductance=1.0,
-                constraining_head=5.0, max_flow_ts_column=0, max_flow=99.0,
+                node_id=1,
+                layer=1,
+                ts_column=0,
+                external_head=10.0,
+                conductance=1.0,
+                constraining_head=5.0,
+                max_flow_ts_column=0,
+                max_flow=99.0,
             ),
         ]
         cfg = _make_config(
@@ -530,9 +564,13 @@ class TestWriteConstrainedGhBC:
     def test_multiple_bcs(self, tmp_path: Path) -> None:
         bcs = [
             ConstrainedGeneralHeadBC(
-                node_id=i, layer=1, ts_column=0,
-                external_head=float(i * 10), conductance=1.0,
-                constraining_head=float(i * 5), max_flow_ts_column=0,
+                node_id=i,
+                layer=1,
+                ts_column=0,
+                external_head=float(i * 10),
+                conductance=1.0,
+                constraining_head=float(i * 5),
+                max_flow_ts_column=0,
                 max_flow=float(i),
             )
             for i in range(1, 4)
@@ -545,9 +583,14 @@ class TestWriteConstrainedGhBC:
     def test_max_flow_ts_column_written(self, tmp_path: Path) -> None:
         bcs = [
             ConstrainedGeneralHeadBC(
-                node_id=1, layer=1, ts_column=5,
-                external_head=10.0, conductance=1.0,
-                constraining_head=5.0, max_flow_ts_column=8, max_flow=1.0,
+                node_id=1,
+                layer=1,
+                ts_column=5,
+                external_head=10.0,
+                conductance=1.0,
+                constraining_head=5.0,
+                max_flow_ts_column=8,
+                max_flow=1.0,
             ),
         ]
         cfg = _make_config(constrained_gh_bcs=bcs)
@@ -597,8 +640,11 @@ class TestOutputFormatting:
     def test_general_head_bc_line_format(self, tmp_path: Path) -> None:
         bcs = [
             GeneralHeadBC(
-                node_id=789, layer=1, ts_column=2,
-                external_head=150.0, conductance=0.001234,
+                node_id=789,
+                layer=1,
+                ts_column=2,
+                external_head=150.0,
+                conductance=0.001234,
             )
         ]
         cfg = _make_config(general_head_bcs=bcs)
@@ -615,9 +661,14 @@ class TestOutputFormatting:
     def test_constrained_gh_bc_line_format(self, tmp_path: Path) -> None:
         bcs = [
             ConstrainedGeneralHeadBC(
-                node_id=321, layer=2, ts_column=4,
-                external_head=500.0, conductance=1.5,
-                constraining_head=250.0, max_flow_ts_column=6, max_flow=75.0,
+                node_id=321,
+                layer=2,
+                ts_column=4,
+                external_head=500.0,
+                conductance=1.5,
+                constraining_head=250.0,
+                max_flow_ts_column=6,
+                max_flow=75.0,
             )
         ]
         cfg = _make_config(constrained_gh_bcs=bcs)

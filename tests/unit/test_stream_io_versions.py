@@ -14,26 +14,21 @@ from __future__ import annotations
 import textwrap
 from pathlib import Path
 
-import pytest
-
+from pyiwfm.components.stream import (
+    AppStream,
+    CrossSectionData,
+    StrmEvapNodeSpec,
+    StrmNode,
+)
 from pyiwfm.io.streams import (
-    StreamMainFileReader,
-    StreamMainFileConfig,
-    StreamSpecReader,
-    StreamBedParamRow,
     CrossSectionRow,
+    StreamBedParamRow,
     StreamInitialConditionRow,
+    StreamMainFileReader,
+    StreamSpecReader,
     parse_stream_version,
     stream_version_ge,
 )
-from pyiwfm.components.stream import (
-    AppStream,
-    StrmNode,
-    StrmReach,
-    CrossSectionData,
-    StrmEvapNodeSpec,
-)
-
 
 # =============================================================================
 # Helpers: write sample stream main files for each version
@@ -577,7 +572,9 @@ class TestStrmNodeExpansion:
 
     def test_with_all_new_fields(self) -> None:
         node = StrmNode(
-            id=1, x=0.0, y=0.0,
+            id=1,
+            x=0.0,
+            y=0.0,
             conductivity=10.0,
             bed_thickness=1.5,
             initial_condition=3.0,
@@ -623,15 +620,20 @@ class TestStreamWriterV40:
     """Tests for stream writer with v4.0 format."""
 
     def test_write_v40_bed_params_4_cols(self, tmp_path: Path) -> None:
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
         from pyiwfm.core.model import IWFMModel
+        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         for i in range(1, 4):
-            stream.add_node(StrmNode(
-                id=i, x=float(i * 100), y=float(i * 100),
-                reach_id=1, wetted_perimeter=120.0,
-            ))
+            stream.add_node(
+                StrmNode(
+                    id=i,
+                    x=float(i * 100),
+                    y=float(i * 100),
+                    reach_id=1,
+                    wetted_perimeter=120.0,
+                )
+            )
 
         model = IWFMModel(name="test", streams=stream)
         config = StreamWriterConfig(output_dir=tmp_path, version="4.0")
@@ -644,8 +646,8 @@ class TestStreamWriterV40:
         assert "WETPR" in content
 
     def test_write_v40_interaction_type(self, tmp_path: Path) -> None:
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
         from pyiwfm.core.model import IWFMModel
+        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))
@@ -658,8 +660,8 @@ class TestStreamWriterV40:
         assert "INTRCTYPE" in content
 
     def test_write_v40_evaporation_section(self, tmp_path: Path) -> None:
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
         from pyiwfm.core.model import IWFMModel
+        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))
@@ -680,15 +682,18 @@ class TestStreamWriterV50:
     """Tests for stream writer with v5.0 format."""
 
     def test_write_v50_cross_section(self, tmp_path: Path) -> None:
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
         from pyiwfm.core.model import IWFMModel
+        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         for i in range(1, 4):
             node = StrmNode(id=i, x=float(i * 100), y=float(i * 100))
             node.cross_section = CrossSectionData(
                 bottom_elev=100.0 - i * 10,
-                B0=5.0, s=0.5, n=0.035, max_flow_depth=15.0,
+                B0=5.0,
+                s=0.5,
+                n=0.035,
+                max_flow_depth=15.0,
             )
             stream.add_node(node)
 
@@ -704,8 +709,8 @@ class TestStreamWriterV50:
         assert "ENDSIMFL" in content
 
     def test_write_v50_initial_conditions(self, tmp_path: Path) -> None:
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
         from pyiwfm.core.model import IWFMModel
+        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         for i in range(1, 4):
@@ -723,8 +728,8 @@ class TestStreamWriterV50:
         assert "FACTH" in content
 
     def test_write_v50_no_wetted_perimeter(self, tmp_path: Path) -> None:
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
         from pyiwfm.core.model import IWFMModel
+        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))
@@ -737,14 +742,15 @@ class TestStreamWriterV50:
         assert "WETPR" not in content
 
     def test_write_v50_final_flow_file(self, tmp_path: Path) -> None:
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
         from pyiwfm.core.model import IWFMModel
+        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))
         model = IWFMModel(name="test", streams=stream)
         config = StreamWriterConfig(
-            output_dir=tmp_path, version="5.0",
+            output_dir=tmp_path,
+            version="5.0",
             final_flow_file="EndSimFlows.dat",
         )
         writer = StreamComponentWriter(model, config)

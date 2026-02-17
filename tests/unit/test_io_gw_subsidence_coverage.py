@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from pyiwfm.io.gw_subsidence import (
@@ -16,11 +15,9 @@ from pyiwfm.io.gw_subsidence import (
     SubsidenceNodeParams,
     SubsidenceReader,
     _is_comment_line,
-    _strip_comment,
     read_gw_subsidence,
 )
-from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.iwfm_reader import strip_inline_comment as _strip_comment
 
 # ---------------------------------------------------------------------------
 # Dataclass construction
@@ -155,13 +152,9 @@ def _write_subsidence_v40(
         node_id = node_idx + 1
         for layer_idx in range(n_layers):
             if layer_idx == 0:
-                lines.append(
-                    f"  {node_id}  0.001  0.01  10.0  1.0  50.0\n"
-                )
+                lines.append(f"  {node_id}  0.001  0.01  10.0  1.0  50.0\n")
             else:
-                lines.append(
-                    "  0.002  0.02  20.0  2.0  60.0\n"
-                )
+                lines.append("  0.002  0.02  20.0  2.0  60.0\n")
 
     path.write_text("".join(lines))
 
@@ -192,13 +185,9 @@ def _write_subsidence_v50(
         for layer_idx in range(n_layers):
             if layer_idx == 0:
                 # NodeID Elastic Inelastic Thick ThickMin Precompact Kv Neq
-                lines.append(
-                    f"  {node_id}  0.001  0.01  10.0  1.0  50.0  0.005  2.0\n"
-                )
+                lines.append(f"  {node_id}  0.001  0.01  10.0  1.0  50.0  0.005  2.0\n")
             else:
-                lines.append(
-                    "  0.002  0.02  20.0  2.0  60.0  0.006  3.0\n"
-                )
+                lines.append("  0.002  0.02  20.0  2.0  60.0  0.006  3.0\n")
 
     path.write_text("".join(lines))
 

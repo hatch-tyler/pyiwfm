@@ -9,26 +9,31 @@ curves, and outflows.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Sequence, TextIO
+from typing import TextIO
 
 import numpy as np
-from numpy.typing import NDArray
 
 from pyiwfm.components.lake import (
     AppLake,
     Lake,
     LakeElement,
     LakeRating,
-    LakeOutflow,
 )
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
+)
+from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
+)
+from pyiwfm.io.iwfm_reader import (
     resolve_path as _resolve_path_f,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
 )
 
@@ -182,13 +187,13 @@ class LakeWriter:
                 f.write("C  ELEM_ID  LAKE_ID  FRACTION\n")
 
             # Write element count
-            f.write(f"{len(lakes.lake_elements):<10}                              / NLAKE_ELEMENTS\n")
+            f.write(
+                f"{len(lakes.lake_elements):<10}                              / NLAKE_ELEMENTS\n"
+            )
 
             # Write lake elements
             for elem in lakes.lake_elements:
-                f.write(
-                    f"{elem.element_id:>7} {elem.lake_id:>7} {elem.fraction:>10.6f}\n"
-                )
+                f.write(f"{elem.element_id:>7} {elem.lake_id:>7} {elem.fraction:>10.6f}\n")
 
         return filepath
 
@@ -217,15 +222,18 @@ class LakeWriter:
 
             # Count lakes with rating curves
             lakes_with_ratings = [lk for lk in lakes.lakes.values() if lk.rating is not None]
-            f.write(f"{len(lakes_with_ratings):<10}                              / N_RATING_CURVES\n")
+            f.write(
+                f"{len(lakes_with_ratings):<10}                              / N_RATING_CURVES\n"
+            )
 
             # Write each rating curve
             for lake in lakes_with_ratings:
                 rating = lake.rating
-                f.write(f"C\n")
+                assert rating is not None
+                f.write("C\n")
                 f.write(f"C  Rating curve for lake {lake.id}: {lake.name}\n")
                 f.write(f"{lake.id:<6} {len(rating.elevations):>5}  / LAKE_ID, N_POINTS\n")
-                f.write(f"C  ELEVATION       AREA          VOLUME\n")
+                f.write("C  ELEVATION       AREA          VOLUME\n")
 
                 for i in range(len(rating.elevations)):
                     f.write(
@@ -266,6 +274,7 @@ class LakeWriter:
             # Write outflows
             for lake in lakes_with_outflows:
                 outflow = lake.outflow
+                assert outflow is not None
                 max_rate = outflow.max_rate if outflow.max_rate != float("inf") else 9999999.0
                 f.write(
                     f"{lake.id:>7} {outflow.destination_type:<12} {outflow.destination_id:>7} "
@@ -293,7 +302,7 @@ class LakeReader:
         filepath = Path(filepath)
         lakes: dict[int, Lake] = {}
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             line_num = 0
             n_lakes = None
 
@@ -358,7 +367,7 @@ class LakeReader:
         filepath = Path(filepath)
         elements: list[LakeElement] = []
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             line_num = 0
             n_elements = None
 
@@ -412,9 +421,7 @@ class LakeReader:
 
         return elements
 
-    def read_rating_curves(
-        self, filepath: Path | str
-    ) -> dict[int, LakeRating]:
+    def read_rating_curves(self, filepath: Path | str) -> dict[int, LakeRating]:
         """
         Read lake rating curves from file.
 
@@ -427,7 +434,7 @@ class LakeReader:
         filepath = Path(filepath)
         ratings: dict[int, LakeRating] = {}
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             line_num = 0
             n_curves = None
 
@@ -608,9 +615,7 @@ class LakeMainFileReader:
     def __init__(self) -> None:
         self._line_num = 0
 
-    def read(
-        self, filepath: Path | str, base_dir: Path | None = None
-    ) -> LakeMainFileConfig:
+    def read(self, filepath: Path | str, base_dir: Path | None = None) -> LakeMainFileConfig:
         """
         Parse Lake main file.
 
@@ -629,7 +634,7 @@ class LakeMainFileReader:
         config = LakeMainFileConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Read version header
             config.version = self._read_version(f)
             is_v50 = config.version.startswith("5")
@@ -709,9 +714,7 @@ class LakeMainFileReader:
 
                 # Read outflow rating table for each lake
                 for _ in range(len(config.lake_params)):
-                    rating = self._read_outflow_rating(
-                        f, config.elev_factor, config.outflow_factor
-                    )
+                    rating = self._read_outflow_rating(f, config.elev_factor, config.outflow_factor)
                     if rating:
                         config.outflow_ratings.append(rating)
 
@@ -742,10 +745,12 @@ class LakeMainFileReader:
         n_points = int(float(parts[1]))
 
         # First point on header line
-        rating.points.append(OutflowRatingPoint(
-            elevation=float(parts[2]) * elev_factor,
-            outflow=float(parts[3]) * outflow_factor,
-        ))
+        rating.points.append(
+            OutflowRatingPoint(
+                elevation=float(parts[2]) * elev_factor,
+                outflow=float(parts[3]) * outflow_factor,
+            )
+        )
 
         # Remaining points
         for _ in range(n_points - 1):
@@ -754,10 +759,12 @@ class LakeMainFileReader:
                 break
             lp = line.split()
             if len(lp) >= 2:
-                rating.points.append(OutflowRatingPoint(
-                    elevation=float(lp[0]) * elev_factor,
-                    outflow=float(lp[1]) * outflow_factor,
-                ))
+                rating.points.append(
+                    OutflowRatingPoint(
+                        elevation=float(lp[0]) * elev_factor,
+                        outflow=float(lp[1]) * outflow_factor,
+                    )
+                )
 
         return rating
 
@@ -776,13 +783,10 @@ class LakeMainFileReader:
         return ""
 
 
-
 # Convenience functions
 
 
-def read_lake_main_file(
-    filepath: Path | str, base_dir: Path | None = None
-) -> LakeMainFileConfig:
+def read_lake_main_file(filepath: Path | str, base_dir: Path | None = None) -> LakeMainFileConfig:
     """
     Read IWFM lake component main simulation file.
 

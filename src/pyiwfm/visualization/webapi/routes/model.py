@@ -9,7 +9,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from pyiwfm.visualization.webapi.config import model_state
+from pyiwfm.visualization.webapi.config import model_state, require_model
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +43,7 @@ class BoundsInfo(BaseModel):
 @router.get("/info", response_model=ModelInfo)
 def get_model_info() -> ModelInfo:
     """Get model metadata."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
 
     return ModelInfo(
         name=model.name,
@@ -180,10 +177,7 @@ class ModelSummary(BaseModel):
 @router.get("/summary", response_model=ModelSummary)
 def get_model_summary() -> ModelSummary:
     """Get a structured summary of all model components."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
 
     # Mesh
     n_subregions = None
@@ -277,9 +271,9 @@ def get_model_summary() -> ModelSummary:
                 # Only use this heuristic if connectivity data exists
                 if has_downstream:
                     terminal = sum(
-                        1 for sn in nodes_dict.values()
-                        if sn.id not in has_downstream
-                        and getattr(sn, "gw_node", None) is not None
+                        1
+                        for sn in nodes_dict.values()
+                        if sn.id not in has_downstream and getattr(sn, "gw_node", None) is not None
                     )
                     if terminal > 0:
                         n_reaches = terminal
@@ -378,7 +372,8 @@ def get_model_summary() -> ModelSummary:
                 _ensure_land_use_loaded()
             except Exception as exc:
                 logger.warning(
-                    "Summary: land use lazy-load failed: %s", exc,
+                    "Summary: land use lazy-load failed: %s",
+                    exc,
                 )
 
         if hasattr(rz, "element_landuse") and rz.element_landuse:
@@ -395,15 +390,12 @@ def get_model_summary() -> ModelSummary:
                     snapshot = mgr.get_snapshot(0)
                     if snapshot:
                         n_lu_elements = len(snapshot)
-                        n_missing_lu = max(
-                            0, model.n_elements - n_lu_elements
-                        )
-                        lu_coverage = (
-                            f"{n_lu_elements}/{model.n_elements}"
-                        )
+                        n_missing_lu = max(0, model.n_elements - n_lu_elements)
+                        lu_coverage = f"{n_lu_elements}/{model.n_elements}"
             except Exception as exc:
                 logger.warning(
-                    "Summary: HDF5 area manager stats failed: %s", exc,
+                    "Summary: HDF5 area manager stats failed: %s",
+                    exc,
                 )
 
         # Get area timestep count from HDF5 manager

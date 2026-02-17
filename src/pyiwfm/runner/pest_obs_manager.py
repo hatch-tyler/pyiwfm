@@ -14,23 +14,22 @@ The manager supports:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import numpy as np
-from numpy.typing import NDArray
-
 import pandas as pd
 
 from pyiwfm.runner.pest_observations import (
-    IWFMObservationType,
+    DerivedObservation,
     IWFMObservation,
     IWFMObservationGroup,
+    IWFMObservationType,
     ObservationLocation,
     WeightStrategy,
-    DerivedObservation,
 )
 
 
@@ -207,8 +206,8 @@ class IWFMObservationManager:
 
     def add_head_observations(
         self,
-        wells: "pd.DataFrame | Path | str | list[WellInfo]",
-        observed_data: "pd.DataFrame | Path | str",
+        wells: pd.DataFrame | Path | str | list[WellInfo],
+        observed_data: pd.DataFrame | Path | str,
         layers: int | list[int] | str = "auto",
         weight_strategy: str | WeightStrategy = WeightStrategy.EQUAL,
         start_date: datetime | None = None,
@@ -293,7 +292,9 @@ class IWFMObservationManager:
                 layer = well.layer
 
             # Create observation name
-            date_str = obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            date_str = (
+                obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            )
             obs_name = obs_name_format.format(
                 well=well_id[:12],  # Truncate for PEST name limits
                 date=date_str,
@@ -349,8 +350,8 @@ class IWFMObservationManager:
 
     def add_drawdown_observations(
         self,
-        wells: "pd.DataFrame | Path | str | list[WellInfo]",
-        observed_data: "pd.DataFrame | Path | str",
+        wells: pd.DataFrame | Path | str | list[WellInfo],
+        observed_data: pd.DataFrame | Path | str,
         reference_date: datetime | None = None,
         reference_values: dict[str, float] | None = None,
         **kwargs: Any,
@@ -397,7 +398,7 @@ class IWFMObservationManager:
                         reference_values[well_id] = well_data.iloc[0]["head"]
 
         # Calculate drawdown
-        def calc_drawdown(row):
+        def calc_drawdown(row: Any) -> Any:
             ref = reference_values.get(row["well_id"], 0)
             return ref - row["head"]
 
@@ -414,16 +415,15 @@ class IWFMObservationManager:
         # Update observation type
         for obs in obs_list:
             obs.obs_type = IWFMObservationType.DRAWDOWN
-            obs.metadata["reference_value"] = reference_values.get(
-                obs.metadata.get("well_id"), 0
-            )
+            well_key: str = obs.metadata.get("well_id", "")
+            obs.metadata["reference_value"] = reference_values.get(well_key, 0)
 
         return obs_list
 
     def add_head_difference_observations(
         self,
         well_pairs: list[tuple[str, str]],
-        observed_data: "pd.DataFrame | Path | str",
+        observed_data: pd.DataFrame | Path | str,
         weight: float = 1.0,
         group_name: str = "hdiff",
         **kwargs: Any,
@@ -460,7 +460,7 @@ class IWFMObservationManager:
         created_obs = []
 
         # Get unique times
-        times = obs_df["datetime"].unique()
+        obs_df["datetime"].unique()
 
         for well1, well2 in well_pairs:
             data1 = obs_df[obs_df["well_id"] == well1].set_index("datetime")
@@ -474,7 +474,9 @@ class IWFMObservationManager:
                 head2 = data2.loc[obs_time, "head"]
                 diff = head1 - head2
 
-                date_str = obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+                date_str = (
+                    obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+                )
                 obs_name = f"hdif_{well1[:6]}_{well2[:6]}_{date_str}"
                 obs_name = self._make_valid_obs_name(obs_name)
 
@@ -500,8 +502,8 @@ class IWFMObservationManager:
 
     def add_streamflow_observations(
         self,
-        gages: "pd.DataFrame | Path | str | list[GageInfo]",
-        observed_data: "pd.DataFrame | Path | str",
+        gages: pd.DataFrame | Path | str | list[GageInfo],
+        observed_data: pd.DataFrame | Path | str,
         weight_strategy: str | WeightStrategy = WeightStrategy.EQUAL,
         transform: str = "none",
         start_date: datetime | None = None,
@@ -585,7 +587,9 @@ class IWFMObservationManager:
                 continue
 
             # Create observation name
-            date_str = obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            date_str = (
+                obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            )
             obs_name = obs_name_format.format(
                 gage=gage_id[:12] if gage_id else "gage",
                 date=date_str,
@@ -619,8 +623,8 @@ class IWFMObservationManager:
 
     def add_stream_stage_observations(
         self,
-        gages: "pd.DataFrame | Path | str | list[GageInfo]",
-        observed_data: "pd.DataFrame | Path | str",
+        gages: pd.DataFrame | Path | str | list[GageInfo],
+        observed_data: pd.DataFrame | Path | str,
         **kwargs: Any,
     ) -> list[IWFMObservation]:
         """Add stream stage observations.
@@ -659,7 +663,7 @@ class IWFMObservationManager:
     def add_gain_loss_observations(
         self,
         reaches: list[int],
-        observed_data: "pd.DataFrame | Path | str",
+        observed_data: pd.DataFrame | Path | str,
         weight: float = 1.0,
         group_name: str = "gain_loss",
         **kwargs: Any,
@@ -703,7 +707,9 @@ class IWFMObservationManager:
             obs_time = row["datetime"]
             value = row["gain_loss"]
 
-            date_str = obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            date_str = (
+                obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            )
             obs_name = f"sgl_r{reach_id}_{date_str}"
             obs_name = self._make_valid_obs_name(obs_name)
 
@@ -733,7 +739,7 @@ class IWFMObservationManager:
     def add_lake_observations(
         self,
         lakes: list[int] | str = "all",
-        observed_data: "pd.DataFrame | Path | str | None" = None,
+        observed_data: pd.DataFrame | Path | str | None = None,
         obs_type: str = "level",
         weight: float = 1.0,
         group_name: str | None = None,
@@ -766,7 +772,8 @@ class IWFMObservationManager:
 
         # Determine observation type
         iwfm_obs_type = (
-            IWFMObservationType.LAKE_LEVEL if obs_type == "level"
+            IWFMObservationType.LAKE_LEVEL
+            if obs_type == "level"
             else IWFMObservationType.LAKE_STORAGE
         )
 
@@ -793,7 +800,9 @@ class IWFMObservationManager:
             obs_time = row["datetime"]
             value = row["value"]
 
-            date_str = obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            date_str = (
+                obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            )
             obs_name = f"lak{lake_id}_{obs_type[:3]}_{date_str}"
             obs_name = self._make_valid_obs_name(obs_name)
 
@@ -826,7 +835,7 @@ class IWFMObservationManager:
         components: list[str] | None = None,
         locations: list[int] | str = "all",
         aggregate: str = "sum",
-        observed_data: "pd.DataFrame | Path | str | None" = None,
+        observed_data: pd.DataFrame | Path | str | None = None,
         weight: float = 1.0,
         group_name: str | None = None,
         **kwargs: Any,
@@ -866,8 +875,10 @@ class IWFMObservationManager:
         }
 
         if budget_type not in budget_obs_types:
-            raise ValueError(f"Invalid budget type: {budget_type}. "
-                           f"Must be one of: {list(budget_obs_types.keys())}")
+            raise ValueError(
+                f"Invalid budget type: {budget_type}. "
+                f"Must be one of: {list(budget_obs_types.keys())}"
+            )
 
         iwfm_obs_type = budget_obs_types[budget_type]
         grp_name = group_name or f"{budget_type}bud"
@@ -914,7 +925,9 @@ class IWFMObservationManager:
             component = row.get("component", "total")
             location_id = row.get("location_id")
 
-            date_str = obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            date_str = (
+                obs_time.strftime("%Y%m%d") if isinstance(obs_time, datetime) else str(obs_time)
+            )
 
             if location_id is not None:
                 obs_name = f"{budget_type}_{component[:6]}_{location_id}_{date_str}"
@@ -1052,8 +1065,7 @@ class IWFMObservationManager:
         """
         # Get groups with observations
         active_groups = {
-            name: grp for name, grp in self._observation_groups.items()
-            if len(grp.observations) > 0
+            name: grp for name, grp in self._observation_groups.items() if len(grp.observations) > 0
         }
 
         if len(active_groups) == 0:
@@ -1063,7 +1075,7 @@ class IWFMObservationManager:
         if target_contributions is None:
             # Equal contribution
             n_groups = len(active_groups)
-            target_contributions = {name: 1.0 / n_groups for name in active_groups}
+            target_contributions = dict.fromkeys(active_groups, 1.0 / n_groups)
         else:
             # Fill in missing groups with remaining contribution
             specified_total = sum(target_contributions.values())
@@ -1175,10 +1187,7 @@ class IWFMObservationManager:
         list[IWFMObservation]
             Matching observations.
         """
-        return [
-            obs for obs in self._observations.values()
-            if obs.obs_type == obs_type
-        ]
+        return [obs for obs in self._observations.values() if obs.obs_type == obs_type]
 
     def get_observations_by_group(self, group: str) -> list[IWFMObservation]:
         """Get all observations in a group.
@@ -1230,16 +1239,13 @@ class IWFMObservationManager:
         list[IWFMObservationGroup]
             All groups that have at least one observation.
         """
-        return [
-            grp for grp in self._observation_groups.values()
-            if len(grp.observations) > 0
-        ]
+        return [grp for grp in self._observation_groups.values() if len(grp.observations) > 0]
 
     # =========================================================================
     # Export Methods
     # =========================================================================
 
-    def to_dataframe(self) -> "pd.DataFrame":
+    def to_dataframe(self) -> pd.DataFrame:
         """Export all observations to a DataFrame.
 
         Returns
@@ -1259,7 +1265,7 @@ class IWFMObservationManager:
 
         return pd.DataFrame(records)
 
-    def from_dataframe(self, df: "pd.DataFrame") -> None:
+    def from_dataframe(self, df: pd.DataFrame) -> None:
         """Load observations from a DataFrame.
 
         Parameters
@@ -1363,7 +1369,7 @@ class IWFMObservationManager:
 
     def _parse_wells(
         self,
-        wells: "pd.DataFrame | Path | str | list[WellInfo]",
+        wells: pd.DataFrame | Path | str | list[WellInfo],
     ) -> list[WellInfo]:
         """Parse well information from various input formats."""
         if isinstance(wells, list) and all(isinstance(w, WellInfo) for w in wells):
@@ -1372,6 +1378,7 @@ class IWFMObservationManager:
         if isinstance(wells, (str, Path)):
             wells = pd.read_csv(wells)
 
+        assert isinstance(wells, pd.DataFrame)
         # Convert DataFrame to WellInfo list
         well_list = []
         for _, row in wells.iterrows():
@@ -1391,7 +1398,7 @@ class IWFMObservationManager:
 
     def _parse_gages(
         self,
-        gages: "pd.DataFrame | Path | str | list[GageInfo]",
+        gages: pd.DataFrame | Path | str | list[GageInfo],
     ) -> list[GageInfo]:
         """Parse gage information from various input formats."""
         if isinstance(gages, list) and all(isinstance(g, GageInfo) for g in gages):
@@ -1400,6 +1407,7 @@ class IWFMObservationManager:
         if isinstance(gages, (str, Path)):
             gages = pd.read_csv(gages)
 
+        assert isinstance(gages, pd.DataFrame)
         # Convert DataFrame to GageInfo list
         gage_list = []
         for _, row in gages.iterrows():
@@ -1417,9 +1425,9 @@ class IWFMObservationManager:
 
     def _parse_timeseries_data(
         self,
-        data: "pd.DataFrame | Path | str",
+        data: pd.DataFrame | Path | str,
         value_column: str,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """Parse time series data from various input formats."""
         if isinstance(data, (str, Path)):
             data = pd.read_csv(data, parse_dates=["datetime"])
@@ -1432,11 +1440,11 @@ class IWFMObservationManager:
 
     def _resample_timeseries(
         self,
-        df: "pd.DataFrame",
+        df: pd.DataFrame,
         group_col: str,
         value_col: str,
         frequency: str,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """Resample time series data to specified frequency."""
         result_dfs = []
         for group_id in df[group_col].unique():
@@ -1448,7 +1456,8 @@ class IWFMObservationManager:
             resampled = resampled.rename(columns={value_col: value_col})
             result_dfs.append(resampled)
 
-        return pd.concat(result_dfs, ignore_index=True)
+        concatenated: pd.DataFrame = pd.concat(result_dfs, ignore_index=True)
+        return concatenated
 
     def _determine_layer_from_screen(self, well: WellInfo) -> int | None:
         """Determine model layer from well screen depths."""
@@ -1473,7 +1482,7 @@ class IWFMObservationManager:
         counter = 1
         while name in self._observations:
             suffix = f"_{counter}"
-            name = base_name[:200 - len(suffix)] + suffix
+            name = base_name[: 200 - len(suffix)] + suffix
             counter += 1
 
         return name
@@ -1482,7 +1491,7 @@ class IWFMObservationManager:
     # Iteration
     # =========================================================================
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[IWFMObservation]:
         """Iterate over observations."""
         return iter(self._observations.values())
 

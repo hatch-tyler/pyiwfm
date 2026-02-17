@@ -18,12 +18,13 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
+    from pyiwfm.io.comment_extractor import CommentExtractor
+    from pyiwfm.io.comment_metadata import CommentMetadata
     from pyiwfm.io.simulation import SimulationConfig
-    from pyiwfm.io.comment_metadata import CommentMetadata, FileCommentMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -94,9 +95,7 @@ class CompleteModelLoader:
                 description-based reading (False), or auto-detect (None).
         """
         self.simulation_file = Path(simulation_file)
-        self.preprocessor_file = (
-            Path(preprocessor_file) if preprocessor_file else None
-        )
+        self.preprocessor_file = Path(preprocessor_file) if preprocessor_file else None
         self.use_positional_format = use_positional_format
         self.base_dir = self.simulation_file.parent
 
@@ -122,24 +121,18 @@ class CompleteModelLoader:
         if pp_file is None and sim_config.preprocessor_file:
             pp_file = self._resolve_path(sim_config.preprocessor_file)
             if not pp_file.exists():
-                result.warnings.append(
-                    f"Preprocessor file not found: {pp_file}"
-                )
+                result.warnings.append(f"Preprocessor file not found: {pp_file}")
                 pp_file = None
 
         if pp_file is None:
-            result.errors["preprocessor"] = (
-                "No preprocessor file specified or found"
-            )
+            result.errors["preprocessor"] = "No preprocessor file specified or found"
             return result
 
         # Step 3: Load model using from_simulation_with_preprocessor
         try:
             from pyiwfm.core.model import IWFMModel
 
-            model = IWFMModel.from_simulation_with_preprocessor(
-                self.simulation_file, pp_file
-            )
+            model = IWFMModel.from_simulation_with_preprocessor(self.simulation_file, pp_file)
             result.model = model
 
             # Collect any component-level errors from metadata
@@ -147,9 +140,7 @@ class CompleteModelLoader:
                 if key.endswith("_load_error"):
                     component = key.replace("_load_error", "")
                     result.errors[component] = str(value)
-                    logger.warning(
-                        "Component %s load error: %s", component, value
-                    )
+                    logger.warning("Component %s load error: %s", component, value)
 
         except Exception as e:
             result.errors["model"] = str(e)
@@ -157,7 +148,7 @@ class CompleteModelLoader:
 
         return result
 
-    def load_model(self) -> "IWFMModel":
+    def load_model(self) -> IWFMModel:
         """Load the complete model, raising on failure.
 
         Returns:
@@ -168,13 +159,11 @@ class CompleteModelLoader:
         """
         result = self.load()
         if not result.success:
-            errors = "; ".join(
-                f"{k}: {v}" for k, v in result.errors.items()
-            )
+            errors = "; ".join(f"{k}: {v}" for k, v in result.errors.items())
             raise RuntimeError(f"Failed to load IWFM model: {errors}")
         return result.model  # type: ignore[return-value]
 
-    def _read_simulation_config(self) -> "SimulationConfig":
+    def _read_simulation_config(self) -> SimulationConfig:
         """Read simulation configuration, auto-detecting format."""
         if self.use_positional_format is True:
             return self._read_positional()
@@ -183,21 +172,21 @@ class CompleteModelLoader:
         else:
             return self._read_auto_detect()
 
-    def _read_positional(self) -> "SimulationConfig":
+    def _read_positional(self) -> SimulationConfig:
         """Read using positional IWFM format."""
         from pyiwfm.io.simulation import IWFMSimulationReader
 
         reader = IWFMSimulationReader()
         return reader.read(self.simulation_file, base_dir=self.base_dir)
 
-    def _read_description_based(self) -> "SimulationConfig":
+    def _read_description_based(self) -> SimulationConfig:
         """Read using description-based format."""
         from pyiwfm.io.simulation import SimulationReader
 
         reader = SimulationReader()
         return reader.read(self.simulation_file)
 
-    def _read_auto_detect(self) -> "SimulationConfig":
+    def _read_auto_detect(self) -> SimulationConfig:
         """Auto-detect format and read simulation config.
 
         Heuristic: If the file has numbered description comments
@@ -210,15 +199,14 @@ class CompleteModelLoader:
             config = self._read_description_based()
 
             # Check if we got meaningful data
-            has_dates = (
-                config.start_date.year != 2000
-                or config.end_date.year != 2000
+            has_dates = config.start_date.year != 2000 or config.end_date.year != 2000
+            has_files = any(
+                [
+                    config.groundwater_file,
+                    config.streams_file,
+                    config.rootzone_file,
+                ]
             )
-            has_files = any([
-                config.groundwater_file,
-                config.streams_file,
-                config.rootzone_file,
-            ])
 
             if has_dates or has_files:
                 return config
@@ -242,7 +230,7 @@ def load_complete_model(
     simulation_file: Path | str,
     preprocessor_file: Path | str | None = None,
     use_positional_format: bool | None = None,
-) -> "IWFMModel":
+) -> IWFMModel:
     """Load a complete IWFM model from simulation and preprocessor files.
 
     This is a convenience function that creates a CompleteModelLoader
@@ -259,9 +247,7 @@ def load_complete_model(
     Raises:
         RuntimeError: If model loading fails
     """
-    loader = CompleteModelLoader(
-        simulation_file, preprocessor_file, use_positional_format
-    )
+    loader = CompleteModelLoader(simulation_file, preprocessor_file, use_positional_format)
     return loader.load_model()
 
 
@@ -282,9 +268,9 @@ class ModelLoadResultWithComments(ModelLoadResult):
             Keys include "preprocessor_main", "simulation_main", "gw_main", etc.
     """
 
-    comment_metadata: dict[str, "CommentMetadata"] = field(default_factory=dict)
+    comment_metadata: dict[str, CommentMetadata] = field(default_factory=dict)
 
-    def get_file_comments(self, file_type: str) -> "CommentMetadata | None":
+    def get_file_comments(self, file_type: str) -> CommentMetadata | None:
         """Get comment metadata for a specific file type.
 
         Args:
@@ -332,9 +318,7 @@ class CommentAwareModelLoader(CompleteModelLoader):
             use_positional_format: Force positional format reading
             preserve_comments: Whether to extract and preserve comments
         """
-        super().__init__(
-            simulation_file, preprocessor_file, use_positional_format
-        )
+        super().__init__(simulation_file, preprocessor_file, use_positional_format)
         self.preserve_comments = preserve_comments
 
     def load(self) -> ModelLoadResultWithComments:
@@ -360,9 +344,7 @@ class CommentAwareModelLoader(CompleteModelLoader):
 
         return result
 
-    def _extract_all_comments(
-        self, base_result: ModelLoadResult
-    ) -> dict[str, "CommentMetadata"]:
+    def _extract_all_comments(self, base_result: ModelLoadResult) -> dict[str, CommentMetadata]:
         """Extract comments from all model files.
 
         Args:
@@ -373,7 +355,7 @@ class CommentAwareModelLoader(CompleteModelLoader):
         """
         from pyiwfm.io.comment_extractor import CommentExtractor
 
-        comments: dict[str, "CommentMetadata"] = {}
+        comments: dict[str, CommentMetadata] = {}
         extractor = CommentExtractor()
 
         # Extract from simulation main file
@@ -387,9 +369,9 @@ class CommentAwareModelLoader(CompleteModelLoader):
         # Extract from preprocessor file
         pp_file = self.preprocessor_file
         if pp_file is None and base_result.simulation_config:
-            pp_file = self._resolve_path(
-                base_result.simulation_config.preprocessor_file
-            )
+            pp_raw = base_result.simulation_config.preprocessor_file
+            if pp_raw is not None:
+                pp_file = self._resolve_path(pp_raw)
 
         if pp_file and pp_file.exists():
             try:
@@ -401,17 +383,15 @@ class CommentAwareModelLoader(CompleteModelLoader):
 
         # Extract from component files if simulation config is available
         if base_result.simulation_config:
-            self._extract_component_comments(
-                base_result.simulation_config, extractor, comments
-            )
+            self._extract_component_comments(base_result.simulation_config, extractor, comments)
 
         return comments
 
     def _extract_component_comments(
         self,
-        sim_config: "SimulationConfig",
-        extractor: "CommentExtractor",
-        comments: dict[str, "CommentMetadata"],
+        sim_config: SimulationConfig,
+        extractor: CommentExtractor,
+        comments: dict[str, CommentMetadata],
     ) -> None:
         """Extract comments from component files.
 
@@ -439,16 +419,14 @@ class CommentAwareModelLoader(CompleteModelLoader):
                         comments[file_type] = file_comments
                         logger.debug(f"Extracted comments from {file_type}")
                     except Exception as e:
-                        logger.warning(
-                            f"Failed to extract comments from {file_type}: {e}"
-                        )
+                        logger.warning(f"Failed to extract comments from {file_type}: {e}")
 
 
 def load_model_with_comments(
     simulation_file: Path | str,
     preprocessor_file: Path | str | None = None,
     use_positional_format: bool | None = None,
-) -> tuple["IWFMModel", dict[str, "CommentMetadata"]]:
+) -> tuple[IWFMModel, dict[str, CommentMetadata]]:
     """Load an IWFM model with comment preservation.
 
     This is a convenience function that loads a model and extracts

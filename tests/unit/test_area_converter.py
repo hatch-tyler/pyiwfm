@@ -24,7 +24,6 @@ from pyiwfm.io.rootzone_area import (
     read_area_timestep,
 )
 
-
 # =====================================================================
 # Helper to write test area files
 # =====================================================================
@@ -56,9 +55,7 @@ def _write_area_file(
     dates = [f"{m:02d}/01/2000_24:00" for m in range(10, 10 + n_timesteps)]
     for ts_idx, date in enumerate(dates):
         for eid in range(1, n_elements + 1):
-            vals = "  ".join(
-                f"{100.0 + eid + ts_idx * 10 + c:.1f}" for c in range(n_crops)
-            )
+            vals = "  ".join(f"{100.0 + eid + ts_idx * 10 + c:.1f}" for c in range(n_crops))
             if date_on_every_row or eid == 1:
                 lines.append(f"   {date}   {eid}   {vals}")
             else:
@@ -441,11 +438,19 @@ class TestLoadLandUseFromArrays:
         rz.load_land_use_from_arrays(snapshot)
 
         # Element 1: ag (600) + urban (300) + native (100)
-        ag = [e for e in rz.element_landuse if e.element_id == 1 and e.land_use_type == LandUseType.AGRICULTURAL]
+        ag = [
+            e
+            for e in rz.element_landuse
+            if e.element_id == 1 and e.land_use_type == LandUseType.AGRICULTURAL
+        ]
         assert len(ag) == 1
         assert ag[0].area == pytest.approx(600.0)
 
-        urban = [e for e in rz.element_landuse if e.element_id == 2 and e.land_use_type == LandUseType.URBAN]
+        urban = [
+            e
+            for e in rz.element_landuse
+            if e.element_id == 2 and e.land_use_type == LandUseType.URBAN
+        ]
         assert len(urban) == 1
         assert urban[0].area == pytest.approx(400.0)
 
@@ -453,13 +458,22 @@ class TestLoadLandUseFromArrays:
         from pyiwfm.components.rootzone import ElementLandUse, LandUseType, RootZone
 
         rz = RootZone(n_elements=2, n_layers=1)
-        rz.add_element_landuse(ElementLandUse(
-            element_id=99, land_use_type=LandUseType.AGRICULTURAL, area=999.0,
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=99,
+                land_use_type=LandUseType.AGRICULTURAL,
+                area=999.0,
+            )
+        )
 
         snapshot = {
             1: {
-                "fractions": {"agricultural": 1.0, "urban": 0.0, "native_riparian": 0.0, "water": 0.0},
+                "fractions": {
+                    "agricultural": 1.0,
+                    "urban": 0.0,
+                    "native_riparian": 0.0,
+                    "water": 0.0,
+                },
                 "total_area": 100.0,
                 "dominant": "agricultural",
             },
@@ -485,7 +499,10 @@ class TestContinuationRowFormat:
         """read_area_timestep handles continuation rows."""
         src = tmp_path / "area.dat"
         _write_area_file(
-            src, n_elements=5, n_crops=2, n_timesteps=2,
+            src,
+            n_elements=5,
+            n_crops=2,
+            n_timesteps=2,
             date_on_every_row=False,
         )
 
@@ -506,7 +523,10 @@ class TestContinuationRowFormat:
 
         src = tmp_path / "area.dat"
         _write_area_file(
-            src, n_elements=4, n_crops=3, n_timesteps=3,
+            src,
+            n_elements=4,
+            n_crops=3,
+            n_timesteps=3,
             date_on_every_row=False,
         )
 
@@ -522,7 +542,10 @@ class TestContinuationRowFormat:
 
         src = tmp_path / "area.dat"
         _write_area_file(
-            src, n_elements=5, n_crops=2, n_timesteps=3,
+            src,
+            n_elements=5,
+            n_crops=2,
+            n_timesteps=3,
             date_on_every_row=False,
         )
 
@@ -542,7 +565,10 @@ class TestContinuationRowFormat:
 
         src = tmp_path / "area.dat"
         _write_area_file(
-            src, n_elements=3, n_crops=2, n_timesteps=2,
+            src,
+            n_elements=3,
+            n_crops=2,
+            n_timesteps=2,
             date_on_every_row=False,
         )
 
@@ -566,11 +592,17 @@ class TestContinuationRowFormat:
         src_cont = tmp_path / "cont.dat"
 
         _write_area_file(
-            src_full, n_elements=4, n_crops=2, n_timesteps=2,
+            src_full,
+            n_elements=4,
+            n_crops=2,
+            n_timesteps=2,
             date_on_every_row=True,
         )
         _write_area_file(
-            src_cont, n_elements=4, n_crops=2, n_timesteps=2,
+            src_cont,
+            n_elements=4,
+            n_crops=2,
+            n_timesteps=2,
             date_on_every_row=False,
         )
 
@@ -586,7 +618,10 @@ class TestContinuationRowFormat:
         """Metadata detection works with continuation format."""
         src = tmp_path / "area.dat"
         _write_area_file(
-            src, n_elements=3, n_crops=4, n_timesteps=1,
+            src,
+            n_elements=3,
+            n_crops=4,
+            n_timesteps=1,
             date_on_every_row=False,
         )
 

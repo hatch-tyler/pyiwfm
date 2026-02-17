@@ -15,26 +15,25 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.streams import (
-    StreamFileConfig,
-    StreamWriter,
-    StreamReader,
-    write_stream,
-    read_stream_nodes,
-    read_diversions,
-    _is_comment_line,
-    _strip_comment,
-)
 from pyiwfm.components.stream import (
     AppStream,
+    Bypass,
+    Diversion,
+    StreamRating,
     StrmNode,
     StrmReach,
-    Diversion,
-    Bypass,
-    StreamRating,
 )
 from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.streams import (
+    StreamFileConfig,
+    StreamReader,
+    StreamWriter,
+    _is_comment_line,
+    _strip_comment,
+    read_diversions,
+    read_stream_nodes,
+    write_stream,
+)
 
 # =============================================================================
 # Test Helper Functions
@@ -167,33 +166,51 @@ class TestStreamWriter:
         """Create sample stream component for testing."""
         nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1, gw_node=10,
-                bottom_elev=50.0, wetted_perimeter=5.0,
-                upstream_node=None, downstream_node=2
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                gw_node=10,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
+                upstream_node=None,
+                downstream_node=2,
             ),
             2: StrmNode(
-                id=2, x=150.0, y=250.0, reach_id=1, gw_node=15,
-                bottom_elev=45.0, wetted_perimeter=6.0,
-                upstream_node=1, downstream_node=None
+                id=2,
+                x=150.0,
+                y=250.0,
+                reach_id=1,
+                gw_node=15,
+                bottom_elev=45.0,
+                wetted_perimeter=6.0,
+                upstream_node=1,
+                downstream_node=None,
             ),
         }
         reaches = {
             1: StrmReach(
-                id=1, name="Main Channel", upstream_node=1, downstream_node=2,
-                nodes=[1, 2], outflow_destination=("boundary", 0)
+                id=1,
+                name="Main Channel",
+                upstream_node=1,
+                downstream_node=2,
+                nodes=[1, 2],
+                outflow_destination=("boundary", 0),
             ),
         }
         diversions = {
             1: Diversion(
-                id=1, source_node=1, destination_type="element",
-                destination_id=5, max_rate=100.0, priority=1, name="Div 1"
+                id=1,
+                source_node=1,
+                destination_type="element",
+                destination_id=5,
+                max_rate=100.0,
+                priority=1,
+                name="Div 1",
             ),
         }
         bypasses = {
-            1: Bypass(
-                id=1, source_node=1, destination_node=2,
-                capacity=500.0, name="Bypass 1"
-            ),
+            1: Bypass(id=1, source_node=1, destination_node=2, capacity=500.0, name="Bypass 1"),
         }
 
         return AppStream(
@@ -280,15 +297,16 @@ class TestStreamWriter:
     def test_write_rating_curves(self, tmp_path: Path) -> None:
         """Test writing rating curves file."""
         # Create stream with rating curve
-        rating = StreamRating(
-            stages=np.array([0.0, 1.0, 2.0]),
-            flows=np.array([0.0, 10.0, 50.0])
-        )
+        rating = StreamRating(stages=np.array([0.0, 1.0, 2.0]), flows=np.array([0.0, 10.0, 50.0]))
         nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1,
-                bottom_elev=50.0, wetted_perimeter=5.0,
-                rating=rating
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
+                rating=rating,
             ),
         }
         stream = AppStream(nodes=nodes, reaches={}, diversions={}, bypasses={})
@@ -456,14 +474,22 @@ class TestConvenienceFunctions:
         """Create sample stream component for testing."""
         nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1,
-                bottom_elev=50.0, wetted_perimeter=5.0,
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
             ),
         }
         reaches = {
             1: StrmReach(
-                id=1, name="Main", upstream_node=1, downstream_node=1,
-                nodes=[1], outflow_destination=("boundary", 0)
+                id=1,
+                name="Main",
+                upstream_node=1,
+                downstream_node=1,
+                nodes=[1],
+                outflow_destination=("boundary", 0),
             ),
         }
         return AppStream(nodes=nodes, reaches=reaches, diversions={}, bypasses={})
@@ -475,14 +501,9 @@ class TestConvenienceFunctions:
         assert "stream_nodes" in files
         assert files["stream_nodes"].exists()
 
-    def test_write_stream_with_config(
-        self, sample_stream: AppStream, tmp_path: Path
-    ) -> None:
+    def test_write_stream_with_config(self, sample_stream: AppStream, tmp_path: Path) -> None:
         """Test write_stream with custom config."""
-        config = StreamFileConfig(
-            output_dir=tmp_path,
-            stream_nodes_file="custom_nodes.dat"
-        )
+        config = StreamFileConfig(output_dir=tmp_path, stream_nodes_file="custom_nodes.dat")
 
         files = write_stream(sample_stream, tmp_path, config=config)
 
@@ -528,19 +549,29 @@ class TestRoundtrip:
         # Create original nodes
         original_nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1, gw_node=10,
-                bottom_elev=50.0, wetted_perimeter=5.0,
-                upstream_node=None, downstream_node=2
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                gw_node=10,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
+                upstream_node=None,
+                downstream_node=2,
             ),
             2: StrmNode(
-                id=2, x=150.0, y=250.0, reach_id=1, gw_node=15,
-                bottom_elev=45.0, wetted_perimeter=6.0,
-                upstream_node=1, downstream_node=None
+                id=2,
+                x=150.0,
+                y=250.0,
+                reach_id=1,
+                gw_node=15,
+                bottom_elev=45.0,
+                wetted_perimeter=6.0,
+                upstream_node=1,
+                downstream_node=None,
             ),
         }
-        original_stream = AppStream(
-            nodes=original_nodes, reaches={}, diversions={}, bypasses={}
-        )
+        original_stream = AppStream(nodes=original_nodes, reaches={}, diversions={}, bypasses={})
 
         # Write and read back
         config = StreamFileConfig(output_dir=tmp_path)
@@ -566,12 +597,22 @@ class TestRoundtrip:
         # Create original diversions
         original_diversions = {
             1: Diversion(
-                id=1, source_node=1, destination_type="element",
-                destination_id=5, max_rate=100.0, priority=1, name="Div1"
+                id=1,
+                source_node=1,
+                destination_type="element",
+                destination_id=5,
+                max_rate=100.0,
+                priority=1,
+                name="Div1",
             ),
             2: Diversion(
-                id=2, source_node=2, destination_type="subregion",
-                destination_id=3, max_rate=50.0, priority=2, name="Div2"
+                id=2,
+                source_node=2,
+                destination_type="subregion",
+                destination_id=3,
+                max_rate=50.0,
+                priority=2,
+                name="Div2",
             ),
         }
         original_stream = AppStream(
@@ -612,41 +653,60 @@ class TestStreamWriterCustomHeaders:
         """Create sample stream component for testing."""
         nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1, gw_node=10,
-                bottom_elev=50.0, wetted_perimeter=5.0,
-                upstream_node=None, downstream_node=2
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                gw_node=10,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
+                upstream_node=None,
+                downstream_node=2,
             ),
             2: StrmNode(
-                id=2, x=150.0, y=250.0, reach_id=1, gw_node=15,
-                bottom_elev=45.0, wetted_perimeter=6.0,
-                upstream_node=1, downstream_node=None
+                id=2,
+                x=150.0,
+                y=250.0,
+                reach_id=1,
+                gw_node=15,
+                bottom_elev=45.0,
+                wetted_perimeter=6.0,
+                upstream_node=1,
+                downstream_node=None,
             ),
         }
         reaches = {
             1: StrmReach(
-                id=1, name="Main Channel", upstream_node=1, downstream_node=2,
-                nodes=[1, 2], outflow_destination=("boundary", 0)
+                id=1,
+                name="Main Channel",
+                upstream_node=1,
+                downstream_node=2,
+                nodes=[1, 2],
+                outflow_destination=("boundary", 0),
             ),
         }
         diversions = {
             1: Diversion(
-                id=1, source_node=1, destination_type="element",
-                destination_id=5, max_rate=100.0, priority=1, name="Div 1"
+                id=1,
+                source_node=1,
+                destination_type="element",
+                destination_id=5,
+                max_rate=100.0,
+                priority=1,
+                name="Div 1",
             ),
         }
         bypasses = {
-            1: Bypass(
-                id=1, source_node=1, destination_node=2,
-                capacity=500.0, name="Bypass 1"
-            ),
+            1: Bypass(id=1, source_node=1, destination_node=2, capacity=500.0, name="Bypass 1"),
         }
         return AppStream(
-            nodes=nodes, reaches=reaches, diversions=diversions, bypasses=bypasses,
+            nodes=nodes,
+            reaches=reaches,
+            diversions=diversions,
+            bypasses=bypasses,
         )
 
-    def test_write_reaches_custom_header(
-        self, sample_stream: AppStream, tmp_path: Path
-    ) -> None:
+    def test_write_reaches_custom_header(self, sample_stream: AppStream, tmp_path: Path) -> None:
         """Test writing reaches with custom header."""
         config = StreamFileConfig(output_dir=tmp_path)
         writer = StreamWriter(config)
@@ -656,9 +716,7 @@ class TestStreamWriterCustomHeaders:
         content = filepath.read_text()
         assert "Custom Reaches Header" in content
 
-    def test_write_diversions_custom_header(
-        self, sample_stream: AppStream, tmp_path: Path
-    ) -> None:
+    def test_write_diversions_custom_header(self, sample_stream: AppStream, tmp_path: Path) -> None:
         """Test writing diversions with custom header."""
         config = StreamFileConfig(output_dir=tmp_path)
         writer = StreamWriter(config)
@@ -668,9 +726,7 @@ class TestStreamWriterCustomHeaders:
         content = filepath.read_text()
         assert "Custom Div Header" in content
 
-    def test_write_bypasses_custom_header(
-        self, sample_stream: AppStream, tmp_path: Path
-    ) -> None:
+    def test_write_bypasses_custom_header(self, sample_stream: AppStream, tmp_path: Path) -> None:
         """Test writing bypasses with custom header."""
         config = StreamFileConfig(output_dir=tmp_path)
         writer = StreamWriter(config)
@@ -682,14 +738,16 @@ class TestStreamWriterCustomHeaders:
 
     def test_write_rating_curves_custom_header(self, tmp_path: Path) -> None:
         """Test writing rating curves with custom header."""
-        rating = StreamRating(
-            stages=np.array([0.0, 1.0, 2.0]),
-            flows=np.array([0.0, 10.0, 50.0])
-        )
+        rating = StreamRating(stages=np.array([0.0, 1.0, 2.0]), flows=np.array([0.0, 10.0, 50.0]))
         nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1,
-                bottom_elev=50.0, wetted_perimeter=5.0, rating=rating
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
+                rating=rating,
             ),
         }
         stream = AppStream(nodes=nodes, reaches={}, diversions={}, bypasses={})
@@ -708,22 +766,29 @@ class TestStreamWriterAllFiles:
 
     def test_write_with_rating_curves(self, tmp_path: Path) -> None:
         """Test write() produces rating_curves file when nodes have ratings."""
-        rating = StreamRating(
-            stages=np.array([0.0, 1.0, 2.0]),
-            flows=np.array([0.0, 10.0, 50.0])
-        )
+        rating = StreamRating(stages=np.array([0.0, 1.0, 2.0]), flows=np.array([0.0, 10.0, 50.0]))
         nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1, gw_node=10,
-                bottom_elev=50.0, wetted_perimeter=5.0,
-                upstream_node=None, downstream_node=None,
-                rating=rating
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                gw_node=10,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
+                upstream_node=None,
+                downstream_node=None,
+                rating=rating,
             ),
         }
         reaches = {
             1: StrmReach(
-                id=1, name="Main", upstream_node=1, downstream_node=1,
-                nodes=[1], outflow_destination=("boundary", 0)
+                id=1,
+                name="Main",
+                upstream_node=1,
+                downstream_node=1,
+                nodes=[1],
+                outflow_destination=("boundary", 0),
             ),
         }
         stream = AppStream(nodes=nodes, reaches=reaches, diversions={}, bypasses={})
@@ -825,15 +890,23 @@ class TestStreamWriterManyReachNodes:
         node_ids = list(range(1, 16))
         nodes = {
             nid: StrmNode(
-                id=nid, x=float(nid * 10), y=float(nid * 20),
-                reach_id=1, bottom_elev=50.0, wetted_perimeter=5.0,
+                id=nid,
+                x=float(nid * 10),
+                y=float(nid * 20),
+                reach_id=1,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
             )
             for nid in node_ids
         }
         reaches = {
             1: StrmReach(
-                id=1, name="Long Reach", upstream_node=1, downstream_node=15,
-                nodes=node_ids, outflow_destination=("boundary", 0)
+                id=1,
+                name="Long Reach",
+                upstream_node=1,
+                downstream_node=15,
+                nodes=node_ids,
+                outflow_destination=("boundary", 0),
             ),
         }
         stream = AppStream(nodes=nodes, reaches=reaches, diversions={}, bypasses={})
@@ -855,14 +928,22 @@ class TestStreamWriterReachNoOutflow:
         """Test writing reaches when outflow_destination is empty/None."""
         nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1,
-                bottom_elev=50.0, wetted_perimeter=5.0,
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
             ),
         }
         reaches = {
             1: StrmReach(
-                id=1, name="Dead End", upstream_node=1, downstream_node=1,
-                nodes=[1], outflow_destination=None
+                id=1,
+                name="Dead End",
+                upstream_node=1,
+                downstream_node=1,
+                nodes=[1],
+                outflow_destination=None,
             ),
         }
         stream = AppStream(nodes=nodes, reaches=reaches, diversions={}, bypasses={})

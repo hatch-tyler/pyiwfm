@@ -7,12 +7,18 @@ from __future__ import annotations
 import logging
 import math
 from collections import defaultdict
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from pyiwfm.visualization.webapi.config import model_state
+from pyiwfm.visualization.webapi.config import model_state, require_model
+
+if TYPE_CHECKING:
+    from pyiwfm.components.stream import AppStream
+    from pyiwfm.core.mesh import AppGrid
+    from pyiwfm.core.stratigraphy import Stratigraphy
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +44,7 @@ class StreamNetwork(BaseModel):
     reaches: list[list[int]]
 
 
-def _get_gs_elev_lookup(grid, strat) -> dict[int, int]:
+def _get_gs_elev_lookup(grid: AppGrid, strat: Stratigraphy | None) -> dict[int, int]:
     """Build node-ID -> index lookup for ground surface elevation."""
     lookup: dict[int, int] = {}
     if strat is not None:
@@ -47,7 +53,7 @@ def _get_gs_elev_lookup(grid, strat) -> dict[int, int]:
     return lookup
 
 
-def _node_z(gw_node: int, strat, lookup: dict[int, int]) -> float:
+def _node_z(gw_node: int, strat: Stratigraphy | None, lookup: dict[int, int]) -> float:
     """Look up ground surface elevation for a GW node."""
     if strat is not None and gw_node in lookup:
         return float(strat.gs_elev[lookup[gw_node]])
@@ -55,7 +61,11 @@ def _node_z(gw_node: int, strat, lookup: dict[int, int]) -> float:
 
 
 def _make_stream_node(
-    sn, grid, strat, lookup: dict[int, int], reach_id: int = 0,
+    sn: Any,
+    grid: AppGrid,
+    strat: Stratigraphy | None,
+    lookup: dict[int, int],
+    reach_id: int = 0,
 ) -> StreamNode | None:
     """Resolve a stream node's GW node to grid coordinates and build a StreamNode.
 
@@ -67,7 +77,10 @@ def _make_stream_node(
     nd = grid.nodes[gw_node]
     z = _node_z(gw_node, strat, lookup)
     return StreamNode(
-        id=sn.id, x=nd.x, y=nd.y, z=z,
+        id=sn.id,
+        x=nd.x,
+        y=nd.y,
+        z=z,
         reach_id=reach_id or getattr(sn, "reach_id", 0),
     )
 
@@ -77,7 +90,12 @@ def _make_stream_node(
 # ===================================================================
 
 
-def _build_reaches_from_connectivity(stream, grid, strat, lookup):
+def _build_reaches_from_connectivity(
+    stream: AppStream,
+    grid: AppGrid,
+    strat: Stratigraphy | None,
+    lookup: dict[int, int],
+) -> tuple[list[StreamNode], list[list[int]]] | None:
     """Build reaches by tracing upstream_node/downstream_node links.
 
     Returns (nodes_data, reaches_data) or None if connectivity not populated.
@@ -159,7 +177,12 @@ def _build_reaches_from_connectivity(stream, grid, strat, lookup):
     return nodes_data, reaches_data
 
 
-def _build_reaches_from_preprocessor_binary(stream, grid, strat, lookup):
+def _build_reaches_from_preprocessor_binary(
+    stream: AppStream,
+    grid: AppGrid,
+    strat: Stratigraphy | None,
+    lookup: dict[int, int],
+) -> tuple[list[StreamNode], list[list[int]]] | None:
     """Build reaches using reach boundaries from the preprocessor binary.
 
     The preprocessor binary stores (reach_id, upstream_node, downstream_node)
@@ -195,9 +218,7 @@ def _build_reaches_from_preprocessor_binary(stream, grid, strat, lookup):
         max_id = max(up_node, dn_node)
 
         # Collect valid stream nodes in this range, ordered by ID
-        reach_sn_ids: list[int] = [
-            sn_id for sn_id in sorted_ids if min_id <= sn_id <= max_id
-        ]
+        reach_sn_ids: list[int] = [sn_id for sn_id in sorted_ids if min_id <= sn_id <= max_id]
 
         if len(reach_sn_ids) < 2:
             continue
@@ -205,7 +226,11 @@ def _build_reaches_from_preprocessor_binary(stream, grid, strat, lookup):
         for sn_id in reach_sn_ids:
             if sn_id not in added_nodes:
                 sn_node = _make_stream_node(
-                    valid_nodes[sn_id], grid, strat, lookup, reach_id=reach_id,
+                    valid_nodes[sn_id],
+                    grid,
+                    strat,
+                    lookup,
+                    reach_id=reach_id,
                 )
                 if sn_node is not None:
                     nodes_data.append(sn_node)
@@ -218,12 +243,18 @@ def _build_reaches_from_preprocessor_binary(stream, grid, strat, lookup):
 
     logger.info(
         "Built %d stream reaches from preprocessor binary (%d nodes)",
-        len(reaches_data), len(nodes_data),
+        len(reaches_data),
+        len(nodes_data),
     )
     return nodes_data, reaches_data
 
 
-def _build_streams_from_nodes(stream, grid, strat, lookup):
+def _build_streams_from_nodes(
+    stream: AppStream,
+    grid: AppGrid,
+    strat: Stratigraphy | None,
+    lookup: dict[int, int],
+) -> tuple[list[StreamNode], list[list[int]]]:
     """Build stream nodes/reaches from the nodes dict (fallback when reaches empty).
 
     Groups stream nodes by reach_id and orders by node ID within each group.
@@ -233,7 +264,7 @@ def _build_streams_from_nodes(stream, grid, strat, lookup):
     reaches_data: list[list[int]] = []
 
     # Group by reach_id, order by node ID within each group
-    by_reach: dict[int, list] = defaultdict(list)
+    by_reach: dict[int, list[Any]] = defaultdict(list)
     for sn in sorted(stream.nodes.values(), key=lambda n: n.id):
         rid = getattr(sn, "reach_id", 0)
         gw_node = getattr(sn, "gw_node", None)
@@ -253,7 +284,12 @@ def _build_streams_from_nodes(stream, grid, strat, lookup):
     return nodes_data, reaches_data
 
 
-def _build_streams_from_reaches(stream, grid, strat, lookup):
+def _build_streams_from_reaches(
+    stream: AppStream,
+    grid: AppGrid,
+    strat: Stratigraphy | None,
+    lookup: dict[int, int],
+) -> tuple[list[StreamNode], list[list[int]]]:
     """Build stream nodes/reaches from the reaches dict/list (original path)."""
     nodes_data: list[StreamNode] = []
     reaches_data: list[list[int]] = []
@@ -274,9 +310,8 @@ def _build_streams_from_reaches(stream, grid, strat, lookup):
                 gw_node = getattr(sn_obj, "gw_node", None)
             else:
                 sn_id = sn_or_id.id
-                gw_node = (
-                    getattr(sn_or_id, "groundwater_node", None)
-                    or getattr(sn_or_id, "gw_node", None)
+                gw_node = getattr(sn_or_id, "groundwater_node", None) or getattr(
+                    sn_or_id, "gw_node", None
                 )
             if gw_node is not None and gw_node in grid.nodes:
                 sn_node = StreamNode(
@@ -294,7 +329,12 @@ def _build_streams_from_reaches(stream, grid, strat, lookup):
     return nodes_data, reaches_data
 
 
-def _build_stream_data(stream, grid, strat, lookup):
+def _build_stream_data(
+    stream: AppStream,
+    grid: AppGrid,
+    strat: Stratigraphy | None,
+    lookup: dict[int, int],
+) -> tuple[list[StreamNode], list[list[int]]]:
     """Build stream reach data using the best available method.
 
     Priority:
@@ -310,40 +350,41 @@ def _build_stream_data(stream, grid, strat, lookup):
         if result[0]:  # nodes_data non-empty
             logger.info(
                 "Stream strategy 1 (populated reaches): %d reaches, %d nodes",
-                len(result[1]), len(result[0]),
+                len(result[1]),
+                len(result[0]),
             )
             return result
 
     if hasattr(stream, "nodes") and stream.nodes:
         # 2. Try preprocessor binary reach boundaries
-        result = _build_reaches_from_preprocessor_binary(stream, grid, strat, lookup)
-        if result is not None and result[0]:
+        result_or_none = _build_reaches_from_preprocessor_binary(stream, grid, strat, lookup)
+        if result_or_none is not None and result_or_none[0]:
             logger.info(
                 "Stream strategy 2 (preprocessor binary): %d reaches, %d nodes",
-                len(result[1]), len(result[0]),
+                len(result_or_none[1]),
+                len(result_or_none[0]),
             )
-            return result
+            return result_or_none
 
         # 3. Try connectivity tracing
-        result = _build_reaches_from_connectivity(stream, grid, strat, lookup)
-        if result is not None and result[0]:
+        result_or_none = _build_reaches_from_connectivity(stream, grid, strat, lookup)
+        if result_or_none is not None and result_or_none[0]:
             logger.info(
                 "Stream strategy 3 (connectivity tracing): %d reaches, %d nodes",
-                len(result[1]), len(result[0]),
+                len(result_or_none[1]),
+                len(result_or_none[0]),
             )
-            return result
+            return result_or_none
 
         # 4. Try reach_id grouping (only if some reach_ids are > 0)
-        has_nonzero_reach_ids = any(
-            getattr(sn, "reach_id", 0) > 0
-            for sn in stream.nodes.values()
-        )
+        has_nonzero_reach_ids = any(getattr(sn, "reach_id", 0) > 0 for sn in stream.nodes.values())
         if has_nonzero_reach_ids:
             result = _build_streams_from_nodes(stream, grid, strat, lookup)
             if result[0]:
                 logger.info(
                     "Stream strategy 4 (reach_id grouping): %d reaches, %d nodes",
-                    len(result[1]), len(result[0]),
+                    len(result[1]),
+                    len(result[0]),
                 )
                 return result
 
@@ -353,7 +394,8 @@ def _build_stream_data(stream, grid, strat, lookup):
             "nodes placed in one reach. This likely means reach enrichment "
             "failed during model loading.",
             sum(
-                1 for sn in stream.nodes.values()
+                1
+                for sn in stream.nodes.values()
                 if getattr(sn, "gw_node", None) is not None
                 and getattr(sn, "gw_node", None) in grid.nodes
             ),
@@ -371,7 +413,12 @@ def _build_stream_data(stream, grid, strat, lookup):
     return [], []
 
 
-def _get_gw_nodes_for_reaches(stream, grid, strat, lookup):
+def _get_gw_nodes_for_reaches(
+    stream: AppStream,
+    grid: AppGrid,
+    strat: Stratigraphy | None,
+    lookup: dict[int, int],
+) -> list[tuple[int, str, list[int]]]:
     """Build reach data as (reach_id, name, gw_node_list) tuples for GeoJSON/VTP.
 
     Uses the same priority logic as _build_stream_data.
@@ -422,15 +469,13 @@ def _get_gw_nodes_for_reaches(stream, grid, strat, lookup):
 @router.get("", response_model=StreamNetwork)
 def get_streams() -> StreamNetwork:
     """Get the stream network as JSON."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if not model.has_streams or model.streams is None:
         raise HTTPException(status_code=404, detail="No stream data in model")
 
     stream = model.streams
     grid = model.grid
+    assert grid is not None
     strat = model.stratigraphy
     lookup = _get_gs_elev_lookup(grid, strat)
 
@@ -445,27 +490,25 @@ def get_streams() -> StreamNetwork:
 
 
 @router.get("/geojson")
-def get_streams_geojson() -> dict:
+def get_streams_geojson() -> dict[str, Any]:
     """
     Get the stream network as GeoJSON LineStrings in WGS84.
 
     Returns a FeatureCollection with one LineString per reach,
     suitable for deck.gl rendering on the 2D Results Map.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if not model.has_streams or model.streams is None:
         return {"type": "FeatureCollection", "features": []}
 
     stream = model.streams
     grid = model.grid
+    assert grid is not None
     strat = model.stratigraphy
     lookup = _get_gs_elev_lookup(grid, strat)
 
     reach_info = _get_gw_nodes_for_reaches(stream, grid, strat, lookup)
-    features: list[dict] = []
+    features: list[dict[str, Any]] = []
 
     for rid, name, gw_nodes in reach_info:
         coords: list[list[float]] = []
@@ -475,15 +518,17 @@ def get_streams_geojson() -> dict:
                 lng, lat = model_state.reproject_coords(node.x, node.y)
                 coords.append([lng, lat])
         if len(coords) >= 2:
-            features.append({
-                "type": "Feature",
-                "geometry": {"type": "LineString", "coordinates": coords},
-                "properties": {
-                    "reach_id": rid,
-                    "name": name,
-                    "n_nodes": len(coords),
-                },
-            })
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "LineString", "coordinates": coords},
+                    "properties": {
+                        "reach_id": rid,
+                        "name": name,
+                        "n_nodes": len(coords),
+                    },
+                }
+            )
 
     return {"type": "FeatureCollection", "features": features}
 
@@ -491,10 +536,7 @@ def get_streams_geojson() -> dict:
 @router.get("/vtp")
 def get_streams_vtp() -> Response:
     """Get the stream network as VTP (VTK PolyData) format."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if not model.has_streams or model.streams is None:
         raise HTTPException(status_code=404, detail="No stream data in model")
 
@@ -502,6 +544,7 @@ def get_streams_vtp() -> Response:
 
     stream = model.streams
     grid = model.grid
+    assert grid is not None
     strat = model.stratigraphy
     lookup = _get_gs_elev_lookup(grid, strat)
 
@@ -557,22 +600,20 @@ def get_streams_vtp() -> Response:
 
 
 @router.get("/diversions")
-def get_diversions() -> dict:
+def get_diversions() -> dict[str, Any]:
     """
     Get diversion routing as arcs with WGS84 source/destination coordinates.
 
     Returns arcs from stream diversion points to their delivery destinations,
     suitable for deck.gl ArcLayer rendering.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if not model.has_streams or model.streams is None:
         return {"n_diversions": 0, "diversions": []}
 
     stream = model.streams
     grid = model.grid
+    assert grid is not None
 
     if not hasattr(stream, "diversions") or not stream.diversions:
         return {"n_diversions": 0, "diversions": []}
@@ -588,10 +629,7 @@ def get_diversions() -> dict:
         reaches = stream.reaches
         items = reaches.values() if isinstance(reaches, dict) else reaches
         for reach in items:
-            stream_nodes = (
-                getattr(reach, "stream_nodes", None)
-                or getattr(reach, "nodes", [])
-            )
+            stream_nodes = getattr(reach, "stream_nodes", None) or getattr(reach, "nodes", [])
             for sn in stream_nodes:
                 if isinstance(sn, int):
                     continue  # int IDs — no gw_node info here
@@ -599,7 +637,7 @@ def get_diversions() -> dict:
                 if gw is not None:
                     sn_to_gw[sn.id] = gw
 
-    diversions: list[dict] = []
+    diversions: list[dict[str, Any]] = []
     for div_id, div in stream.diversions.items():
         # Source: stream node -> GW node -> coordinates
         # source_node=0 means diversion from outside the model area (IRDV=0)
@@ -614,7 +652,8 @@ def get_diversions() -> dict:
         if div.destination_type == "element" and div.destination_id in grid.elements:
             # Centroid of the destination element
             elem = grid.elements[div.destination_id]
-            xs, ys = [], []
+            xs: list[float] = []
+            ys: list[float] = []
             for vid in elem.vertices:
                 n = grid.nodes.get(vid)
                 if n:
@@ -629,47 +668,37 @@ def get_diversions() -> dict:
                 n = grid.nodes[dst_gw]
                 dst_lng, dst_lat = model_state.reproject_coords(n.x, n.y)
 
-        diversions.append({
-            "id": div_id,
-            "name": div.name or f"Diversion {div_id}",
-            "source_node": div.source_node,
-            "source": (
-                {"lng": src_lng, "lat": src_lat}
-                if src_lng is not None
-                else None
-            ),
-            "destination_type": div.destination_type,
-            "destination_id": div.destination_id,
-            "destination": (
-                {"lng": dst_lng, "lat": dst_lat}
-                if dst_lng is not None
-                else None
-            ),
-            "max_rate": (
-                div.max_rate if div.max_rate < 1e30 else None
-            ),
-            "priority": div.priority,
-        })
+        diversions.append(
+            {
+                "id": div_id,
+                "name": div.name or f"Diversion {div_id}",
+                "source_node": div.source_node,
+                "source": ({"lng": src_lng, "lat": src_lat} if src_lng is not None else None),
+                "destination_type": div.destination_type,
+                "destination_id": div.destination_id,
+                "destination": ({"lng": dst_lng, "lat": dst_lat} if dst_lng is not None else None),
+                "max_rate": (div.max_rate if div.max_rate < 1e30 else None),
+                "priority": div.priority,
+            }
+        )
 
     return {"n_diversions": len(diversions), "diversions": diversions}
 
 
 @router.get("/diversions/{div_id}")
-def get_diversion_detail(div_id: int) -> dict:
+def get_diversion_detail(div_id: int) -> dict[str, Any]:
     """
     Get detailed information about a specific diversion.
 
     Returns metadata, delivery area as GeoJSON, and timeseries data.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if not model.has_streams or model.streams is None:
         raise HTTPException(status_code=404, detail="No stream data in model")
 
     stream = model.streams
     grid = model.grid
+    assert grid is not None
 
     if not hasattr(stream, "diversions") or not stream.diversions:
         raise HTTPException(status_code=404, detail="No diversions in model")
@@ -696,7 +725,8 @@ def get_diversion_detail(div_id: int) -> dict:
     dst_lng, dst_lat = None, None
     if div.destination_type == "element" and div.destination_id in grid.elements:
         elem = grid.elements[div.destination_id]
-        xs, ys = [], []
+        xs: list[float] = []
+        ys: list[float] = []
         for vid in elem.vertices:
             n = grid.nodes.get(vid)
             if n:
@@ -730,31 +760,33 @@ def get_diversion_detail(div_id: int) -> dict:
                 element_ids.append(elem.id)
 
     # Build GeoJSON FeatureCollection for delivery area polygons
-    delivery_geojson = None
+    delivery_geojson: dict[str, Any] | None = None
     if element_ids:
-        features: list[dict] = []
+        features: list[dict[str, Any]] = []
         for eid in element_ids:
-            elem = grid.elements.get(eid)
-            if elem is None:
+            del_elem = grid.elements.get(eid)
+            if del_elem is None:
                 continue
             ring: list[list[float]] = []
-            for vid in elem.vertices:
+            for vid in del_elem.vertices:
                 n = grid.nodes.get(vid)
                 if n:
                     lng, lat = model_state.reproject_coords(n.x, n.y)
                     ring.append([lng, lat])
             if ring:
                 ring.append(ring[0])  # Close ring
-                features.append({
-                    "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [ring]},
-                    "properties": {"element_id": eid},
-                })
+                features.append(
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Polygon", "coordinates": [ring]},
+                        "properties": {"element_id": eid},
+                    }
+                )
         if features:
             delivery_geojson = {"type": "FeatureCollection", "features": features}
 
     # Extract timeseries data
-    timeseries = None
+    timeseries: dict[str, Any] | None = None
     ts_data = model_state.get_diversion_timeseries()
     if ts_data is not None:
         import numpy as np
@@ -767,7 +799,9 @@ def get_diversion_detail(div_id: int) -> dict:
 
         n_cols = values.shape[1] if values.ndim > 1 else 1
         ts_times = [
-            str(np.datetime_as_string(t, unit="s")).replace("T", " ") if hasattr(t, "item") else str(t)
+            str(np.datetime_as_string(t, unit="s")).replace("T", " ")
+            if hasattr(t, "item")
+            else str(t)
             for t in times
         ]
 
@@ -811,28 +845,26 @@ def get_diversion_detail(div_id: int) -> dict:
 @router.get("/reach-profile")
 def get_reach_profile(
     reach_id: int = Query(..., description="Reach ID"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get longitudinal profile data for a stream reach.
 
     Returns per-node distance from upstream, bed elevation, Manning's n,
     and cross-section parameters along the reach.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if not model.has_streams or model.streams is None:
         raise HTTPException(status_code=404, detail="No stream data in model")
 
     stream = model.streams
     grid = model.grid
+    assert grid is not None
     strat = model.stratigraphy
 
     lookup = _get_gs_elev_lookup(grid, strat)
 
     # Find the reach — try populated reaches first, then build from nodes
-    reach_stream_nodes: list = []
+    reach_stream_nodes: list[Any] = []
     reach_name = f"Reach {reach_id}"
 
     if hasattr(stream, "reaches") and stream.reaches:
@@ -842,15 +874,14 @@ def get_reach_profile(
         else:
             target_reach = next((r for r in reaches if r.id == reach_id), None)
         if target_reach is not None:
-            reach_stream_nodes = (
-                getattr(target_reach, "stream_nodes", None)
-                or getattr(target_reach, "nodes", [])
+            reach_stream_nodes = getattr(target_reach, "stream_nodes", None) or getattr(
+                target_reach, "nodes", []
             )
             reach_name = getattr(target_reach, "name", "") or reach_name
 
     # Resolve int node IDs to StrmNode objects
     if reach_stream_nodes and isinstance(reach_stream_nodes[0], int):
-        resolved = []
+        resolved: list[Any] = []
         for nid in reach_stream_nodes:
             sn_obj = stream.nodes.get(nid) if hasattr(stream, "nodes") else None
             if sn_obj is not None:
@@ -865,13 +896,12 @@ def get_reach_profile(
         )
 
     if not reach_stream_nodes:
-        raise HTTPException(
-            status_code=404, detail=f"Reach {reach_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Reach {reach_id} not found")
 
-    nodes: list[dict] = []
+    nodes: list[dict[str, Any]] = []
     cumulative_dist = 0.0
-    prev_x, prev_y = None, None
+    prev_x: float | None = None
+    prev_y: float | None = None
 
     for sn in reach_stream_nodes:
         gw_node = getattr(sn, "groundwater_node", None) or getattr(sn, "gw_node", None)
@@ -879,9 +909,7 @@ def get_reach_profile(
 
         x = node.x if node else 0.0
         y = node.y if node else 0.0
-        lng, lat = (
-            model_state.reproject_coords(x, y) if node else (0.0, 0.0)
-        )
+        lng, lat = model_state.reproject_coords(x, y) if node else (0.0, 0.0)
 
         # Ground surface elevation
         gs_elev = _node_z(gw_node, strat, lookup) if gw_node else 0.0
@@ -901,24 +929,26 @@ def get_reach_profile(
         bed_thickness = getattr(sn, "bed_thickness", 0.0) or 0.0
 
         # Cumulative distance from upstream
-        if prev_x is not None:
+        if prev_x is not None and prev_y is not None:
             dx = x - prev_x
             dy = y - prev_y
             cumulative_dist += math.sqrt(dx * dx + dy * dy)
         prev_x, prev_y = x, y
 
-        nodes.append({
-            "stream_node_id": sn.id,
-            "gw_node_id": gw_node,
-            "lng": lng,
-            "lat": lat,
-            "distance": round(cumulative_dist, 1),
-            "ground_surface_elev": round(gs_elev, 2),
-            "bed_elev": round(bed_elev, 2),
-            "mannings_n": round(mannings_n, 4),
-            "conductivity": round(conductivity, 4),
-            "bed_thickness": round(bed_thickness, 2),
-        })
+        nodes.append(
+            {
+                "stream_node_id": sn.id,
+                "gw_node_id": gw_node,
+                "lng": lng,
+                "lat": lat,
+                "distance": round(cumulative_dist, 1),
+                "ground_surface_elev": round(gs_elev, 2),
+                "bed_elev": round(bed_elev, 2),
+                "mannings_n": round(mannings_n, 4),
+                "conductivity": round(conductivity, 4),
+                "bed_thickness": round(bed_thickness, 2),
+            }
+        )
 
     return {
         "reach_id": reach_id,

@@ -87,14 +87,16 @@ class ParametricGrid:
             verts = elem.vertices
             if len(verts) == 3:
                 inside, coeffs = self._point_in_triangle(
-                    x, y,
+                    x,
+                    y,
                     self.nodes[verts[0]],
                     self.nodes[verts[1]],
                     self.nodes[verts[2]],
                 )
             elif len(verts) == 4:
                 inside, coeffs = self._point_in_quad(
-                    x, y,
+                    x,
+                    y,
                     self.nodes[verts[0]],
                     self.nodes[verts[1]],
                     self.nodes[verts[2]],

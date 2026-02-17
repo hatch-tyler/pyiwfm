@@ -14,8 +14,7 @@ Every branch and edge case documented in the route source is exercised.
 
 from __future__ import annotations
 
-import math
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -28,7 +27,6 @@ from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.visualization.webapi.config import model_state
 from pyiwfm.visualization.webapi.routes.groundwater import _safe_float, _well_function
 from pyiwfm.visualization.webapi.server import create_app
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -87,9 +85,17 @@ def _reset_model_state():
     model_state._observations = {}
     model_state._results_dir = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
 
@@ -845,9 +851,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=-500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=-500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -869,9 +873,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0, name="Pump A"
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0, name="Pump A")
         gw.iter_wells.return_value = [well]
         # No aquifer_params attribute
         gw.aquifer_params = None
@@ -901,9 +903,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=50.0, element=1
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=50.0, element=1)
         gw.iter_wells.return_value = [well]
         params = MagicMock()
         params.get_element_params.return_value = {"kh": 20.0, "sy": 0.2}
@@ -928,9 +928,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         params = MagicMock()
         params.get_element_params.side_effect = KeyError("No such element")
@@ -955,9 +953,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         params = MagicMock()
         params.get_element_params.side_effect = IndexError("Out of range")
@@ -981,9 +977,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         # aquifer_params without get_element_params
         params = MagicMock(spec=[])
@@ -1008,9 +1002,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=0.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=0.0)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -1032,9 +1024,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=-50.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=-50.0)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -1055,9 +1045,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         params = MagicMock()
         params.get_element_params.return_value = {"kh": 0.0, "sy": 0.1}
@@ -1079,9 +1067,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         params = MagicMock()
         params.get_element_params.return_value = {"kh": 10.0, "sy": 0.0}
@@ -1103,9 +1089,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -1114,9 +1098,7 @@ class TestGetWellImpact:
         app = create_app()
         client = TestClient(app)
         try:
-            resp = client.get(
-                "/api/groundwater/well-impact?well_id=1&max_radius=5000&n_rings=5"
-            )
+            resp = client.get("/api/groundwater/well-impact?well_id=1&max_radius=5000&n_rings=5")
             assert resp.status_code == 200
             data = resp.json()
             # With a fixed max_radius=5000 and 5 rings, radii are 1000,2000,3000,4000,5000
@@ -1130,9 +1112,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -1141,9 +1121,7 @@ class TestGetWellImpact:
         app = create_app()
         client = TestClient(app)
         try:
-            resp = client.get(
-                "/api/groundwater/well-impact?well_id=1&time=30"
-            )
+            resp = client.get("/api/groundwater/well-impact?well_id=1&time=30")
             assert resp.status_code == 200
             data = resp.json()
             assert data["time_days"] == 30.0
@@ -1155,9 +1133,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -1166,9 +1142,7 @@ class TestGetWellImpact:
         app = create_app()
         client = TestClient(app)
         try:
-            resp = client.get(
-                "/api/groundwater/well-impact?well_id=1&n_rings=3"
-            )
+            resp = client.get("/api/groundwater/well-impact?well_id=1&n_rings=3")
             assert resp.status_code == 200
             data = resp.json()
             # At most 3 contours (some may be filtered if drawdown < 0.001)
@@ -1181,9 +1155,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -1208,9 +1180,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -1231,9 +1201,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=1000.0, screen_length=100.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=1000.0, screen_length=100.0)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -1242,9 +1210,7 @@ class TestGetWellImpact:
         app = create_app()
         client = TestClient(app)
         try:
-            resp = client.get(
-                "/api/groundwater/well-impact?well_id=1&n_rings=20"
-            )
+            resp = client.get("/api/groundwater/well-impact?well_id=1&n_rings=20")
             data = resp.json()
             drawdowns = [c["drawdown_ft"] for c in data["contours"]]
             # Drawdown should be non-increasing with distance
@@ -1258,9 +1224,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=7, pump_rate=500.0, screen_length=100.0, name=None
-        )
+        well = _make_mock_well(well_id=7, pump_rate=500.0, screen_length=100.0, name=None)
         gw.iter_wells.return_value = [well]
         gw.aquifer_params = None
         model.groundwater = gw
@@ -1280,9 +1244,7 @@ class TestGetWellImpact:
         _reset_model_state()
         model = _make_mock_model()
         gw = MagicMock()
-        well = _make_mock_well(
-            well_id=1, pump_rate=500.0, screen_length=50.0
-        )
+        well = _make_mock_well(well_id=1, pump_rate=500.0, screen_length=50.0)
         gw.iter_wells.return_value = [well]
         params = MagicMock()
         # Only kh in the dict, no sy
@@ -1340,9 +1302,7 @@ class TestGetWellImpact:
         app = create_app()
         client = TestClient(app)
         try:
-            resp = client.get(
-                "/api/groundwater/well-impact?well_id=1&time=0"
-            )
+            resp = client.get("/api/groundwater/well-impact?well_id=1&time=0")
             assert resp.status_code == 200
             data = resp.json()
             assert data["time_days"] == 0.0

@@ -11,14 +11,14 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, TextIO
+from typing import TYPE_CHECKING, Any, BinaryIO
 
 from pyiwfm.io.iwfm_writer import ensure_parent_dir
 
 if TYPE_CHECKING:
     from pyiwfm.core.mesh import AppGrid
-    from pyiwfm.core.stratigraphy import Stratigraphy
     from pyiwfm.core.model import IWFMModel
+    from pyiwfm.core.stratigraphy import Stratigraphy
     from pyiwfm.io.comment_metadata import CommentMetadata
 
 
@@ -107,7 +107,7 @@ class ModelReader(BaseReader):
     """Abstract base class for reading complete IWFM models."""
 
     @abstractmethod
-    def read(self) -> "IWFMModel":
+    def read(self) -> IWFMModel:
         """
         Read the model from file(s).
 
@@ -117,7 +117,7 @@ class ModelReader(BaseReader):
         pass
 
     @abstractmethod
-    def read_mesh(self) -> "AppGrid":
+    def read_mesh(self) -> AppGrid:
         """
         Read only the mesh from the model files.
 
@@ -127,7 +127,7 @@ class ModelReader(BaseReader):
         pass
 
     @abstractmethod
-    def read_stratigraphy(self) -> "Stratigraphy":
+    def read_stratigraphy(self) -> Stratigraphy:
         """
         Read only the stratigraphy from the model files.
 
@@ -141,7 +141,7 @@ class ModelWriter(BaseWriter):
     """Abstract base class for writing complete IWFM models."""
 
     @abstractmethod
-    def write(self, model: "IWFMModel") -> None:
+    def write(self, model: IWFMModel) -> None:
         """
         Write the model to file(s).
 
@@ -151,7 +151,7 @@ class ModelWriter(BaseWriter):
         pass
 
     @abstractmethod
-    def write_mesh(self, mesh: "AppGrid") -> None:
+    def write_mesh(self, mesh: AppGrid) -> None:
         """
         Write only the mesh.
 
@@ -161,7 +161,7 @@ class ModelWriter(BaseWriter):
         pass
 
     @abstractmethod
-    def write_stratigraphy(self, stratigraphy: "Stratigraphy") -> None:
+    def write_stratigraphy(self, stratigraphy: Stratigraphy) -> None:
         """
         Write only the stratigraphy.
 
@@ -224,9 +224,7 @@ class BinaryReader(BaseReader):
         trailing_length = struct.unpack(f"{self.endian}i", trailing_marker)[0]
 
         if trailing_length != record_length:
-            raise ValueError(
-                f"Record marker mismatch: {record_length} != {trailing_length}"
-            )
+            raise ValueError(f"Record marker mismatch: {record_length} != {trailing_length}")
 
         return data
 
@@ -306,10 +304,10 @@ class CommentAwareReader(BaseReader):
         """
         super().__init__(filepath)
         self.preserve_comments = preserve_comments
-        self._comment_metadata: "CommentMetadata | None" = None
+        self._comment_metadata: CommentMetadata | None = None
 
     @property
-    def comment_metadata(self) -> "CommentMetadata | None":
+    def comment_metadata(self) -> CommentMetadata | None:
         """Get extracted comment metadata.
 
         Returns None if preserve_comments is False or if
@@ -317,7 +315,7 @@ class CommentAwareReader(BaseReader):
         """
         return self._comment_metadata
 
-    def extract_comments(self) -> "CommentMetadata":
+    def extract_comments(self) -> CommentMetadata:
         """Extract comments from the file.
 
         This method can be called explicitly to extract comments
@@ -360,7 +358,7 @@ class CommentAwareWriter(BaseWriter):
     def __init__(
         self,
         filepath: Path | str,
-        comment_metadata: "CommentMetadata | None" = None,
+        comment_metadata: CommentMetadata | None = None,
         use_templates_for_missing: bool = True,
     ) -> None:
         """
@@ -378,12 +376,9 @@ class CommentAwareWriter(BaseWriter):
 
     def has_preserved_comments(self) -> bool:
         """Check if preserved comments are available."""
-        return (
-            self.comment_metadata is not None
-            and self.comment_metadata.has_comments()
-        )
+        return self.comment_metadata is not None and self.comment_metadata.has_comments()
 
-    def get_comment_writer(self) -> "CommentWriter":
+    def get_comment_writer(self) -> CommentWriter:
         """Get a CommentWriter configured with our metadata.
 
         Returns:

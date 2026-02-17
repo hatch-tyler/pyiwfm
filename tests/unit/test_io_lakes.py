@@ -14,25 +14,24 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.lakes import (
-    LakeFileConfig,
-    LakeWriter,
-    LakeReader,
-    write_lakes,
-    read_lake_definitions,
-    read_lake_elements,
-    _is_comment_line,
-    _strip_comment,
-)
 from pyiwfm.components.lake import (
     AppLake,
     Lake,
     LakeElement,
-    LakeRating,
     LakeOutflow,
+    LakeRating,
 )
 from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.lakes import (
+    LakeFileConfig,
+    LakeReader,
+    LakeWriter,
+    _is_comment_line,
+    _strip_comment,
+    read_lake_definitions,
+    read_lake_elements,
+    write_lakes,
+)
 
 # =============================================================================
 # Test Helper Functions
@@ -143,14 +142,8 @@ class TestLakeWriter:
     def sample_lakes(self) -> AppLake:
         """Create sample lake component for testing."""
         lakes = {
-            1: Lake(
-                id=1, name="Big Lake", max_elevation=100.0,
-                initial_storage=50000.0
-            ),
-            2: Lake(
-                id=2, name="Small Lake", max_elevation=80.0,
-                initial_storage=10000.0
-            ),
+            1: Lake(id=1, name="Big Lake", max_elevation=100.0, initial_storage=50000.0),
+            2: Lake(id=2, name="Small Lake", max_elevation=80.0, initial_storage=10000.0),
         }
         lake_elements = [
             LakeElement(element_id=10, lake_id=1, fraction=1.0),
@@ -211,7 +204,7 @@ class TestLakeWriter:
         rating = LakeRating(
             elevations=np.array([0.0, 50.0, 100.0]),
             areas=np.array([0.0, 1000.0, 5000.0]),
-            volumes=np.array([0.0, 25000.0, 200000.0])
+            volumes=np.array([0.0, 25000.0, 200000.0]),
         )
         lakes = {
             1: Lake(id=1, name="Test Lake", rating=rating),
@@ -233,10 +226,7 @@ class TestLakeWriter:
     def test_write_outflows(self, tmp_path: Path) -> None:
         """Test writing outflows file."""
         outflow = LakeOutflow(
-            lake_id=1,
-            destination_type="stream",
-            destination_id=5,
-            max_rate=1000.0
+            lake_id=1, destination_type="stream", destination_id=5, max_rate=1000.0
         )
         lakes = {
             1: Lake(id=1, name="Test Lake", outflow=outflow),
@@ -470,14 +460,9 @@ class TestConvenienceFunctions:
         assert "lakes" in files
         assert files["lakes"].exists()
 
-    def test_write_lakes_with_config(
-        self, sample_lakes: AppLake, tmp_path: Path
-    ) -> None:
+    def test_write_lakes_with_config(self, sample_lakes: AppLake, tmp_path: Path) -> None:
         """Test write_lakes with custom config."""
-        config = LakeFileConfig(
-            output_dir=tmp_path,
-            lakes_file="custom_lakes.dat"
-        )
+        config = LakeFileConfig(output_dir=tmp_path, lakes_file="custom_lakes.dat")
 
         files = write_lakes(sample_lakes, tmp_path, config=config)
 
@@ -574,7 +559,7 @@ class TestRoundtrip:
         rating = LakeRating(
             elevations=np.array([0.0, 50.0, 100.0]),
             areas=np.array([0.0, 1000.0, 5000.0]),
-            volumes=np.array([0.0, 25000.0, 200000.0])
+            volumes=np.array([0.0, 25000.0, 200000.0]),
         )
         original_lakes = {
             1: Lake(id=1, name="Test Lake", rating=rating),
@@ -627,7 +612,7 @@ class TestLakeWriterCustomHeaders:
         rating = LakeRating(
             elevations=np.array([0.0, 50.0, 100.0]),
             areas=np.array([0.0, 1000.0, 5000.0]),
-            volumes=np.array([0.0, 25000.0, 200000.0])
+            volumes=np.array([0.0, 25000.0, 200000.0]),
         )
         lakes = {1: Lake(id=1, name="Test Lake", rating=rating)}
         app_lake = AppLake(lakes=lakes, lake_elements=[])
@@ -700,7 +685,7 @@ class TestLakeWriterFullWrite:
         rating = LakeRating(
             elevations=np.array([0.0, 50.0]),
             areas=np.array([0.0, 1000.0]),
-            volumes=np.array([0.0, 25000.0])
+            volumes=np.array([0.0, 25000.0]),
         )
         outflow = LakeOutflow(
             lake_id=1, destination_type="stream", destination_id=5, max_rate=1000.0
@@ -826,9 +811,7 @@ invalid                         / N_RATING_CURVES
         with pytest.raises(FileFormatError, match="Invalid N_RATING_CURVES"):
             reader.read_rating_curves(rating_file)
 
-    def test_read_lake_definitions_with_comments_between_data(
-        self, tmp_path: Path
-    ) -> None:
+    def test_read_lake_definitions_with_comments_between_data(self, tmp_path: Path) -> None:
         """Test reading lake definitions with comments interspersed."""
         lake_file = tmp_path / "lakes.dat"
         lake_file.write_text("""C Lake definitions file

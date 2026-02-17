@@ -34,7 +34,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     # Dispatch to the subcommand handler
-    return args.func(args)
+    result: int = args.func(args)
+    return result
 
 
 __all__ = ["main"]

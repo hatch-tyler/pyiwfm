@@ -8,11 +8,11 @@ import numpy as np
 import pytest
 
 from pyiwfm.core.timeseries import (
-    TimeUnit,
-    TimeStep,
     SimulationPeriod,
     TimeSeries,
     TimeSeriesCollection,
+    TimeStep,
+    TimeUnit,
 )
 
 
@@ -418,7 +418,11 @@ class TestTimeSeriesAdditional:
         dts = [datetime(2020, 1, 1) + timedelta(days=i) for i in range(10)]
         values = np.arange(10, dtype=np.float64)
         ts = TimeSeries.from_datetimes(
-            dts, values, name="head", units="ft", location="Well1",
+            dts,
+            values,
+            name="head",
+            units="ft",
+            location="Well1",
             metadata={"source": "obs"},
         )
         sliced = ts.slice_time(start=datetime(2020, 1, 3))
@@ -450,8 +454,11 @@ class TestTimeSeriesAdditional:
     def test_from_datetimes_with_all_kwargs(self) -> None:
         dts = [datetime(2020, 1, 1)]
         ts = TimeSeries.from_datetimes(
-            dts, np.array([42.0]),
-            name="test", units="m", location="loc1",
+            dts,
+            np.array([42.0]),
+            name="test",
+            units="m",
+            location="loc1",
             metadata={"key": "val"},
         )
         assert ts.name == "test"

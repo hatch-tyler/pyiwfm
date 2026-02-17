@@ -87,9 +87,7 @@ def export_mesh_geojson(
     return Response(
         content=json.dumps(geojson),
         media_type="application/geo+json",
-        headers={
-            "Content-Disposition": f"attachment; filename=mesh_layer{layer}.geojson"
-        },
+        headers={"Content-Disposition": f"attachment; filename=mesh_layer{layer}.geojson"},
     )
 
 
@@ -130,9 +128,7 @@ def export_budget_csv(
             if use_months:
                 dt = ts.start_datetime + relativedelta(months=i)
             else:
-                dt = ts.start_datetime + timedelta(
-                    minutes=ts.delta_t_minutes * i
-                )
+                dt = ts.start_datetime + timedelta(minutes=ts.delta_t_minutes * i)
             time_strings.append(dt.isoformat())
     else:
         time_strings = [str(t) for t in times_arr.tolist()]
@@ -171,9 +167,7 @@ def export_hydrograph_csv(
     if type == "gw":
         reader = model_state.get_gw_hydrograph_reader()
         if reader is None or reader.n_timesteps == 0:
-            raise HTTPException(
-                status_code=404, detail="No GW hydrograph data available"
-            )
+            raise HTTPException(status_code=404, detail="No GW hydrograph data available")
 
         column_index = location_id - 1
         if column_index < 0 or column_index >= reader.n_columns:

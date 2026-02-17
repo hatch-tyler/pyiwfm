@@ -15,16 +15,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TextIO
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     LineBuffer as _LineBuffer,
+)
+from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
 )
-
 
 # ── Data classes ──────────────────────────────────────────────────────
 
@@ -159,9 +160,7 @@ class NonPondedCropConfig:
     min_soil_moisture_file: Path | None = None
     min_moisture_pointers: list[SoilMoisturePointerRow] = field(default_factory=list)
     target_soil_moisture_file: Path | None = None
-    target_moisture_pointers: list[SoilMoisturePointerRow] = field(
-        default_factory=list
-    )
+    target_moisture_pointers: list[SoilMoisturePointerRow] = field(default_factory=list)
     water_demand_file: Path | None = None
     demand_from_moisture_flag: int = 1
     supply_return_reuse: list[SupplyReturnReuseRow] = field(default_factory=list)
@@ -208,7 +207,7 @@ class NonPondedCropReader:
         if base_dir is None:
             base_dir = filepath.parent
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             lines = f.readlines()
         buf = _LineBuffer(lines)
         config = NonPondedCropConfig()
@@ -263,9 +262,7 @@ class NonPondedCropReader:
         for _ in range(config.n_crops):
             val = buf.next_data()
             try:
-                config.root_depths.append(
-                    float(val) * config.root_depth_factor
-                )
+                config.root_depths.append(float(val) * config.root_depth_factor)
             except ValueError as exc:
                 raise FileFormatError(
                     f"Invalid root depth: '{val}'",
@@ -282,19 +279,19 @@ class NonPondedCropReader:
         val = buf.next_data_or_empty()
         if val:
             config.irrigation_period_file = self._resolve(base_dir, val)
-        config.irrigation_pointers = self._read_pointer_rows(buf)
+        config.irrigation_pointers = self._read_pointer_rows(buf)  # type: ignore[assignment]
 
         # 12. Minimum soil-moisture data file + pointer table.
         val = buf.next_data_or_empty()
         if val:
             config.min_soil_moisture_file = self._resolve(base_dir, val)
-        config.min_moisture_pointers = self._read_pointer_rows(buf)
+        config.min_moisture_pointers = self._read_pointer_rows(buf)  # type: ignore[assignment]
 
         # 13. Target soil-moisture data file (optional) + pointer table.
         val = buf.next_data_or_empty()
         if val:
             config.target_soil_moisture_file = self._resolve(base_dir, val)
-            config.target_moisture_pointers = self._read_pointer_rows(buf)
+            config.target_moisture_pointers = self._read_pointer_rows(buf)  # type: ignore[assignment]
 
         # 14. Water-demand data file (optional).
         val = buf.next_data_or_empty()
@@ -328,9 +325,7 @@ class NonPondedCropReader:
 
     # ── tabular-data helpers ──────────────────────────────────────────
 
-    def _read_rows(
-        self, buf: _LineBuffer, min_cols: int
-    ) -> list[list[str]]:
+    def _read_rows(self, buf: _LineBuffer, min_cols: int) -> list[list[str]]:
         """Read tabular data rows from the buffer.
 
         If ``n_subregions`` was provided, reads exactly that many data
@@ -399,9 +394,7 @@ class NonPondedCropReader:
                 break
         return result
 
-    def _read_supply_rows(
-        self, buf: _LineBuffer
-    ) -> list[SupplyReturnReuseRow]:
+    def _read_supply_rows(self, buf: _LineBuffer) -> list[SupplyReturnReuseRow]:
         raw_rows = self._read_rows(buf, min_cols=4)
         result: list[SupplyReturnReuseRow] = []
         for parts in raw_rows:
@@ -422,9 +415,7 @@ class NonPondedCropReader:
                 break
         return result
 
-    def _read_initial_conditions(
-        self, buf: _LineBuffer
-    ) -> list[InitialConditionRow]:
+    def _read_initial_conditions(self, buf: _LineBuffer) -> list[InitialConditionRow]:
         raw_rows = self._read_rows(buf, min_cols=3)
         result: list[InitialConditionRow] = []
         for parts in raw_rows:

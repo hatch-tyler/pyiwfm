@@ -1,22 +1,22 @@
 """Unit tests for PEST++ observation manager."""
 
+import tempfile
 from datetime import datetime
 from pathlib import Path
-import tempfile
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from pyiwfm.runner.pest_observations import (
-    IWFMObservationType,
-    IWFMObservation,
-    WeightStrategy,
-)
 from pyiwfm.runner.pest_obs_manager import (
+    GageInfo,
     IWFMObservationManager,
     WellInfo,
-    GageInfo,
+)
+from pyiwfm.runner.pest_observations import (
+    IWFMObservation,
+    IWFMObservationType,
+    WeightStrategy,
 )
 
 
@@ -130,26 +130,30 @@ class TestHeadObservations:
     @pytest.fixture
     def sample_wells(self):
         """Create sample well data."""
-        return pd.DataFrame({
-            "well_id": ["W1", "W2", "W3"],
-            "x": [100.0, 200.0, 300.0],
-            "y": [100.0, 200.0, 300.0],
-            "layer": [1, 1, 2],
-        })
+        return pd.DataFrame(
+            {
+                "well_id": ["W1", "W2", "W3"],
+                "x": [100.0, 200.0, 300.0],
+                "y": [100.0, 200.0, 300.0],
+                "layer": [1, 1, 2],
+            }
+        )
 
     @pytest.fixture
     def sample_head_data(self):
         """Create sample head time series."""
-        return pd.DataFrame({
-            "well_id": ["W1", "W1", "W2", "W2"],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-            ],
-            "head": [100.0, 101.0, 150.0, 151.0],
-        })
+        return pd.DataFrame(
+            {
+                "well_id": ["W1", "W1", "W2", "W2"],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                ],
+                "head": [100.0, 101.0, 150.0, 151.0],
+            }
+        )
 
     def test_add_head_observations(self, sample_wells, sample_head_data):
         """Test adding head observations."""
@@ -160,9 +164,7 @@ class TestHeadObservations:
         assert om.n_observations == 4
         assert all(o.obs_type == IWFMObservationType.HEAD for o in obs)
 
-    def test_add_head_observations_with_date_filter(
-        self, sample_wells, sample_head_data
-    ):
+    def test_add_head_observations_with_date_filter(self, sample_wells, sample_head_data):
         """Test adding head observations with date filter."""
         om = IWFMObservationManager()
         obs = om.add_head_observations(
@@ -174,9 +176,7 @@ class TestHeadObservations:
         # Should only get February observations
         assert len(obs) == 2
 
-    def test_add_head_observations_weight_strategy(
-        self, sample_wells, sample_head_data
-    ):
+    def test_add_head_observations_weight_strategy(self, sample_wells, sample_head_data):
         """Test weight strategy in head observations."""
         om = IWFMObservationManager()
         obs = om.add_head_observations(
@@ -188,9 +188,7 @@ class TestHeadObservations:
         # All observations should have calculated weights
         assert all(o.weight > 0 for o in obs)
 
-    def test_add_head_observations_custom_group(
-        self, sample_wells, sample_head_data
-    ):
+    def test_add_head_observations_custom_group(self, sample_wells, sample_head_data):
         """Test custom group name for head observations."""
         om = IWFMObservationManager()
         obs = om.add_head_observations(
@@ -208,18 +206,22 @@ class TestHeadObservations:
             data_file = Path(tmpdir) / "heads.csv"
 
             # Write wells
-            pd.DataFrame({
-                "well_id": ["W1", "W2"],
-                "x": [100.0, 200.0],
-                "y": [100.0, 200.0],
-            }).to_csv(wells_file, index=False)
+            pd.DataFrame(
+                {
+                    "well_id": ["W1", "W2"],
+                    "x": [100.0, 200.0],
+                    "y": [100.0, 200.0],
+                }
+            ).to_csv(wells_file, index=False)
 
             # Write head data
-            pd.DataFrame({
-                "well_id": ["W1", "W2"],
-                "datetime": ["2020-01-01", "2020-01-01"],
-                "head": [100.0, 150.0],
-            }).to_csv(data_file, index=False)
+            pd.DataFrame(
+                {
+                    "well_id": ["W1", "W2"],
+                    "datetime": ["2020-01-01", "2020-01-01"],
+                    "head": [100.0, 150.0],
+                }
+            ).to_csv(data_file, index=False)
 
             om = IWFMObservationManager()
             obs = om.add_head_observations(wells_file, data_file)
@@ -233,27 +235,31 @@ class TestDrawdownObservations:
     @pytest.fixture
     def sample_wells(self):
         """Create sample well data."""
-        return pd.DataFrame({
-            "well_id": ["W1", "W2"],
-            "x": [100.0, 200.0],
-            "y": [100.0, 200.0],
-        })
+        return pd.DataFrame(
+            {
+                "well_id": ["W1", "W2"],
+                "x": [100.0, 200.0],
+                "y": [100.0, 200.0],
+            }
+        )
 
     @pytest.fixture
     def sample_head_data(self):
         """Create sample head time series."""
-        return pd.DataFrame({
-            "well_id": ["W1", "W1", "W1", "W2", "W2", "W2"],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 6, 1),
-                datetime(2020, 12, 1),
-                datetime(2020, 1, 1),
-                datetime(2020, 6, 1),
-                datetime(2020, 12, 1),
-            ],
-            "head": [100.0, 95.0, 90.0, 150.0, 145.0, 140.0],
-        })
+        return pd.DataFrame(
+            {
+                "well_id": ["W1", "W1", "W1", "W2", "W2", "W2"],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 6, 1),
+                    datetime(2020, 12, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 6, 1),
+                    datetime(2020, 12, 1),
+                ],
+                "head": [100.0, 95.0, 90.0, 150.0, 145.0, 140.0],
+            }
+        )
 
     def test_add_drawdown_observations(self, sample_wells, sample_head_data):
         """Test adding drawdown observations."""
@@ -278,7 +284,7 @@ class TestDrawdownObservations:
         )
 
         # Get W1 observations and sort by datetime
-        w1_obs = [o for o in obs if "W1" in o.name]
+        [o for o in obs if "W1" in o.name]
         # First observation should have 0 drawdown (reference)
         # Later observations should have positive drawdown
 
@@ -289,16 +295,18 @@ class TestHeadDifferenceObservations:
     @pytest.fixture
     def sample_head_data(self):
         """Create sample head time series."""
-        return pd.DataFrame({
-            "well_id": ["W1", "W1", "W2", "W2"],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-            ],
-            "head": [100.0, 101.0, 90.0, 91.0],
-        })
+        return pd.DataFrame(
+            {
+                "well_id": ["W1", "W1", "W2", "W2"],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                ],
+                "head": [100.0, 101.0, 90.0, 91.0],
+            }
+        )
 
     def test_add_head_difference_observations(self, sample_head_data):
         """Test adding head difference observations."""
@@ -330,26 +338,30 @@ class TestStreamflowObservations:
     @pytest.fixture
     def sample_gages(self):
         """Create sample gage data."""
-        return pd.DataFrame({
-            "gage_id": ["G1", "G2"],
-            "reach_id": [1, 2],
-            "x": [500.0, 600.0],
-            "y": [500.0, 600.0],
-        })
+        return pd.DataFrame(
+            {
+                "gage_id": ["G1", "G2"],
+                "reach_id": [1, 2],
+                "x": [500.0, 600.0],
+                "y": [500.0, 600.0],
+            }
+        )
 
     @pytest.fixture
     def sample_flow_data(self):
         """Create sample flow time series."""
-        return pd.DataFrame({
-            "gage_id": ["G1", "G1", "G2", "G2"],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-            ],
-            "flow": [100.0, 150.0, 200.0, 250.0],
-        })
+        return pd.DataFrame(
+            {
+                "gage_id": ["G1", "G1", "G2", "G2"],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                ],
+                "flow": [100.0, 150.0, 200.0, 250.0],
+            }
+        )
 
     def test_add_streamflow_observations(self, sample_gages, sample_flow_data):
         """Test adding streamflow observations."""
@@ -372,11 +384,13 @@ class TestStreamflowObservations:
 
     def test_add_streamflow_skips_nonpositive_log(self, sample_gages):
         """Test that non-positive flows are skipped for log transform."""
-        flow_data = pd.DataFrame({
-            "gage_id": ["G1", "G1"],
-            "datetime": [datetime(2020, 1, 1), datetime(2020, 2, 1)],
-            "flow": [100.0, 0.0],  # Zero flow
-        })
+        flow_data = pd.DataFrame(
+            {
+                "gage_id": ["G1", "G1"],
+                "datetime": [datetime(2020, 1, 1), datetime(2020, 2, 1)],
+                "flow": [100.0, 0.0],  # Zero flow
+            }
+        )
 
         om = IWFMObservationManager()
         obs = om.add_streamflow_observations(
@@ -395,19 +409,23 @@ class TestStreamStageObservations:
     @pytest.fixture
     def sample_gages(self):
         """Create sample gage data."""
-        return pd.DataFrame({
-            "gage_id": ["G1"],
-            "reach_id": [1],
-        })
+        return pd.DataFrame(
+            {
+                "gage_id": ["G1"],
+                "reach_id": [1],
+            }
+        )
 
     @pytest.fixture
     def sample_stage_data(self):
         """Create sample stage time series."""
-        return pd.DataFrame({
-            "gage_id": ["G1", "G1"],
-            "datetime": [datetime(2020, 1, 1), datetime(2020, 2, 1)],
-            "stage": [10.0, 12.0],
-        })
+        return pd.DataFrame(
+            {
+                "gage_id": ["G1", "G1"],
+                "datetime": [datetime(2020, 1, 1), datetime(2020, 2, 1)],
+                "stage": [10.0, 12.0],
+            }
+        )
 
     def test_add_stream_stage_observations(self, sample_gages, sample_stage_data):
         """Test adding stream stage observations."""
@@ -424,16 +442,18 @@ class TestGainLossObservations:
     @pytest.fixture
     def sample_gain_loss_data(self):
         """Create sample gain/loss data."""
-        return pd.DataFrame({
-            "reach_id": [1, 1, 2, 2],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-            ],
-            "gain_loss": [10.0, 15.0, -5.0, -8.0],
-        })
+        return pd.DataFrame(
+            {
+                "reach_id": [1, 1, 2, 2],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                ],
+                "gain_loss": [10.0, 15.0, -5.0, -8.0],
+            }
+        )
 
     def test_add_gain_loss_observations(self, sample_gain_loss_data):
         """Test adding gain/loss observations."""
@@ -453,16 +473,18 @@ class TestLakeObservations:
     @pytest.fixture
     def sample_lake_data(self):
         """Create sample lake data."""
-        return pd.DataFrame({
-            "lake_id": [1, 1, 2, 2],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-            ],
-            "value": [100.0, 102.0, 50.0, 48.0],
-        })
+        return pd.DataFrame(
+            {
+                "lake_id": [1, 1, 2, 2],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                ],
+                "value": [100.0, 102.0, 50.0, 48.0],
+            }
+        )
 
     def test_add_lake_level_observations(self, sample_lake_data):
         """Test adding lake level observations."""
@@ -495,17 +517,19 @@ class TestBudgetObservations:
     @pytest.fixture
     def sample_budget_data(self):
         """Create sample budget data."""
-        return pd.DataFrame({
-            "location_id": [1, 1, 2, 2],
-            "component": ["recharge", "recharge", "recharge", "recharge"],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-            ],
-            "value": [100.0, 110.0, 50.0, 55.0],
-        })
+        return pd.DataFrame(
+            {
+                "location_id": [1, 1, 2, 2],
+                "component": ["recharge", "recharge", "recharge", "recharge"],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                ],
+                "value": [100.0, 110.0, 50.0, 55.0],
+            }
+        )
 
     def test_add_budget_observations_gw(self, sample_budget_data):
         """Test adding GW budget observations."""
@@ -613,14 +637,8 @@ class TestWeightManagement:
         om = IWFMObservationManager()
 
         grp = om.get_observation_group("head")
-        obs1 = grp.add_observation(
-            "h1", 100.0, weight=1.0,
-            datetime=datetime(2019, 1, 1)
-        )
-        obs2 = grp.add_observation(
-            "h2", 200.0, weight=1.0,
-            datetime=datetime(2020, 1, 1)
-        )
+        obs1 = grp.add_observation("h1", 100.0, weight=1.0, datetime=datetime(2019, 1, 1))
+        obs2 = grp.add_observation("h2", 200.0, weight=1.0, datetime=datetime(2020, 1, 1))
         # Also add to manager's observation dict
         om._observations["h1"] = obs1
         om._observations["h2"] = obs2
@@ -725,12 +743,14 @@ class TestDataFrameExport:
         """Test loading from DataFrame."""
         om = IWFMObservationManager()
 
-        df = pd.DataFrame({
-            "name": ["o1", "o2"],
-            "value": [100.0, 200.0],
-            "weight": [1.0, 2.0],
-            "group": ["head", "flow"],
-        })
+        df = pd.DataFrame(
+            {
+                "name": ["o1", "o2"],
+                "value": [100.0, 200.0],
+                "weight": [1.0, 2.0],
+                "group": ["head", "flow"],
+            }
+        )
 
         om.from_dataframe(df)
         assert om.n_observations == 2
@@ -746,12 +766,8 @@ class TestFileIO:
 
             # Write
             om1 = IWFMObservationManager()
-            om1._observations["o1"] = IWFMObservation(
-                name="o1", value=100.0, group="head"
-            )
-            om1._observations["o2"] = IWFMObservation(
-                name="o2", value=200.0, group="flow"
-            )
+            om1._observations["o1"] = IWFMObservation(name="o1", value=100.0, group="head")
+            om1._observations["o2"] = IWFMObservation(name="o2", value=200.0, group="flow")
             om1.write_observation_file(filepath)
 
             # Read
@@ -896,16 +912,18 @@ class TestHeadObservationsExtended:
     @pytest.fixture
     def head_data(self):
         """Create sample head data."""
-        return pd.DataFrame({
-            "well_id": ["W1", "W1", "W2", "W2"],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-                datetime(2020, 1, 1),
-                datetime(2020, 2, 1),
-            ],
-            "head": [100.0, 101.0, 150.0, 151.0],
-        })
+        return pd.DataFrame(
+            {
+                "well_id": ["W1", "W1", "W2", "W2"],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                ],
+                "head": [100.0, 101.0, 150.0, 151.0],
+            }
+        )
 
     def test_add_head_observations_from_wellinfo_list(self, wells_list, head_data):
         """Test adding head observations from WellInfo list input."""
@@ -944,7 +962,7 @@ class TestHeadObservationsExtended:
         """Test head observations grouped by layer."""
         om = IWFMObservationManager()
         obs = om.add_head_observations(wells_list, head_data, group_by="layer")
-        groups = set(o.group for o in obs)
+        groups = {o.group for o in obs}
         assert "head_l1" in groups
         assert "head_l2" in groups
 
@@ -952,7 +970,7 @@ class TestHeadObservationsExtended:
         """Test head observations grouped by time."""
         om = IWFMObservationManager()
         obs = om.add_head_observations(wells_list, head_data, group_by="time")
-        groups = set(o.group for o in obs)
+        groups = {o.group for o in obs}
         # Should contain groups like "head_202001"
         assert any("202001" in g for g in groups)
         assert any("202002" in g for g in groups)
@@ -967,18 +985,18 @@ class TestHeadObservationsExtended:
     def test_add_head_observations_end_date_filter(self, wells_list, head_data):
         """Test filtering by end date."""
         om = IWFMObservationManager()
-        obs = om.add_head_observations(
-            wells_list, head_data, end_date=datetime(2020, 1, 15)
-        )
+        obs = om.add_head_observations(wells_list, head_data, end_date=datetime(2020, 1, 15))
         assert len(obs) == 2  # Only January observations
 
     def test_add_head_observations_unknown_well_skipped(self, wells_list):
         """Test that rows with unknown well_id are skipped."""
-        head_data = pd.DataFrame({
-            "well_id": ["W_UNKNOWN"],
-            "datetime": [datetime(2020, 1, 1)],
-            "head": [100.0],
-        })
+        head_data = pd.DataFrame(
+            {
+                "well_id": ["W_UNKNOWN"],
+                "datetime": [datetime(2020, 1, 1)],
+                "head": [100.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_head_observations(wells_list, head_data)
         assert len(obs) == 0
@@ -986,16 +1004,15 @@ class TestHeadObservationsExtended:
     def test_add_head_observations_weight_strategy_string(self, wells_list, head_data):
         """Test that string weight strategy is converted to enum."""
         om = IWFMObservationManager()
-        obs = om.add_head_observations(
-            wells_list, head_data, weight_strategy="equal"
-        )
+        obs = om.add_head_observations(wells_list, head_data, weight_strategy="equal")
         assert all(o.weight == 1.0 for o in obs)
 
     def test_add_head_observations_custom_name_format(self, wells_list, head_data):
         """Test custom observation name format."""
         om = IWFMObservationManager()
         obs = om.add_head_observations(
-            wells_list, head_data,
+            wells_list,
+            head_data,
             obs_name_format="{well}_L{layer}_{date}",
         )
         assert len(obs) == 4
@@ -1006,9 +1023,7 @@ class TestHeadObservationsExtended:
     def test_add_head_observations_error_std(self, wells_list, head_data):
         """Test error_std is passed through to observations."""
         om = IWFMObservationManager()
-        obs = om.add_head_observations(
-            wells_list, head_data, error_std=2.5
-        )
+        obs = om.add_head_observations(wells_list, head_data, error_std=2.5)
         assert all(o.error_std == 2.5 for o in obs)
 
 
@@ -1024,16 +1039,18 @@ class TestDrawdownObservationsExtended:
 
     @pytest.fixture
     def head_data(self):
-        return pd.DataFrame({
-            "well_id": ["W1", "W1", "W2", "W2"],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 6, 1),
-                datetime(2020, 1, 1),
-                datetime(2020, 6, 1),
-            ],
-            "head": [100.0, 95.0, 150.0, 145.0],
-        })
+        return pd.DataFrame(
+            {
+                "well_id": ["W1", "W1", "W2", "W2"],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 6, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 6, 1),
+                ],
+                "head": [100.0, 95.0, 150.0, 145.0],
+            }
+        )
 
     def test_drawdown_without_reference_date(self, wells, head_data):
         """Test drawdown using first value as reference (no reference_date)."""
@@ -1048,9 +1065,7 @@ class TestDrawdownObservationsExtended:
         """Test drawdown with explicitly provided reference values."""
         om = IWFMObservationManager()
         ref = {"W1": 105.0, "W2": 155.0}
-        obs = om.add_drawdown_observations(
-            wells, head_data, reference_values=ref
-        )
+        obs = om.add_drawdown_observations(wells, head_data, reference_values=ref)
         assert len(obs) == 4
         for o in obs:
             assert "reference_value" in o.metadata
@@ -1061,14 +1076,20 @@ class TestHeadDifferenceExtended:
 
     def test_head_difference_multiple_pairs(self):
         """Test with multiple well pairs."""
-        head_data = pd.DataFrame({
-            "well_id": ["W1", "W2", "W3", "W1", "W2", "W3"],
-            "datetime": [
-                datetime(2020, 1, 1), datetime(2020, 1, 1), datetime(2020, 1, 1),
-                datetime(2020, 2, 1), datetime(2020, 2, 1), datetime(2020, 2, 1),
-            ],
-            "head": [100.0, 90.0, 80.0, 101.0, 91.0, 81.0],
-        })
+        head_data = pd.DataFrame(
+            {
+                "well_id": ["W1", "W2", "W3", "W1", "W2", "W3"],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 1, 1),
+                    datetime(2020, 2, 1),
+                    datetime(2020, 2, 1),
+                    datetime(2020, 2, 1),
+                ],
+                "head": [100.0, 90.0, 80.0, 101.0, 91.0, 81.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_head_difference_observations(
             well_pairs=[("W1", "W2"), ("W2", "W3")],
@@ -1079,11 +1100,13 @@ class TestHeadDifferenceExtended:
 
     def test_head_difference_custom_group(self):
         """Test custom group name for head differences."""
-        head_data = pd.DataFrame({
-            "well_id": ["W1", "W2"],
-            "datetime": [datetime(2020, 1, 1), datetime(2020, 1, 1)],
-            "head": [100.0, 90.0],
-        })
+        head_data = pd.DataFrame(
+            {
+                "well_id": ["W1", "W2"],
+                "datetime": [datetime(2020, 1, 1), datetime(2020, 1, 1)],
+                "head": [100.0, 90.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_head_difference_observations(
             well_pairs=[("W1", "W2")],
@@ -1094,11 +1117,13 @@ class TestHeadDifferenceExtended:
 
     def test_head_difference_no_common_times(self):
         """Test with no common times yields no observations."""
-        head_data = pd.DataFrame({
-            "well_id": ["W1", "W2"],
-            "datetime": [datetime(2020, 1, 1), datetime(2020, 2, 1)],
-            "head": [100.0, 90.0],
-        })
+        head_data = pd.DataFrame(
+            {
+                "well_id": ["W1", "W2"],
+                "datetime": [datetime(2020, 1, 1), datetime(2020, 2, 1)],
+                "head": [100.0, 90.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_head_difference_observations(
             well_pairs=[("W1", "W2")],
@@ -1108,11 +1133,13 @@ class TestHeadDifferenceExtended:
 
     def test_head_difference_custom_weight(self):
         """Test custom weight for head difference observations."""
-        head_data = pd.DataFrame({
-            "well_id": ["W1", "W2"],
-            "datetime": [datetime(2020, 1, 1), datetime(2020, 1, 1)],
-            "head": [100.0, 90.0],
-        })
+        head_data = pd.DataFrame(
+            {
+                "well_id": ["W1", "W2"],
+                "datetime": [datetime(2020, 1, 1), datetime(2020, 1, 1)],
+                "head": [100.0, 90.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_head_difference_observations(
             well_pairs=[("W1", "W2")],
@@ -1131,11 +1158,13 @@ class TestStreamflowExtended:
             GageInfo(gage_id="G1", reach_id=1, x=500.0, y=600.0),
             GageInfo(gage_id="G2", reach_id=2, x=700.0, y=800.0),
         ]
-        flow_data = pd.DataFrame({
-            "gage_id": ["G1", "G2"],
-            "datetime": [datetime(2020, 1, 1), datetime(2020, 1, 1)],
-            "flow": [100.0, 200.0],
-        })
+        flow_data = pd.DataFrame(
+            {
+                "gage_id": ["G1", "G2"],
+                "datetime": [datetime(2020, 1, 1), datetime(2020, 1, 1)],
+                "flow": [100.0, 200.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_streamflow_observations(gages, flow_data)
         assert len(obs) == 2
@@ -1143,11 +1172,13 @@ class TestStreamflowExtended:
     def test_streamflow_gage_not_in_dict(self):
         """Test that missing gage still creates observation (gage=None path)."""
         gages = [GageInfo(gage_id="G1", reach_id=1)]
-        flow_data = pd.DataFrame({
-            "gage_id": ["G_UNKNOWN"],
-            "datetime": [datetime(2020, 1, 1)],
-            "flow": [100.0],
-        })
+        flow_data = pd.DataFrame(
+            {
+                "gage_id": ["G_UNKNOWN"],
+                "datetime": [datetime(2020, 1, 1)],
+                "flow": [100.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_streamflow_observations(gages, flow_data)
         # gage_dict.get(gage_id) returns None, location will be None
@@ -1157,18 +1188,21 @@ class TestStreamflowExtended:
     def test_streamflow_date_filter(self):
         """Test start and end date filtering for streamflow."""
         gages = [GageInfo(gage_id="G1")]
-        flow_data = pd.DataFrame({
-            "gage_id": ["G1", "G1", "G1"],
-            "datetime": [
-                datetime(2020, 1, 1),
-                datetime(2020, 6, 1),
-                datetime(2020, 12, 1),
-            ],
-            "flow": [100.0, 150.0, 200.0],
-        })
+        flow_data = pd.DataFrame(
+            {
+                "gage_id": ["G1", "G1", "G1"],
+                "datetime": [
+                    datetime(2020, 1, 1),
+                    datetime(2020, 6, 1),
+                    datetime(2020, 12, 1),
+                ],
+                "flow": [100.0, 150.0, 200.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_streamflow_observations(
-            gages, flow_data,
+            gages,
+            flow_data,
             start_date=datetime(2020, 3, 1),
             end_date=datetime(2020, 9, 1),
         )
@@ -1177,43 +1211,43 @@ class TestStreamflowExtended:
     def test_streamflow_negative_log_skipped(self):
         """Test that negative flows are skipped for log transform."""
         gages = [GageInfo(gage_id="G1")]
-        flow_data = pd.DataFrame({
-            "gage_id": ["G1", "G1"],
-            "datetime": [datetime(2020, 1, 1), datetime(2020, 2, 1)],
-            "flow": [100.0, -50.0],
-        })
-        om = IWFMObservationManager()
-        obs = om.add_streamflow_observations(
-            gages, flow_data, transform="log"
+        flow_data = pd.DataFrame(
+            {
+                "gage_id": ["G1", "G1"],
+                "datetime": [datetime(2020, 1, 1), datetime(2020, 2, 1)],
+                "flow": [100.0, -50.0],
+            }
         )
+        om = IWFMObservationManager()
+        obs = om.add_streamflow_observations(gages, flow_data, transform="log")
         assert len(obs) == 1
 
     def test_streamflow_custom_group_name(self):
         """Test custom group name for streamflow."""
         gages = [GageInfo(gage_id="G1")]
-        flow_data = pd.DataFrame({
-            "gage_id": ["G1"],
-            "datetime": [datetime(2020, 1, 1)],
-            "flow": [100.0],
-        })
-        om = IWFMObservationManager()
-        obs = om.add_streamflow_observations(
-            gages, flow_data, group_name="my_flow"
+        flow_data = pd.DataFrame(
+            {
+                "gage_id": ["G1"],
+                "datetime": [datetime(2020, 1, 1)],
+                "flow": [100.0],
+            }
         )
+        om = IWFMObservationManager()
+        obs = om.add_streamflow_observations(gages, flow_data, group_name="my_flow")
         assert obs[0].group == "my_flow"
 
     def test_streamflow_weight_strategy_string(self):
         """Test weight strategy as string for streamflow."""
         gages = [GageInfo(gage_id="G1")]
-        flow_data = pd.DataFrame({
-            "gage_id": ["G1"],
-            "datetime": [datetime(2020, 1, 1)],
-            "flow": [100.0],
-        })
-        om = IWFMObservationManager()
-        obs = om.add_streamflow_observations(
-            gages, flow_data, weight_strategy="equal"
+        flow_data = pd.DataFrame(
+            {
+                "gage_id": ["G1"],
+                "datetime": [datetime(2020, 1, 1)],
+                "flow": [100.0],
+            }
         )
+        om = IWFMObservationManager()
+        obs = om.add_streamflow_observations(gages, flow_data, weight_strategy="equal")
         assert obs[0].weight == 1.0
 
 
@@ -1222,11 +1256,13 @@ class TestGainLossExtended:
 
     def test_gain_loss_reach_filtering(self):
         """Test that only specified reaches are included."""
-        data = pd.DataFrame({
-            "reach_id": [1, 2, 3],
-            "datetime": [datetime(2020, 1, 1)] * 3,
-            "gain_loss": [10.0, -5.0, 8.0],
-        })
+        data = pd.DataFrame(
+            {
+                "reach_id": [1, 2, 3],
+                "datetime": [datetime(2020, 1, 1)] * 3,
+                "gain_loss": [10.0, -5.0, 8.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_gain_loss_observations(reaches=[1, 3], observed_data=data)
         assert len(obs) == 2
@@ -1237,15 +1273,15 @@ class TestGainLossExtended:
 
     def test_gain_loss_custom_group(self):
         """Test custom group name for gain/loss."""
-        data = pd.DataFrame({
-            "reach_id": [1],
-            "datetime": [datetime(2020, 1, 1)],
-            "gain_loss": [10.0],
-        })
-        om = IWFMObservationManager()
-        obs = om.add_gain_loss_observations(
-            reaches=[1], observed_data=data, group_name="custom_gl"
+        data = pd.DataFrame(
+            {
+                "reach_id": [1],
+                "datetime": [datetime(2020, 1, 1)],
+                "gain_loss": [10.0],
+            }
         )
+        om = IWFMObservationManager()
+        obs = om.add_gain_loss_observations(reaches=[1], observed_data=data, group_name="custom_gl")
         assert obs[0].group == "custom_gl"
 
 
@@ -1260,39 +1296,41 @@ class TestLakeObservationsExtended:
 
     def test_lake_observations_all_lakes(self):
         """Test lake observations with lakes='all'."""
-        data = pd.DataFrame({
-            "lake_id": [1, 2, 3],
-            "datetime": [datetime(2020, 1, 1)] * 3,
-            "value": [100.0, 200.0, 300.0],
-        })
+        data = pd.DataFrame(
+            {
+                "lake_id": [1, 2, 3],
+                "datetime": [datetime(2020, 1, 1)] * 3,
+                "value": [100.0, 200.0, 300.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_lake_observations(lakes="all", observed_data=data)
         assert len(obs) == 3
 
     def test_lake_storage_type(self):
         """Test that storage type produces LAKE_STORAGE obs_type."""
-        data = pd.DataFrame({
-            "lake_id": [1],
-            "datetime": [datetime(2020, 1, 1)],
-            "value": [1000.0],
-        })
-        om = IWFMObservationManager()
-        obs = om.add_lake_observations(
-            lakes=[1], observed_data=data, obs_type="storage"
+        data = pd.DataFrame(
+            {
+                "lake_id": [1],
+                "datetime": [datetime(2020, 1, 1)],
+                "value": [1000.0],
+            }
         )
+        om = IWFMObservationManager()
+        obs = om.add_lake_observations(lakes=[1], observed_data=data, obs_type="storage")
         assert obs[0].obs_type == IWFMObservationType.LAKE_STORAGE
 
     def test_lake_custom_group(self):
         """Test custom group for lake observations."""
-        data = pd.DataFrame({
-            "lake_id": [1],
-            "datetime": [datetime(2020, 1, 1)],
-            "value": [100.0],
-        })
-        om = IWFMObservationManager()
-        obs = om.add_lake_observations(
-            lakes=[1], observed_data=data, group_name="my_lake"
+        data = pd.DataFrame(
+            {
+                "lake_id": [1],
+                "datetime": [datetime(2020, 1, 1)],
+                "value": [100.0],
+            }
         )
+        om = IWFMObservationManager()
+        obs = om.add_lake_observations(lakes=[1], observed_data=data, group_name="my_lake")
         assert obs[0].group == "my_lake"
 
 
@@ -1301,27 +1339,27 @@ class TestBudgetObservationsExtended:
 
     def test_budget_rootzone_type(self):
         """Test rootzone budget type."""
-        data = pd.DataFrame({
-            "datetime": [datetime(2020, 1, 1)],
-            "value": [500.0],
-        })
-        om = IWFMObservationManager()
-        obs = om.add_budget_observations(
-            budget_type="rootzone", observed_data=data
+        data = pd.DataFrame(
+            {
+                "datetime": [datetime(2020, 1, 1)],
+                "value": [500.0],
+            }
         )
+        om = IWFMObservationManager()
+        obs = om.add_budget_observations(budget_type="rootzone", observed_data=data)
         assert len(obs) == 1
         assert obs[0].obs_type == IWFMObservationType.ROOTZONE_BUDGET
 
     def test_budget_lake_type(self):
         """Test lake budget type."""
-        data = pd.DataFrame({
-            "datetime": [datetime(2020, 1, 1)],
-            "value": [500.0],
-        })
-        om = IWFMObservationManager()
-        obs = om.add_budget_observations(
-            budget_type="lake", observed_data=data
+        data = pd.DataFrame(
+            {
+                "datetime": [datetime(2020, 1, 1)],
+                "value": [500.0],
+            }
         )
+        om = IWFMObservationManager()
+        obs = om.add_budget_observations(budget_type="lake", observed_data=data)
         assert obs[0].obs_type == IWFMObservationType.LAKE_BUDGET
 
     def test_budget_none_data_returns_empty(self):
@@ -1332,11 +1370,13 @@ class TestBudgetObservationsExtended:
 
     def test_budget_component_filtering(self):
         """Test filtering by components."""
-        data = pd.DataFrame({
-            "datetime": [datetime(2020, 1, 1)] * 3,
-            "component": ["recharge", "pumping", "storage"],
-            "value": [100.0, -50.0, 30.0],
-        })
+        data = pd.DataFrame(
+            {
+                "datetime": [datetime(2020, 1, 1)] * 3,
+                "component": ["recharge", "pumping", "storage"],
+                "value": [100.0, -50.0, 30.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_budget_observations(
             budget_type="gw",
@@ -1348,11 +1388,13 @@ class TestBudgetObservationsExtended:
 
     def test_budget_location_filtering(self):
         """Test filtering by location IDs."""
-        data = pd.DataFrame({
-            "datetime": [datetime(2020, 1, 1)] * 3,
-            "location_id": [1, 2, 3],
-            "value": [100.0, 200.0, 300.0],
-        })
+        data = pd.DataFrame(
+            {
+                "datetime": [datetime(2020, 1, 1)] * 3,
+                "location_id": [1, 2, 3],
+                "value": [100.0, 200.0, 300.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_budget_observations(
             budget_type="gw",
@@ -1364,11 +1406,13 @@ class TestBudgetObservationsExtended:
 
     def test_budget_aggregate_mean(self):
         """Test mean aggregation for budget observations."""
-        data = pd.DataFrame({
-            "datetime": [datetime(2020, 1, 1)] * 2,
-            "location_id": [1, 2],
-            "value": [100.0, 200.0],
-        })
+        data = pd.DataFrame(
+            {
+                "datetime": [datetime(2020, 1, 1)] * 2,
+                "location_id": [1, 2],
+                "value": [100.0, 200.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_budget_observations(
             budget_type="gw",
@@ -1381,11 +1425,13 @@ class TestBudgetObservationsExtended:
 
     def test_budget_aggregate_by_location(self):
         """Test by_location aggregation (no aggregation)."""
-        data = pd.DataFrame({
-            "datetime": [datetime(2020, 1, 1)] * 2,
-            "location_id": [1, 2],
-            "value": [100.0, 200.0],
-        })
+        data = pd.DataFrame(
+            {
+                "datetime": [datetime(2020, 1, 1)] * 2,
+                "location_id": [1, 2],
+                "value": [100.0, 200.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_budget_observations(
             budget_type="gw",
@@ -1396,11 +1442,13 @@ class TestBudgetObservationsExtended:
 
     def test_budget_with_location_id_in_name(self):
         """Test that location_id is included in observation name."""
-        data = pd.DataFrame({
-            "datetime": [datetime(2020, 1, 1)] * 2,
-            "location_id": [1, 2],
-            "value": [100.0, 200.0],
-        })
+        data = pd.DataFrame(
+            {
+                "datetime": [datetime(2020, 1, 1)] * 2,
+                "location_id": [1, 2],
+                "value": [100.0, 200.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_budget_observations(
             budget_type="gw",
@@ -1413,10 +1461,12 @@ class TestBudgetObservationsExtended:
 
     def test_budget_custom_group_name(self):
         """Test custom group name for budget observations."""
-        data = pd.DataFrame({
-            "datetime": [datetime(2020, 1, 1)],
-            "value": [100.0],
-        })
+        data = pd.DataFrame(
+            {
+                "datetime": [datetime(2020, 1, 1)],
+                "value": [100.0],
+            }
+        )
         om = IWFMObservationManager()
         obs = om.add_budget_observations(
             budget_type="gw",
@@ -1520,12 +1570,8 @@ class TestWeightManagementExtended:
         om = IWFMObservationManager()
 
         grp = om.get_observation_group("head")
-        obs1 = grp.add_observation(
-            "h1", 100.0, weight=1.0, datetime=datetime(2018, 1, 1)
-        )
-        obs2 = grp.add_observation(
-            "h2", 200.0, weight=1.0, datetime=datetime(2020, 1, 1)
-        )
+        obs1 = grp.add_observation("h1", 100.0, weight=1.0, datetime=datetime(2018, 1, 1))
+        obs2 = grp.add_observation("h2", 200.0, weight=1.0, datetime=datetime(2020, 1, 1))
         om._observations["h1"] = obs1
         om._observations["h2"] = obs2
 
@@ -1552,9 +1598,7 @@ class TestWeightManagementExtended:
         om._observations["h1"] = obs_with_date
         om._observations["h2"] = obs_without_date
 
-        om.apply_temporal_weights(
-            decay_factor=0.9, reference_date=datetime(2020, 6, 1)
-        )
+        om.apply_temporal_weights(decay_factor=0.9, reference_date=datetime(2020, 6, 1))
         # obs without date should keep original weight
         assert om.get_observation("h2").weight == 1.0
 
@@ -1599,11 +1643,13 @@ class TestParseWells:
     def test_parse_from_dataframe(self):
         """Test parsing wells from DataFrame."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "well_id": ["W1", "W2"],
-            "x": [100.0, 200.0],
-            "y": [100.0, 200.0],
-        })
+        df = pd.DataFrame(
+            {
+                "well_id": ["W1", "W2"],
+                "x": [100.0, 200.0],
+                "y": [100.0, 200.0],
+            }
+        )
         wells = om._parse_wells(df)
         assert len(wells) == 2
         assert wells[0].well_id == "W1"
@@ -1619,11 +1665,13 @@ class TestParseWells:
         """Test parsing wells from CSV file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "wells.csv"
-            pd.DataFrame({
-                "well_id": ["W1"],
-                "x": [100.0],
-                "y": [200.0],
-            }).to_csv(filepath, index=False)
+            pd.DataFrame(
+                {
+                    "well_id": ["W1"],
+                    "x": [100.0],
+                    "y": [200.0],
+                }
+            ).to_csv(filepath, index=False)
 
             om = IWFMObservationManager()
             wells = om._parse_wells(str(filepath))
@@ -1637,10 +1685,12 @@ class TestParseGages:
     def test_parse_from_dataframe(self):
         """Test parsing gages from DataFrame."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "gage_id": ["G1", "G2"],
-            "reach_id": [1, 2],
-        })
+        df = pd.DataFrame(
+            {
+                "gage_id": ["G1", "G2"],
+                "reach_id": [1, 2],
+            }
+        )
         gages = om._parse_gages(df)
         assert len(gages) == 2
         assert gages[0].gage_id == "G1"
@@ -1656,10 +1706,12 @@ class TestParseGages:
         """Test parsing gages from CSV file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "gages.csv"
-            pd.DataFrame({
-                "gage_id": ["G1"],
-                "reach_id": [5],
-            }).to_csv(filepath, index=False)
+            pd.DataFrame(
+                {
+                    "gage_id": ["G1"],
+                    "reach_id": [5],
+                }
+            ).to_csv(filepath, index=False)
 
             om = IWFMObservationManager()
             gages = om._parse_gages(str(filepath))
@@ -1673,10 +1725,12 @@ class TestParseTimeseries:
     def test_parse_from_dataframe(self):
         """Test parsing timeseries from DataFrame."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "datetime": ["2020-01-01", "2020-02-01"],
-            "head": [100.0, 101.0],
-        })
+        df = pd.DataFrame(
+            {
+                "datetime": ["2020-01-01", "2020-02-01"],
+                "head": [100.0, 101.0],
+            }
+        )
         result = om._parse_timeseries_data(df, "head")
         assert len(result) == 2
 
@@ -1684,10 +1738,12 @@ class TestParseTimeseries:
         """Test parsing timeseries from CSV file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "data.csv"
-            pd.DataFrame({
-                "datetime": ["2020-01-01"],
-                "head": [100.0],
-            }).to_csv(filepath, index=False)
+            pd.DataFrame(
+                {
+                    "datetime": ["2020-01-01"],
+                    "head": [100.0],
+                }
+            ).to_csv(filepath, index=False)
 
             om = IWFMObservationManager()
             result = om._parse_timeseries_data(str(filepath), "head")
@@ -1700,14 +1756,20 @@ class TestResampleTimeseries:
     def test_resample_monthly(self):
         """Test resampling to monthly frequency."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "well_id": ["W1"] * 4,
-            "datetime": pd.to_datetime([
-                "2020-01-01", "2020-01-15",
-                "2020-02-01", "2020-02-15",
-            ]),
-            "head": [100.0, 102.0, 104.0, 106.0],
-        })
+        df = pd.DataFrame(
+            {
+                "well_id": ["W1"] * 4,
+                "datetime": pd.to_datetime(
+                    [
+                        "2020-01-01",
+                        "2020-01-15",
+                        "2020-02-01",
+                        "2020-02-15",
+                    ]
+                ),
+                "head": [100.0, 102.0, 104.0, 106.0],
+            }
+        )
         result = om._resample_timeseries(df, "well_id", "head", "MS")
         assert len(result) == 2  # 2 months
 
@@ -1718,13 +1780,15 @@ class TestFromDataFrameExtended:
     def test_from_dataframe_with_obs_type(self):
         """Test loading from DataFrame with obs_type column."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "name": ["o1"],
-            "value": [100.0],
-            "weight": [1.0],
-            "group": ["head"],
-            "obs_type": ["head"],
-        })
+        df = pd.DataFrame(
+            {
+                "name": ["o1"],
+                "value": [100.0],
+                "weight": [1.0],
+                "group": ["head"],
+                "obs_type": ["head"],
+            }
+        )
         om.from_dataframe(df)
         obs = om.get_observation("o1")
         assert obs.obs_type == IWFMObservationType.HEAD
@@ -1732,13 +1796,15 @@ class TestFromDataFrameExtended:
     def test_from_dataframe_with_datetime(self):
         """Test loading from DataFrame with datetime column."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "name": ["o1"],
-            "value": [100.0],
-            "weight": [1.0],
-            "group": ["head"],
-            "datetime": ["2020-01-01"],
-        })
+        df = pd.DataFrame(
+            {
+                "name": ["o1"],
+                "value": [100.0],
+                "weight": [1.0],
+                "group": ["head"],
+                "datetime": ["2020-01-01"],
+            }
+        )
         om.from_dataframe(df)
         obs = om.get_observation("o1")
         assert obs.datetime is not None
@@ -1746,13 +1812,15 @@ class TestFromDataFrameExtended:
     def test_from_dataframe_with_transform(self):
         """Test loading from DataFrame with transform column."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "name": ["o1"],
-            "value": [100.0],
-            "weight": [1.0],
-            "group": ["head"],
-            "transform": ["log"],
-        })
+        df = pd.DataFrame(
+            {
+                "name": ["o1"],
+                "value": [100.0],
+                "weight": [1.0],
+                "group": ["head"],
+                "transform": ["log"],
+            }
+        )
         om.from_dataframe(df)
         obs = om.get_observation("o1")
         assert obs.transform == "log"
@@ -1760,11 +1828,13 @@ class TestFromDataFrameExtended:
     def test_from_dataframe_creates_new_group(self):
         """Test that from_dataframe creates new groups if needed."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "name": ["o1"],
-            "value": [100.0],
-            "group": ["new_group"],
-        })
+        df = pd.DataFrame(
+            {
+                "name": ["o1"],
+                "value": [100.0],
+                "group": ["new_group"],
+            }
+        )
         om.from_dataframe(df)
         grp = om.get_observation_group("new_group")
         assert grp is not None
@@ -1773,12 +1843,14 @@ class TestFromDataFrameExtended:
     def test_from_dataframe_nan_obs_type(self):
         """Test loading from DataFrame with NaN obs_type."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "name": ["o1"],
-            "value": [100.0],
-            "group": ["head"],
-            "obs_type": [np.nan],
-        })
+        df = pd.DataFrame(
+            {
+                "name": ["o1"],
+                "value": [100.0],
+                "group": ["head"],
+                "obs_type": [np.nan],
+            }
+        )
         om.from_dataframe(df)
         obs = om.get_observation("o1")
         assert obs.obs_type is None
@@ -1786,12 +1858,14 @@ class TestFromDataFrameExtended:
     def test_from_dataframe_nan_datetime(self):
         """Test loading from DataFrame with NaN datetime."""
         om = IWFMObservationManager()
-        df = pd.DataFrame({
-            "name": ["o1"],
-            "value": [100.0],
-            "group": ["head"],
-            "datetime": [np.nan],
-        })
+        df = pd.DataFrame(
+            {
+                "name": ["o1"],
+                "value": [100.0],
+                "group": ["head"],
+                "datetime": [np.nan],
+            }
+        )
         om.from_dataframe(df)
         obs = om.get_observation("o1")
         assert obs.datetime is None
@@ -1875,7 +1949,10 @@ class TestFileIOExtended:
 
             om1 = IWFMObservationManager()
             om1._observations["o1"] = IWFMObservation(
-                name="o1", value=100.5, weight=2.0, group="head",
+                name="o1",
+                value=100.5,
+                weight=2.0,
+                group="head",
                 obs_type=IWFMObservationType.HEAD,
             )
             om1.write_observation_file(filepath)

@@ -6,12 +6,12 @@ import numpy as np
 import pytest
 
 from pyiwfm.runner.pest_observations import (
-    IWFMObservationType,
+    DerivedObservation,
     IWFMObservation,
     IWFMObservationGroup,
+    IWFMObservationType,
     ObservationLocation,
     WeightStrategy,
-    DerivedObservation,
 )
 
 
@@ -588,8 +588,14 @@ class TestObservationLocationExtended:
     def test_to_dict_with_all_fields(self):
         """Test to_dict includes all non-None fields."""
         loc = ObservationLocation(
-            x=1.0, y=2.0, z=-10.0,
-            node_id=1, element_id=2, layer=3, reach_id=4, lake_id=5,
+            x=1.0,
+            y=2.0,
+            z=-10.0,
+            node_id=1,
+            element_id=2,
+            layer=3,
+            reach_id=4,
+            lake_id=5,
         )
         d = loc.to_dict()
         assert len(d) == 8

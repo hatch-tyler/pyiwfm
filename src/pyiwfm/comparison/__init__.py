@@ -31,8 +31,8 @@ from pyiwfm.comparison.report import (
     TextReport,
 )
 from pyiwfm.comparison.results_differ import (
-    ResultsDiffer,
     ResultsComparison,
+    ResultsDiffer,
 )
 
 __all__ = [

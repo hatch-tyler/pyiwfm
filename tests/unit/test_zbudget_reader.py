@@ -10,19 +10,17 @@ Tests cover:
 - Aggregation and export methods
 """
 
-import pytest
+from datetime import datetime
+
 import numpy as np
-from pathlib import Path
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+import pytest
 
 from pyiwfm.io.zbudget import (
-    ZBudgetReader,
-    ZBudgetHeader,
-    ZoneInfo,
     ZBUDGET_DATA_TYPES,
+    ZBudgetHeader,
+    ZBudgetReader,
+    ZoneInfo,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -55,7 +53,7 @@ def mock_zbudget_file(tmp_path):
                 b"Pumping",
                 b"Subsurface Inflow",
                 b"Storage Change",
-            ]
+            ],
         )
         attrs.create_dataset(
             "DataHDFPaths",
@@ -64,34 +62,31 @@ def mock_zbudget_file(tmp_path):
                 b"/Pumping",
                 b"/SubsurfaceInflow",
                 b"/StorageChange",
-            ]
+            ],
         )
         attrs.create_dataset("NTimeSteps", data=12)
 
         # Create ZoneList group
         zone_list = f.create_group("ZoneList")
         zone_list.attrs["NZones"] = 3
-        zone_list.create_dataset(
-            "ZoneNames",
-            data=[b"Zone 1", b"Zone 2", b"Zone 3"]
-        )
+        zone_list.create_dataset("ZoneNames", data=[b"Zone 1", b"Zone 2", b"Zone 3"])
 
         # Zone details
         for i in range(3):
-            zone_group = zone_list.create_group(f"Zone_{i+1}")
-            zone_group.create_dataset("Elements", data=list(range(i*10+1, (i+1)*10+1)))
+            zone_group = zone_list.create_group(f"Zone_{i + 1}")
+            zone_group.create_dataset("Elements", data=list(range(i * 10 + 1, (i + 1) * 10 + 1)))
             zone_group.create_dataset("Area", data=1000.0 * (i + 1))
-            zone_group.create_dataset("AdjacentZones", data=[j+1 for j in range(3) if j != i])
+            zone_group.create_dataset("AdjacentZones", data=[j + 1 for j in range(3) if j != i])
 
         # Create data groups
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
         n_elements = 30
         n_timesteps = 12
 
         for path in ["/DeepPercolation", "/Pumping", "/SubsurfaceInflow", "/StorageChange"]:
             data_group = f.create_group(path.strip("/"))
             # Create layer data
-            data = np.random.rand(n_elements, n_timesteps) * 100
+            data = rng.random((n_elements, n_timesteps)) * 100
             data_group.create_dataset("Layer_1", data=data)
             data_group.create_dataset("Layer_2", data=data * 0.5)
 
@@ -373,13 +368,9 @@ class TestDataFrame:
 
     def test_get_dataframe_with_columns(self, mock_zbudget_file):
         """Test getting DataFrame with specific columns."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = ZBudgetReader(mock_zbudget_file)
-        df = reader.get_dataframe(
-            "Zone 1",
-            layer=1,
-            data_columns=["Pumping", "Deep Percolation"]
-        )
+        df = reader.get_dataframe("Zone 1", layer=1, data_columns=["Pumping", "Deep Percolation"])
 
         assert len(df.columns) == 2
         assert "Pumping" in df.columns
@@ -443,7 +434,7 @@ class TestWaterBalance:
 
     def test_get_water_balance_custom_columns(self, mock_zbudget_file):
         """Test water balance with custom inflow/outflow columns."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = ZBudgetReader(mock_zbudget_file)
         df = reader.get_water_balance(
             "Zone 1",
@@ -466,7 +457,7 @@ class TestExport:
 
     def test_to_csv(self, mock_zbudget_file, tmp_path):
         """Test CSV export."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = ZBudgetReader(mock_zbudget_file)
         output_dir = tmp_path / "output"
 
@@ -478,7 +469,7 @@ class TestExport:
 
     def test_to_csv_specific_zones(self, mock_zbudget_file, tmp_path):
         """Test CSV export for specific zones."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = ZBudgetReader(mock_zbudget_file)
         output_dir = tmp_path / "output"
 
@@ -533,7 +524,7 @@ def mock_zbudget_with_datetime(tmp_path):
     import h5py
 
     filepath = tmp_path / "zbudget_dt.hdf"
-    np.random.seed(99)
+    rng = np.random.default_rng(99)
     n_elements = 10
     n_timesteps = 24  # 2 years of monthly data
 
@@ -560,13 +551,13 @@ def mock_zbudget_with_datetime(tmp_path):
         zone_list.attrs["NZones"] = 2
         zone_list.create_dataset("ZoneNames", data=[b"Zone A", b"Zone B"])
         for i in range(2):
-            zg = zone_list.create_group(f"Zone_{i+1}")
+            zg = zone_list.create_group(f"Zone_{i + 1}")
             zg.create_dataset("Elements", data=list(range(i * 5 + 1, (i + 1) * 5 + 1)))
             zg.create_dataset("Area", data=500.0 * (i + 1))
 
         for path in ["/Recharge", "/Pumping", "/ET"]:
             dg = f.create_group(path.strip("/"))
-            data = np.random.rand(n_elements, n_timesteps) * 50
+            data = rng.random((n_elements, n_timesteps)) * 50
             dg.create_dataset("Layer_1", data=data)
             dg.create_dataset("Layer_2", data=data * 0.3)
 
@@ -762,7 +753,7 @@ class TestDataFrameEdgeCases:
 
     def test_get_dataframe_nonexistent_columns_filtered(self, mock_zbudget_file):
         """Requesting non-existent data_columns filters to only available ones."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = ZBudgetReader(mock_zbudget_file)
         df = reader.get_dataframe(
             "Zone 1",
@@ -836,7 +827,6 @@ class TestAggregationEdgeCases:
 
         # Create a small file with only 6 timesteps
         filepath = tmp_path / "zbudget_6ts.hdf"
-        np.random.seed(77)
         n_elements = 5
         n_timesteps = 6
 
@@ -871,7 +861,7 @@ class TestWaterBalanceEdgeCases:
 
     def test_water_balance_no_matching_inflows(self, mock_zbudget_file):
         """Auto-detected inflow columns may be empty if no keyword match."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = ZBudgetReader(mock_zbudget_file)
         # The test fixture has "Deep Percolation" which matches "percolation"
         # so at least 1 inflow is auto-detected; test with explicit empty
@@ -886,7 +876,7 @@ class TestWaterBalanceEdgeCases:
 
     def test_water_balance_auto_detect(self, mock_zbudget_with_datetime):
         """Auto-detection of inflow/outflow columns based on keywords."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = ZBudgetReader(mock_zbudget_with_datetime)
         # Data names are "Recharge Inflow", "Pumping Outflow", "ET Evaporation"
         # "Recharge Inflow" matches "inflow" and "recharge"
@@ -903,7 +893,7 @@ class TestExportEdgeCases:
 
     def test_to_csv_creates_directory(self, mock_zbudget_file, tmp_path):
         """to_csv creates the output directory if it doesn't exist."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = ZBudgetReader(mock_zbudget_file)
         output_dir = tmp_path / "deep" / "nested" / "dir"
         files = reader.to_csv(output_dir, zones=["Zone 1"], layer=1)
@@ -912,7 +902,7 @@ class TestExportEdgeCases:
 
     def test_to_csv_zone_name_sanitization(self, mock_zbudget_file, tmp_path):
         """CSV filenames sanitize zone names (spaces -> underscores)."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = ZBudgetReader(mock_zbudget_file)
         files = reader.to_csv(tmp_path / "csv_out", zones=["Zone 1"], layer=1)
         assert "Zone_1" in files[0].name

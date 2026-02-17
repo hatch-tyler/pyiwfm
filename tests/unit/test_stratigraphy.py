@@ -5,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.core.exceptions import StratigraphyError
+from pyiwfm.core.stratigraphy import Stratigraphy
 
 
 class TestStratigraphy:
@@ -44,9 +44,7 @@ class TestStratigraphy:
         assert total.shape == (9,)
         np.testing.assert_allclose(total, 100.0)  # 2 layers * 50 units each
 
-    def test_stratigraphy_get_node_elevations(
-        self, sample_stratigraphy_data: dict
-    ) -> None:
+    def test_stratigraphy_get_node_elevations(self, sample_stratigraphy_data: dict) -> None:
         """Test getting elevations for a specific node."""
         strat = Stratigraphy(**sample_stratigraphy_data)
 
@@ -63,9 +61,7 @@ class TestStratigraphy:
         top_layer0 = strat.get_layer_top(layer=0)
         np.testing.assert_allclose(top_layer0, strat.gs_elev)
 
-    def test_stratigraphy_layer_bottom_elev(
-        self, sample_stratigraphy_data: dict
-    ) -> None:
+    def test_stratigraphy_layer_bottom_elev(self, sample_stratigraphy_data: dict) -> None:
         """Test layer bottom elevation access."""
         strat = Stratigraphy(**sample_stratigraphy_data)
 
@@ -113,18 +109,14 @@ class TestStratigraphy:
         assert strat.get_n_active_nodes(layer=0) == 9
         assert strat.get_n_active_nodes(layer=1) == 9
 
-    def test_stratigraphy_invalid_layer_index(
-        self, sample_stratigraphy_data: dict
-    ) -> None:
+    def test_stratigraphy_invalid_layer_index(self, sample_stratigraphy_data: dict) -> None:
         """Test error on invalid layer index."""
         strat = Stratigraphy(**sample_stratigraphy_data)
 
         with pytest.raises(IndexError):
             strat.get_layer_thickness(layer=5)
 
-    def test_stratigraphy_invalid_node_index(
-        self, sample_stratigraphy_data: dict
-    ) -> None:
+    def test_stratigraphy_invalid_node_index(self, sample_stratigraphy_data: dict) -> None:
         """Test error on invalid node index."""
         strat = Stratigraphy(**sample_stratigraphy_data)
 
@@ -245,18 +237,14 @@ class TestStratigraphyOperations:
         assert strat.get_layer_at_elevation(node_idx=0, elevation=75.0) == 0
         assert strat.get_layer_at_elevation(node_idx=0, elevation=25.0) == 1
 
-    def test_get_layer_at_elevation_boundary(
-        self, sample_stratigraphy_data: dict
-    ) -> None:
+    def test_get_layer_at_elevation_boundary(self, sample_stratigraphy_data: dict) -> None:
         """Test layer determination at layer boundaries."""
         strat = Stratigraphy(**sample_stratigraphy_data)
 
         # At elevation 50 (boundary), should return layer 0 (convention: include top)
         assert strat.get_layer_at_elevation(node_idx=0, elevation=50.0) == 0
 
-    def test_get_layer_at_elevation_above_gs(
-        self, sample_stratigraphy_data: dict
-    ) -> None:
+    def test_get_layer_at_elevation_above_gs(self, sample_stratigraphy_data: dict) -> None:
         """Test layer determination above ground surface."""
         strat = Stratigraphy(**sample_stratigraphy_data)
 
@@ -264,9 +252,7 @@ class TestStratigraphyOperations:
         layer = strat.get_layer_at_elevation(node_idx=0, elevation=150.0)
         assert layer == -1  # Convention: -1 means above surface
 
-    def test_get_layer_at_elevation_below_bottom(
-        self, sample_stratigraphy_data: dict
-    ) -> None:
+    def test_get_layer_at_elevation_below_bottom(self, sample_stratigraphy_data: dict) -> None:
         """Test layer determination below all layers."""
         strat = Stratigraphy(**sample_stratigraphy_data)
 

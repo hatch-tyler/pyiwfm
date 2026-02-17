@@ -16,22 +16,21 @@ import io
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
+from pyiwfm.io.config import OutputFormat, TimeSeriesOutputConfig
 from pyiwfm.io.writer_base import (
+    ComponentWriter,
+    IWFMModelWriter,
     TemplateWriter,
     TimeSeriesSpec,
     TimeSeriesWriter,
-    ComponentWriter,
-    IWFMModelWriter,
     _check_dss,
 )
-from pyiwfm.io.config import OutputFormat, TimeSeriesOutputConfig
 from pyiwfm.templates.engine import TemplateEngine
-
 
 # =============================================================================
 # Concrete Implementations for Testing
@@ -137,7 +136,7 @@ class TestTemplateWriterAdditional:
         # This should call the engine's render_template method
         # If template doesn't exist, it may raise - that's expected
         try:
-            result = writer.render_header("nonexistent_template")
+            writer.render_header("nonexistent_template")
         except Exception:
             pass  # Template file doesn't exist - that's OK
 
@@ -378,7 +377,9 @@ class TestTimeSeriesWriterBranches:
         columns = {"Col1": np.array([1.0])}
 
         writer.write_timeseries_table(
-            dates, columns, "table.dat",
+            dates,
+            columns,
+            "table.dat",
             header_lines=["Header Line 1", "Header Line 2"],
         )
 
@@ -462,9 +463,7 @@ class TestIWFMModelWriterCoverage:
     def test_model_writer_properties(self, tmp_path: Path) -> None:
         """Test model writer stores model and config."""
         model = MagicMock()
-        writer = ConcreteModelWriter(
-            model, tmp_path, ts_format=OutputFormat.TEXT
-        )
+        writer = ConcreteModelWriter(model, tmp_path, ts_format=OutputFormat.TEXT)
 
         assert writer.model is model
         assert writer.output_dir == tmp_path

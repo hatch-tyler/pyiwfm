@@ -27,7 +27,6 @@ from pyiwfm.visualization.webapi.area_loader import (
     _iwfm_date_to_iso,
 )
 
-
 # =====================================================================
 # Helpers: create test HDF5 area files
 # =====================================================================
@@ -643,9 +642,7 @@ class TestAreaDataManagerGetElementBreakdown:
 
 class TestAreaDataManagerGetElementTimeseries:
     def test_basic_timeseries(self, tmp_path):
-        mgr = _make_manager_with_loaders(
-            tmp_path, nonponded=True, n_timesteps=5, n_elements=3
-        )
+        mgr = _make_manager_with_loaders(tmp_path, nonponded=True, n_timesteps=5, n_elements=3)
         ts = mgr.get_element_timeseries(element_id=2)
         assert ts["element_id"] == 2
         assert "dates" in ts
@@ -654,9 +651,7 @@ class TestAreaDataManagerGetElementTimeseries:
         assert len(ts["nonponded"]["areas"]) == 5
 
     def test_timeseries_element_not_found(self, tmp_path):
-        mgr = _make_manager_with_loaders(
-            tmp_path, nonponded=True, n_timesteps=3, n_elements=2
-        )
+        mgr = _make_manager_with_loaders(tmp_path, nonponded=True, n_timesteps=3, n_elements=2)
         ts = mgr.get_element_timeseries(element_id=999)
         assert ts["element_id"] == 999
         assert "nonponded" not in ts

@@ -10,18 +10,16 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
 
 fastapi = pytest.importorskip("fastapi", reason="FastAPI not available")
 pydantic = pytest.importorskip("pydantic", reason="Pydantic not available")
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
-from pyiwfm.core.mesh import AppGrid, Element, Node
-from pyiwfm.visualization.webapi.config import ModelState, model_state
-from pyiwfm.visualization.webapi.server import create_app
-
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.visualization.webapi.config import model_state  # noqa: E402
+from pyiwfm.visualization.webapi.server import create_app  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -48,10 +46,15 @@ def _reset_model_state():
     model_state._results_dir = None
     # Restore any monkey-patched methods back to the class originals
     for attr in (
-        "get_budget_reader", "get_available_budgets", "reproject_coords",
-        "get_stream_reach_boundaries", "get_head_loader",
-        "get_gw_hydrograph_reader", "get_stream_hydrograph_reader",
-        "get_area_manager", "get_subsidence_reader",
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
     ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
@@ -198,8 +201,10 @@ class TestModelInfoEndpoint:
     def test_model_with_streams_and_lakes(self):
         """Both streams and lakes can be present simultaneously."""
         model = _make_mock_model(
-            has_streams=True, n_stream_nodes=5,
-            has_lakes=True, n_lakes=2,
+            has_streams=True,
+            n_stream_nodes=5,
+            has_lakes=True,
+            n_lakes=2,
         )
         model_state._model = model
         app = create_app()
@@ -696,9 +701,12 @@ class TestSummaryStreams:
         stm.n_diversions = 0
         stm.n_bypasses = 0
 
-        n1 = MagicMock(); n1.reach_id = 1
-        n2 = MagicMock(); n2.reach_id = 1
-        n3 = MagicMock(); n3.reach_id = 2
+        n1 = MagicMock()
+        n1.reach_id = 1
+        n2 = MagicMock()
+        n2.reach_id = 1
+        n3 = MagicMock()
+        n3.reach_id = 2
         stm.nodes = {1: n1, 2: n2, 3: n3}
 
         model = _make_mock_model(streams=stm)
@@ -729,12 +737,21 @@ class TestSummaryStreams:
         stm.n_bypasses = 0
 
         # All nodes have reach_id == 0 -> reach_id strategy produces empty set
-        n1 = MagicMock(); n1.id = 1; n1.reach_id = 0
-        n1.downstream_node = 2; n1.gw_node = 100
-        n2 = MagicMock(); n2.id = 2; n2.reach_id = 0
-        n2.downstream_node = 3; n2.gw_node = 200
-        n3 = MagicMock(); n3.id = 3; n3.reach_id = 0
-        n3.downstream_node = None; n3.gw_node = 300
+        n1 = MagicMock()
+        n1.id = 1
+        n1.reach_id = 0
+        n1.downstream_node = 2
+        n1.gw_node = 100
+        n2 = MagicMock()
+        n2.id = 2
+        n2.reach_id = 0
+        n2.downstream_node = 3
+        n2.gw_node = 200
+        n3 = MagicMock()
+        n3.id = 3
+        n3.reach_id = 0
+        n3.downstream_node = None
+        n3.gw_node = 300
         stm.nodes = {1: n1, 2: n2, 3: n3}
 
         model = _make_mock_model(streams=stm)
@@ -767,12 +784,21 @@ class TestSummaryStreams:
         stm.n_bypasses = 0
 
         # All nodes have reach_id == 0, no connectivity data either
-        n1 = MagicMock(); n1.id = 1; n1.reach_id = 0
-        n1.downstream_node = None; n1.gw_node = None
-        n2 = MagicMock(); n2.id = 2; n2.reach_id = 0
-        n2.downstream_node = None; n2.gw_node = None
-        n3 = MagicMock(); n3.id = 3; n3.reach_id = 0
-        n3.downstream_node = None; n3.gw_node = None
+        n1 = MagicMock()
+        n1.id = 1
+        n1.reach_id = 0
+        n1.downstream_node = None
+        n1.gw_node = None
+        n2 = MagicMock()
+        n2.id = 2
+        n2.reach_id = 0
+        n2.downstream_node = None
+        n2.gw_node = None
+        n3 = MagicMock()
+        n3.id = 3
+        n3.reach_id = 0
+        n3.downstream_node = None
+        n3.gw_node = None
         stm.nodes = {1: n1, 2: n2, 3: n3}
 
         model = _make_mock_model(streams=stm)
@@ -790,7 +816,8 @@ class TestSummaryStreams:
             patch.object(model_state, "get_available_budgets", return_value=[]),
             patch.object(model_state, "get_area_manager", return_value=None),
             patch.object(
-                model_state, "get_stream_reach_boundaries",
+                model_state,
+                "get_stream_reach_boundaries",
                 return_value=[(1, 1, 5), (2, 6, 10), (3, 11, 15)],
             ),
         ):
@@ -871,10 +898,14 @@ class TestSummaryStreams:
 
         # All have reach_id == 0 (strategy 1 fails)
         # All have downstream_node pointing to IDs NOT in nodes_dict
-        n1 = MagicMock(); n1.id = 1; n1.reach_id = 0
+        n1 = MagicMock()
+        n1.id = 1
+        n1.reach_id = 0
         n1.downstream_node = 999  # Not in dict
         n1.gw_node = 100
-        n2 = MagicMock(); n2.id = 2; n2.reach_id = 0
+        n2 = MagicMock()
+        n2.id = 2
+        n2.reach_id = 0
         n2.downstream_node = 998  # Not in dict
         n2.gw_node = 200
         stm.nodes = {1: n1, 2: n2}
@@ -924,7 +955,8 @@ class TestSummaryStreams:
             patch.object(model_state, "get_available_budgets", return_value=[]),
             patch.object(model_state, "get_area_manager", return_value=None),
             patch.object(
-                model_state, "get_stream_reach_boundaries",
+                model_state,
+                "get_stream_reach_boundaries",
                 side_effect=RuntimeError("binary parse error"),
             ),
         ):
@@ -941,13 +973,22 @@ class TestSummaryStreams:
         stm.n_bypasses = 0
 
         # All reach_id == 0 -> strategy 1 fails
-        n1 = MagicMock(); n1.id = 1; n1.reach_id = 0
-        n1.downstream_node = 2; n1.gw_node = 100
-        n2 = MagicMock(); n2.id = 2; n2.reach_id = 0
-        n2.downstream_node = 3; n2.gw_node = 200
+        n1 = MagicMock()
+        n1.id = 1
+        n1.reach_id = 0
+        n1.downstream_node = 2
+        n1.gw_node = 100
+        n2 = MagicMock()
+        n2.id = 2
+        n2.reach_id = 0
+        n2.downstream_node = 3
+        n2.gw_node = 200
         # Node 3 is terminal (not in has_downstream), but gw_node is None
-        n3 = MagicMock(); n3.id = 3; n3.reach_id = 0
-        n3.downstream_node = None; n3.gw_node = None
+        n3 = MagicMock()
+        n3.id = 3
+        n3.reach_id = 0
+        n3.downstream_node = None
+        n3.gw_node = None
         stm.nodes = {1: n1, 2: n2, 3: n3}
 
         model = _make_mock_model(streams=stm)
@@ -981,9 +1022,13 @@ class TestSummaryStreams:
 
         # reach_id strategy succeeds with empty set (all reach_id==0)
         # But connectivity iteration raises
-        n1 = MagicMock(); n1.id = 1; n1.reach_id = 0
+        n1 = MagicMock()
+        n1.id = 1
+        n1.reach_id = 0
         # Getting downstream_node will raise
-        type(n1).downstream_node = property(lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
+        type(n1).downstream_node = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("boom"))
+        )
         stm.nodes = {1: n1}
 
         model = _make_mock_model(streams=stm)
@@ -1148,7 +1193,8 @@ class TestSummaryRootZone:
         """When n_crop_types == 0, computes from sub-configs."""
         rz = MagicMock()
         rz.n_crop_types = 0
-        nonponded = MagicMock(); nonponded.n_crops = 10
+        nonponded = MagicMock()
+        nonponded.n_crops = 10
         rz.nonponded_config = nonponded
         rz.ponded_config = MagicMock()  # Fixed 5
         rz.urban_config = MagicMock()  # Fixed 1
@@ -1226,7 +1272,8 @@ class TestSummaryRootZone:
         """When n_crop_types == 0 with only nonponded and urban, partial count."""
         rz = MagicMock()
         rz.n_crop_types = 0
-        nonponded = MagicMock(); nonponded.n_crops = 8
+        nonponded = MagicMock()
+        nonponded.n_crops = 8
         rz.nonponded_config = nonponded
         rz.ponded_config = None  # Not set
         rz.urban_config = MagicMock()  # Set
@@ -1356,9 +1403,12 @@ class TestSummaryRootZone:
         rz.native_area_file = None
 
         # 3 elements with land use data out of 5 total
-        elu1 = MagicMock(); elu1.element_id = 1
-        elu2 = MagicMock(); elu2.element_id = 2
-        elu3 = MagicMock(); elu3.element_id = 3
+        elu1 = MagicMock()
+        elu1.element_id = 1
+        elu2 = MagicMock()
+        elu2.element_id = 2
+        elu3 = MagicMock()
+        elu3.element_id = 3
         rz.element_landuse = [elu1, elu2, elu3]
 
         model = _make_mock_model(rootzone=rz, n_elements=5)
@@ -1459,7 +1509,8 @@ class TestSummaryRootZone:
             patch.object(model_state, "get_stream_hydrograph_reader", return_value=None),
             patch.object(model_state, "get_available_budgets", return_value=[]),
             patch.object(
-                model_state, "get_area_manager",
+                model_state,
+                "get_area_manager",
                 side_effect=RuntimeError("HDF5 error"),
             ),
         ):
@@ -1504,7 +1555,7 @@ class TestSummaryRootZone:
                 "pyiwfm.visualization.webapi.routes.model._ensure_land_use_loaded",
                 side_effect=RuntimeError("lazy load failed"),
                 create=True,
-            ) as mock_lazy,
+            ),
         ):
             # The lazy load is imported inside the function, so we need to
             # patch the rootzone module's function. Since it's imported
@@ -1842,7 +1893,8 @@ class TestSummaryAvailableResults:
 
         with (
             patch.object(
-                model_state, "get_head_loader",
+                model_state,
+                "get_head_loader",
                 side_effect=RuntimeError("HDF5 corrupt"),
             ),
             patch.object(model_state, "get_gw_hydrograph_reader", return_value=None),
@@ -1870,7 +1922,8 @@ class TestSummaryAvailableResults:
         with (
             patch.object(model_state, "get_head_loader", return_value=None),
             patch.object(
-                model_state, "get_gw_hydrograph_reader",
+                model_state,
+                "get_gw_hydrograph_reader",
                 side_effect=RuntimeError("parse error"),
             ),
             patch.object(model_state, "get_stream_hydrograph_reader", return_value=None),
@@ -1898,7 +1951,8 @@ class TestSummaryAvailableResults:
             patch.object(model_state, "get_head_loader", return_value=None),
             patch.object(model_state, "get_gw_hydrograph_reader", return_value=None),
             patch.object(
-                model_state, "get_stream_hydrograph_reader",
+                model_state,
+                "get_stream_hydrograph_reader",
                 side_effect=RuntimeError("file not found"),
             ),
             patch.object(model_state, "get_available_budgets", return_value=[]),
@@ -1926,7 +1980,8 @@ class TestSummaryAvailableResults:
             patch.object(model_state, "get_gw_hydrograph_reader", return_value=None),
             patch.object(model_state, "get_stream_hydrograph_reader", return_value=None),
             patch.object(
-                model_state, "get_available_budgets",
+                model_state,
+                "get_available_budgets",
                 side_effect=RuntimeError("budget error"),
             ),
             patch.object(model_state, "get_area_manager", return_value=None),

@@ -14,20 +14,12 @@ Typical ponded crops in C2VSimFG:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from pyiwfm.io.rootzone_nonponded import (
     NonPondedCropConfig,
     NonPondedCropReader,
-    CurveNumberRow,
-    EtcPointerRow,
-    IrrigationPointerRow,
-    SoilMoisturePointerRow,
-    SupplyReturnReuseRow,
-    InitialConditionRow,
 )
-
 
 # ── Ponded-specific aliases ───────────────────────────────────────────
 # The binary file format is identical to the non-ponded crop format.

@@ -12,18 +12,17 @@ from pathlib import Path
 
 import pytest
 
-from pyiwfm.io.groundwater import (
-    GWFileConfig,
-    GroundwaterWriter,
-    GroundwaterReader,
-    read_subsidence,
-)
 from pyiwfm.components.groundwater import (
     AppGW,
     Subsidence,
 )
 from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.groundwater import (
+    GroundwaterReader,
+    GroundwaterWriter,
+    GWFileConfig,
+    read_subsidence,
+)
 
 # =============================================================================
 # Test read_subsidence method
@@ -195,12 +194,15 @@ class TestSubsidenceRoundtrip:
     def test_roundtrip_single(self, tmp_path: Path) -> None:
         """Test write/read roundtrip with single subsidence."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
-        gw.add_subsidence(Subsidence(
-            element=3, layer=1,
-            elastic_storage=1.5e-5,
-            inelastic_storage=2.0e-4,
-            preconsolidation_head=95.0
-        ))
+        gw.add_subsidence(
+            Subsidence(
+                element=3,
+                layer=1,
+                elastic_storage=1.5e-5,
+                inelastic_storage=2.0e-4,
+                preconsolidation_head=95.0,
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -220,14 +222,34 @@ class TestSubsidenceRoundtrip:
         """Test write/read roundtrip with multiple subsidence entries."""
         gw = AppGW(n_nodes=20, n_layers=3, n_elements=10)
         subsidence_data = [
-            Subsidence(element=1, layer=1, elastic_storage=1e-5,
-                      inelastic_storage=1e-4, preconsolidation_head=90.0),
-            Subsidence(element=1, layer=2, elastic_storage=2e-5,
-                      inelastic_storage=2e-4, preconsolidation_head=85.0),
-            Subsidence(element=5, layer=1, elastic_storage=3e-6,
-                      inelastic_storage=5e-5, preconsolidation_head=100.0),
-            Subsidence(element=8, layer=3, elastic_storage=8e-6,
-                      inelastic_storage=9e-4, preconsolidation_head=70.0),
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-5,
+                inelastic_storage=1e-4,
+                preconsolidation_head=90.0,
+            ),
+            Subsidence(
+                element=1,
+                layer=2,
+                elastic_storage=2e-5,
+                inelastic_storage=2e-4,
+                preconsolidation_head=85.0,
+            ),
+            Subsidence(
+                element=5,
+                layer=1,
+                elastic_storage=3e-6,
+                inelastic_storage=5e-5,
+                preconsolidation_head=100.0,
+            ),
+            Subsidence(
+                element=8,
+                layer=3,
+                elastic_storage=8e-6,
+                inelastic_storage=9e-4,
+                preconsolidation_head=70.0,
+            ),
         ]
         for sub in subsidence_data:
             gw.add_subsidence(sub)
@@ -240,30 +262,34 @@ class TestSubsidenceRoundtrip:
         result = reader.read_subsidence(filepath)
 
         assert len(result) == 4
-        for orig, read in zip(subsidence_data, result):
+        for orig, read in zip(subsidence_data, result, strict=False):
             assert read.element == orig.element
             assert read.layer == orig.layer
             assert read.elastic_storage == pytest.approx(orig.elastic_storage, rel=1e-3)
             assert read.inelastic_storage == pytest.approx(orig.inelastic_storage, rel=1e-3)
-            assert read.preconsolidation_head == pytest.approx(
-                orig.preconsolidation_head, rel=1e-3
-            )
+            assert read.preconsolidation_head == pytest.approx(orig.preconsolidation_head, rel=1e-3)
 
     def test_roundtrip_extreme_values(self, tmp_path: Path) -> None:
         """Test roundtrip with extreme but valid values."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
-        gw.add_subsidence(Subsidence(
-            element=1, layer=1,
-            elastic_storage=1e-9,
-            inelastic_storage=1e-1,
-            preconsolidation_head=0.0
-        ))
-        gw.add_subsidence(Subsidence(
-            element=2, layer=2,
-            elastic_storage=9.99e-3,
-            inelastic_storage=9.99e-2,
-            preconsolidation_head=999.9999
-        ))
+        gw.add_subsidence(
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-9,
+                inelastic_storage=1e-1,
+                preconsolidation_head=0.0,
+            )
+        )
+        gw.add_subsidence(
+            Subsidence(
+                element=2,
+                layer=2,
+                elastic_storage=9.99e-3,
+                inelastic_storage=9.99e-2,
+                preconsolidation_head=999.9999,
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -280,10 +306,11 @@ class TestSubsidenceRoundtrip:
         """Test precision of roundtrip is within expected tolerance."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
         original = Subsidence(
-            element=1, layer=1,
+            element=1,
+            layer=1,
             elastic_storage=1.234567e-5,
             inelastic_storage=9.876543e-4,
-            preconsolidation_head=123.4567
+            preconsolidation_head=123.4567,
         )
         gw.add_subsidence(original)
 
@@ -296,12 +323,8 @@ class TestSubsidenceRoundtrip:
 
         assert len(result) == 1
         # Scientific notation format: 12.6e gives 6 significant digits
-        assert result[0].elastic_storage == pytest.approx(
-            original.elastic_storage, rel=1e-5
-        )
-        assert result[0].inelastic_storage == pytest.approx(
-            original.inelastic_storage, rel=1e-5
-        )
+        assert result[0].elastic_storage == pytest.approx(original.elastic_storage, rel=1e-5)
+        assert result[0].inelastic_storage == pytest.approx(original.inelastic_storage, rel=1e-5)
         # Fixed format: 12.4f gives 4 decimal places
         assert result[0].preconsolidation_head == pytest.approx(
             original.preconsolidation_head, rel=1e-3
@@ -355,12 +378,15 @@ class TestWriteSubsidenceCustomHeader:
     def test_write_custom_header(self, tmp_path: Path) -> None:
         """Test writing subsidence with custom header."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
-        gw.add_subsidence(Subsidence(
-            element=1, layer=1,
-            elastic_storage=1e-5,
-            inelastic_storage=1e-4,
-            preconsolidation_head=90.0
-        ))
+        gw.add_subsidence(
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-5,
+                inelastic_storage=1e-4,
+                preconsolidation_head=90.0,
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -373,12 +399,15 @@ class TestWriteSubsidenceCustomHeader:
     def test_write_default_header(self, tmp_path: Path) -> None:
         """Test that default header includes expected keywords."""
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
-        gw.add_subsidence(Subsidence(
-            element=1, layer=1,
-            elastic_storage=1e-5,
-            inelastic_storage=1e-4,
-            preconsolidation_head=90.0
-        ))
+        gw.add_subsidence(
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-5,
+                inelastic_storage=1e-4,
+                preconsolidation_head=90.0,
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)

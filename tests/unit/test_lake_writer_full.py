@@ -8,16 +8,15 @@ Tests cover:
 - File generation with various model configurations
 """
 
-import pytest
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from pyiwfm.io.lake_writer import (
-    LakeWriterConfig,
     LakeComponentWriter,
+    LakeWriterConfig,
     write_lake_component,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -131,9 +130,7 @@ class TestLakeWriterConfig:
     def test_main_path_property(self, tmp_path):
         """Test main_path property returns correct path."""
         config = LakeWriterConfig(
-            output_dir=tmp_path,
-            lake_subdir="Lake",
-            main_file="Lake_MAIN.dat"
+            output_dir=tmp_path, lake_subdir="Lake", main_file="Lake_MAIN.dat"
         )
 
         assert config.main_path == tmp_path / "Lake" / "Lake_MAIN.dat"
@@ -205,7 +202,7 @@ class TestLakeComponentWriterWrite:
         """Test write() calls write_all()."""
         writer = LakeComponentWriter(mock_model, lake_config)
 
-        with patch.object(writer, 'write_all') as mock_write_all:
+        with patch.object(writer, "write_all") as mock_write_all:
             writer.write()
             mock_write_all.assert_called_once()
 
@@ -339,7 +336,7 @@ class TestWriteLakeComponent:
             version="5.0",
         )
 
-        result = write_lake_component(mock_model, tmp_path, config)
+        write_lake_component(mock_model, tmp_path, config)
 
         assert (tmp_path / "Lakes" / "Lake_MAIN.dat").exists()
 
@@ -355,14 +352,12 @@ class TestWriteLakeComponent:
         other_path = tmp_path / "other"
         config = LakeWriterConfig(output_dir=other_path)
 
-        result = write_lake_component(mock_model, tmp_path, config)
+        write_lake_component(mock_model, tmp_path, config)
 
         # Should use tmp_path, not other_path
         assert (tmp_path / "Lake" / "Lake_MAIN.dat").exists()
 
-    def test_write_lake_component_with_full_lakes(
-        self, mock_model_with_lakes, tmp_path
-    ):
+    def test_write_lake_component_with_full_lakes(self, mock_model_with_lakes, tmp_path):
         """Test write_lake_component with full lake data."""
         result = write_lake_component(mock_model_with_lakes, tmp_path)
 
@@ -508,8 +503,8 @@ class TestLakeWriterEdgeCases:
         content = result.read_text()
 
         # Check for MXLKELVFL line - should be empty/blank path
-        lines = content.split('\n')
-        mxlkelvfl_line = [l for l in lines if "MXLKELVFL" in l]
+        lines = content.split("\n")
+        mxlkelvfl_line = [line for line in lines if "MXLKELVFL" in line]
         assert len(mxlkelvfl_line) == 1
 
     def test_ichlmax_column_indices(self, lake_config):

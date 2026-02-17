@@ -17,15 +17,14 @@ from typing import Any
 import numpy as np
 import pytest
 
+from pyiwfm.io.config import OutputFormat, TimeSeriesOutputConfig
 from pyiwfm.io.writer_base import (
+    ComponentWriter,
     TemplateWriter,
     TimeSeriesSpec,
     TimeSeriesWriter,
-    ComponentWriter,
 )
-from pyiwfm.io.config import OutputFormat, TimeSeriesOutputConfig
 from pyiwfm.templates.engine import TemplateEngine
-
 
 # =============================================================================
 # Test TemplateWriter
@@ -480,9 +479,7 @@ class TestTemplateWriterAdditional:
 
         result = writer.render_header("test_template.j2", key="value")
 
-        writer._engine.render_template.assert_called_once_with(
-            "test_template.j2", key="value"
-        )
+        writer._engine.render_template.assert_called_once_with("test_template.j2", key="value")
         assert result == "rendered header"
 
     def test_write_data_block_with_multiple_formats(self, tmp_path: Path) -> None:
@@ -525,9 +522,7 @@ class TestTemplateWriterAdditional:
         """Test render_string with more complex template syntax."""
         writer = ConcreteTemplateWriter(tmp_path)
 
-        result = writer.render_string(
-            "{% for i in items %}{{ i }} {% endfor %}", items=[1, 2, 3]
-        )
+        result = writer.render_string("{% for i in items %}{{ i }} {% endfor %}", items=[1, 2, 3])
         assert result == "1 2 3 "
 
 
@@ -539,9 +534,7 @@ class TestTemplateWriterAdditional:
 class TestTimeSeriesWriterAdditional:
     """Additional tests for TimeSeriesWriter edge cases."""
 
-    def test_write_timeseries_dss_format_raises_no_dss(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
+    def test_write_timeseries_dss_format_raises_no_dss(self, tmp_path: Path, monkeypatch) -> None:
         """Test writing DSS format raises ImportError when DSS unavailable."""
         import pyiwfm.io.writer_base as wb
 
@@ -697,9 +690,7 @@ class TestTimeSeriesWriterAdditional:
         assert "100.000000" in content
         assert "200.000000" in content
 
-    def test_write_text_timeseries_no_units_no_location(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_text_timeseries_no_units_no_location(self, tmp_path: Path) -> None:
         """Test _write_text_timeseries without units or location."""
         config = TimeSeriesOutputConfig(format=OutputFormat.TEXT)
         writer = TimeSeriesWriter(config, tmp_path)
@@ -738,9 +729,7 @@ class TestTimeSeriesWriterAdditional:
         assert "12/24/2021_24:00" in content
         assert "2.500000" in content
 
-    def test_write_dss_timeseries_no_dss_file_configured(
-        self, tmp_path: Path, monkeypatch
-    ) -> None:
+    def test_write_dss_timeseries_no_dss_file_configured(self, tmp_path: Path, monkeypatch) -> None:
         """Test _write_dss_timeseries raises when dss_file not configured."""
         import pyiwfm.io.writer_base as wb
 
@@ -842,17 +831,13 @@ class TestComponentWriterAdditional:
         writer = ConcreteComponentWriter(tmp_path)
 
         buffer = io.StringIO()
-        writer.write_component_header(
-            buffer, component_name="Lakes", version="2.0"
-        )
+        writer.write_component_header(buffer, component_name="Lakes", version="2.0")
         result = buffer.getvalue()
 
         assert "Lakes" in result
         assert "Version: 2.0" in result
 
-    def test_write_component_header_with_description_only(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_component_header_with_description_only(self, tmp_path: Path) -> None:
         """Test write_component_header with description but no version."""
         writer = ConcreteComponentWriter(tmp_path)
 
@@ -873,9 +858,7 @@ class TestComponentWriterAdditional:
         writer = ConcreteComponentWriter(tmp_path)
 
         buffer = io.StringIO()
-        writer.write_file_reference(
-            buffer, ref_path="", description="Empty path"
-        )
+        writer.write_file_reference(buffer, ref_path="", description="Empty path")
         result = buffer.getvalue()
 
         assert "Empty path" in result
@@ -885,17 +868,13 @@ class TestComponentWriterAdditional:
         writer = ConcreteComponentWriter(tmp_path)
 
         buffer = io.StringIO()
-        writer.write_file_reference(
-            buffer, ref_path="   ", description="Whitespace"
-        )
+        writer.write_file_reference(buffer, ref_path="   ", description="Whitespace")
         result = buffer.getvalue()
 
         # Whitespace-only path should be treated as empty
         assert "Whitespace" in result
 
-    def test_write_file_reference_backslash_conversion(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_file_reference_backslash_conversion(self, tmp_path: Path) -> None:
         """Test write_file_reference converts backslashes to forward slashes."""
         writer = ConcreteComponentWriter(tmp_path)
 
@@ -923,9 +902,7 @@ class TestComponentWriterAdditional:
             "some/file.dat"
         )
 
-    def test_write_file_reference_none_no_description(
-        self, tmp_path: Path
-    ) -> None:
+    def test_write_file_reference_none_no_description(self, tmp_path: Path) -> None:
         """Test write_file_reference with None path and no description."""
         writer = ConcreteComponentWriter(tmp_path)
 
@@ -941,9 +918,7 @@ class TestComponentWriterAdditional:
         writer = ConcreteComponentWriter(tmp_path)
 
         buffer = io.StringIO()
-        writer.write_value_line(
-            buffer, "filename.dat", description="Input file"
-        )
+        writer.write_value_line(buffer, "filename.dat", description="Input file")
         result = buffer.getvalue()
 
         assert "filename.dat" in result
@@ -969,9 +944,7 @@ class TestComponentWriterAdditional:
         """Test initialization with all optional parameters."""
         engine = TemplateEngine()
         ts_config = TimeSeriesOutputConfig(format=OutputFormat.BOTH)
-        writer = ConcreteComponentWriter(
-            tmp_path, ts_config=ts_config, template_engine=engine
-        )
+        writer = ConcreteComponentWriter(tmp_path, ts_config=ts_config, template_engine=engine)
 
         assert writer._engine is engine
         assert writer.ts_config is ts_config
@@ -990,6 +963,7 @@ class ConcreteModelWriter:
     We avoid importing IWFMModel by using a mock and directly
     subclassing IWFMModelWriter.
     """
+
     pass
 
 
@@ -1029,9 +1003,7 @@ class TestIWFMModelWriter:
         ConcreteWriter = self._make_concrete_class()
         model = MagicMock()
         engine = TemplateEngine()
-        writer = ConcreteWriter(
-            model, tmp_path, ts_format=OutputFormat.DSS, template_engine=engine
-        )
+        writer = ConcreteWriter(model, tmp_path, ts_format=OutputFormat.DSS, template_engine=engine)
 
         assert writer.ts_format == OutputFormat.DSS
         assert writer._engine is engine
@@ -1078,6 +1050,7 @@ class TestIWFMModelWriter:
     def test_abstract_methods_required(self) -> None:
         """Test that IWFMModelWriter cannot be instantiated directly."""
         from unittest.mock import MagicMock
+
         from pyiwfm.io.writer_base import IWFMModelWriter
 
         model = MagicMock()
@@ -1087,6 +1060,7 @@ class TestIWFMModelWriter:
     def test_abstract_methods_must_be_implemented(self) -> None:
         """Test that subclass must implement both abstract methods."""
         from unittest.mock import MagicMock
+
         from pyiwfm.io.writer_base import IWFMModelWriter
 
         class PartialWriter(IWFMModelWriter):
@@ -1102,6 +1076,7 @@ class TestIWFMModelWriter:
     def test_write_all_multiple_files(self, tmp_path: Path) -> None:
         """Test write_all with multiple files from each component."""
         from unittest.mock import MagicMock
+
         from pyiwfm.io.writer_base import IWFMModelWriter
 
         class MultiWriter(IWFMModelWriter):

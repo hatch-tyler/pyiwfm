@@ -16,7 +16,6 @@ PEST++ suite includes:
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -61,9 +60,7 @@ class Parameter:
         if len(self.name) > 200:
             raise ValueError(f"Parameter name too long: {self.name}")
         if self.lower_bound > self.upper_bound:
-            raise ValueError(
-                f"Lower bound ({self.lower_bound}) > upper bound ({self.upper_bound})"
-            )
+            raise ValueError(f"Lower bound ({self.lower_bound}) > upper bound ({self.upper_bound})")
         if not self.lower_bound <= self.initial_value <= self.upper_bound:
             raise ValueError(
                 f"Initial value ({self.initial_value}) not within bounds "
@@ -194,7 +191,7 @@ class TemplateFile:
         template_file: Path | str,
         parameters: dict[str, float],
         delimiter: str = "#",
-    ) -> "TemplateFile":
+    ) -> TemplateFile:
         """Create a template file from an existing input file.
 
         Parameters
@@ -300,7 +297,7 @@ class InstructionFile:
         observations: list[tuple[str, int, int]],
         header_lines: int = 0,
         marker: str = "@",
-    ) -> "InstructionFile":
+    ) -> InstructionFile:
         """Create instruction file for reading time series output.
 
         Parameters
@@ -367,7 +364,7 @@ class InstructionFile:
         time_column: int = 1,
         value_column: int = 2,
         marker: str = "@",
-    ) -> "InstructionFile":
+    ) -> InstructionFile:
         """Create instruction file for reading hydrograph output.
 
         This creates instructions to read specific time values from
@@ -668,6 +665,7 @@ class PESTInterface:
             Path to the written control file.
         """
         if filepath is None:
+            assert self.pest_dir is not None
             filepath = self.pest_dir / f"{self.case_name}.pst"
         else:
             filepath = Path(filepath)
@@ -704,10 +702,14 @@ class PESTInterface:
         f.write(f"{ntplfle:6d} {ninsfle:6d} single point 1 0 0\n")
 
         # Control options
-        f.write("  5.0   2.0   0.3    0.03    10\n")  # RLAMBDA1, RLAMFAC, PHIRATSUF, PHIREDLAM, NUMLAM
+        f.write(
+            "  5.0   2.0   0.3    0.03    10\n"
+        )  # RLAMBDA1, RLAMFAC, PHIRATSUF, PHIREDLAM, NUMLAM
         f.write("  0.1   3     0.01   3\n")  # RELPARMAX, FACPARMAX, FACORIG, MAXSINGVAL
         f.write("  0.0   0     1\n")  # PHIREDSWH, NOPTSWITCH, SPLITSWH
-        f.write("    50  .005     4     4  .005     4\n")  # NOPTMAX, PHIREDSTP, NPHISTP, NPHINORED, RELPARSTP, NRELPAR
+        f.write(
+            "    50  .005     4     4  .005     4\n"
+        )  # NOPTMAX, PHIREDSTP, NPHISTP, NPHINORED, RELPARSTP, NRELPAR
         f.write("    1     1      1\n")  # ICOV, ICOR, IEIG
 
     def _write_parameter_groups(self, f: TextIO) -> None:
@@ -787,6 +789,7 @@ class PESTInterface:
             Path to the written script.
         """
         if filepath is None:
+            assert self.pest_dir is not None
             filepath = self.pest_dir / "run_model.py"
         else:
             filepath = Path(filepath)

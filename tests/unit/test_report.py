@@ -8,17 +8,16 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.comparison.differ import ModelDiffer, MeshDiff, ModelDiff
+from pyiwfm.comparison.differ import MeshDiff, ModelDiff
 from pyiwfm.comparison.metrics import ComparisonMetrics, TimeSeriesComparison
 from pyiwfm.comparison.report import (
+    ComparisonReport,
+    HtmlReport,
+    JsonReport,
     ReportGenerator,
     TextReport,
-    JsonReport,
-    HtmlReport,
-    ComparisonReport,
 )
+from pyiwfm.core.mesh import AppGrid, Element, Node
 
 
 @pytest.fixture
@@ -116,9 +115,7 @@ class TestTextReport:
         assert len(content) > 0
         assert "Model" in content or "Diff" in content
 
-    def test_text_report_from_metrics(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_text_report_from_metrics(self, sample_metrics: ComparisonMetrics) -> None:
         """Test generating text report from metrics."""
         report = TextReport()
         content = report.generate_metrics_report(sample_metrics)
@@ -168,9 +165,7 @@ class TestJsonReport:
         data = json.loads(content)
         assert isinstance(data, dict)
 
-    def test_json_report_from_metrics(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_json_report_from_metrics(self, sample_metrics: ComparisonMetrics) -> None:
         """Test generating JSON report from metrics."""
         report = JsonReport()
         content = report.generate_metrics_report(sample_metrics)
@@ -219,9 +214,7 @@ class TestHtmlReport:
         assert isinstance(content, str)
         assert "<html>" in content or "<!DOCTYPE" in content
 
-    def test_html_report_from_metrics(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_html_report_from_metrics(self, sample_metrics: ComparisonMetrics) -> None:
         """Test generating HTML report from metrics."""
         report = HtmlReport()
         content = report.generate_metrics_report(sample_metrics)
@@ -256,9 +249,7 @@ class TestReportGenerator:
         generator = ReportGenerator()
         assert generator is not None
 
-    def test_generate_text_report(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_generate_text_report(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test generating text report through generator."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
@@ -268,9 +259,7 @@ class TestReportGenerator:
 
         assert isinstance(content, str)
 
-    def test_generate_json_report(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_generate_json_report(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test generating JSON report through generator."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
@@ -281,9 +270,7 @@ class TestReportGenerator:
         data = json.loads(content)
         assert isinstance(data, dict)
 
-    def test_generate_html_report(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_generate_html_report(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test generating HTML report through generator."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
@@ -293,9 +280,7 @@ class TestReportGenerator:
 
         assert "<html>" in content or "<!DOCTYPE" in content
 
-    def test_generate_invalid_format(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_generate_invalid_format(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test error handling for invalid format."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
@@ -410,23 +395,25 @@ class TestTextReportExtended:
         self, simple_grid: AppGrid, modified_grid: AppGrid
     ) -> None:
         """Test text report includes stratigraphy changes section."""
-        from pyiwfm.comparison.differ import StratigraphyDiff, DiffItem, DiffType
+        from pyiwfm.comparison.differ import DiffItem, DiffType, StratigraphyDiff
 
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
-        strat_diff = StratigraphyDiff(items=[
-            DiffItem(
-                path="stratigraphy.gs_elev[0]",
-                diff_type=DiffType.MODIFIED,
-                old_value=100.0,
-                new_value=101.0,
-            ),
-            DiffItem(
-                path="stratigraphy.gs_elev[1]",
-                diff_type=DiffType.MODIFIED,
-                old_value=200.0,
-                new_value=202.0,
-            ),
-        ])
+        strat_diff = StratigraphyDiff(
+            items=[
+                DiffItem(
+                    path="stratigraphy.gs_elev[0]",
+                    diff_type=DiffType.MODIFIED,
+                    old_value=100.0,
+                    new_value=101.0,
+                ),
+                DiffItem(
+                    path="stratigraphy.gs_elev[1]",
+                    diff_type=DiffType.MODIFIED,
+                    old_value=200.0,
+                    new_value=202.0,
+                ),
+            ]
+        )
         model_diff = ModelDiff(mesh_diff=mesh_diff, stratigraphy_diff=strat_diff)
 
         report = TextReport()
@@ -456,7 +443,7 @@ class TestTextReportExtended:
 
     def test_text_report_truncation_stratigraphy(self) -> None:
         """Test text report truncates stratigraphy diff items beyond 50."""
-        from pyiwfm.comparison.differ import StratigraphyDiff, DiffItem, DiffType
+        from pyiwfm.comparison.differ import DiffItem, DiffType, StratigraphyDiff
 
         items = [
             DiffItem(
@@ -497,9 +484,7 @@ class TestTextReportExtended:
 class TestJsonReportExtended:
     """Extended tests for JsonReport covering more branches."""
 
-    def test_json_report_custom_indent(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_json_report_custom_indent(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test JsonReport with custom indent level."""
         report = JsonReport(indent=4)
         assert report.indent == 4
@@ -528,9 +513,7 @@ class TestJsonReportExtended:
         assert "is_identical" in data["summary"]
         assert "statistics" in data["summary"]
 
-    def test_json_report_metrics_has_rating(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_json_report_metrics_has_rating(self, sample_metrics: ComparisonMetrics) -> None:
         """Test JSON metrics report includes the rating field."""
         report = JsonReport()
         content = report.generate_metrics_report(sample_metrics)
@@ -578,17 +561,19 @@ class TestHtmlReportExtended:
         self, simple_grid: AppGrid, modified_grid: AppGrid
     ) -> None:
         """Test HTML report renders stratigraphy changes table."""
-        from pyiwfm.comparison.differ import StratigraphyDiff, DiffItem, DiffType
+        from pyiwfm.comparison.differ import DiffItem, DiffType, StratigraphyDiff
 
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
-        strat_diff = StratigraphyDiff(items=[
-            DiffItem(
-                path="stratigraphy.gs_elev[0]",
-                diff_type=DiffType.MODIFIED,
-                old_value=100.0,
-                new_value=101.0,
-            ),
-        ])
+        strat_diff = StratigraphyDiff(
+            items=[
+                DiffItem(
+                    path="stratigraphy.gs_elev[0]",
+                    diff_type=DiffType.MODIFIED,
+                    old_value=100.0,
+                    new_value=101.0,
+                ),
+            ]
+        )
         model_diff = ModelDiff(mesh_diff=mesh_diff, stratigraphy_diff=strat_diff)
 
         report = HtmlReport()
@@ -619,7 +604,7 @@ class TestHtmlReportExtended:
 
     def test_html_report_stratigraphy_truncation(self) -> None:
         """Test HTML report truncates stratigraphy diff items beyond 100."""
-        from pyiwfm.comparison.differ import StratigraphyDiff, DiffItem, DiffType
+        from pyiwfm.comparison.differ import DiffItem, DiffType, StratigraphyDiff
 
         items = [
             DiffItem(
@@ -642,8 +627,14 @@ class TestHtmlReportExtended:
         """Test HTML metrics report uses correct rating color for each level."""
         # Excellent: NSE >= 0.90
         m_excellent = ComparisonMetrics(
-            rmse=0.01, mae=0.01, mbe=0.0, nash_sutcliffe=0.95,
-            percent_bias=0.1, correlation=0.99, max_error=0.02, n_points=100,
+            rmse=0.01,
+            mae=0.01,
+            mbe=0.0,
+            nash_sutcliffe=0.95,
+            percent_bias=0.1,
+            correlation=0.99,
+            max_error=0.02,
+            n_points=100,
         )
         report = HtmlReport()
         content = report.generate_metrics_report(m_excellent)
@@ -652,8 +643,14 @@ class TestHtmlReportExtended:
 
         # Good: NSE >= 0.65
         m_good = ComparisonMetrics(
-            rmse=0.5, mae=0.4, mbe=0.1, nash_sutcliffe=0.75,
-            percent_bias=2.0, correlation=0.9, max_error=1.0, n_points=100,
+            rmse=0.5,
+            mae=0.4,
+            mbe=0.1,
+            nash_sutcliffe=0.75,
+            percent_bias=2.0,
+            correlation=0.9,
+            max_error=1.0,
+            n_points=100,
         )
         content_good = report.generate_metrics_report(m_good)
         assert "GOOD" in content_good
@@ -661,8 +658,14 @@ class TestHtmlReportExtended:
 
         # Fair: NSE >= 0.50
         m_fair = ComparisonMetrics(
-            rmse=1.0, mae=0.8, mbe=0.3, nash_sutcliffe=0.55,
-            percent_bias=5.0, correlation=0.8, max_error=2.0, n_points=100,
+            rmse=1.0,
+            mae=0.8,
+            mbe=0.3,
+            nash_sutcliffe=0.55,
+            percent_bias=5.0,
+            correlation=0.8,
+            max_error=2.0,
+            n_points=100,
         )
         content_fair = report.generate_metrics_report(m_fair)
         assert "FAIR" in content_fair
@@ -670,16 +673,20 @@ class TestHtmlReportExtended:
 
         # Poor: NSE < 0.50
         m_poor = ComparisonMetrics(
-            rmse=5.0, mae=4.0, mbe=2.0, nash_sutcliffe=0.2,
-            percent_bias=20.0, correlation=0.5, max_error=10.0, n_points=100,
+            rmse=5.0,
+            mae=4.0,
+            mbe=2.0,
+            nash_sutcliffe=0.2,
+            percent_bias=20.0,
+            correlation=0.5,
+            max_error=10.0,
+            n_points=100,
         )
         content_poor = report.generate_metrics_report(m_poor)
         assert "POOR" in content_poor
         assert "#d9534f" in content_poor
 
-    def test_html_report_metrics_table_values(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_html_report_metrics_table_values(self, sample_metrics: ComparisonMetrics) -> None:
         """Test HTML metrics report contains all metric values in table."""
         report = HtmlReport()
         content = report.generate_metrics_report(sample_metrics)
@@ -707,36 +714,28 @@ class TestHtmlReportExtended:
 class TestReportGeneratorExtended:
     """Extended tests for ReportGenerator covering metrics and save."""
 
-    def test_generate_metrics_text(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_generate_metrics_text(self, sample_metrics: ComparisonMetrics) -> None:
         """Test generating text metrics report through generator."""
         generator = ReportGenerator()
         content = generator.generate_metrics(sample_metrics, format="text")
         assert isinstance(content, str)
         assert "RMSE" in content
 
-    def test_generate_metrics_json(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_generate_metrics_json(self, sample_metrics: ComparisonMetrics) -> None:
         """Test generating JSON metrics report through generator."""
         generator = ReportGenerator()
         content = generator.generate_metrics(sample_metrics, format="json")
         data = json.loads(content)
         assert "rmse" in data
 
-    def test_generate_metrics_html(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_generate_metrics_html(self, sample_metrics: ComparisonMetrics) -> None:
         """Test generating HTML metrics report through generator."""
         generator = ReportGenerator()
         content = generator.generate_metrics(sample_metrics, format="html")
         assert "<!DOCTYPE html>" in content
         assert "RMSE" in content
 
-    def test_generate_metrics_invalid_format(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_generate_metrics_invalid_format(self, sample_metrics: ComparisonMetrics) -> None:
         """Test error handling for invalid metrics format."""
         generator = ReportGenerator()
         with pytest.raises(ValueError, match="Unknown format"):
@@ -869,9 +868,7 @@ class TestComparisonReportExtended:
         assert "Report With Description" in text
         assert "This is a detailed description of the comparison." in text
 
-    def test_to_text_with_flow_metrics(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_to_text_with_flow_metrics(self, sample_metrics: ComparisonMetrics) -> None:
         """Test to_text includes flow metrics section."""
         report = ComparisonReport(
             title="Flow Report",
@@ -928,9 +925,7 @@ class TestComparisonReportExtended:
         assert data["metadata"]["author"] == "test"
         assert data["metadata"]["version"] == "1.0"
 
-    def test_to_json_with_flow_metrics(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_to_json_with_flow_metrics(self, sample_metrics: ComparisonMetrics) -> None:
         """Test to_json includes flow_metrics section."""
         report = ComparisonReport(
             title="Flow JSON",
@@ -941,9 +936,7 @@ class TestComparisonReportExtended:
         assert "flow_metrics" in data
         assert "rmse" in data["flow_metrics"]
 
-    def test_to_json_with_model_diff(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_to_json_with_model_diff(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test to_json includes model_diff section."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
@@ -976,9 +969,7 @@ class TestComparisonReportExtended:
         html = report.to_html()
         assert "A description for HTML." in html
 
-    def test_to_html_with_flow_metrics(
-        self, sample_metrics: ComparisonMetrics
-    ) -> None:
+    def test_to_html_with_flow_metrics(self, sample_metrics: ComparisonMetrics) -> None:
         """Test to_html includes flow metrics section."""
         report = ComparisonReport(
             title="HTML Flow",
@@ -990,9 +981,7 @@ class TestComparisonReportExtended:
         assert "Nash-Sutcliffe" in html
         assert "Rating" in html
 
-    def test_to_html_with_model_diff(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_to_html_with_model_diff(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test to_html includes model diff section with stats."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)

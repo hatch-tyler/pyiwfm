@@ -20,15 +20,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Literal
-
-import numpy as np
-from numpy.typing import NDArray
 
 import h5py
-
+import numpy as np
 import pandas as pd
-
+from numpy.typing import NDArray
 
 # ZBudget data type codes (from ZBudget_Parameters.f90)
 ZBUDGET_DATA_TYPES = {
@@ -164,14 +160,12 @@ class ZBudgetReader:
             if "FullDataNames" in attrs:
                 names = attrs["FullDataNames"][:]
                 header.data_names = [
-                    n.decode().strip() if isinstance(n, bytes) else str(n).strip()
-                    for n in names
+                    n.decode().strip() if isinstance(n, bytes) else str(n).strip() for n in names
                 ]
             if "DataHDFPaths" in attrs:
                 paths = attrs["DataHDFPaths"][:]
                 header.data_hdf_paths = [
-                    p.decode().strip() if isinstance(p, bytes) else str(p).strip()
-                    for p in paths
+                    p.decode().strip() if isinstance(p, bytes) else str(p).strip() for p in paths
                 ]
 
             # Try to determine n_layers from element data columns
@@ -227,14 +221,14 @@ class ZBudgetReader:
                         for n in zone_names
                     ]
                 else:
-                    zone_names = [f"Zone {i+1}" for i in range(n_zones)]
+                    zone_names = [f"Zone {i + 1}" for i in range(n_zones)]
 
                 # Read zone element assignments
                 for i, name in enumerate(zone_names):
-                    zone_info = ZoneInfo(id=i+1, name=name)
+                    zone_info = ZoneInfo(id=i + 1, name=name)
 
                     # Try to read element list
-                    zone_key = f"Zone_{i+1}"
+                    zone_key = f"Zone_{i + 1}"
                     if zone_key in zone_list:
                         zone_group = zone_list[zone_key]
                         if "Elements" in zone_group:
@@ -350,7 +344,9 @@ class ZBudgetReader:
                 try:
                     data_idx = lower_names.index(data_name.lower())
                 except ValueError:
-                    raise KeyError(f"Data '{data_name}' not found. Available: {self.data_names}")
+                    raise KeyError(
+                        f"Data '{data_name}' not found. Available: {self.data_names}"
+                    ) from None
 
         # Get HDF5 path
         if data_idx < len(self.header.data_hdf_paths):
@@ -451,10 +447,7 @@ class ZBudgetReader:
         if ts.start_datetime:
             start = ts.start_datetime
             delta = timedelta(minutes=ts.delta_t_minutes)
-            times = np.array([
-                (start + i * delta).timestamp()
-                for i in range(n_timesteps)
-            ])
+            times = np.array([(start + i * delta).timestamp() for i in range(n_timesteps)])
         else:
             times = np.arange(n_timesteps, dtype=np.float64)
 
@@ -469,7 +462,7 @@ class ZBudgetReader:
         zone: str | int,
         layer: int = 1,
         data_columns: list[str] | None = None,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Read zone budget data as a pandas DataFrame.
 
@@ -496,13 +489,14 @@ class ZBudgetReader:
 
         # Create datetime index
         ts = self.header
+        index: pd.Index  # type: ignore[type-arg]
         if ts.start_datetime:
             index = pd.to_datetime(times, unit="s")
         else:
             index = pd.Index(times, name="Time")
 
         # Column names
-        col_names = self.data_names[:values.shape[1]]
+        col_names = self.data_names[: values.shape[1]]
 
         df = pd.DataFrame(values, index=index, columns=col_names)
 
@@ -517,7 +511,7 @@ class ZBudgetReader:
         self,
         data_name: str,
         layer: int = 1,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Get data for all zones as a DataFrame.
 
@@ -541,18 +535,19 @@ class ZBudgetReader:
 
         # Create datetime index
         ts = self.header
+        zindex: pd.Index  # type: ignore[type-arg]
         if ts.start_datetime:
-            index = pd.to_datetime(times, unit="s")
+            zindex = pd.to_datetime(times, unit="s")
         else:
-            index = pd.Index(times, name="Time")
+            zindex = pd.Index(times, name="Time")
 
-        return pd.DataFrame(zone_data, index=index)
+        return pd.DataFrame(zone_data, index=zindex)
 
     def get_monthly_averages(
         self,
         zone: str | int,
         layer: int = 1,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Calculate monthly averages for zone budget data.
 
@@ -571,7 +566,8 @@ class ZBudgetReader:
         df = self.get_dataframe(zone, layer)
 
         if isinstance(df.index, pd.DatetimeIndex):
-            return df.resample("MS").mean()
+            result: pd.DataFrame = df.resample("MS").mean()
+            return result
         else:
             return df
 
@@ -579,7 +575,7 @@ class ZBudgetReader:
         self,
         zone: str | int,
         layer: int = 1,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Calculate annual totals for zone budget data.
 
@@ -598,14 +594,16 @@ class ZBudgetReader:
         df = self.get_dataframe(zone, layer)
 
         if isinstance(df.index, pd.DatetimeIndex):
-            return df.resample("YS").sum()
+            annual_result: pd.DataFrame = df.resample("YS").sum()
+            return annual_result
         else:
             n_years = len(df) // 12
             if n_years == 0:
-                return df.sum().to_frame().T
+                total: pd.DataFrame = df.sum().to_frame().T
+                return total
             annual = []
             for i in range(n_years):
-                annual.append(df.iloc[i*12:(i+1)*12].sum())
+                annual.append(df.iloc[i * 12 : (i + 1) * 12].sum())
             return pd.DataFrame(annual)
 
     def get_water_balance(
@@ -614,7 +612,7 @@ class ZBudgetReader:
         layer: int = 1,
         inflow_columns: list[str] | None = None,
         outflow_columns: list[str] | None = None,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Calculate water balance for a zone.
 
@@ -639,12 +637,14 @@ class ZBudgetReader:
         # Auto-detect inflow/outflow columns if not specified
         if inflow_columns is None:
             inflow_columns = [
-                c for c in df.columns
+                c
+                for c in df.columns
                 if any(kw in c.lower() for kw in ["inflow", "recharge", "percolation", "precip"])
             ]
         if outflow_columns is None:
             outflow_columns = [
-                c for c in df.columns
+                c
+                for c in df.columns
                 if any(kw in c.lower() for kw in ["outflow", "pump", "et", "evap", "discharge"])
             ]
 

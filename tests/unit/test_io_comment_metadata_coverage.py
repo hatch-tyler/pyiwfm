@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 
 import pytest
 
@@ -26,7 +26,6 @@ from pyiwfm.io.comment_metadata import (
     PreserveMode,
     SectionComments,
 )
-
 
 # =============================================================================
 # Test from_dict with invalid preserve_mode
@@ -80,7 +79,7 @@ class TestSaveIOError:
         meta = CommentMetadata(source_file="test.in")
         output = tmp_path / "output.json"
 
-        with patch("builtins.open", side_effect=IOError("disk full")):
+        with patch("builtins.open", side_effect=OSError("disk full")):
             with pytest.raises(IOError, match="disk full"):
                 meta.save(output)
 
@@ -92,7 +91,7 @@ class TestSaveIOError:
         assert output.exists()
 
         # Verify contents
-        with open(output, "r", encoding="utf-8") as f:
+        with open(output, encoding="utf-8") as f:
             data = json.load(f)
         assert data["source_file"] == "test.in"
 
@@ -275,7 +274,7 @@ class TestSaveAll:
         assert sidecar_gw.exists()
 
         # Verify content
-        with open(sidecar_pp, "r", encoding="utf-8") as f:
+        with open(sidecar_pp, encoding="utf-8") as f:
             data = json.load(f)
         assert data["source_file"] == "preproc.in"
 

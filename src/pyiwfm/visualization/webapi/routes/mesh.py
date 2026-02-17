@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from pyiwfm.visualization.webapi.config import model_state
+from pyiwfm.visualization.webapi.config import model_state, require_model
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ def get_mesh_json(
     try:
         data = model_state.get_surface_json(layer=layer)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     return SurfaceMeshData(**data)
 
@@ -143,12 +143,9 @@ def get_head_map(
     includes a 'head' property with the average head value at that
     element's nodes for the specified timestep and layer.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model = require_model()
 
-    from pyiwfm.visualization.webapi.config import model_state as ms
-
-    loader = ms.get_head_loader()
+    loader = model_state.get_head_loader()
     if loader is None:
         raise HTTPException(status_code=404, detail="No head data available")
 
@@ -168,15 +165,16 @@ def get_head_map(
 
     head_values = frame[:, layer_idx]
 
-    model = ms.model
     grid = model.grid
+    if grid is None:
+        raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
     # Build node_id -> index mapping
     sorted_node_ids = sorted(grid.nodes.keys())
     node_id_to_idx = {nid: i for i, nid in enumerate(sorted_node_ids)}
 
     # Get the base GeoJSON and add head values
-    geojson = ms.get_mesh_geojson(layer=layer)
+    geojson = model_state.get_mesh_geojson(layer=layer)
 
     features = []
     for feat in geojson["features"]:
@@ -223,11 +221,10 @@ def get_subregions() -> dict:
     element edges that are only shared by elements within the
     same subregion, then assembling them into closed rings.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     grid = model.grid
+    if grid is None:
+        raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
     # Group elements by subregion (skip subregion 0 = unassigned)
     elements_by_sub: dict[int, list[int]] = {}
@@ -342,16 +339,18 @@ def get_subregions() -> dict:
             n_pts = len(coords) - 1
             centroid = [lng_sum / n_pts, lat_sum / n_pts]
 
-            features.append({
-                "type": "Feature",
-                "geometry": {"type": "Polygon", "coordinates": [coords]},
-                "properties": {
-                    "subregion_id": sub_id,
-                    "name": sub_name,
-                    "n_elements": len(elem_ids),
-                    "centroid": centroid,
-                },
-            })
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Polygon", "coordinates": [coords]},
+                    "properties": {
+                        "subregion_id": sub_id,
+                        "name": sub_name,
+                        "n_elements": len(elem_ids),
+                        "centroid": centroid,
+                    },
+                }
+            )
 
     return {"type": "FeatureCollection", "features": features}
 
@@ -367,22 +366,20 @@ def get_property_map(
     Returns a GeoJSON FeatureCollection where each element polygon
     includes a 'value' property with the property value for that element.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
     import numpy as np
 
     from pyiwfm.visualization.webapi.properties import PROPERTY_INFO
     from pyiwfm.visualization.webapi.routes.properties import _compute_property_values
 
+    model = require_model()
+
     values = _compute_property_values(property, layer)
     if values is None:
-        raise HTTPException(
-            status_code=404, detail=f"Property '{property}' not available"
-        )
+        raise HTTPException(status_code=404, detail=f"Property '{property}' not available")
 
-    model = model_state.model
     grid = model.grid
+    if grid is None:
+        raise HTTPException(status_code=404, detail="No mesh/grid loaded")
     n_elements = grid.n_elements
 
     # Extract per-element values for the requested layer
@@ -391,9 +388,7 @@ def get_property_map(
     end = start + n_elements
 
     if end > len(values):
-        raise HTTPException(
-            status_code=400, detail=f"Layer {layer} out of range"
-        )
+        raise HTTPException(status_code=400, detail=f"Layer {layer} out of range")
 
     elem_values = values[start:end]
 
@@ -449,18 +444,15 @@ def get_element_detail(
     Returns subregion, vertices with coordinates, area, per-layer
     aquifer properties, wells in element, and current head values.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     grid = model.grid
+    if grid is None:
+        raise HTTPException(status_code=404, detail="No mesh/grid loaded")
     strat = model.stratigraphy
 
     elem = grid.elements.get(element_id)
     if elem is None:
-        raise HTTPException(
-            status_code=404, detail=f"Element {element_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Element {element_id} not found")
 
     # Subregion info
     sub_info = grid.subregions.get(elem.subregion)
@@ -475,10 +467,15 @@ def get_element_detail(
         node = grid.nodes.get(nid)
         if node:
             lng, lat = model_state.reproject_coords(node.x, node.y)
-            vertices.append({
-                "node_id": nid, "x": node.x, "y": node.y,
-                "lng": lng, "lat": lat,
-            })
+            vertices.append(
+                {
+                    "node_id": nid,
+                    "x": node.x,
+                    "y": node.y,
+                    "lng": lng,
+                    "lat": lat,
+                }
+            )
 
     # Area
     area = elem.area
@@ -542,12 +539,14 @@ def get_element_detail(
     if model.groundwater:
         for well in model.groundwater.iter_wells():
             if well.element == element_id:
-                wells.append({
-                    "id": well.id,
-                    "name": well.name,
-                    "pump_rate": well.pump_rate,
-                    "layers": well.layers,
-                })
+                wells.append(
+                    {
+                        "id": well.id,
+                        "name": well.name,
+                        "pump_rate": well.pump_rate,
+                        "layers": well.layers,
+                    }
+                )
 
     # Head values at element nodes (latest timestep)
     head_at_nodes: dict[int, list[float]] = {}
@@ -558,8 +557,7 @@ def get_element_detail(
             idx = node_id_to_idx.get(nid)
             if idx is not None and idx < frame.shape[0]:
                 head_at_nodes[nid] = [
-                    round(float(frame[idx, lay]), 2)
-                    for lay in range(frame.shape[1])
+                    round(float(frame[idx, lay]), 2) for lay in range(frame.shape[1])
                 ]
 
     # Land use breakdown — use HDF5 area manager for per-column detail
@@ -587,12 +585,14 @@ def get_element_detail(
                             crop_id = i + 1
                             ct = rz.crop_types.get(crop_id)
                             name = ct.name if ct else f"Crop {crop_id}"
-                            categories.append({
-                                "category": "nonponded",
-                                "name": name,
-                                "area": val,
-                                "crop_id": crop_id,
-                            })
+                            categories.append(
+                                {
+                                    "category": "nonponded",
+                                    "name": name,
+                                    "area": val,
+                                    "crop_id": crop_id,
+                                }
+                            )
                             total_area += val
 
                     if "ponded" in breakdown:
@@ -600,56 +600,61 @@ def get_element_detail(
                             crop_id = n_nonponded + i + 1
                             ct = rz.crop_types.get(crop_id)
                             name = ct.name if ct else f"Ponded {i + 1}"
-                            categories.append({
-                                "category": "ponded",
-                                "name": name,
-                                "area": val,
-                                "crop_id": crop_id,
-                            })
+                            categories.append(
+                                {
+                                    "category": "ponded",
+                                    "name": name,
+                                    "area": val,
+                                    "crop_id": crop_id,
+                                }
+                            )
                             total_area += val
 
                     if "urban" in breakdown:
                         urban_total = sum(breakdown["urban"])
-                        categories.append({
-                            "category": "urban",
-                            "name": "Urban",
-                            "area": urban_total,
-                        })
+                        categories.append(
+                            {
+                                "category": "urban",
+                                "name": "Urban",
+                                "area": urban_total,
+                            }
+                        )
                         total_area += urban_total
 
                     if "native" in breakdown:
                         cols = breakdown["native"]
                         if len(cols) >= 1:
-                            categories.append({
-                                "category": "native",
-                                "name": "Native Vegetation",
-                                "area": cols[0],
-                            })
+                            categories.append(
+                                {
+                                    "category": "native",
+                                    "name": "Native Vegetation",
+                                    "area": cols[0],
+                                }
+                            )
                             total_area += cols[0]
                         if len(cols) >= 2:
-                            categories.append({
-                                "category": "native",
-                                "name": "Riparian Vegetation",
-                                "area": cols[1],
-                            })
+                            categories.append(
+                                {
+                                    "category": "native",
+                                    "name": "Riparian Vegetation",
+                                    "area": cols[1],
+                                }
+                            )
                             total_area += cols[1]
 
                     # Also compute aggregated fractions for backward compat
                     ag = sum(
-                        c["area"] for c in categories
-                        if c["category"] in ("nonponded", "ponded")
+                        c["area"] for c in categories if c["category"] in ("nonponded", "ponded")
                     )
-                    urb = sum(
-                        c["area"] for c in categories if c["category"] == "urban"
-                    )
-                    nrv = sum(
-                        c["area"] for c in categories if c["category"] == "native"
-                    )
+                    urb = sum(c["area"] for c in categories if c["category"] == "urban")
+                    nrv = sum(c["area"] for c in categories if c["category"] == "native")
                     land_use = {
                         "fractions": {
                             "agricultural": round(ag / total_area, 4) if total_area > 0 else 0.0,
                             "urban": round(urb / total_area, 4) if total_area > 0 else 0.0,
-                            "native_riparian": round(nrv / total_area, 4) if total_area > 0 else 0.0,
+                            "native_riparian": round(nrv / total_area, 4)
+                            if total_area > 0
+                            else 0.0,
                             "water": 0.0,
                         },
                         "total_area": round(total_area, 2),
@@ -659,7 +664,8 @@ def get_element_detail(
             except Exception as exc:
                 logger.warning(
                     "Failed to get land use breakdown for element %d: %s",
-                    element_id, exc,
+                    element_id,
+                    exc,
                 )
 
     return {
@@ -683,10 +689,10 @@ def get_mesh_nodes(
 
     Returns node IDs and WGS84 coordinates for rendering as a dot layer.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    grid = model_state.model.grid
+    model = require_model()
+    grid = model.grid
+    if grid is None:
+        raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
     nodes: list[dict] = []
     for n in grid.iter_nodes():

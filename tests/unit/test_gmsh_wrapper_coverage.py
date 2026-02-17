@@ -9,11 +9,10 @@ Covers:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch, call
 import sys
+from unittest.mock import MagicMock, patch
 
 import numpy as np
-import pytest
 
 from pyiwfm.mesh_generation.constraints import (
     Boundary,
@@ -207,6 +206,4 @@ class TestMinAngleParameter:
             )
             gen.generate(boundary, min_angle=25.0)
 
-        mock_gmsh.option.setNumber.assert_any_call(
-            "Mesh.AngleToleranceFacetOverlap", 25.0
-        )
+        mock_gmsh.option.setNumber.assert_any_call("Mesh.AngleToleranceFacetOverlap", 25.0)

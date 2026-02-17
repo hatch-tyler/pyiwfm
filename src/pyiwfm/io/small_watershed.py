@@ -21,10 +21,15 @@ from typing import TextIO
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
+)
+from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
+)
+from pyiwfm.io.iwfm_reader import (
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _strip_comment,
 )
 
 
@@ -38,6 +43,7 @@ class WatershedGWNode:
         is_baseflow: Whether this is a baseflow node
         layer: Baseflow layer (if is_baseflow)
     """
+
     gw_node_id: int = 0
     max_perc_rate: float = 0.0
     is_baseflow: bool = False
@@ -54,6 +60,7 @@ class WatershedSpec:
         dest_stream_node: Destination stream node for outflow
         gw_nodes: List of connected groundwater nodes
     """
+
     id: int = 0
     area: float = 0.0
     dest_stream_node: int = 0
@@ -78,6 +85,7 @@ class WatershedRootZoneParams:
         kunsat_method: Unsaturated K method code
         curve_number: SCS curve number
     """
+
     id: int = 0
     precip_col: int = 0
     precip_factor: float = 1.0
@@ -102,6 +110,7 @@ class WatershedInitialCondition:
         soil_moisture: Initial soil moisture fraction (0-1)
         gw_storage: Initial groundwater storage (multiplied by ic_factor)
     """
+
     id: int = 0
     soil_moisture: float = 0.0
     gw_storage: float = 0.0
@@ -118,6 +127,7 @@ class WatershedAquiferParams:
         surface_flow_coeff: Surface flow recession coefficient
         baseflow_coeff: Baseflow recession coefficient
     """
+
     id: int = 0
     gw_threshold: float = 0.0
     max_gw_storage: float = 0.0
@@ -150,6 +160,7 @@ class SmallWatershedMainConfig:
         aq_time_unit: Time unit for recession coefficients
         aquifer_params: Aquifer parameters per watershed
     """
+
     version: str = ""
     budget_output_file: Path | None = None
     final_results_file: Path | None = None
@@ -192,9 +203,7 @@ class SmallWatershedMainReader:
     def __init__(self) -> None:
         self._line_num = 0
 
-    def read(
-        self, filepath: Path | str, base_dir: Path | None = None
-    ) -> SmallWatershedMainConfig:
+    def read(self, filepath: Path | str, base_dir: Path | None = None) -> SmallWatershedMainConfig:
         """Read small watershed main file.
 
         Args:
@@ -211,7 +220,7 @@ class SmallWatershedMainReader:
         config = SmallWatershedMainConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Version header
             config.version = self._read_version(f)
 
@@ -247,9 +256,7 @@ class SmallWatershedMainReader:
 
         return config
 
-    def _read_geospatial_data(
-        self, f: TextIO, config: SmallWatershedMainConfig
-    ) -> None:
+    def _read_geospatial_data(self, f: TextIO, config: SmallWatershedMainConfig) -> None:
         """Read geospatial data for all watersheds."""
         # Area factor
         area_str = _next_data_or_empty(f)
@@ -299,9 +306,7 @@ class SmallWatershedMainReader:
 
             config.watershed_specs.append(spec)
 
-    def _read_rootzone_data(
-        self, f: TextIO, config: SmallWatershedMainConfig
-    ) -> None:
+    def _read_rootzone_data(self, f: TextIO, config: SmallWatershedMainConfig) -> None:
         """Read root zone parameters for all watersheds."""
         # Solver tolerance
         tol_str = _next_data_or_empty(f)
@@ -340,28 +345,38 @@ class SmallWatershedMainReader:
             params = WatershedRootZoneParams()
             try:
                 idx = 0
-                params.id = int(parts[idx]); idx += 1
-                params.precip_col = int(parts[idx]); idx += 1
-                params.precip_factor = float(parts[idx]); idx += 1
-                params.et_col = int(parts[idx]); idx += 1
+                params.id = int(parts[idx])
+                idx += 1
+                params.precip_col = int(parts[idx])
+                idx += 1
+                params.precip_factor = float(parts[idx])
+                idx += 1
+                params.et_col = int(parts[idx])
+                idx += 1
                 if is_v41:
-                    params.crop_coeff_col = int(parts[idx]); idx += 1
-                params.wilting_point = float(parts[idx]); idx += 1
-                params.field_capacity = float(parts[idx]); idx += 1
-                params.total_porosity = float(parts[idx]); idx += 1
-                params.lambda_param = float(parts[idx]); idx += 1
-                params.root_depth = float(parts[idx]) * config.rz_length_factor; idx += 1
-                params.hydraulic_cond = float(parts[idx]) * config.rz_k_factor; idx += 1
-                params.kunsat_method = int(parts[idx]); idx += 1
+                    params.crop_coeff_col = int(parts[idx])
+                    idx += 1
+                params.wilting_point = float(parts[idx])
+                idx += 1
+                params.field_capacity = float(parts[idx])
+                idx += 1
+                params.total_porosity = float(parts[idx])
+                idx += 1
+                params.lambda_param = float(parts[idx])
+                idx += 1
+                params.root_depth = float(parts[idx]) * config.rz_length_factor
+                idx += 1
+                params.hydraulic_cond = float(parts[idx]) * config.rz_k_factor
+                idx += 1
+                params.kunsat_method = int(parts[idx])
+                idx += 1
                 params.curve_number = float(parts[idx]) * config.rz_cn_factor
             except (IndexError, ValueError):
                 pass
 
             config.rootzone_params.append(params)
 
-    def _read_aquifer_data(
-        self, f: TextIO, config: SmallWatershedMainConfig
-    ) -> None:
+    def _read_aquifer_data(self, f: TextIO, config: SmallWatershedMainConfig) -> None:
         """Read aquifer parameters for all watersheds."""
         # GW factor
         gw_str = _next_data_or_empty(f)
@@ -393,9 +408,7 @@ class SmallWatershedMainReader:
 
             config.aquifer_params.append(params)
 
-    def _read_initial_conditions(
-        self, f: TextIO, config: SmallWatershedMainConfig
-    ) -> None:
+    def _read_initial_conditions(self, f: TextIO, config: SmallWatershedMainConfig) -> None:
         """Read initial conditions for all watersheds.
 
         This section is optional — older files may end after the aquifer

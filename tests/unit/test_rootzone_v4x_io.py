@@ -5,49 +5,46 @@ sub-file readers/writers, round-trips, and model loading integration.
 
 from __future__ import annotations
 
-import textwrap
 from pathlib import Path
 
 import pytest
 
+from pyiwfm.components.rootzone import RootZone, SoilParameters
 from pyiwfm.io.rootzone import (
-    RootZoneMainFileReader,
-    RootZoneMainFileConfig,
     ElementSoilParamRow,
+    RootZoneMainFileReader,
+)
+from pyiwfm.io.rootzone import (
     parse_version as _parse_version,
+)
+from pyiwfm.io.rootzone import (
     version_ge as _version_ge,
 )
 from pyiwfm.io.rootzone_v4x import (
-    # Data classes
-    NonPondedCropConfigV4x,
-    PondedCropConfigV4x,
-    UrbanConfigV4x,
-    NativeRiparianConfigV4x,
-    RootDepthRow,
-    ElementCropRow,
     AgInitialConditionRow,
-    UrbanElementRowV4x,
-    UrbanInitialRowV4x,
+    ElementCropRow,
+    NativeRiparianConfigV4x,
     NativeRiparianElementRowV4x,
     NativeRiparianInitialRowV4x,
-    # Readers
-    NonPondedCropReaderV4x,
-    PondedCropReaderV4x,
-    UrbanReaderV4x,
     NativeRiparianReaderV4x,
-    # Writers
-    NonPondedCropWriterV4x,
-    PondedCropWriterV4x,
-    UrbanWriterV4x,
     NativeRiparianWriterV4x,
+    # Data classes
+    NonPondedCropConfigV4x,
+    # Readers
+    NonPondedCropWriterV4x,
+    PondedCropConfigV4x,
+    PondedCropWriterV4x,
+    RootDepthRow,
+    UrbanConfigV4x,
+    UrbanElementRowV4x,
+    UrbanInitialRowV4x,
+    UrbanWriterV4x,
+    read_native_riparian_v4x,
     # Convenience functions
     read_nonponded_v4x,
     read_ponded_v4x,
     read_urban_v4x,
-    read_native_riparian_v4x,
 )
-from pyiwfm.components.rootzone import SoilParameters, RootZone
-
 
 # =====================================================================
 # Version utility tests
@@ -171,9 +168,7 @@ def _write_main_file_v40(path: Path, n_elements: int = 3) -> None:
         "C  IE  WP  FC  TN  Lambda  K  KMethod  iPrecCol  fPrecFac  iGenCol  iDestType  iDest",
     ]
     for i in range(1, n_elements + 1):
-        lines.append(
-            f"   {i}   0.10  0.20  0.45  0.62  2.60  2  {i}  1.0  0  0  0"
-        )
+        lines.append(f"   {i}   0.10  0.20  0.45  0.62  2.60  2  {i}  1.0  0  0  0")
     path.write_text("\n".join(lines) + "\n")
 
 
@@ -211,9 +206,7 @@ def _write_main_file_v411(path: Path, n_elements: int = 3) -> None:
         "C  IE WP FC TN Lambda K KMethod CapRise iPrecCol fPrecFac iGenCol iDestType iDest",
     ]
     for i in range(1, n_elements + 1):
-        lines.append(
-            f"   {i}   0.10  0.20  0.45  0.62  2.60  2  0.0  {i}  1.0  0  0  0"
-        )
+        lines.append(f"   {i}   0.10  0.20  0.45  0.62  2.60  2  0.0  {i}  1.0  0  0  0")
     path.write_text("\n".join(lines) + "\n")
 
 
@@ -451,9 +444,7 @@ def _write_urban_file(path: Path, n_elements: int = 3) -> None:
         "C  Element data",
     ]
     for i in range(1, n_elements + 1):
-        lines.append(
-            f"   {i}   0.6   72.0   {i}   {i}   1.0   {i}   {i}   {i}   {i}"
-        )
+        lines.append(f"   {i}   0.6   72.0   {i}   {i}   1.0   {i}   {i}   {i}   {i}")
     lines.append("C  Initial conditions")
     for i in range(1, n_elements + 1):
         lines.append(f"   {i}   0.5   0.12")

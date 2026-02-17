@@ -3,20 +3,19 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from pyiwfm.comparison.metrics import (
-    rmse,
+    ComparisonMetrics,
+    SpatialComparison,
+    TimeSeriesComparison,
+    correlation_coefficient,
     mae,
+    max_error,
     mbe,
     nash_sutcliffe,
     percent_bias,
-    correlation_coefficient,
     relative_error,
-    max_error,
-    ComparisonMetrics,
-    TimeSeriesComparison,
-    SpatialComparison,
+    rmse,
 )
 
 
@@ -392,9 +391,7 @@ class TestTimeSeriesComparisonExtended:
         observed = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         simulated = np.array([1.1, 2.1, 3.1, 4.1, 5.1])
 
-        comparison = TimeSeriesComparison(
-            times=times, observed=observed, simulated=simulated
-        )
+        comparison = TimeSeriesComparison(times=times, observed=observed, simulated=simulated)
         d = comparison.to_dict()
 
         assert "n_points" in d
@@ -411,9 +408,7 @@ class TestTimeSeriesComparisonExtended:
         observed = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
         simulated = np.array([1.1, 2.1, 3.1, 4.1, 5.1])
 
-        comparison = TimeSeriesComparison(
-            times=times, observed=observed, simulated=simulated
-        )
+        comparison = TimeSeriesComparison(times=times, observed=observed, simulated=simulated)
         m1 = comparison.metrics
         m2 = comparison.metrics
         assert m1 is m2  # Same object (cached)
@@ -429,9 +424,7 @@ class TestSpatialComparisonExtended:
         observed = np.array([10.0, 20.0, 30.0])
         simulated = np.array([11.0, 21.0, 31.0])
 
-        comparison = SpatialComparison(
-            x=x, y=y, observed=observed, simulated=simulated
-        )
+        comparison = SpatialComparison(x=x, y=y, observed=observed, simulated=simulated)
         d = comparison.to_dict()
 
         assert "n_points" in d
@@ -446,9 +439,7 @@ class TestSpatialComparisonExtended:
         observed = np.array([10.0, 20.0])
         simulated = np.array([11.0, 21.0])
 
-        comparison = SpatialComparison(
-            x=x, y=y, observed=observed, simulated=simulated
-        )
+        comparison = SpatialComparison(x=x, y=y, observed=observed, simulated=simulated)
         m1 = comparison.metrics
         m2 = comparison.metrics
         assert m1 is m2  # Same object (cached)

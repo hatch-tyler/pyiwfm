@@ -18,26 +18,25 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.groundwater import (
-    GWFileConfig,
-    GroundwaterWriter,
-    GroundwaterReader,
-    write_groundwater,
-    read_wells,
-    read_initial_heads,
-    _is_comment_line,
-    _strip_comment,
-)
 from pyiwfm.components.groundwater import (
     AppGW,
-    Well,
-    BoundaryCondition,
-    TileDrain,
-    Subsidence,
     AquiferParameters,
+    BoundaryCondition,
+    Subsidence,
+    TileDrain,
+    Well,
 )
 from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.groundwater import (
+    GroundwaterReader,
+    GroundwaterWriter,
+    GWFileConfig,
+    _is_comment_line,
+    _strip_comment,
+    read_initial_heads,
+    read_wells,
+    write_groundwater,
+)
 
 # =============================================================================
 # Test Helper Functions
@@ -150,29 +149,70 @@ class TestGroundwaterWriter:
         gw = AppGW(n_nodes=10, n_layers=2, n_elements=5)
 
         # Add wells
-        gw.add_well(Well(id=1, x=100.0, y=200.0, element=1, name="Well 1",
-                        top_screen=50.0, bottom_screen=10.0, max_pump_rate=100.0))
-        gw.add_well(Well(id=2, x=300.0, y=400.0, element=3, name="Well 2",
-                        top_screen=45.0, bottom_screen=15.0, max_pump_rate=150.0))
+        gw.add_well(
+            Well(
+                id=1,
+                x=100.0,
+                y=200.0,
+                element=1,
+                name="Well 1",
+                top_screen=50.0,
+                bottom_screen=10.0,
+                max_pump_rate=100.0,
+            )
+        )
+        gw.add_well(
+            Well(
+                id=2,
+                x=300.0,
+                y=400.0,
+                element=3,
+                name="Well 2",
+                top_screen=45.0,
+                bottom_screen=15.0,
+                max_pump_rate=150.0,
+            )
+        )
 
         # Add boundary conditions
-        gw.add_boundary_condition(BoundaryCondition(
-            id=1, bc_type="specified_head", nodes=[1, 2], values=[100.0, 95.0], layer=1
-        ))
-        gw.add_boundary_condition(BoundaryCondition(
-            id=2, bc_type="specified_flow", nodes=[9, 10], values=[-50.0, -25.0], layer=2
-        ))
-        gw.add_boundary_condition(BoundaryCondition(
-            id=3, bc_type="general_head", nodes=[5], values=[80.0], layer=1, conductance=[0.01]
-        ))
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=1, bc_type="specified_head", nodes=[1, 2], values=[100.0, 95.0], layer=1
+            )
+        )
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=2, bc_type="specified_flow", nodes=[9, 10], values=[-50.0, -25.0], layer=2
+            )
+        )
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=3, bc_type="general_head", nodes=[5], values=[80.0], layer=1, conductance=[0.01]
+            )
+        )
 
         # Add tile drains
-        gw.add_tile_drain(TileDrain(id=1, element=2, elevation=30.0, conductance=0.005,
-                                    destination_type="stream", destination_id=5))
+        gw.add_tile_drain(
+            TileDrain(
+                id=1,
+                element=2,
+                elevation=30.0,
+                conductance=0.005,
+                destination_type="stream",
+                destination_id=5,
+            )
+        )
 
         # Add subsidence
-        gw.add_subsidence(Subsidence(element=1, layer=1, elastic_storage=1e-5,
-                                     inelastic_storage=1e-4, preconsolidation_head=90.0))
+        gw.add_subsidence(
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-5,
+                inelastic_storage=1e-4,
+                preconsolidation_head=90.0,
+            )
+        )
 
         return gw
 
@@ -207,13 +247,14 @@ class TestGroundwaterWriter:
     def test_write_aquifer_params(self, config: GWFileConfig, basic_gw: AppGW) -> None:
         """Test writing aquifer parameters file."""
         # Add aquifer parameters
+        rng = np.random.default_rng(42)
         params = AquiferParameters(
             n_nodes=10,
             n_layers=2,
-            kh=np.random.rand(10, 2) * 100,
-            kv=np.random.rand(10, 2) * 10,
-            specific_storage=np.random.rand(10, 2) * 1e-5,
-            specific_yield=np.random.rand(10, 2) * 0.3,
+            kh=rng.random((10, 2)) * 100,
+            kv=rng.random((10, 2)) * 10,
+            specific_storage=rng.random((10, 2)) * 1e-5,
+            specific_yield=rng.random((10, 2)) * 0.3,
         )
         basic_gw.aquifer_params = params
 
@@ -226,7 +267,9 @@ class TestGroundwaterWriter:
         assert "NNODES" in content
         assert "NLAYERS" in content
 
-    def test_write_aquifer_params_no_data_raises_error(self, config: GWFileConfig, basic_gw: AppGW) -> None:
+    def test_write_aquifer_params_no_data_raises_error(
+        self, config: GWFileConfig, basic_gw: AppGW
+    ) -> None:
         """Test writing aquifer params without data raises error."""
         basic_gw.aquifer_params = None
         writer = GroundwaterWriter(config)
@@ -273,7 +316,8 @@ class TestGroundwaterWriter:
     def test_write_initial_heads(self, config: GWFileConfig, basic_gw: AppGW) -> None:
         """Test writing initial heads file."""
         # Add heads
-        basic_gw.heads = np.random.rand(10, 2) * 100 + 50
+        rng = np.random.default_rng(42)
+        basic_gw.heads = rng.random((10, 2)) * 100 + 50
 
         writer = GroundwaterWriter(config)
         filepath = writer.write_initial_heads(basic_gw)
@@ -284,7 +328,9 @@ class TestGroundwaterWriter:
         assert "NNODES" in content
         assert "NLAYERS" in content
 
-    def test_write_initial_heads_no_data_raises_error(self, config: GWFileConfig, basic_gw: AppGW) -> None:
+    def test_write_initial_heads_no_data_raises_error(
+        self, config: GWFileConfig, basic_gw: AppGW
+    ) -> None:
         """Test writing heads without data raises error."""
         writer = GroundwaterWriter(config)
 
@@ -294,16 +340,17 @@ class TestGroundwaterWriter:
     def test_write_all(self, config: GWFileConfig, basic_gw: AppGW) -> None:
         """Test writing all files."""
         # Add aquifer params and heads
+        rng = np.random.default_rng(42)
         params = AquiferParameters(
             n_nodes=10,
             n_layers=2,
-            kh=np.random.rand(10, 2) * 100,
-            kv=np.random.rand(10, 2) * 10,
-            specific_storage=np.random.rand(10, 2) * 1e-5,
-            specific_yield=np.random.rand(10, 2) * 0.3,
+            kh=rng.random((10, 2)) * 100,
+            kv=rng.random((10, 2)) * 10,
+            specific_storage=rng.random((10, 2)) * 1e-5,
+            specific_yield=rng.random((10, 2)) * 0.3,
         )
         basic_gw.aquifer_params = params
-        basic_gw.heads = np.random.rand(10, 2) * 100 + 50
+        basic_gw.heads = rng.random((10, 2)) * 100 + 50
 
         writer = GroundwaterWriter(config)
         files = writer.write(basic_gw)
@@ -337,10 +384,7 @@ class TestGroundwaterWriter:
 
         writer = GroundwaterWriter(config)
         filepath = writer.write_pumping_timeseries(
-            config.get_pumping_path(),
-            times,
-            pumping_rates,
-            units="TAF"
+            config.get_pumping_path(), times, pumping_rates, units="TAF"
         )
 
         assert filepath.exists()
@@ -493,10 +537,7 @@ class TestConvenienceFunctions:
 
     def test_write_groundwater_with_config(self, tmp_path: Path) -> None:
         """Test write_groundwater with custom config."""
-        config = GWFileConfig(
-            output_dir=tmp_path,
-            wells_file="custom_wells.dat"
-        )
+        config = GWFileConfig(output_dir=tmp_path, wells_file="custom_wells.dat")
         gw = AppGW(n_nodes=5, n_layers=2, n_elements=3)
         gw.add_well(Well(id=1, x=100.0, y=200.0, element=1))
 
@@ -546,10 +587,30 @@ class TestRoundtrip:
         """Test roundtrip for wells."""
         # Create and write
         gw = AppGW(n_nodes=5, n_layers=2, n_elements=3)
-        gw.add_well(Well(id=1, x=100.5, y=200.7, element=1, name="Alfalfa Well",
-                        top_screen=50.0, bottom_screen=10.0, max_pump_rate=100.0))
-        gw.add_well(Well(id=2, x=300.2, y=400.9, element=2, name="Corn Well",
-                        top_screen=45.0, bottom_screen=15.0, max_pump_rate=150.0))
+        gw.add_well(
+            Well(
+                id=1,
+                x=100.5,
+                y=200.7,
+                element=1,
+                name="Alfalfa Well",
+                top_screen=50.0,
+                bottom_screen=10.0,
+                max_pump_rate=100.0,
+            )
+        )
+        gw.add_well(
+            Well(
+                id=2,
+                x=300.2,
+                y=400.9,
+                element=2,
+                name="Corn Well",
+                top_screen=45.0,
+                bottom_screen=15.0,
+                max_pump_rate=150.0,
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -569,13 +630,15 @@ class TestRoundtrip:
         """Test roundtrip for initial heads."""
         # Create and write
         gw = AppGW(n_nodes=5, n_layers=3, n_elements=3)
-        gw.heads = np.array([
-            [100.0, 95.0, 90.0],
-            [98.0, 93.0, 88.0],
-            [96.0, 91.0, 86.0],
-            [94.0, 89.0, 84.0],
-            [92.0, 87.0, 82.0],
-        ])
+        gw.heads = np.array(
+            [
+                [100.0, 95.0, 90.0],
+                [98.0, 93.0, 88.0],
+                [96.0, 91.0, 86.0],
+                [94.0, 89.0, 84.0],
+                [92.0, 87.0, 82.0],
+            ]
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -616,7 +679,7 @@ class TestEdgeCases:
         """Test with many wells."""
         gw = AppGW(n_nodes=100, n_layers=2, n_elements=50)
         for i in range(100):
-            gw.add_well(Well(id=i+1, x=float(i * 100), y=float(i * 50), element=i % 50 + 1))
+            gw.add_well(Well(id=i + 1, x=float(i * 100), y=float(i * 50), element=i % 50 + 1))
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -660,16 +723,30 @@ class TestEdgeCases:
         """Test writing all BC types."""
         gw = AppGW(n_nodes=20, n_layers=3, n_elements=10)
 
-        gw.add_boundary_condition(BoundaryCondition(
-            id=1, bc_type="specified_head", nodes=[1, 2, 3], values=[100.0, 99.0, 98.0], layer=1
-        ))
-        gw.add_boundary_condition(BoundaryCondition(
-            id=2, bc_type="specified_flow", nodes=[18, 19, 20], values=[-10.0, -12.0, -8.0], layer=2
-        ))
-        gw.add_boundary_condition(BoundaryCondition(
-            id=3, bc_type="general_head", nodes=[10, 11], values=[85.0, 84.0], layer=1,
-            conductance=[0.01, 0.02]
-        ))
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=1, bc_type="specified_head", nodes=[1, 2, 3], values=[100.0, 99.0, 98.0], layer=1
+            )
+        )
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=2,
+                bc_type="specified_flow",
+                nodes=[18, 19, 20],
+                values=[-10.0, -12.0, -8.0],
+                layer=2,
+            )
+        )
+        gw.add_boundary_condition(
+            BoundaryCondition(
+                id=3,
+                bc_type="general_head",
+                nodes=[10, 11],
+                values=[85.0, 84.0],
+                layer=1,
+                conductance=[0.01, 0.02],
+            )
+        )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)

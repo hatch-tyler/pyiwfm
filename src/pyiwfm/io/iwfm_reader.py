@@ -100,9 +100,7 @@ def next_data_line(f: TextIO, line_counter: list[int] | None = None) -> str:
     return ""
 
 
-def next_data_or_empty(
-    f: TextIO, line_counter: list[int] | None = None
-) -> str:
+def next_data_or_empty(f: TextIO, line_counter: list[int] | None = None) -> str:
     """Read next non-comment data value, or ``""`` at EOF.
 
     Like :func:`next_data_value` but returns ``""`` instead of raising
@@ -134,7 +132,11 @@ def parse_int(value: str, context: str = "", line_number: int | None = None) -> 
     try:
         return int(value)
     except (ValueError, TypeError) as exc:
-        msg = f"Expected integer for {context}, got {value!r}" if context else f"Expected integer, got {value!r}"
+        msg = (
+            f"Expected integer for {context}, got {value!r}"
+            if context
+            else f"Expected integer, got {value!r}"
+        )
         raise FileFormatError(msg, line_number=line_number) from exc
 
 
@@ -153,7 +155,11 @@ def parse_float(value: str, context: str = "", line_number: int | None = None) -
     try:
         return float(value)
     except (ValueError, TypeError) as exc:
-        msg = f"Expected number for {context}, got {value!r}" if context else f"Expected number, got {value!r}"
+        msg = (
+            f"Expected number for {context}, got {value!r}"
+            if context
+            else f"Expected number, got {value!r}"
+        )
         raise FileFormatError(msg, line_number=line_number) from exc
 
 
@@ -233,9 +239,7 @@ class LineBuffer:
             value, _ = strip_inline_comment(line)
             if value:
                 return value
-        raise FileFormatError(
-            "Unexpected end of file", line_number=self._pos
-        )
+        raise FileFormatError("Unexpected end of file", line_number=self._pos)
 
     def next_data_or_empty(self) -> str:
         """Return next data value, or ``""`` at EOF.

@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -23,50 +23,50 @@ class IWFMParameterType(Enum):
     """
 
     # Aquifer parameters (by layer, zone, or pilot point)
-    HORIZONTAL_K = "hk"           # Horizontal hydraulic conductivity [L/T]
-    VERTICAL_K = "vk"             # Vertical hydraulic conductivity [L/T]
-    SPECIFIC_STORAGE = "ss"       # Specific storage [1/L]
-    SPECIFIC_YIELD = "sy"         # Specific yield [-]
-    POROSITY = "por"              # Porosity [-]
+    HORIZONTAL_K = "hk"  # Horizontal hydraulic conductivity [L/T]
+    VERTICAL_K = "vk"  # Vertical hydraulic conductivity [L/T]
+    SPECIFIC_STORAGE = "ss"  # Specific storage [1/L]
+    SPECIFIC_YIELD = "sy"  # Specific yield [-]
+    POROSITY = "por"  # Porosity [-]
 
     # Stream parameters
-    STREAMBED_K = "strk"          # Streambed hydraulic conductivity [L/T]
+    STREAMBED_K = "strk"  # Streambed hydraulic conductivity [L/T]
     STREAMBED_THICKNESS = "strt"  # Streambed thickness [L]
-    STREAM_WIDTH = "strw"         # Stream width factor [-]
-    MANNING_N = "mann"            # Manning's roughness coefficient [-]
+    STREAM_WIDTH = "strw"  # Stream width factor [-]
+    MANNING_N = "mann"  # Manning's roughness coefficient [-]
 
     # Lake parameters
-    LAKEBED_K = "lakk"            # Lakebed hydraulic conductivity [L/T]
-    LAKEBED_THICKNESS = "lakt"    # Lakebed thickness [L]
+    LAKEBED_K = "lakk"  # Lakebed hydraulic conductivity [L/T]
+    LAKEBED_THICKNESS = "lakt"  # Lakebed thickness [L]
 
     # Root zone parameters
-    CROP_COEFFICIENT = "kc"       # Crop coefficient multiplier [-]
+    CROP_COEFFICIENT = "kc"  # Crop coefficient multiplier [-]
     IRRIGATION_EFFICIENCY = "ie"  # Irrigation efficiency [-]
-    ROOT_DEPTH = "rd"             # Root depth factor [-]
-    FIELD_CAPACITY = "fc"         # Field capacity [-]
-    WILTING_POINT = "wp"          # Wilting point [-]
-    SOIL_AWC = "awc"              # Available water capacity [-]
+    ROOT_DEPTH = "rd"  # Root depth factor [-]
+    FIELD_CAPACITY = "fc"  # Field capacity [-]
+    WILTING_POINT = "wp"  # Wilting point [-]
+    SOIL_AWC = "awc"  # Available water capacity [-]
 
     # Flux multipliers (applied to time series inputs)
-    PUMPING_MULT = "pump"         # Pumping rate multiplier [-]
-    RECHARGE_MULT = "rech"        # Recharge rate multiplier [-]
-    DIVERSION_MULT = "div"        # Diversion rate multiplier [-]
-    BYPASS_MULT = "byp"           # Bypass flow multiplier [-]
-    PRECIP_MULT = "ppt"           # Precipitation multiplier [-]
-    ET_MULT = "et"                # ET multiplier [-]
-    STREAM_INFLOW_MULT = "infl"   # Stream inflow multiplier [-]
-    RETURN_FLOW_MULT = "rtf"      # Return flow multiplier [-]
+    PUMPING_MULT = "pump"  # Pumping rate multiplier [-]
+    RECHARGE_MULT = "rech"  # Recharge rate multiplier [-]
+    DIVERSION_MULT = "div"  # Diversion rate multiplier [-]
+    BYPASS_MULT = "byp"  # Bypass flow multiplier [-]
+    PRECIP_MULT = "ppt"  # Precipitation multiplier [-]
+    ET_MULT = "et"  # ET multiplier [-]
+    STREAM_INFLOW_MULT = "infl"  # Stream inflow multiplier [-]
+    RETURN_FLOW_MULT = "rtf"  # Return flow multiplier [-]
 
     # Boundary conditions
-    GHB_CONDUCTANCE = "ghbc"      # General head boundary conductance [L2/T]
-    GHB_HEAD = "ghbh"             # General head boundary head [L]
-    SPECIFIED_HEAD = "chd"        # Specified head boundary [L]
-    SPECIFIED_FLOW = "wel"        # Specified flow boundary [L3/T]
+    GHB_CONDUCTANCE = "ghbc"  # General head boundary conductance [L2/T]
+    GHB_HEAD = "ghbh"  # General head boundary head [L]
+    SPECIFIED_HEAD = "chd"  # Specified head boundary [L]
+    SPECIFIED_FLOW = "wel"  # Specified flow boundary [L3/T]
 
     # Subsidence parameters
-    ELASTIC_STORAGE = "ske"       # Elastic skeletal storage [1/L]
-    INELASTIC_STORAGE = "skv"     # Inelastic skeletal storage [1/L]
-    PRECONSOLIDATION = "pcs"      # Preconsolidation stress [L]
+    ELASTIC_STORAGE = "ske"  # Elastic skeletal storage [1/L]
+    INELASTIC_STORAGE = "skv"  # Inelastic skeletal storage [1/L]
+    PRECONSOLIDATION = "pcs"  # Preconsolidation stress [L]
 
     @property
     def default_bounds(self) -> tuple[float, float]:
@@ -119,10 +119,14 @@ class IWFMParameterType(Enum):
         """Get default transform based on parameter type."""
         # Log transform for parameters spanning orders of magnitude
         log_params = {
-            self.HORIZONTAL_K, self.VERTICAL_K,
-            self.SPECIFIC_STORAGE, self.STREAMBED_K,
-            self.LAKEBED_K, self.GHB_CONDUCTANCE,
-            self.ELASTIC_STORAGE, self.INELASTIC_STORAGE,
+            self.HORIZONTAL_K,
+            self.VERTICAL_K,
+            self.SPECIFIC_STORAGE,
+            self.STREAMBED_K,
+            self.LAKEBED_K,
+            self.GHB_CONDUCTANCE,
+            self.ELASTIC_STORAGE,
+            self.INELASTIC_STORAGE,
         }
         if self in log_params:
             return "log"
@@ -131,18 +135,16 @@ class IWFMParameterType(Enum):
     @property
     def is_multiplier(self) -> bool:
         """Check if this parameter type is a multiplier."""
-        return self.value in {
-            "pump", "rech", "div", "byp", "ppt", "et", "infl", "rtf"
-        }
+        return self.value in {"pump", "rech", "div", "byp", "ppt", "et", "infl", "rtf"}
 
 
 class ParameterTransform(Enum):
     """Parameter transformation types for PEST++."""
 
-    NONE = "none"       # No transformation
-    LOG = "log"         # Log10 transformation
-    FIXED = "fixed"     # Fixed (not adjusted)
-    TIED = "tied"       # Tied to another parameter
+    NONE = "none"  # No transformation
+    LOG = "log"  # Log10 transformation
+    FIXED = "fixed"  # Fixed (not adjusted)
+    TIED = "tied"  # Tied to another parameter
 
 
 @dataclass
@@ -266,8 +268,7 @@ class Parameter:
             if not self.lower_bound <= self.initial_value <= self.upper_bound:
                 # Clip to bounds with warning
                 self.initial_value = max(
-                    self.lower_bound,
-                    min(self.upper_bound, self.initial_value)
+                    self.lower_bound, min(self.upper_bound, self.initial_value)
                 )
 
         # Convert string transform to enum
@@ -302,7 +303,6 @@ class Parameter:
 
     def to_pest_line(self) -> str:
         """Format as PEST control file parameter data line."""
-        partied = self.tied_to if self.tied_to else self.name
         return (
             f"{self.name:20s} {self.partrans:10s} {self.tied_ratio:8.4f} "
             f"{self.parval1:15.7e} {self.parlbnd:15.7e} {self.parubnd:15.7e} "
@@ -348,6 +348,18 @@ class ParameterizationStrategy:
 
         if self.group_name is None:
             self.group_name = self.param_type.value
+
+    @property
+    def _bounds(self) -> tuple[float, float]:
+        """Get bounds (always non-None after __post_init__)."""
+        assert self.bounds is not None
+        return self.bounds
+
+    @property
+    def _group(self) -> str:
+        """Get group_name (always non-None after __post_init__)."""
+        assert self.group_name is not None
+        return self.group_name
 
     def generate_parameters(self, model: Any) -> list[Parameter]:
         """Generate parameters for this strategy.
@@ -395,23 +407,26 @@ class ZoneParameterization(ParameterizationStrategy):
 
     def _get_zone_ids(self, model: Any) -> list[int]:
         """Get zone IDs from model or specification."""
-        if self.zones == "subregions":
-            # Get subregion IDs from model
-            if hasattr(model, 'grid') and hasattr(model.grid, 'subregions'):
-                return sorted(model.grid.subregions.keys())
-            elif hasattr(model, 'subregions'):
-                return sorted(model.subregions.keys())
+        if isinstance(self.zones, str):
+            if self.zones == "subregions":
+                # Get subregion IDs from model
+                if hasattr(model, "grid") and hasattr(model.grid, "subregions"):
+                    return sorted(model.grid.subregions.keys())
+                elif hasattr(model, "subregions"):
+                    return sorted(model.subregions.keys())
+                else:
+                    raise ValueError("Model does not have subregion information")
+            elif self.zones == "all":
+                # Same as subregions
+                return self._get_zone_ids_subregions(model)
             else:
-                raise ValueError("Model does not have subregion information")
-        elif isinstance(self.zones, str) and self.zones == "all":
-            # Same as subregions
-            return self._get_zone_ids_subregions(model)
+                raise ValueError(f"Unknown zone specification: {self.zones}")
         else:
             return list(self.zones)
 
     def _get_zone_ids_subregions(self, model: Any) -> list[int]:
         """Get subregion IDs from model."""
-        if hasattr(model, 'grid') and hasattr(model.grid, 'subregions'):
+        if hasattr(model, "grid") and hasattr(model.grid, "subregions"):
             return sorted(model.grid.subregions.keys())
         return []
 
@@ -456,9 +471,9 @@ class ZoneParameterization(ParameterizationStrategy):
             param = Parameter(
                 name=name,
                 initial_value=initial,
-                lower_bound=self.bounds[0],
-                upper_bound=self.bounds[1],
-                group=self.group_name,
+                lower_bound=self._bounds[0],
+                upper_bound=self._bounds[1],
+                group=self._group,
                 transform=self.transform,
                 param_type=self.param_type,
                 layer=self.layer,
@@ -503,8 +518,7 @@ class MultiplierParameterization(ParameterizationStrategy):
         valid_spatial = {"global", "zone", "element"}
         if self.spatial_extent not in valid_spatial:
             raise ValueError(
-                f"Invalid spatial_extent '{self.spatial_extent}'. "
-                f"Must be one of: {valid_spatial}"
+                f"Invalid spatial_extent '{self.spatial_extent}'. Must be one of: {valid_spatial}"
             )
 
         valid_temporal = {"constant", "seasonal", "monthly", "annual"}
@@ -554,9 +568,9 @@ class MultiplierParameterization(ParameterizationStrategy):
                 param = Parameter(
                     name=name,
                     initial_value=self.initial_value,
-                    lower_bound=self.bounds[0],
-                    upper_bound=self.bounds[1],
-                    group=self.group_name,
+                    lower_bound=self._bounds[0],
+                    upper_bound=self._bounds[1],
+                    group=self._group,
                     transform=self.transform,
                     param_type=self.param_type,
                     metadata={"spatial": "global", "temporal": self.temporal_extent},
@@ -568,7 +582,7 @@ class MultiplierParameterization(ParameterizationStrategy):
             zone_ids = self.zones
             if zone_ids is None:
                 # Get from model
-                if hasattr(model, 'grid') and hasattr(model.grid, 'subregions'):
+                if hasattr(model, "grid") and hasattr(model.grid, "subregions"):
                     zone_ids = sorted(model.grid.subregions.keys())
                 else:
                     zone_ids = [1]  # Default single zone
@@ -579,9 +593,9 @@ class MultiplierParameterization(ParameterizationStrategy):
                     param = Parameter(
                         name=name,
                         initial_value=self.initial_value,
-                        lower_bound=self.bounds[0],
-                        upper_bound=self.bounds[1],
-                        group=self.group_name,
+                        lower_bound=self._bounds[0],
+                        upper_bound=self._bounds[1],
+                        group=self._group,
                         transform=self.transform,
                         param_type=self.param_type,
                         zone=zone_id,
@@ -592,9 +606,9 @@ class MultiplierParameterization(ParameterizationStrategy):
         elif self.spatial_extent == "element":
             # One multiplier per element (highly parameterized)
             n_elements = 1
-            if hasattr(model, 'grid'):
+            if hasattr(model, "grid"):
                 n_elements = model.grid.n_elements
-            elif hasattr(model, 'n_elements'):
+            elif hasattr(model, "n_elements"):
                 n_elements = model.n_elements
 
             for elem_id in range(1, n_elements + 1):
@@ -603,9 +617,9 @@ class MultiplierParameterization(ParameterizationStrategy):
                     param = Parameter(
                         name=name,
                         initial_value=self.initial_value,
-                        lower_bound=self.bounds[0],
-                        upper_bound=self.bounds[1],
-                        group=self.group_name,
+                        lower_bound=self._bounds[0],
+                        upper_bound=self._bounds[1],
+                        group=self._group,
                         transform=self.transform,
                         param_type=self.param_type,
                         metadata={
@@ -663,9 +677,7 @@ class PilotPointParameterization(ParameterizationStrategy):
         super().__post_init__()
 
         if self.points is None and self.spacing is None:
-            raise ValueError(
-                "Must specify either 'points' or 'spacing' for pilot points"
-            )
+            raise ValueError("Must specify either 'points' or 'spacing' for pilot points")
 
     def generate_pilot_point_grid(
         self,
@@ -690,11 +702,11 @@ class PilotPointParameterization(ParameterizationStrategy):
             raise ValueError("Spacing must be set to generate grid")
 
         # Get model extent
-        if hasattr(model, 'grid'):
+        if hasattr(model, "grid"):
             grid = model.grid
             x_coords = grid.node_coordinates[:, 0]
             y_coords = grid.node_coordinates[:, 1]
-        elif hasattr(model, 'node_coordinates'):
+        elif hasattr(model, "node_coordinates"):
             x_coords = model.node_coordinates[:, 0]
             y_coords = model.node_coordinates[:, 1]
         else:
@@ -719,9 +731,11 @@ class PilotPointParameterization(ParameterizationStrategy):
         if isinstance(self.initial_value, np.ndarray):
             if index < len(self.initial_value):
                 return float(self.initial_value[index])
-        return float(self.initial_value) if not isinstance(
-            self.initial_value, np.ndarray
-        ) else float(self.initial_value[0])
+        return (
+            float(self.initial_value)
+            if not isinstance(self.initial_value, np.ndarray)
+            else float(self.initial_value[0])
+        )
 
     def generate_parameters(self, model: Any) -> list[Parameter]:
         """Generate pilot point parameters.
@@ -746,14 +760,14 @@ class PilotPointParameterization(ParameterizationStrategy):
         for i, (x, y) in enumerate(points):
             initial = self._get_initial_value(i)
 
-            name = f"{self.param_type.value}_pp{i+1:04d}_l{self.layer}"
+            name = f"{self.param_type.value}_pp{i + 1:04d}_l{self.layer}"
 
             param = Parameter(
                 name=name,
                 initial_value=initial,
-                lower_bound=self.bounds[0],
-                upper_bound=self.bounds[1],
-                group=self.group_name,
+                lower_bound=self._bounds[0],
+                upper_bound=self._bounds[1],
+                group=self._group,
                 transform=self.transform,
                 param_type=self.param_type,
                 layer=self.layer,
@@ -816,9 +830,9 @@ class DirectParameterization(ParameterizationStrategy):
         param = Parameter(
             name=self.name,
             initial_value=self.initial_value,
-            lower_bound=self.bounds[0],
-            upper_bound=self.bounds[1],
-            group=self.group_name,
+            lower_bound=self._bounds[0],
+            upper_bound=self._bounds[1],
+            group=self._group,
             transform=self.transform,
             param_type=self.param_type,
             layer=self.layer,
@@ -849,10 +863,10 @@ class StreamParameterization(ParameterizationStrategy):
 
     def _get_reach_ids(self, model: Any) -> list[int]:
         """Get reach IDs from model or specification."""
-        if self.reaches == "all":
-            if hasattr(model, 'streams') and hasattr(model.streams, 'reaches'):
+        if isinstance(self.reaches, str):
+            if hasattr(model, "streams") and hasattr(model.streams, "reaches"):
                 return sorted(model.streams.reaches.keys())
-            elif hasattr(model, 'reach_ids'):
+            elif hasattr(model, "reach_ids"):
                 return sorted(model.reach_ids)
             else:
                 return [1]  # Default
@@ -887,9 +901,9 @@ class StreamParameterization(ParameterizationStrategy):
             param = Parameter(
                 name=name,
                 initial_value=initial,
-                lower_bound=self.bounds[0],
-                upper_bound=self.bounds[1],
-                group=self.group_name,
+                lower_bound=self._bounds[0],
+                upper_bound=self._bounds[1],
+                group=self._group,
                 transform=self.transform,
                 param_type=self.param_type,
                 metadata={"reach_id": reach_id},
@@ -925,7 +939,7 @@ class RootZoneParameterization(ParameterizationStrategy):
             return [(cid, f"crop{cid}") for cid in self.crop_ids]
 
         if self.land_use_types == "all":
-            if hasattr(model, 'rootzone') and hasattr(model.rootzone, 'crop_types'):
+            if hasattr(model, "rootzone") and hasattr(model.rootzone, "crop_types"):
                 return list(model.rootzone.crop_types.items())
             else:
                 # Default land use types
@@ -968,9 +982,9 @@ class RootZoneParameterization(ParameterizationStrategy):
             param = Parameter(
                 name=name,
                 initial_value=initial,
-                lower_bound=self.bounds[0],
-                upper_bound=self.bounds[1],
-                group=self.group_name,
+                lower_bound=self._bounds[0],
+                upper_bound=self._bounds[1],
+                group=self._group,
                 transform=self.transform,
                 param_type=self.param_type,
                 metadata={"crop_id": crop_id, "land_use_type": lu_name},

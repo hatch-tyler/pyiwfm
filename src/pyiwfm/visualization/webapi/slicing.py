@@ -10,7 +10,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from numpy.typing import NDArray
 
 if TYPE_CHECKING:
     import pyvista as pv
@@ -43,11 +42,11 @@ class SlicingController:
     >>> slice_z = slicer.slice_z(position=-50.0)
     """
 
-    def __init__(self, mesh: "pv.UnstructuredGrid") -> None:
+    def __init__(self, mesh: pv.UnstructuredGrid) -> None:
         """Initialize the slicing controller."""
         self.mesh = mesh
         self._bounds = mesh.bounds
-        self._cache: dict[str, "pv.PolyData"] = {}
+        self._cache: dict[str, pv.PolyData] = {}
         self._max_cache_size = 50
 
     @property
@@ -92,7 +91,7 @@ class SlicingController:
             return f"cs_{start}_{end}"
         return ""
 
-    def _add_to_cache(self, key: str, slice_mesh: "pv.PolyData") -> None:
+    def _add_to_cache(self, key: str, slice_mesh: pv.PolyData) -> None:
         """Add a slice to the cache, evicting old entries if needed."""
         if len(self._cache) >= self._max_cache_size:
             # Remove oldest entry (first key)
@@ -100,7 +99,7 @@ class SlicingController:
             del self._cache[oldest]
         self._cache[key] = slice_mesh
 
-    def slice_x(self, position: float) -> "pv.PolyData":
+    def slice_x(self, position: float) -> pv.PolyData:
         """
         Create a slice perpendicular to the X axis (YZ plane).
 
@@ -132,9 +131,9 @@ class SlicingController:
         )
 
         self._add_to_cache(cache_key, slice_mesh)
-        return slice_mesh
+        return slice_mesh  # type: ignore[no-any-return]
 
-    def slice_y(self, position: float) -> "pv.PolyData":
+    def slice_y(self, position: float) -> pv.PolyData:
         """
         Create a slice perpendicular to the Y axis (XZ plane).
 
@@ -166,9 +165,9 @@ class SlicingController:
         )
 
         self._add_to_cache(cache_key, slice_mesh)
-        return slice_mesh
+        return slice_mesh  # type: ignore[no-any-return]
 
-    def slice_z(self, position: float) -> "pv.PolyData":
+    def slice_z(self, position: float) -> pv.PolyData:
         """
         Create a horizontal slice at a specific elevation (XY plane).
 
@@ -201,13 +200,13 @@ class SlicingController:
         )
 
         self._add_to_cache(cache_key, slice_mesh)
-        return slice_mesh
+        return slice_mesh  # type: ignore[no-any-return]
 
     def slice_arbitrary(
         self,
         normal: tuple[float, float, float],
         origin: tuple[float, float, float] | None = None,
-    ) -> "pv.PolyData":
+    ) -> pv.PolyData:
         """
         Create a slice along an arbitrary plane.
 
@@ -251,14 +250,14 @@ class SlicingController:
         slice_mesh = self.mesh.slice(normal=normal, origin=origin)
 
         self._add_to_cache(cache_key, slice_mesh)
-        return slice_mesh
+        return slice_mesh  # type: ignore[no-any-return]
 
     def create_cross_section(
         self,
         start: tuple[float, float],
         end: tuple[float, float],
         n_samples: int = 100,
-    ) -> "pv.PolyData":
+    ) -> pv.PolyData:
         """
         Create a vertical cross-section between two map points.
 
@@ -327,13 +326,13 @@ class SlicingController:
         )
 
         self._add_to_cache(cache_key, slice_mesh)
-        return slice_mesh
+        return slice_mesh  # type: ignore[no-any-return]
 
     def slice_along_polyline(
         self,
         points: list[tuple[float, float]],
         resolution: int = 100,
-    ) -> "pv.PolyData":
+    ) -> pv.PolyData:
         """
         Create a vertical cross-section along a polyline path.
 
@@ -382,7 +381,7 @@ class SlicingController:
         self,
         bounds: tuple[float, float, float, float, float, float] | None = None,
         invert: bool = False,
-    ) -> "pv.UnstructuredGrid":
+    ) -> pv.UnstructuredGrid:
         """
         Extract a box region from the mesh.
 
@@ -418,13 +417,13 @@ class SlicingController:
                 zmax - dz,
             )
 
-        return self.mesh.clip_box(bounds=bounds, invert=invert)
+        return self.mesh.clip_box(bounds=bounds, invert=invert)  # type: ignore[no-any-return]
 
     def slice_multiple_z(
         self,
         positions: list[float] | None = None,
         n_slices: int = 5,
-    ) -> list["pv.PolyData"]:
+    ) -> list[pv.PolyData]:
         """
         Create multiple horizontal slices at specified elevations.
 
@@ -454,7 +453,7 @@ class SlicingController:
 
         return [self.slice_z(pos) for pos in positions]
 
-    def get_slice_properties(self, slice_mesh: "pv.PolyData") -> dict:
+    def get_slice_properties(self, slice_mesh: pv.PolyData) -> dict:
         """
         Get properties of a slice result.
 
@@ -506,16 +505,17 @@ class SlicingController:
             World-space origin point for a slice at the given position.
         """
         bounds = self._bounds
-        center = np.array([
-            (bounds[0] + bounds[1]) / 2,
-            (bounds[2] + bounds[3]) / 2,
-            (bounds[4] + bounds[5]) / 2,
-        ])
+        center = np.array(
+            [
+                (bounds[0] + bounds[1]) / 2,
+                (bounds[2] + bounds[3]) / 2,
+                (bounds[4] + bounds[5]) / 2,
+            ]
+        )
         # All eight corners of the bounding box
-        corners = np.array([
-            [bounds[i], bounds[j], bounds[k]]
-            for i in (0, 1) for j in (2, 3) for k in (4, 5)
-        ])
+        corners = np.array(
+            [[bounds[i], bounds[j], bounds[k]] for i in (0, 1) for j in (2, 3) for k in (4, 5)]
+        )
         normal_arr = np.array(normal, dtype=float)
         norm_len = np.linalg.norm(normal_arr)
         if norm_len < 1e-10:

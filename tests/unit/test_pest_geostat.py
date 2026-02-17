@@ -7,13 +7,13 @@ import numpy as np
 import pytest
 
 from pyiwfm.runner.pest_geostat import (
-    VariogramType,
-    Variogram,
-    GeostatManager,
-    compute_empirical_variogram,
     HAS_SCIPY,
+    GeostatManager,
+    Variogram,
+    VariogramType,
+    compute_empirical_variogram,
 )
-from pyiwfm.runner.pest_params import Parameter, IWFMParameterType
+from pyiwfm.runner.pest_params import IWFMParameterType, Parameter
 
 
 class TestVariogramType:
@@ -337,9 +337,9 @@ class TestCovarianceMatrix:
         """Test covariance matrix is symmetric."""
         gm = GeostatManager()
         v = Variogram("spherical", a=500, sill=1.0)
-        np.random.seed(42)
-        x = np.random.rand(10) * 1000
-        y = np.random.rand(10) * 1000
+        rng = np.random.default_rng(42)
+        x = rng.random(10) * 1000
+        y = rng.random(10) * 1000
 
         cov = gm.compute_covariance_matrix(x, y, v)
         np.testing.assert_array_almost_equal(cov, cov.T)
@@ -402,11 +402,7 @@ class TestKriging:
         target_x = np.array([500])
         target_y = np.array([0])
 
-        result = gm.krige(
-            pp_x, pp_y, pp_values,
-            target_x, target_y, v,
-            kriging_type="simple"
-        )
+        result = gm.krige(pp_x, pp_y, pp_values, target_x, target_y, v, kriging_type="simple")
         assert len(result) == 1
         # Should be between the two values
         assert 1.0 <= result[0] <= 2.0
@@ -424,9 +420,7 @@ class TestKriging:
         target_y = np.array([0])
 
         result, variance = gm.krige(
-            pp_x, pp_y, pp_values,
-            target_x, target_y, v,
-            return_variance=True
+            pp_x, pp_y, pp_values, target_x, target_y, v, return_variance=True
         )
         assert len(result) == 1
         assert len(variance) == 1
@@ -526,9 +520,7 @@ class TestRealizations:
         x = np.linspace(0, 1000, 20)
         y = np.zeros(20)
 
-        reals = gm.generate_realizations(
-            x, y, v, n_realizations=100, mean=5.0, seed=42
-        )
+        reals = gm.generate_realizations(x, y, v, n_realizations=100, mean=5.0, seed=42)
         # Mean of all realizations should be close to specified mean
         assert np.mean(reals) == pytest.approx(5.0, abs=0.5)
 
@@ -556,12 +548,18 @@ class TestPriorEnsemble:
 
         params = [
             Parameter(
-                name="p1", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=1e-4, lower_bound=1e-6, upper_bound=1e-2,
+                name="p1",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=1e-4,
+                lower_bound=1e-6,
+                upper_bound=1e-2,
             ),
             Parameter(
-                name="p2", param_type=IWFMParameterType.VERTICAL_K,
-                initial_value=1e-5, lower_bound=1e-7, upper_bound=1e-3,
+                name="p2",
+                param_type=IWFMParameterType.VERTICAL_K,
+                initial_value=1e-5,
+                lower_bound=1e-7,
+                upper_bound=1e-3,
             ),
         ]
 
@@ -574,8 +572,11 @@ class TestPriorEnsemble:
 
         params = [
             Parameter(
-                name="p1", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=0.5, lower_bound=0.1, upper_bound=0.9,
+                name="p1",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=0.5,
+                lower_bound=0.1,
+                upper_bound=0.9,
             ),
         ]
 
@@ -590,25 +591,32 @@ class TestPriorEnsemble:
 
         params = [
             Parameter(
-                name="pp1", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=1e-4, lower_bound=1e-6, upper_bound=1e-2,
+                name="pp1",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=1e-4,
+                lower_bound=1e-6,
+                upper_bound=1e-2,
                 location=(0, 0),
             ),
             Parameter(
-                name="pp2", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=1e-4, lower_bound=1e-6, upper_bound=1e-2,
+                name="pp2",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=1e-4,
+                lower_bound=1e-6,
+                upper_bound=1e-2,
                 location=(100, 0),
             ),
             Parameter(
-                name="pp3", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=1e-4, lower_bound=1e-6, upper_bound=1e-2,
+                name="pp3",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=1e-4,
+                lower_bound=1e-6,
+                upper_bound=1e-2,
                 location=(50, 50),
             ),
         ]
 
-        ensemble = gm.generate_prior_ensemble(
-            params, n_realizations=20, variogram=v, seed=42
-        )
+        ensemble = gm.generate_prior_ensemble(params, n_realizations=20, variogram=v, seed=42)
         assert ensemble.shape == (20, 3)
 
     def test_prior_ensemble_lhs(self):
@@ -617,14 +625,15 @@ class TestPriorEnsemble:
 
         params = [
             Parameter(
-                name="p1", param_type=IWFMParameterType.PUMPING_MULT,
-                initial_value=1.0, lower_bound=0.5, upper_bound=1.5,
+                name="p1",
+                param_type=IWFMParameterType.PUMPING_MULT,
+                initial_value=1.0,
+                lower_bound=0.5,
+                upper_bound=1.5,
             ),
         ]
 
-        ensemble = gm.generate_prior_ensemble(
-            params, n_realizations=100, method="lhs", seed=42
-        )
+        ensemble = gm.generate_prior_ensemble(params, n_realizations=100, method="lhs", seed=42)
         assert ensemble.shape == (100, 1)
         # LHS should cover the range reasonably well
         assert np.min(ensemble) < 0.6
@@ -650,8 +659,8 @@ class TestLatinHypercube:
     def test_lhs_coverage(self):
         """Test LHS covers the range."""
         gm = GeostatManager()
-        np.random.seed(42)
-        samples = gm._latin_hypercube(100, 1).flatten()
+        rng = np.random.default_rng(42)
+        samples = gm._latin_hypercube(100, 1, rng=rng).flatten()
         # Check that samples cover different strata
         hist, _ = np.histogram(samples, bins=10)
         # Each bin should have approximately 10 samples
@@ -677,9 +686,7 @@ class TestWriteKrigingFactors:
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "factors.dat"
             result = gm.write_kriging_factors(
-                pp_x, pp_y, pp_names,
-                target_x, target_y, target_ids,
-                v, filepath, format="pest"
+                pp_x, pp_y, pp_names, target_x, target_y, target_ids, v, filepath, format="pest"
             )
 
             assert result.exists()
@@ -702,9 +709,7 @@ class TestWriteKrigingFactors:
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "factors.csv"
             result = gm.write_kriging_factors(
-                pp_x, pp_y, pp_names,
-                target_x, target_y, target_ids,
-                v, filepath, format="csv"
+                pp_x, pp_y, pp_names, target_x, target_y, target_ids, v, filepath, format="csv"
             )
 
             assert result.exists()
@@ -738,10 +743,7 @@ class TestWriteStructureFile:
     def test_write_structure_file_anisotropic(self):
         """Test writing structure file with anisotropy."""
         gm = GeostatManager()
-        v = Variogram(
-            "spherical", a=500, sill=1.0,
-            anisotropy_ratio=2.0, anisotropy_angle=45
-        )
+        v = Variogram("spherical", a=500, sill=1.0, anisotropy_ratio=2.0, anisotropy_angle=45)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "structure.dat"
@@ -758,7 +760,6 @@ class TestEmpiricalVariogram:
     def test_basic_computation(self):
         """Test basic empirical variogram computation."""
         # Create simple test data
-        np.random.seed(42)
         x = np.arange(10) * 100.0
         y = np.zeros(10)
         values = np.linspace(1, 3, 10)
@@ -772,14 +773,12 @@ class TestEmpiricalVariogram:
 
     def test_with_max_lag(self):
         """Test empirical variogram with max lag."""
-        np.random.seed(42)
-        x = np.random.rand(20) * 1000
-        y = np.random.rand(20) * 1000
-        values = np.random.rand(20)
+        rng = np.random.default_rng(42)
+        x = rng.random(20) * 1000
+        y = rng.random(20) * 1000
+        values = rng.random(20)
 
-        lags, gamma, counts = compute_empirical_variogram(
-            x, y, values, n_lags=10, max_lag=500
-        )
+        lags, gamma, counts = compute_empirical_variogram(x, y, values, n_lags=10, max_lag=500)
 
         assert lags[-1] < 500
         assert len(lags) == 10
@@ -792,12 +791,12 @@ class TestVariogramFitting:
     def test_fit_from_data(self):
         """Test fitting variogram from data."""
         # Generate spatially correlated data
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
         n = 50
-        x = np.random.rand(n) * 1000
-        y = np.random.rand(n) * 1000
+        x = rng.random(n) * 1000
+        y = rng.random(n) * 1000
         # Simple spatial pattern
-        values = x / 1000 + 0.1 * np.random.randn(n)
+        values = x / 1000 + 0.1 * rng.standard_normal(n)
 
         v = Variogram.from_data(x, y, values, variogram_type="exponential")
 
@@ -808,11 +807,11 @@ class TestVariogramFitting:
 
     def test_fit_different_types(self):
         """Test fitting different variogram types."""
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
         n = 30
-        x = np.random.rand(n) * 500
-        y = np.random.rand(n) * 500
-        values = np.random.rand(n)
+        x = rng.random(n) * 500
+        y = rng.random(n) * 500
+        values = rng.random(n)
 
         for vtype in ["spherical", "exponential", "gaussian"]:
             v = Variogram.from_data(x, y, values, variogram_type=vtype)
@@ -920,6 +919,7 @@ class TestDistanceMatrixNoScipy:
     def test_manual_distance_computation(self):
         """Simulate fallback path for compute_distance_matrix."""
         import pyiwfm.runner.pest_geostat as gmod
+
         orig = gmod.HAS_SCIPY
         try:
             gmod.HAS_SCIPY = False
@@ -939,6 +939,7 @@ class TestEmpiricalVariogramNoScipy:
     def test_empirical_variogram_no_scipy(self):
         """Test empirical variogram fallback distance computation."""
         import pyiwfm.runner.pest_geostat as gmod
+
         orig = gmod.HAS_SCIPY
         try:
             gmod.HAS_SCIPY = False
@@ -957,11 +958,11 @@ class TestVariogramFittingEdgeCases:
 
     def test_fit_with_explicit_max_lag(self):
         """Test fitting with an explicit max_lag parameter."""
-        np.random.seed(99)
+        rng = np.random.default_rng(99)
         n = 30
-        x = np.random.rand(n) * 500
-        y = np.random.rand(n) * 500
-        values = x / 500 + 0.05 * np.random.randn(n)
+        x = rng.random(n) * 500
+        y = rng.random(n) * 500
+        values = x / 500 + 0.05 * rng.standard_normal(n)
         v = Variogram.from_data(x, y, values, variogram_type="exponential", max_lag=200.0)
         assert v.a > 0
         assert v.sill > 0
@@ -969,11 +970,12 @@ class TestVariogramFittingEdgeCases:
     def test_fit_fallback_on_curve_fit_failure(self):
         """Test from_data fallback when curve_fit raises RuntimeError."""
         from unittest.mock import patch
-        np.random.seed(42)
+
+        rng = np.random.default_rng(42)
         n = 20
-        x = np.random.rand(n) * 100
-        y = np.random.rand(n) * 100
-        values = np.random.rand(n)
+        x = rng.random(n) * 100
+        y = rng.random(n) * 100
+        values = rng.random(n)
 
         with patch("pyiwfm.runner.pest_geostat.curve_fit", side_effect=RuntimeError("fail")):
             v = Variogram.from_data(x, y, values, variogram_type="exponential")
@@ -985,13 +987,12 @@ class TestVariogramFittingEdgeCases:
     def test_from_data_no_scipy_raises(self):
         """Test from_data raises ImportError when scipy is missing."""
         import pyiwfm.runner.pest_geostat as gmod
+
         orig = gmod.HAS_SCIPY
         try:
             gmod.HAS_SCIPY = False
             with pytest.raises(ImportError, match="scipy required"):
-                Variogram.from_data(
-                    np.array([0.0]), np.array([0.0]), np.array([1.0])
-                )
+                Variogram.from_data(np.array([0.0]), np.array([0.0]), np.array([1.0]))
         finally:
             gmod.HAS_SCIPY = orig
 
@@ -1011,8 +1012,14 @@ class TestKrigingEdgeCases:
         target_y = np.array([0.0])
 
         result, variance = gm.krige(
-            pp_x, pp_y, pp_values, target_x, target_y, v,
-            kriging_type="simple", return_variance=True,
+            pp_x,
+            pp_y,
+            pp_values,
+            target_x,
+            target_y,
+            v,
+            kriging_type="simple",
+            return_variance=True,
         )
         assert len(result) == 1
         assert len(variance) == 1
@@ -1021,6 +1028,7 @@ class TestKrigingEdgeCases:
     def test_ordinary_kriging_singular_matrix(self):
         """Test ordinary kriging handles singular covariance matrix."""
         from unittest.mock import patch
+
         from scipy import linalg
 
         gm = GeostatManager()
@@ -1047,6 +1055,7 @@ class TestKrigingEdgeCases:
     def test_simple_kriging_singular_matrix(self):
         """Test simple kriging handles singular covariance matrix."""
         from unittest.mock import patch
+
         from scipy import linalg
 
         gm = GeostatManager()
@@ -1068,7 +1077,12 @@ class TestKrigingEdgeCases:
 
         with patch("pyiwfm.runner.pest_geostat.linalg.inv", side_effect=flaky_inv):
             result = gm.krige(
-                pp_x, pp_y, pp_values, target_x, target_y, v,
+                pp_x,
+                pp_y,
+                pp_values,
+                target_x,
+                target_y,
+                v,
                 kriging_type="simple",
             )
             assert len(result) == 1
@@ -1076,6 +1090,7 @@ class TestKrigingEdgeCases:
     def test_krige_no_scipy_raises(self):
         """Test krige raises ImportError when scipy is missing."""
         import pyiwfm.runner.pest_geostat as gmod
+
         orig = gmod.HAS_SCIPY
         try:
             gmod.HAS_SCIPY = False
@@ -1083,8 +1098,12 @@ class TestKrigingEdgeCases:
             v = Variogram("exponential", a=1000, sill=1.0)
             with pytest.raises(ImportError, match="scipy required"):
                 gm.krige(
-                    np.array([0.0]), np.array([0.0]), np.array([1.0]),
-                    np.array([1.0]), np.array([0.0]), v,
+                    np.array([0.0]),
+                    np.array([0.0]),
+                    np.array([1.0]),
+                    np.array([1.0]),
+                    np.array([0.0]),
+                    v,
                 )
         finally:
             gmod.HAS_SCIPY = orig
@@ -1111,6 +1130,7 @@ class TestKrigingFactorsEdgeCases:
     def test_factors_ordinary_singular_matrix(self):
         """Test ordinary kriging factors with singular matrix."""
         from unittest.mock import patch
+
         from scipy import linalg
 
         gm = GeostatManager()
@@ -1138,6 +1158,7 @@ class TestKrigingFactorsEdgeCases:
     def test_factors_simple_singular_matrix(self):
         """Test simple kriging factors with singular matrix."""
         from unittest.mock import patch
+
         from scipy import linalg
 
         gm = GeostatManager()
@@ -1165,6 +1186,7 @@ class TestKrigingFactorsEdgeCases:
     def test_kriging_factors_no_scipy_raises(self):
         """Test compute_kriging_factors raises ImportError without scipy."""
         import pyiwfm.runner.pest_geostat as gmod
+
         orig = gmod.HAS_SCIPY
         try:
             gmod.HAS_SCIPY = False
@@ -1172,8 +1194,11 @@ class TestKrigingFactorsEdgeCases:
             v = Variogram("exponential", a=1000, sill=1.0)
             with pytest.raises(ImportError, match="scipy required"):
                 gm.compute_kriging_factors(
-                    np.array([0.0]), np.array([0.0]),
-                    np.array([1.0]), np.array([0.0]), v,
+                    np.array([0.0]),
+                    np.array([0.0]),
+                    np.array([1.0]),
+                    np.array([0.0]),
+                    v,
                 )
         finally:
             gmod.HAS_SCIPY = orig
@@ -1186,6 +1211,7 @@ class TestRealizationsEdgeCases:
     def test_realizations_cholesky_fallback(self):
         """Test eigendecomposition fallback when Cholesky fails."""
         from unittest.mock import patch
+
         from scipy import linalg
 
         gm = GeostatManager()
@@ -1212,7 +1238,11 @@ class TestRealizationsEdgeCases:
         cond_values = np.array([5.0, 10.0])
 
         reals = gm.generate_realizations(
-            x, y, v, n_realizations=3, mean=7.0,
+            x,
+            y,
+            v,
+            n_realizations=3,
+            mean=7.0,
             conditioning_data=(cond_x, cond_y, cond_values),
             seed=42,
         )
@@ -1221,6 +1251,7 @@ class TestRealizationsEdgeCases:
     def test_realizations_no_scipy_raises(self):
         """Test generate_realizations raises ImportError without scipy."""
         import pyiwfm.runner.pest_geostat as gmod
+
         orig = gmod.HAS_SCIPY
         try:
             gmod.HAS_SCIPY = False
@@ -1228,7 +1259,10 @@ class TestRealizationsEdgeCases:
             v = Variogram("exponential", a=500, sill=1.0)
             with pytest.raises(ImportError, match="scipy required"):
                 gm.generate_realizations(
-                    np.array([0.0]), np.array([0.0]), v, n_realizations=1,
+                    np.array([0.0]),
+                    np.array([0.0]),
+                    v,
+                    n_realizations=1,
                 )
         finally:
             gmod.HAS_SCIPY = orig
@@ -1245,18 +1279,29 @@ class TestPriorEnsembleEdgeCases:
 
         params = [
             Parameter(
-                name="pp1", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=1e-3, lower_bound=1e-6, upper_bound=1e-1,
-                location=(0, 0), transform="log",
+                name="pp1",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=1e-3,
+                lower_bound=1e-6,
+                upper_bound=1e-1,
+                location=(0, 0),
+                transform="log",
             ),
             Parameter(
-                name="pp2", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=1e-3, lower_bound=1e-6, upper_bound=1e-1,
-                location=(100, 0), transform="log",
+                name="pp2",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=1e-3,
+                lower_bound=1e-6,
+                upper_bound=1e-1,
+                location=(100, 0),
+                transform="log",
             ),
         ]
         ensemble = gm.generate_prior_ensemble(
-            params, n_realizations=10, variogram=v, seed=42,
+            params,
+            n_realizations=10,
+            variogram=v,
+            seed=42,
         )
         assert ensemble.shape == (10, 2)
         # Values should be clipped to bounds
@@ -1268,13 +1313,19 @@ class TestPriorEnsembleEdgeCases:
         gm = GeostatManager()
         params = [
             Parameter(
-                name="p1", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=1.0, lower_bound=0.01, upper_bound=100.0,
+                name="p1",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=1.0,
+                lower_bound=0.01,
+                upper_bound=100.0,
                 transform="log",
             ),
         ]
         ensemble = gm.generate_prior_ensemble(
-            params, n_realizations=50, seed=42, method="lhs",
+            params,
+            n_realizations=50,
+            seed=42,
+            method="lhs",
         )
         assert ensemble.shape == (50, 1)
         assert np.all(ensemble >= 0.01)
@@ -1285,16 +1336,25 @@ class TestPriorEnsembleEdgeCases:
         gm = GeostatManager()
         params = [
             Parameter(
-                name="p1", param_type=IWFMParameterType.PUMPING_MULT,
-                initial_value=1.0, lower_bound=0.5, upper_bound=1.5,
+                name="p1",
+                param_type=IWFMParameterType.PUMPING_MULT,
+                initial_value=1.0,
+                lower_bound=0.5,
+                upper_bound=1.5,
             ),
             Parameter(
-                name="p2", param_type=IWFMParameterType.RECHARGE_MULT,
-                initial_value=1.0, lower_bound=0.5, upper_bound=1.5,
+                name="p2",
+                param_type=IWFMParameterType.RECHARGE_MULT,
+                initial_value=1.0,
+                lower_bound=0.5,
+                upper_bound=1.5,
             ),
         ]
         ensemble = gm.generate_prior_ensemble(
-            params, n_realizations=50, seed=42, method="uniform",
+            params,
+            n_realizations=50,
+            seed=42,
+            method="uniform",
         )
         assert ensemble.shape == (50, 2)
         assert np.all(ensemble >= 0.5)
@@ -1305,14 +1365,20 @@ class TestPriorEnsembleEdgeCases:
         gm = GeostatManager()
         params = [
             Parameter(
-                name="pp1", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=1.0, lower_bound=0.1, upper_bound=10.0,
+                name="pp1",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=1.0,
+                lower_bound=0.1,
+                upper_bound=10.0,
                 location=(0, 0),
             ),
         ]
         # No variogram => spatial params are not generated with correlation
         ensemble = gm.generate_prior_ensemble(
-            params, n_realizations=10, variogram=None, seed=42,
+            params,
+            n_realizations=10,
+            variogram=None,
+            seed=42,
         )
         assert ensemble.shape == (10, 1)
 
@@ -1322,17 +1388,26 @@ class TestPriorEnsembleEdgeCases:
         v = Variogram("exponential", a=500, sill=0.5)
         params = [
             Parameter(
-                name="pp1", param_type=IWFMParameterType.HORIZONTAL_K,
-                initial_value=1.0, lower_bound=0.1, upper_bound=10.0,
+                name="pp1",
+                param_type=IWFMParameterType.HORIZONTAL_K,
+                initial_value=1.0,
+                lower_bound=0.1,
+                upper_bound=10.0,
                 location=(0, 0),
             ),
             Parameter(
-                name="mult1", param_type=IWFMParameterType.PUMPING_MULT,
-                initial_value=1.0, lower_bound=0.5, upper_bound=1.5,
+                name="mult1",
+                param_type=IWFMParameterType.PUMPING_MULT,
+                initial_value=1.0,
+                lower_bound=0.5,
+                upper_bound=1.5,
             ),
         ]
         ensemble = gm.generate_prior_ensemble(
-            params, n_realizations=20, variogram=v, seed=42,
+            params,
+            n_realizations=20,
+            variogram=v,
+            seed=42,
         )
         assert ensemble.shape == (20, 2)
 

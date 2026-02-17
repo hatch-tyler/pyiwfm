@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 
 pv = pytest.importorskip("pyvista", reason="PyVista not available")
 
-from pyiwfm.visualization.webapi.slicing import SlicingController
-
+from pyiwfm.visualization.webapi.slicing import SlicingController  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -96,7 +94,7 @@ class TestAxisSlices:
     def test_slice_x(self) -> None:
         mesh = _make_mock_mesh()
         slicer = SlicingController(mesh)
-        result = slicer.slice_x(500.0)
+        slicer.slice_x(500.0)
         mesh.slice.assert_called_once()
         call_kwargs = mesh.slice.call_args[1]
         assert call_kwargs["normal"] == (1, 0, 0)
@@ -104,7 +102,7 @@ class TestAxisSlices:
     def test_slice_y(self) -> None:
         mesh = _make_mock_mesh()
         slicer = SlicingController(mesh)
-        result = slicer.slice_y(1000.0)
+        slicer.slice_y(1000.0)
         mesh.slice.assert_called_once()
         call_kwargs = mesh.slice.call_args[1]
         assert call_kwargs["normal"] == (0, 1, 0)
@@ -112,7 +110,7 @@ class TestAxisSlices:
     def test_slice_z(self) -> None:
         mesh = _make_mock_mesh()
         slicer = SlicingController(mesh)
-        result = slicer.slice_z(-50.0)
+        slicer.slice_z(-50.0)
         mesh.slice.assert_called_once()
         call_kwargs = mesh.slice.call_args[1]
         assert call_kwargs["normal"] == (0, 0, 1)

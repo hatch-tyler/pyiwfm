@@ -10,9 +10,9 @@ import pytest
 # Skip all tests if vtk is not available
 vtk = pytest.importorskip("vtk")
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.visualization.vtk_export import VTKExporter
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.core.stratigraphy import Stratigraphy  # noqa: E402
+from pyiwfm.visualization.vtk_export import VTKExporter  # noqa: E402
 
 
 @pytest.fixture
@@ -46,14 +46,18 @@ def simple_stratigraphy() -> Stratigraphy:
     n_nodes = 9
     n_layers = 2
     gs_elev = np.full(n_nodes, 100.0)
-    top_elev = np.column_stack([
-        np.full(n_nodes, 100.0),
-        np.full(n_nodes, 50.0),
-    ])
-    bottom_elev = np.column_stack([
-        np.full(n_nodes, 50.0),
-        np.full(n_nodes, 0.0),
-    ])
+    top_elev = np.column_stack(
+        [
+            np.full(n_nodes, 100.0),
+            np.full(n_nodes, 50.0),
+        ]
+    )
+    bottom_elev = np.column_stack(
+        [
+            np.full(n_nodes, 50.0),
+            np.full(n_nodes, 0.0),
+        ]
+    )
     active_node = np.ones((n_nodes, n_layers), dtype=bool)
     return Stratigraphy(
         n_layers=n_layers,
@@ -84,9 +88,7 @@ class TestVTKExporter:
         assert vtk_grid.GetNumberOfPoints() == 9
         assert vtk_grid.GetNumberOfCells() == 4
 
-    def test_create_3d_mesh(
-        self, simple_grid: AppGrid, simple_stratigraphy: Stratigraphy
-    ) -> None:
+    def test_create_3d_mesh(self, simple_grid: AppGrid, simple_stratigraphy: Stratigraphy) -> None:
         """Test creating 3D VTK mesh."""
         exporter = VTKExporter(grid=simple_grid, stratigraphy=simple_stratigraphy)
         vtk_grid = exporter.create_3d_mesh()
@@ -125,9 +127,7 @@ class TestVTKExporter:
         assert scalars is not None
         assert scalars.GetNumberOfTuples() == 4
 
-    def test_export_vtu(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_export_vtu(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test exporting to VTU format."""
         exporter = VTKExporter(grid=simple_grid)
 
@@ -150,9 +150,7 @@ class TestVTKExporter:
 
         assert output_file.exists()
 
-    def test_export_with_scalars(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_export_with_scalars(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test exporting with scalar data."""
         exporter = VTKExporter(grid=simple_grid)
 
@@ -168,9 +166,7 @@ class TestVTKExporter:
 
         assert output_file.exists()
 
-    def test_export_vtk_legacy(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_export_vtk_legacy(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test exporting to legacy VTK format."""
         exporter = VTKExporter(grid=simple_grid)
 

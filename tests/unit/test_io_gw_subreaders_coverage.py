@@ -12,47 +12,48 @@ from pathlib import Path
 
 import pytest
 
-from pyiwfm.io.gw_pumping import (
-    PumpingReader,
-    PumpingConfig,
-    WellSpec,
-    WellPumpingSpec,
-    ElementPumpingSpec,
-    ElementGroup,
-    read_gw_pumping,
-    _is_comment_line,
-    _strip_comment,
-    DIST_USER_FRAC,
-    DIST_TOTAL_AREA,
-    DIST_AG_URB_AREA,
-    DIST_AG_AREA,
-    DIST_URB_AREA,
-    DEST_SAME_ELEMENT,
-    DEST_OUTSIDE,
-    DEST_ELEMENT,
-    DEST_SUBREGION,
-    DEST_ELEM_GROUP,
-)
 from pyiwfm.io.gw_boundary import (
-    GWBoundaryReader,
+    ConstrainedGeneralHeadBC,
+    GeneralHeadBC,
     GWBoundaryConfig,
+    GWBoundaryReader,
     SpecifiedFlowBC,
     SpecifiedHeadBC,
-    GeneralHeadBC,
-    ConstrainedGeneralHeadBC,
-    read_gw_boundary,
+)
+from pyiwfm.io.gw_pumping import (
+    DEST_ELEM_GROUP,
+    DEST_ELEMENT,
+    DEST_OUTSIDE,
+    DEST_SAME_ELEMENT,
+    DEST_SUBREGION,
+    DIST_AG_AREA,
+    DIST_AG_URB_AREA,
+    DIST_TOTAL_AREA,
+    DIST_URB_AREA,
+    DIST_USER_FRAC,
+    ElementGroup,
+    ElementPumpingSpec,
+    PumpingConfig,
+    PumpingReader,
+    WellPumpingSpec,
+    WellSpec,
+    read_gw_pumping,
 )
 from pyiwfm.io.gw_tiledrain import (
-    TileDrainReader,
-    TileDrainConfig,
-    TileDrainSpec,
-    SubIrrigationSpec,
-    read_gw_tiledrain,
     TD_DEST_OUTSIDE,
     TD_DEST_STREAM,
+    SubIrrigationSpec,
+    TileDrainConfig,
+    TileDrainReader,
+    TileDrainSpec,
+    read_gw_tiledrain,
 )
-from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.iwfm_reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
+    strip_inline_comment as _strip_comment,
+)
 
 # =============================================================================
 # Helper function tests (gw_pumping module)
@@ -303,11 +304,11 @@ class TestPumpingReaderExtended:
         config = PumpingReader().read(filepath)
 
         ws = config.well_specs[0]
-        assert ws.x == pytest.approx(200.0)      # 100 * 2.0
-        assert ws.y == pytest.approx(400.0)      # 200 * 2.0
-        assert ws.radius == pytest.approx(9.0)   # (6.0 / 2) * 3.0
-        assert ws.perf_top == pytest.approx(-40.0)    # -10 * 4.0
-        assert ws.perf_bottom == pytest.approx(-200.0) # -50 * 4.0
+        assert ws.x == pytest.approx(200.0)  # 100 * 2.0
+        assert ws.y == pytest.approx(400.0)  # 200 * 2.0
+        assert ws.radius == pytest.approx(9.0)  # (6.0 / 2) * 3.0
+        assert ws.perf_top == pytest.approx(-40.0)  # -10 * 4.0
+        assert ws.perf_bottom == pytest.approx(-200.0)  # -50 * 4.0
 
     def test_resolve_absolute_path(self, tmp_path: Path) -> None:
         """Absolute paths should not be resolved relative to base_dir."""
@@ -326,9 +327,7 @@ class TestPumpingReaderExtended:
 
     def test_read_well_file_zero_wells(self, tmp_path: Path) -> None:
         """Well file with zero wells should produce empty config."""
-        well_content = (
-            "    0                              / NWell\n"
-        )
+        well_content = "    0                              / NWell\n"
         self._write_file(tmp_path, "wells.dat", well_content)
 
         main_content = (
@@ -345,9 +344,7 @@ class TestPumpingReaderExtended:
 
     def test_elem_pump_zero_sinks(self, tmp_path: Path) -> None:
         """Element pump file with zero sinks should produce empty config."""
-        elem_content = (
-            "    0                              / NSink\n"
-        )
+        elem_content = "    0                              / NSink\n"
         self._write_file(tmp_path, "elempump.dat", elem_content)
 
         main_content = (
@@ -527,9 +524,7 @@ class TestGWBoundaryReaderExtended:
 
     def test_zero_count_subfile_returns_empty(self, tmp_path: Path) -> None:
         """Sub-file with zero count should return empty list."""
-        sf_content = (
-            "    0                              / NQB\n"
-        )
+        sf_content = "    0                              / NQB\n"
         self._write_file(tmp_path, "sf_bc.dat", sf_content)
 
         main_content = (
@@ -606,7 +601,7 @@ class TestTileDrainReaderExtended:
         config = TileDrainReader().read(filepath)
 
         si = config.sub_irrigations[0]
-        assert si.elevation == pytest.approx(20.0)   # 10.0 * 2.0
+        assert si.elevation == pytest.approx(20.0)  # 10.0 * 2.0
         assert si.conductance == pytest.approx(1.5)  # 0.5 * 3.0
 
     def test_tiledrain_config_defaults(self) -> None:

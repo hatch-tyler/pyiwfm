@@ -6,15 +6,15 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from pyiwfm.core.timeseries import TimeSeries
 
-
 # ---------------------------------------------------------------------------
 # Strategies
 # ---------------------------------------------------------------------------
+
 
 @st.composite
 def timeseries_strategy(draw: st.DrawFn) -> TimeSeries:
@@ -23,21 +23,29 @@ def timeseries_strategy(draw: st.DrawFn) -> TimeSeries:
     start = datetime(2000, 1, 1)
 
     # Generate sorted time offsets (in days)
-    offsets = sorted(draw(st.lists(
-        st.integers(min_value=0, max_value=36500),
-        min_size=n,
-        max_size=n,
-        unique=True,
-    )))
+    offsets = sorted(
+        draw(
+            st.lists(
+                st.integers(min_value=0, max_value=36500),
+                min_size=n,
+                max_size=n,
+                unique=True,
+            )
+        )
+    )
     times = [start + timedelta(days=d) for d in offsets]
     np_times = np.array(times, dtype="datetime64[s]")
 
     values = np.array(
-        [draw(st.floats(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False))
-         for _ in range(n)]
+        [
+            draw(st.floats(min_value=-1e6, max_value=1e6, allow_nan=False, allow_infinity=False))
+            for _ in range(n)
+        ]
     )
 
-    name = draw(st.text(min_size=1, max_size=20, alphabet=st.characters(whitelist_categories=("L",))))
+    name = draw(
+        st.text(min_size=1, max_size=20, alphabet=st.characters(whitelist_categories=("L",)))
+    )
 
     return TimeSeries(times=np_times, values=values, name=name)
 

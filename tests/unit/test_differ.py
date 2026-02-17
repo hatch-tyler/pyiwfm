@@ -5,16 +5,16 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.comparison.differ import (
-    ModelDiffer,
     DiffItem,
     DiffType,
     MeshDiff,
-    StratigraphyDiff,
     ModelDiff,
+    ModelDiffer,
+    StratigraphyDiff,
 )
+from pyiwfm.core.mesh import AppGrid, Element, Node
+from pyiwfm.core.stratigraphy import Stratigraphy
 
 
 @pytest.fixture
@@ -75,14 +75,18 @@ def simple_stratigraphy() -> Stratigraphy:
     n_nodes = 9
     n_layers = 2
     gs_elev = np.full(n_nodes, 100.0)
-    top_elev = np.column_stack([
-        np.full(n_nodes, 100.0),
-        np.full(n_nodes, 50.0),
-    ])
-    bottom_elev = np.column_stack([
-        np.full(n_nodes, 50.0),
-        np.full(n_nodes, 0.0),
-    ])
+    top_elev = np.column_stack(
+        [
+            np.full(n_nodes, 100.0),
+            np.full(n_nodes, 50.0),
+        ]
+    )
+    bottom_elev = np.column_stack(
+        [
+            np.full(n_nodes, 50.0),
+            np.full(n_nodes, 0.0),
+        ]
+    )
     active_node = np.ones((n_nodes, n_layers), dtype=bool)
     return Stratigraphy(
         n_layers=n_layers,
@@ -101,14 +105,18 @@ def modified_stratigraphy() -> Stratigraphy:
     n_layers = 2
     gs_elev = np.full(n_nodes, 100.0)
     gs_elev[4] = 105.0  # Modified elevation at node 5
-    top_elev = np.column_stack([
-        np.full(n_nodes, 100.0),
-        np.full(n_nodes, 55.0),  # Modified layer boundary
-    ])
-    bottom_elev = np.column_stack([
-        np.full(n_nodes, 55.0),
-        np.full(n_nodes, 0.0),
-    ])
+    top_elev = np.column_stack(
+        [
+            np.full(n_nodes, 100.0),
+            np.full(n_nodes, 55.0),  # Modified layer boundary
+        ]
+    )
+    bottom_elev = np.column_stack(
+        [
+            np.full(n_nodes, 55.0),
+            np.full(n_nodes, 0.0),
+        ]
+    )
     active_node = np.ones((n_nodes, n_layers), dtype=bool)
     active_node[0, 1] = False  # Deactivated node
     return Stratigraphy(
@@ -167,54 +175,40 @@ class TestMeshDiff:
         assert diff.is_identical
         assert len(diff.items) == 0
 
-    def test_different_node_count(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_different_node_count(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test detecting different node counts."""
         diff = MeshDiff.compare(simple_grid, modified_grid)
         assert not diff.is_identical
         assert diff.nodes_added == 1
 
-    def test_modified_node_coordinates(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_modified_node_coordinates(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test detecting modified node coordinates."""
         diff = MeshDiff.compare(simple_grid, modified_grid)
         modified_items = [
-            item for item in diff.items
+            item
+            for item in diff.items
             if item.diff_type == DiffType.MODIFIED and "nodes.5" in item.path
         ]
         assert len(modified_items) > 0
 
-    def test_added_elements(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_added_elements(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test detecting added elements."""
         diff = MeshDiff.compare(simple_grid, modified_grid)
         assert diff.elements_added == 1
 
-    def test_modified_element_subregion(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_modified_element_subregion(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test detecting modified element subregion."""
         diff = MeshDiff.compare(simple_grid, modified_grid)
-        subregion_items = [
-            item for item in diff.items
-            if "subregion" in item.path
-        ]
+        subregion_items = [item for item in diff.items if "subregion" in item.path]
         assert len(subregion_items) > 0
 
 
 class TestStratigraphyDiff:
     """Tests for stratigraphy comparison."""
 
-    def test_identical_stratigraphy(
-        self, simple_stratigraphy: Stratigraphy
-    ) -> None:
+    def test_identical_stratigraphy(self, simple_stratigraphy: Stratigraphy) -> None:
         """Test comparing identical stratigraphy."""
-        diff = StratigraphyDiff.compare(
-            simple_stratigraphy, simple_stratigraphy
-        )
+        diff = StratigraphyDiff.compare(simple_stratigraphy, simple_stratigraphy)
         assert diff.is_identical
 
     def test_modified_ground_surface(
@@ -223,14 +217,9 @@ class TestStratigraphyDiff:
         modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test detecting modified ground surface elevation."""
-        diff = StratigraphyDiff.compare(
-            simple_stratigraphy, modified_stratigraphy
-        )
+        diff = StratigraphyDiff.compare(simple_stratigraphy, modified_stratigraphy)
         assert not diff.is_identical
-        gs_items = [
-            item for item in diff.items
-            if "gs_elev" in item.path
-        ]
+        gs_items = [item for item in diff.items if "gs_elev" in item.path]
         assert len(gs_items) > 0
 
     def test_modified_layer_elevations(
@@ -239,12 +228,9 @@ class TestStratigraphyDiff:
         modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test detecting modified layer elevations."""
-        diff = StratigraphyDiff.compare(
-            simple_stratigraphy, modified_stratigraphy
-        )
+        diff = StratigraphyDiff.compare(simple_stratigraphy, modified_stratigraphy)
         layer_items = [
-            item for item in diff.items
-            if "top_elev" in item.path or "bottom_elev" in item.path
+            item for item in diff.items if "top_elev" in item.path or "bottom_elev" in item.path
         ]
         assert len(layer_items) > 0
 
@@ -254,13 +240,8 @@ class TestStratigraphyDiff:
         modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test detecting modified active node flags."""
-        diff = StratigraphyDiff.compare(
-            simple_stratigraphy, modified_stratigraphy
-        )
-        active_items = [
-            item for item in diff.items
-            if "active_node" in item.path
-        ]
+        diff = StratigraphyDiff.compare(simple_stratigraphy, modified_stratigraphy)
+        active_items = [item for item in diff.items if "active_node" in item.path]
         assert len(active_items) > 0
 
 
@@ -272,9 +253,7 @@ class TestModelDiffer:
         differ = ModelDiffer()
         assert differ is not None
 
-    def test_diff_meshes(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_diff_meshes(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test diffing meshes through ModelDiffer."""
         differ = ModelDiffer()
         diff = differ.diff_meshes(simple_grid, modified_grid)
@@ -288,9 +267,7 @@ class TestModelDiffer:
     ) -> None:
         """Test diffing stratigraphy through ModelDiffer."""
         differ = ModelDiffer()
-        diff = differ.diff_stratigraphy(
-            simple_stratigraphy, modified_stratigraphy
-        )
+        diff = differ.diff_stratigraphy(simple_stratigraphy, modified_stratigraphy)
         assert isinstance(diff, StratigraphyDiff)
         assert not diff.is_identical
 
@@ -298,9 +275,7 @@ class TestModelDiffer:
 class TestModelDiff:
     """Tests for ModelDiff container."""
 
-    def test_model_diff_summary(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_model_diff_summary(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test generating diff summary."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
@@ -308,27 +283,21 @@ class TestModelDiff:
         assert isinstance(summary, str)
         assert len(summary) > 0
 
-    def test_model_diff_filter_by_path(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_model_diff_filter_by_path(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test filtering diff items by path."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
         filtered = model_diff.filter_by_path("nodes")
         assert all("nodes" in item.path for item in filtered.items)
 
-    def test_model_diff_filter_by_type(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_model_diff_filter_by_type(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test filtering diff items by type."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
         added = model_diff.filter_by_type(DiffType.ADDED)
         assert all(item.diff_type == DiffType.ADDED for item in added.items)
 
-    def test_model_diff_to_dict(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_model_diff_to_dict(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test converting diff to dictionary."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
@@ -336,9 +305,7 @@ class TestModelDiff:
         assert isinstance(d, dict)
         assert "mesh" in d
 
-    def test_model_diff_statistics(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_model_diff_statistics(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test diff statistics."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
         model_diff = ModelDiff(mesh_diff=mesh_diff)
@@ -394,9 +361,7 @@ class TestDiffItemRepr:
 class TestMeshDiffRemoved:
     """Tests for mesh diff with removed nodes and elements."""
 
-    def test_removed_nodes(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_removed_nodes(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test detecting removed nodes when comparing reversed."""
         # Compare modified -> simple means node 10 is "removed"
         diff = MeshDiff.compare(modified_grid, simple_grid)
@@ -404,13 +369,13 @@ class TestMeshDiffRemoved:
         removed = [i for i in diff.items if i.diff_type == DiffType.REMOVED and "nodes" in i.path]
         assert len(removed) == 1
 
-    def test_removed_elements(
-        self, simple_grid: AppGrid, modified_grid: AppGrid
-    ) -> None:
+    def test_removed_elements(self, simple_grid: AppGrid, modified_grid: AppGrid) -> None:
         """Test detecting removed elements when comparing reversed."""
         diff = MeshDiff.compare(modified_grid, simple_grid)
         assert diff.elements_removed == 1
-        removed = [i for i in diff.items if i.diff_type == DiffType.REMOVED and "elements" in i.path]
+        removed = [
+            i for i in diff.items if i.diff_type == DiffType.REMOVED and "elements" in i.path
+        ]
         assert len(removed) == 1
 
     def test_modified_element_vertices(self) -> None:
@@ -461,8 +426,12 @@ class TestStratigraphyDiffEdgeCases:
             n_layers=3,
             n_nodes=n_nodes,
             gs_elev=gs,
-            top_elev=np.column_stack([np.full(n_nodes, 100.0), np.full(n_nodes, 66.0), np.full(n_nodes, 33.0)]),
-            bottom_elev=np.column_stack([np.full(n_nodes, 66.0), np.full(n_nodes, 33.0), np.full(n_nodes, 0.0)]),
+            top_elev=np.column_stack(
+                [np.full(n_nodes, 100.0), np.full(n_nodes, 66.0), np.full(n_nodes, 33.0)]
+            ),
+            bottom_elev=np.column_stack(
+                [np.full(n_nodes, 66.0), np.full(n_nodes, 33.0), np.full(n_nodes, 0.0)]
+            ),
             active_node=np.ones((n_nodes, 3), dtype=bool),
         )
         diff = StratigraphyDiff.compare(strat1, strat2)
@@ -473,14 +442,16 @@ class TestStratigraphyDiffEdgeCases:
     def test_different_node_count(self) -> None:
         """Test comparing stratigraphy with different node counts returns early."""
         strat1 = Stratigraphy(
-            n_layers=1, n_nodes=3,
+            n_layers=1,
+            n_nodes=3,
             gs_elev=np.full(3, 100.0),
             top_elev=np.full((3, 1), 100.0),
             bottom_elev=np.full((3, 1), 0.0),
             active_node=np.ones((3, 1), dtype=bool),
         )
         strat2 = Stratigraphy(
-            n_layers=1, n_nodes=4,
+            n_layers=1,
+            n_nodes=4,
             gs_elev=np.full(4, 100.0),
             top_elev=np.full((4, 1), 100.0),
             bottom_elev=np.full((4, 1), 0.0),
@@ -499,7 +470,8 @@ class TestStratigraphyDiffEdgeCases:
         n = 3
         gs = np.full(n, 100.0)
         strat1 = Stratigraphy(
-            n_layers=1, n_nodes=n,
+            n_layers=1,
+            n_nodes=n,
             gs_elev=gs,
             top_elev=np.full((n, 1), 100.0),
             bottom_elev=np.full((n, 1), 0.0),
@@ -508,7 +480,8 @@ class TestStratigraphyDiffEdgeCases:
         gs2 = gs.copy()
         gs2[0] = 100.0 + 1e-8  # Very small change
         strat2 = Stratigraphy(
-            n_layers=1, n_nodes=n,
+            n_layers=1,
+            n_nodes=n,
             gs_elev=gs2,
             top_elev=np.full((n, 1), 100.0),
             bottom_elev=np.full((n, 1), 0.0),
@@ -542,8 +515,11 @@ class TestModelDiffEdgeCases:
         assert md.is_identical is True
 
     def test_model_diff_items_combined(
-        self, simple_grid: AppGrid, modified_grid: AppGrid,
-        simple_stratigraphy: Stratigraphy, modified_stratigraphy: Stratigraphy,
+        self,
+        simple_grid: AppGrid,
+        modified_grid: AppGrid,
+        simple_stratigraphy: Stratigraphy,
+        modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test items property combines mesh and strat items."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
@@ -564,7 +540,9 @@ class TestModelDiffEdgeCases:
         assert "identical" in summary.lower()
 
     def test_model_diff_summary_with_strat_changes(
-        self, simple_stratigraphy: Stratigraphy, modified_stratigraphy: Stratigraphy,
+        self,
+        simple_stratigraphy: Stratigraphy,
+        modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test summary includes stratigraphy changes."""
         strat_diff = StratigraphyDiff.compare(simple_stratigraphy, modified_stratigraphy)
@@ -574,7 +552,9 @@ class TestModelDiffEdgeCases:
         assert "modifications" in summary
 
     def test_model_diff_summary_with_mesh_changes(
-        self, simple_grid: AppGrid, modified_grid: AppGrid,
+        self,
+        simple_grid: AppGrid,
+        modified_grid: AppGrid,
     ) -> None:
         """Test summary includes mesh changes with node/element counts."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
@@ -585,7 +565,9 @@ class TestModelDiffEdgeCases:
         assert "Elements:" in summary
 
     def test_filter_by_path_with_stratigraphy(
-        self, simple_stratigraphy: Stratigraphy, modified_stratigraphy: Stratigraphy,
+        self,
+        simple_stratigraphy: Stratigraphy,
+        modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test filter_by_path with stratigraphy diff."""
         strat_diff = StratigraphyDiff.compare(simple_stratigraphy, modified_stratigraphy)
@@ -594,7 +576,9 @@ class TestModelDiffEdgeCases:
         assert all("gs_elev" in i.path for i in filtered.items)
 
     def test_filter_by_type_with_stratigraphy(
-        self, simple_stratigraphy: Stratigraphy, modified_stratigraphy: Stratigraphy,
+        self,
+        simple_stratigraphy: Stratigraphy,
+        modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test filter_by_type with stratigraphy diff."""
         strat_diff = StratigraphyDiff.compare(simple_stratigraphy, modified_stratigraphy)
@@ -603,7 +587,9 @@ class TestModelDiffEdgeCases:
         assert all(i.diff_type == DiffType.MODIFIED for i in modified.items)
 
     def test_filter_by_path_no_match(
-        self, simple_grid: AppGrid, modified_grid: AppGrid,
+        self,
+        simple_grid: AppGrid,
+        modified_grid: AppGrid,
     ) -> None:
         """Test filter_by_path returns empty when no items match."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
@@ -612,7 +598,9 @@ class TestModelDiffEdgeCases:
         assert len(filtered.items) == 0
 
     def test_to_dict_with_stratigraphy(
-        self, simple_stratigraphy: Stratigraphy, modified_stratigraphy: Stratigraphy,
+        self,
+        simple_stratigraphy: Stratigraphy,
+        modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test to_dict includes stratigraphy section."""
         strat_diff = StratigraphyDiff.compare(simple_stratigraphy, modified_stratigraphy)
@@ -624,8 +612,11 @@ class TestModelDiffEdgeCases:
         assert "items" in d["stratigraphy"]
 
     def test_to_dict_with_both(
-        self, simple_grid: AppGrid, modified_grid: AppGrid,
-        simple_stratigraphy: Stratigraphy, modified_stratigraphy: Stratigraphy,
+        self,
+        simple_grid: AppGrid,
+        modified_grid: AppGrid,
+        simple_stratigraphy: Stratigraphy,
+        modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test to_dict with both mesh and stratigraphy diffs."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
@@ -642,7 +633,9 @@ class TestModelDiffEdgeCases:
         assert d == {}
 
     def test_to_dict_mesh_structure(
-        self, simple_grid: AppGrid, modified_grid: AppGrid,
+        self,
+        simple_grid: AppGrid,
+        modified_grid: AppGrid,
     ) -> None:
         """Test to_dict mesh section has all expected keys."""
         mesh_diff = MeshDiff.compare(simple_grid, modified_grid)
@@ -674,7 +667,9 @@ class TestModelDifferEdgeCases:
         assert differ.tolerance == 1e-3
 
     def test_diff_method_mesh_only(
-        self, simple_grid: AppGrid, modified_grid: AppGrid,
+        self,
+        simple_grid: AppGrid,
+        modified_grid: AppGrid,
     ) -> None:
         """Test diff() method with mesh only."""
         differ = ModelDiffer()
@@ -684,7 +679,9 @@ class TestModelDifferEdgeCases:
         assert result.stratigraphy_diff is None
 
     def test_diff_method_strat_only(
-        self, simple_stratigraphy: Stratigraphy, modified_stratigraphy: Stratigraphy,
+        self,
+        simple_stratigraphy: Stratigraphy,
+        modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test diff() method with stratigraphy only."""
         differ = ModelDiffer()
@@ -693,14 +690,19 @@ class TestModelDifferEdgeCases:
         assert result.stratigraphy_diff is not None
 
     def test_diff_method_both(
-        self, simple_grid: AppGrid, modified_grid: AppGrid,
-        simple_stratigraphy: Stratigraphy, modified_stratigraphy: Stratigraphy,
+        self,
+        simple_grid: AppGrid,
+        modified_grid: AppGrid,
+        simple_stratigraphy: Stratigraphy,
+        modified_stratigraphy: Stratigraphy,
     ) -> None:
         """Test diff() method with both mesh and stratigraphy."""
         differ = ModelDiffer()
         result = differ.diff(
-            mesh1=simple_grid, mesh2=modified_grid,
-            strat1=simple_stratigraphy, strat2=modified_stratigraphy,
+            mesh1=simple_grid,
+            mesh2=modified_grid,
+            strat1=simple_stratigraphy,
+            strat2=modified_stratigraphy,
         )
         assert result.mesh_diff is not None
         assert result.stratigraphy_diff is not None
@@ -714,7 +716,8 @@ class TestModelDifferEdgeCases:
         assert result.is_identical
 
     def test_diff_method_one_mesh_none(
-        self, simple_grid: AppGrid,
+        self,
+        simple_grid: AppGrid,
     ) -> None:
         """Test diff() with one mesh None does not produce mesh diff."""
         differ = ModelDiffer()
@@ -726,7 +729,8 @@ class TestModelDifferEdgeCases:
         n = 3
         gs = np.full(n, 100.0)
         strat1 = Stratigraphy(
-            n_layers=1, n_nodes=n,
+            n_layers=1,
+            n_nodes=n,
             gs_elev=gs,
             top_elev=np.full((n, 1), 100.0),
             bottom_elev=np.full((n, 1), 0.0),
@@ -735,7 +739,8 @@ class TestModelDifferEdgeCases:
         gs2 = gs.copy()
         gs2[0] = 100.001  # Small change
         strat2 = Stratigraphy(
-            n_layers=1, n_nodes=n,
+            n_layers=1,
+            n_nodes=n,
             gs_elev=gs2,
             top_elev=np.full((n, 1), 100.0),
             bottom_elev=np.full((n, 1), 0.0),

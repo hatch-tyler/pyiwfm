@@ -10,18 +10,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.io.binary import FortranBinaryReader
-from pyiwfm.core.exceptions import FileFormatError
 
 
 @dataclass
 class AppNodeData:
     """Pre-processed application node data."""
+
     id: int
     area: float
     boundary_node: bool
@@ -37,6 +36,7 @@ class AppNodeData:
 @dataclass
 class AppElementData:
     """Pre-processed application element data."""
+
     id: int
     subregion: int
     area: float
@@ -50,6 +50,7 @@ class AppElementData:
 @dataclass
 class AppFaceData:
     """Pre-processed application face data."""
+
     nodes: NDArray[np.int32]  # (n_faces, 2) - node indices for each face
     elements: NDArray[np.int32]  # (n_faces, 2) - element indices on each side
     boundary: NDArray[np.bool_]  # (n_faces,) - True if boundary face
@@ -59,6 +60,7 @@ class AppFaceData:
 @dataclass
 class SubregionData:
     """Pre-processed subregion data."""
+
     id: int
     name: str
     n_elements: int
@@ -73,6 +75,7 @@ class SubregionData:
 @dataclass
 class StratigraphyData:
     """Pre-processed stratigraphy data."""
+
     n_layers: int
     ground_surface_elev: NDArray[np.float64]  # (n_nodes,)
     top_elev: NDArray[np.float64]  # (n_nodes, n_layers)
@@ -87,6 +90,7 @@ class StratigraphyData:
 @dataclass
 class StreamGWConnectorData:
     """Pre-processed stream-GW connector data."""
+
     n_stream_nodes: int
     gw_nodes: NDArray[np.int32]  # GW node index for each stream node
     layers: NDArray[np.int32]  # Layer for each connection
@@ -95,6 +99,7 @@ class StreamGWConnectorData:
 @dataclass
 class LakeGWConnectorData:
     """Pre-processed lake-GW connector data."""
+
     n_lakes: int
     lake_elements: list[NDArray[np.int32]]  # Elements for each lake
     lake_nodes: list[NDArray[np.int32]]  # GW nodes for each lake
@@ -103,6 +108,7 @@ class LakeGWConnectorData:
 @dataclass
 class StreamLakeConnectorData:
     """Pre-processed stream-lake connector data."""
+
     n_connections: int
     stream_nodes: NDArray[np.int32]  # Stream node indices
     lake_ids: NDArray[np.int32]  # Connected lake IDs
@@ -111,6 +117,7 @@ class StreamLakeConnectorData:
 @dataclass
 class StreamData:
     """Pre-processed stream data."""
+
     n_reaches: int
     n_stream_nodes: int
     reach_ids: NDArray[np.int32]
@@ -123,6 +130,7 @@ class StreamData:
 @dataclass
 class LakeData:
     """Pre-processed lake data."""
+
     n_lakes: int
     lake_ids: NDArray[np.int32]
     lake_names: list[str]
@@ -133,6 +141,7 @@ class LakeData:
 @dataclass
 class PreprocessorBinaryData:
     """Complete preprocessor binary output structure."""
+
     # Grid dimensions
     n_nodes: int = 0
     n_elements: int = 0
@@ -248,7 +257,7 @@ class PreprocessorBinaryReader:
 
         # Element connectivity
         data.n_vertex = f.read_int_array()  # Number of vertices per element
-        data.vertex = f.read_int_array()    # Flattened vertex indices
+        data.vertex = f.read_int_array()  # Flattened vertex indices
 
         # Read app node data
         for _ in range(data.n_nodes):
@@ -422,7 +431,9 @@ class PreprocessorBinaryReader:
             bottom_active_layer=bottom_active,
         )
 
-    def _read_stream_lake_connector(self, f: FortranBinaryReader, data: PreprocessorBinaryData) -> None:
+    def _read_stream_lake_connector(
+        self, f: FortranBinaryReader, data: PreprocessorBinaryData
+    ) -> None:
         """Read stream-lake connector data."""
         n_connections = f.read_int()
 
@@ -443,7 +454,9 @@ class PreprocessorBinaryReader:
             lake_ids=lake_ids,
         )
 
-    def _read_stream_gw_connector(self, f: FortranBinaryReader, data: PreprocessorBinaryData) -> None:
+    def _read_stream_gw_connector(
+        self, f: FortranBinaryReader, data: PreprocessorBinaryData
+    ) -> None:
         """Read stream-GW connector data."""
         n_stream_nodes = f.read_int()
 

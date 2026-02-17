@@ -129,9 +129,7 @@ class AppUnsatZone:
             ComponentError: If component is invalid
         """
         if self.n_layers <= 0:
-            raise ComponentError(
-                f"Unsaturated zone has non-positive layer count: {self.n_layers}"
-            )
+            raise ComponentError(f"Unsaturated zone has non-positive layer count: {self.n_layers}")
 
         for elem in self.elements.values():
             if elem.n_layers != self.n_layers:
@@ -162,9 +160,7 @@ class AppUnsatZone:
             budget_file=str(config.budget_file) if config.budget_file else "",
             zbudget_file=str(config.zbudget_file) if config.zbudget_file else "",
             final_results_file=(
-                str(config.final_results_file)
-                if config.final_results_file
-                else ""
+                str(config.final_results_file) if config.final_results_file else ""
             ),
         )
 
@@ -172,13 +168,15 @@ class AppUnsatZone:
         for ed in config.element_data:
             layers = []
             for i in range(config.n_layers):
-                layers.append(UnsatZoneLayer(
-                    thickness_max=float(ed.thickness_max[i]),
-                    total_porosity=float(ed.total_porosity[i]),
-                    lambda_param=float(ed.lambda_param[i]),
-                    hyd_cond=float(ed.hyd_cond[i]),
-                    kunsat_method=int(ed.kunsat_method[i]),
-                ))
+                layers.append(
+                    UnsatZoneLayer(
+                        thickness_max=float(ed.thickness_max[i]),
+                        total_porosity=float(ed.total_porosity[i]),
+                        lambda_param=float(ed.lambda_param[i]),
+                        hyd_cond=float(ed.hyd_cond[i]),
+                        kunsat_method=int(ed.kunsat_method[i]),
+                    )
+                )
 
             moisture = config.initial_soil_moisture.get(ed.element_id)
             if moisture is None:
@@ -195,7 +193,4 @@ class AppUnsatZone:
         return comp
 
     def __repr__(self) -> str:
-        return (
-            f"AppUnsatZone(n_layers={self.n_layers}, "
-            f"n_elements={self.n_elements})"
-        )
+        return f"AppUnsatZone(n_layers={self.n_layers}, n_elements={self.n_elements})"

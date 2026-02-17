@@ -11,22 +11,31 @@ Tests all component writers:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-import numpy as np
 import pytest
 
 from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
-from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.core.model import IWFMModel
+from pyiwfm.core.stratigraphy import Stratigraphy
 
 # Import writers and configs
-from pyiwfm.io.gw_writer import GWWriterConfig, GWComponentWriter, write_gw_component
-from pyiwfm.io.stream_writer import StreamWriterConfig, StreamComponentWriter, write_stream_component
-from pyiwfm.io.lake_writer import LakeWriterConfig, LakeComponentWriter, write_lake_component
-from pyiwfm.io.rootzone_writer import RootZoneWriterConfig, RootZoneComponentWriter, write_rootzone_component
-from pyiwfm.io.simulation_writer import SimulationMainConfig, SimulationMainWriter, write_simulation_main
-
+from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig, write_gw_component
+from pyiwfm.io.lake_writer import LakeComponentWriter, LakeWriterConfig, write_lake_component
+from pyiwfm.io.rootzone_writer import (
+    RootZoneComponentWriter,
+    RootZoneWriterConfig,
+    write_rootzone_component,
+)
+from pyiwfm.io.simulation_writer import (
+    SimulationMainConfig,
+    SimulationMainWriter,
+    write_simulation_main,
+)
+from pyiwfm.io.stream_writer import (
+    StreamComponentWriter,
+    StreamWriterConfig,
+    write_stream_component,
+)
 
 # =============================================================================
 # Fixtures
@@ -444,8 +453,11 @@ class TestRootZoneComponentWriter:
 
         # Check that all 4 elements are written
         lines = content.split("\n")
-        data_lines = [l for l in lines if l.strip().startswith(("1", "2", "3", "4"))
-                      and "0.20" in l]  # Default field capacity
+        data_lines = [
+            line
+            for line in lines
+            if line.strip().startswith(("1", "2", "3", "4")) and "0.20" in line
+        ]  # Default field capacity
         assert len(data_lines) >= 4  # At least 4 elements
 
     def test_write_function(self, simple_model: IWFMModel, tmp_path: Path) -> None:

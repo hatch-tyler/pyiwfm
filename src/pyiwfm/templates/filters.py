@@ -7,13 +7,13 @@ valid IWFM input files from templates.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-
 
 # =============================================================================
 # Number Formatting
@@ -178,6 +178,7 @@ def iwfm_timestamp(dt: datetime | np.datetime64 | str | None) -> str:
         return dt
 
     from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+
     return format_iwfm_timestamp(dt)
 
 
@@ -466,7 +467,7 @@ def dss_timeseries_ref(
 # =============================================================================
 
 
-def register_all_filters(env) -> None:
+def register_all_filters(env: Any) -> None:
     """
     Register all IWFM filters with a Jinja2 environment.
 

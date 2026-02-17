@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -30,7 +31,7 @@ from pyiwfm.io.config import ModelWriteConfig, OutputFormat
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.io.comment_metadata import CommentMetadata, FileCommentMetadata
+    from pyiwfm.io.comment_metadata import CommentMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -130,17 +131,13 @@ class TimeSeriesCopier:
 
             source_path = Path(source_path)
             if not source_path.exists():
-                warnings.append(
-                    f"Source TS file not found: {source_key} -> {source_path}"
-                )
+                warnings.append(f"Source TS file not found: {source_key} -> {source_path}")
                 continue
 
             try:
                 dest_path = self.config.get_path(dest_key)
             except KeyError:
-                warnings.append(
-                    f"No destination key '{dest_key}' for source '{source_key}'"
-                )
+                warnings.append(f"No destination key '{dest_key}' for source '{source_key}'")
                 continue
 
             dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -149,9 +146,7 @@ class TimeSeriesCopier:
                 self._copy_or_convert(source_path, dest_path, source_key)
                 files[dest_key] = dest_path
             except Exception as e:
-                warnings.append(
-                    f"Failed to copy {source_key}: {e}"
-                )
+                warnings.append(f"Failed to copy {source_key}: {e}")
 
         return files, warnings
 
@@ -195,17 +190,17 @@ class TimeSeriesCopier:
             make_ag_water_demand_ts_config,
             make_diversion_ts_config,
             make_et_ts_config,
+            make_irig_period_ts_config,
             make_max_lake_elev_ts_config,
             make_precip_ts_config,
             make_pumping_ts_config,
             make_return_flow_ts_config,
             make_reuse_ts_config,
-            make_irig_period_ts_config,
             make_stream_inflow_ts_config,
         )
 
         # Factory mapping (keyed by source TS key)
-        factories = {
+        factories: dict[str, Callable[..., TimeSeriesDataConfig]] = {
             "precipitation_ts": make_precip_ts_config,
             "et_ts": make_et_ts_config,
             "gw_pumping_ts": make_pumping_ts_config,
@@ -239,10 +234,10 @@ class TimeSeriesCopier:
         dss_path.parent.mkdir(parents=True, exist_ok=True)
 
         try:
+            from pyiwfm.io.dss.pathname import DSSPathnameTemplate
             from pyiwfm.io.dss.timeseries import (
                 DSSTimeSeriesWriter as DSSWriter,
             )
-            from pyiwfm.io.dss.pathname import DSSPathnameTemplate
 
             # Build location -> values mapping
             values_dict: dict[str, np.ndarray] = {}
@@ -271,9 +266,7 @@ class TimeSeriesCopier:
                 dss_path,
             )
         except ImportError:
-            logger.warning(
-                "DSS library not available; copying raw file for %s", key
-            )
+            logger.warning("DSS library not available; copying raw file for %s", key)
             shutil.copy2(source, dest)
             return
 
@@ -281,9 +274,7 @@ class TimeSeriesCopier:
         dss_paths: list[DSSPathItem] = []
         for i in range(actual_cols):
             location = f"ELEM_{i + 1}"
-            pathname = (
-                f"/{a_part}/{location}/{dss_param}//{dss_interval}/{f_part}/"
-            )
+            pathname = f"/{a_part}/{location}/{dss_param}//{dss_interval}/{f_part}/"
             dss_paths.append(DSSPathItem(index=i + 1, path=pathname))
 
         # Step 5: Compute relative DSS file path from stub's directory
@@ -293,9 +284,9 @@ class TimeSeriesCopier:
         # Step 6: Create TimeSeriesDataConfig for stub file.
         # Use factor=1.0 because the data written to DSS already has
         # the original factor applied (the reader applies it on read).
-        factory = factories.get(key)
-        if factory:
-            stub_config = factory(ncol=actual_cols, factor=1.0)
+        factory_fn = factories.get(key)
+        if factory_fn is not None:
+            stub_config = factory_fn(ncol=actual_cols, factor=1.0)
         else:
             stub_config = TimeSeriesDataConfig(ncol=actual_cols, factor=1.0)
 
@@ -340,7 +331,7 @@ class CompleteModelWriter:
         self,
         model: IWFMModel,
         config: ModelWriteConfig,
-        comment_metadata: dict[str, "CommentMetadata"] | None = None,
+        comment_metadata: dict[str, CommentMetadata] | None = None,
         preserve_comments: bool = True,
     ) -> None:
         """Initialize the complete model writer.
@@ -359,7 +350,7 @@ class CompleteModelWriter:
         self.comment_metadata = comment_metadata or {}
         self.preserve_comments = preserve_comments
 
-    def get_file_comments(self, file_type: str) -> "CommentMetadata | None":
+    def get_file_comments(self, file_type: str) -> CommentMetadata | None:
         """Get comment metadata for a specific file type.
 
         Args:
@@ -462,7 +453,7 @@ class CompleteModelWriter:
             return
 
         try:
-            from pyiwfm.io.gw_writer import GWWriterConfig, GWComponentWriter
+            from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
 
             gw_main_path = self.config.get_path("gw_main")
             gw_dir = gw_main_path.parent
@@ -498,9 +489,7 @@ class CompleteModelWriter:
                 gw_zbudget_file=self.config.get_relative_path(
                     "simulation_main", "results_gw_zbudget"
                 ),
-                gw_head_file=self.config.get_relative_path(
-                    "simulation_main", "results_gw_head"
-                ),
+                gw_head_file=self.config.get_relative_path("simulation_main", "results_gw_head"),
             )
 
             writer = GWComponentWriter(self.model, gw_config)
@@ -518,8 +507,8 @@ class CompleteModelWriter:
 
         try:
             from pyiwfm.io.stream_writer import (
-                StreamWriterConfig,
                 StreamComponentWriter,
+                StreamWriterConfig,
             )
 
             stream_main_path = self.config.get_path("stream_main")
@@ -563,7 +552,7 @@ class CompleteModelWriter:
             return
 
         try:
-            from pyiwfm.io.lake_writer import LakeWriterConfig, LakeComponentWriter
+            from pyiwfm.io.lake_writer import LakeComponentWriter, LakeWriterConfig
 
             lake_main_path = self.config.get_path("lake_main")
             lake_dir = lake_main_path.parent
@@ -594,8 +583,8 @@ class CompleteModelWriter:
 
         try:
             from pyiwfm.io.rootzone_writer import (
-                RootZoneWriterConfig,
                 RootZoneComponentWriter,
+                RootZoneWriterConfig,
             )
 
             rz_main_path = self.config.get_path("rootzone_main")
@@ -616,9 +605,7 @@ class CompleteModelWriter:
                 return_flow_file=self.config.get_path("rootzone_return_flow").name,
                 reuse_file=self.config.get_path("rootzone_reuse").name,
                 irig_period_file=self.config.get_path("rootzone_irig_period").name,
-                surface_flow_dest_file=self.config.get_path(
-                    "rootzone_surface_flow_dest"
-                ).name,
+                surface_flow_dest_file=self.config.get_path("rootzone_surface_flow_dest").name,
                 lwu_budget_file=self.config.get_relative_path(
                     "simulation_main", "results_lwu_budget"
                 ),
@@ -657,8 +644,8 @@ class CompleteModelWriter:
         if self.model.small_watersheds is not None:
             try:
                 from pyiwfm.io.small_watershed_writer import (
-                    SmallWatershedWriterConfig,
                     SmallWatershedComponentWriter,
+                    SmallWatershedWriterConfig,
                 )
 
                 sw_main_path = self.config.get_path("swshed_main")
@@ -667,9 +654,7 @@ class CompleteModelWriter:
                 sw_config = SmallWatershedWriterConfig(
                     output_dir=sw_dir,
                     swshed_subdir="",
-                    version=self.model.metadata.get(
-                        "small_watershed_version", "4.0"
-                    ),
+                    version=self.model.metadata.get("small_watershed_version", "4.0"),
                     main_file=sw_main_path.name,
                 )
 
@@ -680,8 +665,7 @@ class CompleteModelWriter:
                 return
             except Exception as e:
                 result.warnings.append(
-                    f"Failed to write small watershed from data, "
-                    f"falling back to copy: {e}"
+                    f"Failed to write small watershed from data, falling back to copy: {e}"
                 )
 
         # Fallback: copy source file
@@ -690,9 +674,7 @@ class CompleteModelWriter:
             return
         source_path = Path(source_path)
         if not source_path.exists():
-            result.warnings.append(
-                f"Passthrough source not found: swshed_main -> {source_path}"
-            )
+            result.warnings.append(f"Passthrough source not found: swshed_main -> {source_path}")
             return
         try:
             dest_path = self.config.get_path("swshed_main")
@@ -708,8 +690,8 @@ class CompleteModelWriter:
         if self.model.unsaturated_zone is not None:
             try:
                 from pyiwfm.io.unsaturated_zone_writer import (
-                    UnsatZoneWriterConfig,
                     UnsatZoneComponentWriter,
+                    UnsatZoneWriterConfig,
                 )
 
                 uz_main_path = self.config.get_path("unsatzone_main")
@@ -718,9 +700,7 @@ class CompleteModelWriter:
                 uz_config = UnsatZoneWriterConfig(
                     output_dir=uz_dir,
                     unsatzone_subdir="",
-                    version=self.model.metadata.get(
-                        "unsat_zone_version", "4.0"
-                    ),
+                    version=self.model.metadata.get("unsat_zone_version", "4.0"),
                     main_file=uz_main_path.name,
                 )
 
@@ -731,8 +711,7 @@ class CompleteModelWriter:
                 return
             except Exception as e:
                 result.warnings.append(
-                    f"Failed to write unsaturated zone from data, "
-                    f"falling back to copy: {e}"
+                    f"Failed to write unsaturated zone from data, falling back to copy: {e}"
                 )
 
         # Fallback: copy source file
@@ -741,22 +720,16 @@ class CompleteModelWriter:
             return
         source_path = Path(source_path)
         if not source_path.exists():
-            result.warnings.append(
-                f"Passthrough source not found: unsatzone_main -> {source_path}"
-            )
+            result.warnings.append(f"Passthrough source not found: unsatzone_main -> {source_path}")
             return
         try:
             dest_path = self.config.get_path("unsatzone_main")
             dest_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source_path, dest_path)
             result.files["unsatzone_main"] = dest_path
-            logger.info(
-                f"Copied passthrough component: unsatzone_main -> {dest_path}"
-            )
+            logger.info(f"Copied passthrough component: unsatzone_main -> {dest_path}")
         except Exception as e:
-            result.warnings.append(
-                f"Failed to copy passthrough unsatzone_main: {e}"
-            )
+            result.warnings.append(f"Failed to copy passthrough unsatzone_main: {e}")
 
     def _write_supply_adjustment(self, result: ModelWriteResult) -> None:
         """Write the supply adjustment file.
@@ -776,9 +749,7 @@ class CompleteModelWriter:
                 logger.info("Wrote supply adjustment: %s", dest_path)
                 return
             except Exception as e:
-                result.warnings.append(
-                    f"Failed to write supply adjustment from data: {e}"
-                )
+                result.warnings.append(f"Failed to write supply adjustment from data: {e}")
                 # Fall through to passthrough copy
 
         # Fallback: copy source file if available
@@ -788,9 +759,7 @@ class CompleteModelWriter:
 
         source_path = Path(source_path)
         if not source_path.exists():
-            result.warnings.append(
-                f"Supply adjustment source not found: {source_path}"
-            )
+            result.warnings.append(f"Supply adjustment source not found: {source_path}")
             return
 
         try:
@@ -800,9 +769,7 @@ class CompleteModelWriter:
             result.files["supply_adjust"] = dest_path
             logger.info("Copied supply adjustment: %s -> %s", source_path, dest_path)
         except Exception as e:
-            result.warnings.append(
-                f"Failed to copy supply adjustment: {e}"
-            )
+            result.warnings.append(f"Failed to copy supply adjustment: {e}")
 
     def _write_simulation_main(self) -> Path:
         """Write the Simulation_MAIN.IN file referencing all components."""
@@ -818,38 +785,23 @@ class CompleteModelWriter:
         sim_config = SimulationMainConfig(
             output_dir=sim_dir,
             main_file=sim_main_path.name,
-            preprocessor_bin=self.config.get_relative_path(
-                "simulation_main", "preprocessor_bin"
-            ),
+            preprocessor_bin=self.config.get_relative_path("simulation_main", "preprocessor_bin"),
             gw_main=self.config.get_relative_path("simulation_main", "gw_main"),
-            stream_main=self.config.get_relative_path(
-                "simulation_main", "stream_main"
-            ),
-            rootzone_main=self.config.get_relative_path(
-                "simulation_main", "rootzone_main"
-            ),
-            irig_frac=self.config.get_relative_path(
-                "simulation_main", "irig_frac"
-            ),
-            precip_file=self.config.get_relative_path(
-                "simulation_main", "precipitation"
-            ),
+            stream_main=self.config.get_relative_path("simulation_main", "stream_main"),
+            rootzone_main=self.config.get_relative_path("simulation_main", "rootzone_main"),
+            irig_frac=self.config.get_relative_path("simulation_main", "irig_frac"),
+            precip_file=self.config.get_relative_path("simulation_main", "precipitation"),
             et_file=self.config.get_relative_path("simulation_main", "et"),
         )
 
         # Lake: only set path if model has lakes
         if self.model.lakes and self.model.lakes.n_lakes > 0:
-            sim_config.lake_main = self.config.get_relative_path(
-                "simulation_main", "lake_main"
-            )
+            sim_config.lake_main = self.config.get_relative_path("simulation_main", "lake_main")
         else:
             sim_config.lake_main = ""
 
         # Supply adjustment: only set path if model has supply adjustment data
-        if (
-            self.model.supply_adjustment is not None
-            or self.model.source_files.get("supply_adjust")
-        ):
+        if self.model.supply_adjustment is not None or self.model.source_files.get("supply_adjust"):
             sim_config.supply_adjust = self.config.get_relative_path(
                 "simulation_main", "supply_adjust"
             )
@@ -858,9 +810,7 @@ class CompleteModelWriter:
 
         # Small watershed and unsaturated zone (pass-through, not regenerated)
         if self.model.source_files.get("swshed_main"):
-            sim_config.swshed_main = self.config.get_relative_path(
-                "simulation_main", "swshed_main"
-            )
+            sim_config.swshed_main = self.config.get_relative_path("simulation_main", "swshed_main")
         if self.model.source_files.get("unsatzone_main"):
             sim_config.unsatzone_main = self.config.get_relative_path(
                 "simulation_main", "unsatzone_main"
@@ -874,9 +824,7 @@ class CompleteModelWriter:
         if meta.get("end_date"):
             sim_config.end_date = _iso_to_iwfm_date(meta["end_date"])
         if meta.get("time_step_length") and meta.get("time_step_unit"):
-            sim_config.time_step = (
-                f"{meta['time_step_length']}{meta['time_step_unit']}"
-            )
+            sim_config.time_step = f"{meta['time_step_length']}{meta['time_step_unit']}"
 
         # Solver parameters
         if meta.get("matrix_solver") is not None:
@@ -925,6 +873,7 @@ def _iso_to_iwfm_date(iso_str: str) -> str:
     try:
         dt = datetime.fromisoformat(iso_str)
         from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+
         return format_iwfm_timestamp(dt)
     except (ValueError, TypeError):
         return iso_str
@@ -974,8 +923,7 @@ def write_model(
         output_dir=Path(output_dir),
         file_paths=file_paths or {},
         ts_format=fmt,
-        **version_defaults,
-        **kwargs,
+        **{**version_defaults, **kwargs},  # type: ignore[arg-type]
     )
     writer = CompleteModelWriter(model, config)
     return writer.write_all()
@@ -989,7 +937,7 @@ def write_model(
 def write_model_with_comments(
     model: IWFMModel,
     output_dir: Path | str,
-    comment_metadata: dict[str, "CommentMetadata"] | None = None,
+    comment_metadata: dict[str, CommentMetadata] | None = None,
     file_paths: dict[str, str] | None = None,
     ts_format: str = "text",
     save_sidecars: bool = True,
@@ -1044,8 +992,7 @@ def write_model_with_comments(
         output_dir=Path(output_dir),
         file_paths=file_paths or {},
         ts_format=fmt,
-        **version_defaults,
-        **kwargs,
+        **{**version_defaults, **kwargs},  # type: ignore[arg-type]
     )
 
     writer = CompleteModelWriter(
@@ -1065,7 +1012,7 @@ def write_model_with_comments(
 
 def _save_comment_sidecars(
     written_files: dict[str, Path],
-    comment_metadata: dict[str, "CommentMetadata"],
+    comment_metadata: dict[str, CommentMetadata],
 ) -> None:
     """Save comment metadata as sidecar files.
 
@@ -1073,7 +1020,6 @@ def _save_comment_sidecars(
         written_files: Dictionary of file type to written path.
         comment_metadata: Dictionary of file type to CommentMetadata.
     """
-    from pyiwfm.io.comment_metadata import CommentMetadata
 
     for file_type, metadata in comment_metadata.items():
         # Map file type to written path
@@ -1103,7 +1049,7 @@ def _save_comment_sidecars(
 def save_model_with_comments(
     model: IWFMModel,
     output_dir: Path | str,
-    comment_metadata: dict[str, "CommentMetadata"] | None = None,
+    comment_metadata: dict[str, CommentMetadata] | None = None,
 ) -> dict[str, Path]:
     """High-level API for writing a model with preserved comments.
 

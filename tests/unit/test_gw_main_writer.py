@@ -19,7 +19,6 @@ from pyiwfm.io.gw_main_writer import (
     write_gw_main_file,
 )
 
-
 # =============================================================================
 # Helpers
 # =============================================================================
@@ -258,9 +257,7 @@ class TestWriteGWMainFileFull:
             aquitard_kv=akv,
         )
 
-        initial_heads = np.array(
-            [[100.0, 90.0], [105.0, 95.0], [110.0, 85.0]]
-        )
+        initial_heads = np.array([[100.0, 90.0], [105.0, 95.0], [110.0, 85.0]])
 
         return _make_config(
             version="4.0",
@@ -435,7 +432,9 @@ class TestWriteGWMainFileFull:
         # Find lines with node IDs (layer 0 lines have the node id)
         # Node 1, layer 0: kh=10, ss=1e-5, sy=0.15, kv=1, akv=0.01
         # The format is: {i+1:>6d}  {kh:>12.6g}  {ss:>12.6g}  {sy:>12.6g}  {kv:>12.6g}  {akv:>12.6g}
-        node1_layer0 = [ln for ln in lines if ln.strip().startswith("1") and "10" in ln and "0.15" in ln]
+        node1_layer0 = [
+            ln for ln in lines if ln.strip().startswith("1") and "10" in ln and "0.15" in ln
+        ]
         assert len(node1_layer0) >= 1
 
     def test_aquifer_params_multilayer_format(self, tmp_path, full_config):
@@ -583,7 +582,7 @@ class TestWriteGWMainFileFull:
         for i in range(len(positions) - 1):
             assert positions[i] < positions[i + 1], (
                 f"Marker '{markers[i]}' (pos {positions[i]}) should appear before "
-                f"'{markers[i+1]}' (pos {positions[i+1]})"
+                f"'{markers[i + 1]}' (pos {positions[i + 1]})"
             )
 
 
@@ -684,13 +683,32 @@ class TestWriteGWMainFileMinimal:
         assert "C  IWFM Groundwater Component Main File" in content
         # Must have all required descriptors
         for desc in [
-            "BCFL", "TDFL", "PUMPFL", "SUBSFL", "OVRWRTFL",
-            "FACTLTOU", "UNITLTOU", "FACTVLOU", "UNITVLOU",
-            "FACTVROU", "UNITVROU",
-            "VELOUTFL", "VFLOWOUTFL", "GWALLOUTFL",
-            "HTPOUTFL", "VTPOUTFL", "GWBUDFL", "ZBUDFL", "FNGWFL",
-            "KDEB", "NOUTH", "FACTXY", "GWHYDOUTFL",
-            "NOUTF", "FCHYDOUTFL", "NEBK",
+            "BCFL",
+            "TDFL",
+            "PUMPFL",
+            "SUBSFL",
+            "OVRWRTFL",
+            "FACTLTOU",
+            "UNITLTOU",
+            "FACTVLOU",
+            "UNITVLOU",
+            "FACTVROU",
+            "UNITVROU",
+            "VELOUTFL",
+            "VFLOWOUTFL",
+            "GWALLOUTFL",
+            "HTPOUTFL",
+            "VTPOUTFL",
+            "GWBUDFL",
+            "ZBUDFL",
+            "FNGWFL",
+            "KDEB",
+            "NOUTH",
+            "FACTXY",
+            "GWHYDOUTFL",
+            "NOUTF",
+            "FCHYDOUTFL",
+            "NEBK",
         ]:
             assert desc in content, f"Required descriptor '{desc}' missing from output"
 
@@ -864,7 +882,9 @@ class TestHydrographLocationEdgeCases:
         write_gw_main_file(config, outfile)
         lines = outfile.read_text().splitlines()
         # Find the hydrograph location line (contains "42" as node id)
-        loc_lines = [ln for ln in lines if "42" in ln and "0" in ln and "/" in ln and "NOUTH" not in ln]
+        loc_lines = [
+            ln for ln in lines if "42" in ln and "0" in ln and "/" in ln and "NOUTH" not in ln
+        ]
         assert len(loc_lines) >= 1
         # Name should be empty string (or " " after "/")
         assert "/ " in loc_lines[0]
@@ -880,8 +900,15 @@ class TestHydrographLocationEdgeCases:
         write_gw_main_file(config, outfile)
         content = outfile.read_text()
         lines = content.splitlines()
-        loc_lines = [ln for ln in lines if "/ " in ln and "7" in ln and "NOUTH" not in ln
-                     and "FACTXY" not in ln and "GWHYDOUTFL" not in ln]
+        loc_lines = [
+            ln
+            for ln in lines
+            if "/ " in ln
+            and "7" in ln
+            and "NOUTH" not in ln
+            and "FACTXY" not in ln
+            and "GWHYDOUTFL" not in ln
+        ]
         assert len(loc_lines) >= 1
 
     def test_multiple_locations_all_written(self, tmp_path):

@@ -11,11 +11,16 @@ enabling roundtrip read-write fidelity.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TextIO
 
 from pyiwfm.io.gw_subsidence import SubsidenceConfig
 from pyiwfm.io.iwfm_writer import (
     ensure_parent_dir as _ensure_parent_dir,
+)
+from pyiwfm.io.iwfm_writer import (
     write_comment as _write_comment,
+)
+from pyiwfm.io.iwfm_writer import (
     write_value as _write_value,
 )
 
@@ -107,7 +112,7 @@ def write_subsidence_main(config: SubsidenceConfig, filepath: Path | str) -> Pat
     return filepath
 
 
-def _write_subsidence_params(f: object, config: SubsidenceConfig, is_v50: bool) -> None:
+def _write_subsidence_params(f: TextIO, config: SubsidenceConfig, is_v50: bool) -> None:
     """Write direct subsidence parameter data for all nodes.
 
     For each node, writes n_layers rows. The first layer row includes

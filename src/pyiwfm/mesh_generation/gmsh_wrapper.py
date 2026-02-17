@@ -10,20 +10,19 @@ Gmsh is a powerful open-source mesh generator with CAD capabilities.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
 import math
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
-from numpy.typing import NDArray
 
 from pyiwfm.mesh_generation.generators import MeshGenerator, MeshResult
 
 if TYPE_CHECKING:
     from pyiwfm.mesh_generation.constraints import (
         Boundary,
-        StreamConstraint,
-        RefinementZone,
         PointConstraint,
+        RefinementZone,
+        StreamConstraint,
     )
 
 
@@ -56,20 +55,19 @@ class GmshMeshGenerator(MeshGenerator):
             import gmsh  # noqa: F401
         except ImportError as e:
             raise ImportError(
-                "Gmsh library is required for GmshMeshGenerator. "
-                "Install with: pip install gmsh"
+                "Gmsh library is required for GmshMeshGenerator. Install with: pip install gmsh"
             ) from e
 
         self.element_type = element_type
 
     def generate(
         self,
-        boundary: "Boundary",
+        boundary: Boundary,
         max_area: float | None = None,
         min_angle: float | None = None,
-        streams: list["StreamConstraint"] | None = None,
-        refinement_zones: list["RefinementZone"] | None = None,
-        points: list["PointConstraint"] | None = None,
+        streams: list[StreamConstraint] | None = None,
+        refinement_zones: list[RefinementZone] | None = None,
+        points: list[PointConstraint] | None = None,
     ) -> MeshResult:
         """
         Generate a mesh within the boundary.
@@ -96,9 +94,7 @@ class GmshMeshGenerator(MeshGenerator):
             gmsh.model.add("mesh")
 
             # Build geometry
-            self._build_geometry(
-                boundary, streams, points, refinement_zones
-            )
+            self._build_geometry(boundary, streams, points, refinement_zones)
 
             # Set mesh size
             if max_area is not None:
@@ -133,17 +129,17 @@ class GmshMeshGenerator(MeshGenerator):
 
     def _build_geometry(
         self,
-        boundary: "Boundary",
-        streams: list["StreamConstraint"] | None = None,
-        points: list["PointConstraint"] | None = None,
-        refinement_zones: list["RefinementZone"] | None = None,
+        boundary: Boundary,
+        streams: list[StreamConstraint] | None = None,
+        points: list[PointConstraint] | None = None,
+        refinement_zones: list[RefinementZone] | None = None,
     ) -> None:
         """Build Gmsh geometry from constraints."""
         import gmsh
 
         # Create boundary points
         boundary_point_ids = []
-        for i, (x, y) in enumerate(boundary.vertices):
+        for _i, (x, y) in enumerate(boundary.vertices):
             pt_id = gmsh.model.geo.addPoint(x, y, 0)
             boundary_point_ids.append(pt_id)
 
@@ -151,10 +147,7 @@ class GmshMeshGenerator(MeshGenerator):
         boundary_line_ids = []
         n = len(boundary_point_ids)
         for i in range(n):
-            line_id = gmsh.model.geo.addLine(
-                boundary_point_ids[i],
-                boundary_point_ids[(i + 1) % n]
-            )
+            line_id = gmsh.model.geo.addLine(boundary_point_ids[i], boundary_point_ids[(i + 1) % n])
             boundary_line_ids.append(line_id)
 
         # Create boundary curve loop
@@ -172,8 +165,7 @@ class GmshMeshGenerator(MeshGenerator):
             n_hole = len(hole_point_ids)
             for i in range(n_hole):
                 line_id = gmsh.model.geo.addLine(
-                    hole_point_ids[i],
-                    hole_point_ids[(i + 1) % n_hole]
+                    hole_point_ids[i], hole_point_ids[(i + 1) % n_hole]
                 )
                 hole_line_ids.append(line_id)
 
@@ -196,10 +188,7 @@ class GmshMeshGenerator(MeshGenerator):
 
                 stream_line_ids = []
                 for i in range(len(stream_point_ids) - 1):
-                    line_id = gmsh.model.geo.addLine(
-                        stream_point_ids[i],
-                        stream_point_ids[i + 1]
-                    )
+                    line_id = gmsh.model.geo.addLine(stream_point_ids[i], stream_point_ids[i + 1])
                     stream_line_ids.append(line_id)
 
                 # Embed in surface
@@ -220,14 +209,14 @@ class GmshMeshGenerator(MeshGenerator):
 
     def _apply_refinement_fields(
         self,
-        refinement_zones: list["RefinementZone"],
+        refinement_zones: list[RefinementZone],
     ) -> None:
         """Apply refinement zones using Gmsh mesh size fields."""
         import gmsh
 
         field_ids = []
 
-        for i, zone in enumerate(refinement_zones):
+        for _i, zone in enumerate(refinement_zones):
             char_length = math.sqrt(zone.max_area)
 
             if zone.center is not None and zone.radius is not None:
@@ -238,7 +227,9 @@ class GmshMeshGenerator(MeshGenerator):
                 gmsh.model.mesh.field.setNumber(field_id, "ZCenter", 0)
                 gmsh.model.mesh.field.setNumber(field_id, "Radius", zone.radius)
                 gmsh.model.mesh.field.setNumber(field_id, "VIn", char_length)
-                gmsh.model.mesh.field.setNumber(field_id, "VOut", char_length * 3)  # Coarser outside
+                gmsh.model.mesh.field.setNumber(
+                    field_id, "VOut", char_length * 3
+                )  # Coarser outside
                 field_ids.append(field_id)
 
         if field_ids:
@@ -272,7 +263,7 @@ class GmshMeshGenerator(MeshGenerator):
         # Process elements
         elements_list = []
 
-        for etype, etags, enodes in zip(elem_types, elem_tags, elem_node_tags):
+        for etype, etags, enodes in zip(elem_types, elem_tags, elem_node_tags, strict=False):
             if etype == 2:  # Triangle
                 # 3 nodes per triangle
                 n_tri = len(etags)

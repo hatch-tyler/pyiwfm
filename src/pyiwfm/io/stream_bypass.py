@@ -20,12 +20,11 @@ from numpy.typing import NDArray
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty,
-    strip_inline_comment as _strip_comment,
 )
-
+from pyiwfm.io.iwfm_reader import (
+    next_data_or_empty as _next_data_or_empty,
+)
 
 # Bypass destination types
 BYPASS_DEST_STREAM = 1
@@ -40,6 +39,7 @@ class BypassRatingTable:
         flows: Array of flow values
         fractions: Array of bypass fraction at each flow level
     """
+
     flows: NDArray[np.float64] = field(default_factory=lambda: np.array([], dtype=np.float64))
     fractions: NDArray[np.float64] = field(default_factory=lambda: np.array([], dtype=np.float64))
 
@@ -62,6 +62,7 @@ class BypassSpec:
         name: Bypass name (up to 20 chars)
         inline_rating: Inline rating table (if rating_table_col < 0)
     """
+
     id: int = 0
     export_stream_node: int = 0
     dest_type: int = BYPASS_DEST_STREAM
@@ -83,6 +84,7 @@ class BypassSeepageZone:
         element_ids: List of element IDs
         element_fractions: List of fractions for each element
     """
+
     bypass_id: int = 0
     n_elements: int = 0
     element_ids: list[int] = field(default_factory=list)
@@ -102,6 +104,7 @@ class BypassSpecConfig:
         bypasses: List of bypass specifications
         seepage_zones: List of seepage zone destinations (per bypass)
     """
+
     n_bypasses: int = 0
     flow_factor: float = 1.0
     flow_time_unit: str = ""
@@ -134,7 +137,7 @@ class BypassSpecReader:
         config = BypassSpecConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # NBypass
             nbypass_str = _next_data_or_empty(f)
             if not nbypass_str:
@@ -191,13 +194,20 @@ class BypassSpecReader:
         spec = BypassSpec()
         try:
             idx = 0
-            spec.id = int(parts[idx]); idx += 1
-            spec.export_stream_node = int(parts[idx]); idx += 1
-            spec.dest_type = int(parts[idx]); idx += 1
-            spec.dest_id = int(parts[idx]); idx += 1
-            spec.rating_table_col = int(parts[idx]); idx += 1
-            spec.frac_recoverable = float(parts[idx]); idx += 1
-            spec.frac_non_recoverable = float(parts[idx]); idx += 1
+            spec.id = int(parts[idx])
+            idx += 1
+            spec.export_stream_node = int(parts[idx])
+            idx += 1
+            spec.dest_type = int(parts[idx])
+            idx += 1
+            spec.dest_id = int(parts[idx])
+            idx += 1
+            spec.rating_table_col = int(parts[idx])
+            idx += 1
+            spec.frac_recoverable = float(parts[idx])
+            idx += 1
+            spec.frac_non_recoverable = float(parts[idx])
+            idx += 1
 
             # Name is optional — take text up to inline comment (/)
             if idx < len(parts):

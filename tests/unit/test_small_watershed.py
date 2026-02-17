@@ -17,10 +17,12 @@ from pyiwfm.io.small_watershed import (
     SmallWatershedMainConfig,
     SmallWatershedMainReader,
     WatershedAquiferParams,
-    WatershedGWNode as ReaderGWNode,
     WatershedInitialCondition,
     WatershedRootZoneParams,
     WatershedSpec,
+)
+from pyiwfm.io.small_watershed import (
+    WatershedGWNode as ReaderGWNode,
 )
 from pyiwfm.io.small_watershed_writer import (
     SmallWatershedComponentWriter,
@@ -28,10 +30,10 @@ from pyiwfm.io.small_watershed_writer import (
     write_small_watershed_component,
 )
 
-
 # ---------------------------------------------------------------------------
 # Component class tests
 # ---------------------------------------------------------------------------
+
 
 class TestWatershedUnit:
     def test_basic_creation(self):
@@ -57,12 +59,8 @@ class TestAppSmallWatershed:
         comp = AppSmallWatershed()
         gn1 = WatershedGWNode(gw_node_id=10, max_perc_rate=5.0)
         gn2 = WatershedGWNode(gw_node_id=20, max_perc_rate=3.0)
-        ws1 = WatershedUnit(
-            id=1, area=100.0, dest_stream_node=5, gw_nodes=[gn1]
-        )
-        ws2 = WatershedUnit(
-            id=2, area=200.0, dest_stream_node=8, gw_nodes=[gn2]
-        )
+        ws1 = WatershedUnit(id=1, area=100.0, dest_stream_node=5, gw_nodes=[gn1])
+        ws2 = WatershedUnit(id=2, area=200.0, dest_stream_node=8, gw_nodes=[gn2])
         comp.add_watershed(ws1)
         comp.add_watershed(ws2)
         return comp
@@ -100,9 +98,7 @@ class TestAppSmallWatershed:
 
     def test_validate_no_gw_nodes(self):
         comp = AppSmallWatershed()
-        comp.add_watershed(
-            WatershedUnit(id=1, area=10.0, dest_stream_node=5)
-        )
+        comp.add_watershed(WatershedUnit(id=1, area=10.0, dest_stream_node=5))
         with pytest.raises(Exception, match="no connected GW nodes"):
             comp.validate()
 
@@ -175,6 +171,7 @@ class TestFromConfig:
 # ---------------------------------------------------------------------------
 # Reader tests
 # ---------------------------------------------------------------------------
+
 
 class TestSmallWatershedReader:
     def test_read_empty_file(self, tmp_path):
@@ -449,6 +446,7 @@ class TestSmallWatershedReaderV41:
 # Writer tests
 # ---------------------------------------------------------------------------
 
+
 class TestSmallWatershedWriter:
     def test_write_main(self, tmp_path):
         from pyiwfm.io.small_watershed_writer import (
@@ -520,6 +518,7 @@ class TestSmallWatershedWriter:
 # ---------------------------------------------------------------------------
 # Round-trip test
 # ---------------------------------------------------------------------------
+
 
 class TestSmallWatershedRoundTrip:
     def test_read_write_read(self, tmp_path):
@@ -614,6 +613,7 @@ class TestSmallWatershedRoundTrip:
 # ---------------------------------------------------------------------------
 # Additional writer coverage tests
 # ---------------------------------------------------------------------------
+
 
 class TestSmallWatershedWriterConfig:
     def test_swshed_dir_empty_subdir(self, tmp_path):
@@ -710,12 +710,8 @@ class TestSmallWatershedWriterCoverage:
             ic_factor=1.0,
         )
         # Create a baseflow GW node
-        gn_baseflow = WatershedGWNode(
-            gw_node_id=11, max_perc_rate=5.0, is_baseflow=True, layer=2
-        )
-        gn_normal = WatershedGWNode(
-            gw_node_id=10, max_perc_rate=2.5, is_baseflow=False, layer=0
-        )
+        gn_baseflow = WatershedGWNode(gw_node_id=11, max_perc_rate=5.0, is_baseflow=True, layer=2)
+        gn_normal = WatershedGWNode(gw_node_id=10, max_perc_rate=2.5, is_baseflow=False, layer=0)
         ws = WatershedUnit(
             id=1,
             area=500.0,
@@ -887,9 +883,7 @@ class TestSmallWatershedWriterCoverage:
             output_dir=Path("/dummy"),  # Will be overridden
             swshed_subdir="CustomSW",
         )
-        results = write_small_watershed_component(
-            model, tmp_path, config=custom_config
-        )
+        results = write_small_watershed_component(model, tmp_path, config=custom_config)
         assert "main" in results
         # Verify the config's output_dir was overridden to tmp_path
         assert custom_config.output_dir == tmp_path

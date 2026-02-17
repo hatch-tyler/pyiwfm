@@ -18,10 +18,15 @@ Reference: Class_Diversion.f90 - Diversion_New()
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TextIO
 
 from pyiwfm.io.iwfm_writer import (
     ensure_parent_dir as _ensure_parent_dir,
+)
+from pyiwfm.io.iwfm_writer import (
     write_comment as _write_comment,
+)
+from pyiwfm.io.iwfm_writer import (
     write_value as _write_value,
 )
 from pyiwfm.io.stream_diversion import DiversionSpecConfig
@@ -76,7 +81,7 @@ def write_diversion_spec(config: DiversionSpecConfig, filepath: Path | str) -> P
 
 
 def _write_diversion_line(
-    f: object,
+    f: TextIO,
     div: object,
     has_spills: bool,
 ) -> None:
@@ -127,7 +132,7 @@ def _write_diversion_line(
     f.write("     " + "  ".join(parts) + "\n")
 
 
-def _write_element_group(f: object, group: object) -> None:
+def _write_element_group(f: TextIO, group: object) -> None:
     """Write a single element group.
 
     Format:
@@ -154,7 +159,7 @@ def _write_element_group(f: object, group: object) -> None:
         f.write(f"     {group.id:>6d}  {0:>4d}\n")
 
 
-def _write_recharge_zone(f: object, rz: object) -> None:
+def _write_recharge_zone(f: TextIO, rz: object) -> None:
     """Write recharge zone destination data.
 
     Format (LossDestination_New in Fortran):

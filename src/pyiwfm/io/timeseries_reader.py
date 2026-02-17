@@ -32,9 +32,7 @@ class IWFMTimeSeriesData:
 
     n_columns: int = 0
     dates: list[datetime] = field(default_factory=list)
-    data: NDArray[np.float64] = field(
-        default_factory=lambda: np.empty((0, 0), dtype=np.float64)
-    )
+    data: NDArray[np.float64] = field(default_factory=lambda: np.empty((0, 0), dtype=np.float64))
     factor: float = 1.0
     time_unit: str = ""
 

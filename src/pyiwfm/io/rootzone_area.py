@@ -23,8 +23,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS as _COMMENT_CHARS,
     is_comment_line as _is_comment,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment,
 )
 

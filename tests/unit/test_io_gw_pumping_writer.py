@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+# ---------------------------------------------------------------------------
+# Helper: in-memory StringIO tests for low-level helpers
+# ---------------------------------------------------------------------------
+import io
 from pathlib import Path
-
-import pytest
 
 from pyiwfm.io.gw_pumping import (
     ElementGroup,
@@ -20,13 +22,6 @@ from pyiwfm.io.gw_pumping_writer import (
     write_pumping_main,
     write_well_spec_file,
 )
-
-
-# ---------------------------------------------------------------------------
-# Helper: in-memory StringIO tests for low-level helpers
-# ---------------------------------------------------------------------------
-
-import io
 
 
 class TestWriteComment:
@@ -359,7 +354,7 @@ class TestWriteWellSpecFile:
         assert "/ NWELL" in text
         # NWELL should be 0
         lines = text.strip().split("\n")
-        nwell_line = [l for l in lines if "NWELL" in l][0]
+        nwell_line = [line for line in lines if "NWELL" in line][0]
         assert "0" in nwell_line
 
     def test_creates_parent_directories(self, tmp_path: Path) -> None:
@@ -469,7 +464,7 @@ class TestWriteElemPumpFile:
         text = out.read_text()
         lines = text.strip().split("\n")
         # Find the group lines after NGROUPS
-        ngroups_idx = next(i for i, l in enumerate(lines) if "NGROUPS" in l)
+        ngroups_idx = next(i for i, line in enumerate(lines) if "NGROUPS" in line)
         group_line = lines[ngroups_idx + 1]
         # Should contain group_id=5, count=3, first element=10
         parts = group_line.split()
@@ -487,7 +482,7 @@ class TestWriteElemPumpFile:
 
         text = out.read_text()
         assert "/ NSINK" in text
-        nsink_line = [l for l in text.strip().split("\n") if "NSINK" in l][0]
+        nsink_line = [line for line in text.strip().split("\n") if "NSINK" in line][0]
         assert "0" in nsink_line
 
     def test_creates_parent_directories(self, tmp_path: Path) -> None:
@@ -538,7 +533,7 @@ class TestWriteElemPumpFile:
 
         text = out.read_text()
         assert "/ NGROUPS" in text
-        ngroups_line = [l for l in text.strip().split("\n") if "NGROUPS" in l][0]
+        ngroups_line = [line for line in text.strip().split("\n") if "NGROUPS" in line][0]
         assert "0" in ngroups_line
 
 

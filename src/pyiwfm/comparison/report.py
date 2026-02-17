@@ -16,14 +16,14 @@ from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from pyiwfm.comparison.differ import ModelDiff
-    from pyiwfm.comparison.metrics import ComparisonMetrics, TimeSeriesComparison
+    from pyiwfm.comparison.metrics import ComparisonMetrics
 
 
 class BaseReport(ABC):
     """Abstract base class for report generators."""
 
     @abstractmethod
-    def generate(self, model_diff: "ModelDiff") -> str:
+    def generate(self, model_diff: ModelDiff) -> str:
         """
         Generate report content from model diff.
 
@@ -36,7 +36,7 @@ class BaseReport(ABC):
         pass
 
     @abstractmethod
-    def generate_metrics_report(self, metrics: "ComparisonMetrics") -> str:
+    def generate_metrics_report(self, metrics: ComparisonMetrics) -> str:
         """
         Generate report content from metrics.
 
@@ -48,7 +48,7 @@ class BaseReport(ABC):
         """
         pass
 
-    def save(self, model_diff: "ModelDiff", output_path: Path | str) -> None:
+    def save(self, model_diff: ModelDiff, output_path: Path | str) -> None:
         """
         Save report to file.
 
@@ -63,7 +63,7 @@ class BaseReport(ABC):
 class TextReport(BaseReport):
     """Generate plain text reports."""
 
-    def generate(self, model_diff: "ModelDiff") -> str:
+    def generate(self, model_diff: ModelDiff) -> str:
         """Generate text report from model diff."""
         lines = [
             "=" * 60,
@@ -99,13 +99,11 @@ class TextReport(BaseReport):
                 lines.append(str(item))
 
             if len(model_diff.stratigraphy_diff.items) > 50:
-                lines.append(
-                    f"... and {len(model_diff.stratigraphy_diff.items) - 50} more items"
-                )
+                lines.append(f"... and {len(model_diff.stratigraphy_diff.items) - 50} more items")
 
         return "\n".join(lines)
 
-    def generate_metrics_report(self, metrics: "ComparisonMetrics") -> str:
+    def generate_metrics_report(self, metrics: ComparisonMetrics) -> str:
         """Generate text report from metrics."""
         lines = [
             "=" * 60,
@@ -130,7 +128,7 @@ class JsonReport(BaseReport):
         """
         self.indent = indent
 
-    def generate(self, model_diff: "ModelDiff") -> str:
+    def generate(self, model_diff: ModelDiff) -> str:
         """Generate JSON report from model diff."""
         data = {
             "report_type": "model_comparison",
@@ -143,7 +141,7 @@ class JsonReport(BaseReport):
         }
         return json.dumps(data, indent=self.indent, default=str)
 
-    def generate_metrics_report(self, metrics: "ComparisonMetrics") -> str:
+    def generate_metrics_report(self, metrics: ComparisonMetrics) -> str:
         """Generate JSON report from metrics."""
         data = {
             "report_type": "comparison_metrics",
@@ -166,7 +164,7 @@ class HtmlReport(BaseReport):
         """
         self.title = title
 
-    def generate(self, model_diff: "ModelDiff") -> str:
+    def generate(self, model_diff: ModelDiff) -> str:
         """Generate HTML report from model diff."""
         stats = model_diff.statistics()
 
@@ -195,25 +193,25 @@ class HtmlReport(BaseReport):
 </head>
 <body>
     <h1>{self.title}</h1>
-    <p class="timestamp">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    <p class="timestamp">Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
 
     <div class="summary">
         <h2>Summary</h2>
         {"<p class='identical'>Models are identical.</p>" if model_diff.is_identical else ""}
         <div class="stat">
-            <div class="stat-value">{stats['total_changes']}</div>
+            <div class="stat-value">{stats["total_changes"]}</div>
             <div class="stat-label">Total Changes</div>
         </div>
         <div class="stat">
-            <div class="stat-value added">+{stats['added']}</div>
+            <div class="stat-value added">+{stats["added"]}</div>
             <div class="stat-label">Added</div>
         </div>
         <div class="stat">
-            <div class="stat-value removed">-{stats['removed']}</div>
+            <div class="stat-value removed">-{stats["removed"]}</div>
             <div class="stat-label">Removed</div>
         </div>
         <div class="stat">
-            <div class="stat-value modified">~{stats['modified']}</div>
+            <div class="stat-value modified">~{stats["modified"]}</div>
             <div class="stat-label">Modified</div>
         </div>
     </div>
@@ -280,7 +278,7 @@ class HtmlReport(BaseReport):
 </html>"""
         return html
 
-    def generate_metrics_report(self, metrics: "ComparisonMetrics") -> str:
+    def generate_metrics_report(self, metrics: ComparisonMetrics) -> str:
         """Generate HTML report from metrics."""
         rating = metrics.rating()
         rating_colors = {
@@ -315,7 +313,7 @@ class HtmlReport(BaseReport):
 </head>
 <body>
     <h1>Comparison Metrics Report</h1>
-    <p class="timestamp">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    <p class="timestamp">Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
 
     <p>Overall Rating: <span class="rating">{rating.upper()}</span></p>
 
@@ -353,7 +351,7 @@ class ReportGenerator:
 
     def generate(
         self,
-        model_diff: "ModelDiff",
+        model_diff: ModelDiff,
         format: Literal["text", "json", "html"] = "text",
     ) -> str:
         """
@@ -376,7 +374,7 @@ class ReportGenerator:
 
     def generate_metrics(
         self,
-        metrics: "ComparisonMetrics",
+        metrics: ComparisonMetrics,
         format: Literal["text", "json", "html"] = "text",
     ) -> str:
         """
@@ -396,7 +394,7 @@ class ReportGenerator:
 
     def save(
         self,
-        model_diff: "ModelDiff",
+        model_diff: ModelDiff,
         output_path: Path | str,
         format: Literal["text", "json", "html"] | None = None,
     ) -> None:
@@ -411,12 +409,20 @@ class ReportGenerator:
         output_path = Path(output_path)
 
         # Auto-detect format from extension
+        fmt: Literal["text", "json", "html"]
         if format is None:
             ext = output_path.suffix.lower()
-            format_map = {".txt": "text", ".json": "json", ".html": "html", ".htm": "html"}
-            format = format_map.get(ext, "text")
+            format_map: dict[str, Literal["text", "json", "html"]] = {
+                ".txt": "text",
+                ".json": "json",
+                ".html": "html",
+                ".htm": "html",
+            }
+            fmt = format_map.get(ext, "text")
+        else:
+            fmt = format
 
-        content = self.generate(model_diff, format=format)
+        content = self.generate(model_diff, format=fmt)
         output_path.write_text(content, encoding="utf-8")
 
 
@@ -438,9 +444,9 @@ class ComparisonReport:
     """
 
     title: str
-    model_diff: "ModelDiff | None" = None
-    head_metrics: "ComparisonMetrics | None" = None
-    flow_metrics: "ComparisonMetrics | None" = None
+    model_diff: ModelDiff | None = None
+    head_metrics: ComparisonMetrics | None = None
+    flow_metrics: ComparisonMetrics | None = None
     description: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -526,7 +532,7 @@ class ComparisonReport:
 </head>
 <body>
     <h1>{self.title}</h1>
-    <p class="timestamp">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    <p class="timestamp">Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
 """
 
         if self.description:
@@ -539,19 +545,19 @@ class ComparisonReport:
         <h2>Model Differences</h2>
         <div class="metric-grid">
             <div class="metric-box">
-                <div class="metric-value">{stats['total_changes']}</div>
+                <div class="metric-value">{stats["total_changes"]}</div>
                 <div class="metric-label">Total Changes</div>
             </div>
             <div class="metric-box">
-                <div class="metric-value" style="color: green;">+{stats['added']}</div>
+                <div class="metric-value" style="color: green;">+{stats["added"]}</div>
                 <div class="metric-label">Added</div>
             </div>
             <div class="metric-box">
-                <div class="metric-value" style="color: red;">-{stats['removed']}</div>
+                <div class="metric-value" style="color: red;">-{stats["removed"]}</div>
                 <div class="metric-label">Removed</div>
             </div>
             <div class="metric-box">
-                <div class="metric-value" style="color: orange;">~{stats['modified']}</div>
+                <div class="metric-value" style="color: orange;">~{stats["modified"]}</div>
                 <div class="metric-label">Modified</div>
             </div>
         </div>
@@ -607,14 +613,22 @@ class ComparisonReport:
         """
         output_path = Path(output_path)
 
+        fmt: Literal["text", "json", "html"]
         if format is None:
             ext = output_path.suffix.lower()
-            format_map = {".txt": "text", ".json": "json", ".html": "html", ".htm": "html"}
-            format = format_map.get(ext, "text")
+            fmt_map: dict[str, Literal["text", "json", "html"]] = {
+                ".txt": "text",
+                ".json": "json",
+                ".html": "html",
+                ".htm": "html",
+            }
+            fmt = fmt_map.get(ext, "text")
+        else:
+            fmt = format
 
-        if format == "text":
+        if fmt == "text":
             content = self.to_text()
-        elif format == "json":
+        elif fmt == "json":
             content = self.to_json()
         else:
             content = self.to_html()

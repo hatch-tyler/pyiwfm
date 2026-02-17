@@ -20,37 +20,36 @@ import pytest
 from jinja2 import Environment
 
 from pyiwfm.templates.filters import (
+    dss_date_part,
+    dss_interval,
+    # DSS formatting
+    dss_pathname,
+    dss_timeseries_ref,
     # Number formatting
     fortran_float,
     fortran_int,
     fortran_scientific,
-    # IWFM formatting
-    iwfm_comment,
-    iwfm_value,
-    iwfm_path,
-    iwfm_blank_or_path,
-    # Time formatting
-    iwfm_timestamp,
-    iwfm_date,
-    iwfm_time_unit,
-    # DSS formatting
-    dss_pathname,
-    dss_date_part,
-    dss_interval,
     # Array formatting
     iwfm_array_row,
+    iwfm_blank_or_path,
+    # IWFM formatting
+    iwfm_comment,
     iwfm_data_row,
+    iwfm_date,
+    iwfm_path,
+    iwfm_time_unit,
+    # Time formatting
+    iwfm_timestamp,
+    iwfm_value,
+    pad_left,
     # String formatting
     pad_right,
-    pad_left,
-    truncate,
-    # Time series references
-    timeseries_ref,
-    dss_timeseries_ref,
     # Registration
     register_all_filters,
+    # Time series references
+    timeseries_ref,
+    truncate,
 )
-
 
 # =============================================================================
 # Test Number Formatting

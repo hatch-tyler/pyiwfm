@@ -1,23 +1,21 @@
 """Unit tests for PEST++ instruction file generation."""
 
+import tempfile
 from datetime import datetime
 from pathlib import Path
-import tempfile
 
 import pytest
 
-from pyiwfm.runner.pest import InstructionFile
-from pyiwfm.runner.pest_observations import (
-    IWFMObservationType,
-    IWFMObservation,
-    ObservationLocation,
-)
 from pyiwfm.runner.pest_instructions import (
+    IWFM_OUTPUT_FORMATS,
     IWFMInstructionManager,
     OutputFileFormat,
-    IWFM_OUTPUT_FORMATS,
 )
 from pyiwfm.runner.pest_obs_manager import IWFMObservationManager
+from pyiwfm.runner.pest_observations import (
+    IWFMObservation,
+    IWFMObservationType,
+)
 
 
 class TestOutputFileFormat:
@@ -86,7 +84,7 @@ class TestIWFMInstructionManagerInit:
         """Test that output directory is created."""
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir) / "instructions" / "nested"
-            im = IWFMInstructionManager(output_dir=output_dir)
+            IWFMInstructionManager(output_dir=output_dir)
             assert output_dir.exists()
 
 
@@ -138,9 +136,7 @@ Date_Time        (ft)
             filepath.write_text(content)
             yield filepath
 
-    def test_generate_head_instructions(
-        self, sample_head_observations, sample_head_output_file
-    ):
+    def test_generate_head_instructions(self, sample_head_observations, sample_head_output_file):
         """Test generating head instructions."""
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
@@ -217,9 +213,7 @@ Date_Time        (cfs)     (ft)
             filepath.write_text(content)
             yield filepath
 
-    def test_generate_flow_instructions(
-        self, sample_flow_observations, sample_flow_output_file
-    ):
+    def test_generate_flow_instructions(self, sample_flow_observations, sample_flow_output_file):
         """Test generating flow instructions."""
         with tempfile.TemporaryDirectory() as tmpdir:
             im = IWFMInstructionManager(output_dir=tmpdir)
@@ -239,9 +233,7 @@ Date_Time        (cfs)     (ft)
             content = ins.instruction_path.read_text()
             assert "pif @" in content
 
-    def test_generate_stage_instructions(
-        self, sample_flow_output_file
-    ):
+    def test_generate_stage_instructions(self, sample_flow_output_file):
         """Test generating stage instructions."""
         with tempfile.TemporaryDirectory() as tmpdir:
             stage_obs = [
@@ -366,9 +358,7 @@ Date       (AF)       (AF)
             filepath.write_text(content)
             yield filepath
 
-    def test_generate_budget_instructions_gw(
-        self, sample_budget_observations, sample_budget_file
-    ):
+    def test_generate_budget_instructions_gw(self, sample_budget_observations, sample_budget_file):
         """Test generating GW budget instructions."""
         with tempfile.TemporaryDirectory() as tmpdir:
             im = IWFMInstructionManager(output_dir=tmpdir)
@@ -428,9 +418,7 @@ Date_Time        (ft)
             filepath.write_text(content)
             yield filepath
 
-    def test_generate_lake_instructions(
-        self, sample_lake_observations, sample_lake_file
-    ):
+    def test_generate_lake_instructions(self, sample_lake_observations, sample_lake_file):
         """Test generating lake instructions."""
         with tempfile.TemporaryDirectory() as tmpdir:
             im = IWFMInstructionManager(output_dir=tmpdir)
@@ -535,8 +523,8 @@ class TestCustomInstructions:
             im = IWFMInstructionManager(output_dir=tmpdir)
 
             observations = [
-                ("obs1", 1, 1, 5),   # Line 1, columns 1-5
-                ("obs2", 1, 10, 15), # Line 1, columns 10-15
+                ("obs1", 1, 1, 5),  # Line 1, columns 1-5
+                ("obs2", 1, 10, 15),  # Line 1, columns 10-15
             ]
 
             ins = im.generate_fixed_format_instructions(
@@ -613,9 +601,7 @@ class TestOutputFileFormatExtended:
 
     def test_custom_time_format(self):
         """Test custom time format."""
-        fmt = OutputFileFormat(
-            name="custom", time_format="%Y-%m-%d %H:%M:%S"
-        )
+        fmt = OutputFileFormat(name="custom", time_format="%Y-%m-%d %H:%M:%S")
         assert fmt.time_format == "%Y-%m-%d %H:%M:%S"
 
     def test_custom_delimiter(self):
@@ -761,13 +747,15 @@ class TestHeadInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="h_w1", value=100.0,
+                    name="h_w1",
+                    value=100.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=datetime(2020, 1, 1, 0, 0),
                     metadata={"well_id": "W1"},
                 ),
                 IWFMObservation(
-                    name="h_w2", value=150.0,
+                    name="h_w2",
+                    value=150.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=datetime(2020, 1, 1, 0, 0),
                     metadata={"well_id": "W2"},
@@ -786,12 +774,14 @@ class TestHeadInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="h1", value=100.0,
+                    name="h1",
+                    value=100.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=None,  # No datetime
                 ),
                 IWFMObservation(
-                    name="h2", value=101.0,
+                    name="h2",
+                    value=101.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -810,7 +800,8 @@ class TestHeadInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="h1", value=100.0,
+                    name="h1",
+                    value=100.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -831,13 +822,15 @@ class TestHeadInstructionsByWell:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="h_w1_t1", value=100.0,
+                    name="h_w1_t1",
+                    value=100.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=datetime(2020, 1, 1, 0, 0),
                     metadata={"well_id": "W1"},
                 ),
                 IWFMObservation(
-                    name="h_w2_t1", value=150.0,
+                    name="h_w2_t1",
+                    value=150.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=datetime(2020, 1, 1, 0, 0),
                     metadata={"well_id": "W2"},
@@ -863,7 +856,8 @@ class TestHeadInstructionsByWell:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs1 = IWFMObservation(
-                name="h_w1_t1", value=100.0,
+                name="h_w1_t1",
+                value=100.0,
                 obs_type=IWFMObservationType.HEAD,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 metadata={"well_id": "W1"},
@@ -886,13 +880,15 @@ class TestHeadInstructionsByWell:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="h_w1_t1", value=100.0,
+                    name="h_w1_t1",
+                    value=100.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=datetime(2020, 1, 1, 0, 0),
                     metadata={"well_id": "W1"},
                 ),
                 IWFMObservation(
-                    name="h_w3_t1", value=200.0,
+                    name="h_w3_t1",
+                    value=200.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=datetime(2020, 1, 1, 0, 0),
                     metadata={"well_id": "W3"},  # Not in output_files
@@ -915,7 +911,8 @@ class TestHeadInstructionsByWell:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="h_t1", value=100.0,
+                    name="h_t1",
+                    value=100.0,
                     obs_type=IWFMObservationType.HEAD,
                     datetime=datetime(2020, 1, 1, 0, 0),
                     metadata={},  # No well_id
@@ -940,7 +937,8 @@ class TestFlowInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="f1", value=500.0,
+                name="f1",
+                value=500.0,
                 obs_type=IWFMObservationType.STREAM_FLOW,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="flow",
@@ -953,9 +951,7 @@ class TestFlowInstructionsExtended:
             output_file = Path(tmpdir) / "StreamFlow.out"
             output_file.write_text("header\n")
 
-            ins = im.generate_flow_instructions(
-                output_file=output_file, variable="flow"
-            )
+            ins = im.generate_flow_instructions(output_file=output_file, variable="flow")
             assert len(ins.observations) == 1
 
     def test_stage_instructions_from_om(self):
@@ -963,7 +959,8 @@ class TestFlowInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="s1", value=10.0,
+                name="s1",
+                value=10.0,
                 obs_type=IWFMObservationType.STREAM_STAGE,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="stage",
@@ -976,9 +973,7 @@ class TestFlowInstructionsExtended:
             output_file = Path(tmpdir) / "Stage.out"
             output_file.write_text("header\n")
 
-            ins = im.generate_flow_instructions(
-                output_file=output_file, variable="stage"
-            )
+            ins = im.generate_flow_instructions(output_file=output_file, variable="stage")
             assert len(ins.observations) == 1
 
     def test_flow_instructions_no_observations_raises(self):
@@ -996,7 +991,8 @@ class TestFlowInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="f1", value=100.0,
+                    name="f1",
+                    value=100.0,
                     obs_type=IWFMObservationType.STREAM_FLOW,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1015,7 +1011,8 @@ class TestFlowInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="f1", value=100.0,
+                    name="f1",
+                    value=100.0,
                     obs_type=IWFMObservationType.STREAM_FLOW,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1033,7 +1030,8 @@ class TestFlowInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="f1", value=100.0,
+                    name="f1",
+                    value=100.0,
                     obs_type=IWFMObservationType.STREAM_FLOW,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1069,7 +1067,8 @@ class TestGainLossInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="sgl1", value=10.0,
+                name="sgl1",
+                value=10.0,
                 obs_type=IWFMObservationType.STREAM_GAIN_LOSS,
                 datetime=datetime(2020, 1, 1),
                 group="gain_loss",
@@ -1090,13 +1089,15 @@ class TestGainLossInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="sgl1", value=10.0,
+                    name="sgl1",
+                    value=10.0,
                     obs_type=IWFMObservationType.STREAM_GAIN_LOSS,
                     datetime=None,
                     metadata={"reach_id": 1},
                 ),
                 IWFMObservation(
-                    name="sgl2", value=5.0,
+                    name="sgl2",
+                    value=5.0,
                     obs_type=IWFMObservationType.STREAM_GAIN_LOSS,
                     datetime=datetime(2020, 1, 1),
                     metadata={"reach_id": 2},
@@ -1115,7 +1116,8 @@ class TestGainLossInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="sgl1", value=10.0,
+                    name="sgl1",
+                    value=10.0,
                     obs_type=IWFMObservationType.STREAM_GAIN_LOSS,
                     datetime=datetime(2020, 1, 1),
                     metadata={"reach_id": 1},
@@ -1135,7 +1137,8 @@ class TestGainLossInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="sgl1", value=10.0,
+                    name="sgl1",
+                    value=10.0,
                     obs_type=IWFMObservationType.STREAM_GAIN_LOSS,
                     datetime=datetime(2020, 1, 1),
                     metadata={},  # No reach_id
@@ -1154,7 +1157,8 @@ class TestGainLossInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="sgl1", value=10.0,
+                    name="sgl1",
+                    value=10.0,
                     obs_type=IWFMObservationType.STREAM_GAIN_LOSS,
                     datetime=datetime(2020, 1, 1),
                     metadata={"reach_id": 1},
@@ -1187,7 +1191,8 @@ class TestBudgetInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="gwb1", value=1000.0,
+                name="gwb1",
+                value=1000.0,
                 obs_type=IWFMObservationType.GW_BUDGET,
                 datetime=datetime(2020, 1, 1),
                 group="gwbud",
@@ -1209,7 +1214,8 @@ class TestBudgetInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="strb1", value=500.0,
+                    name="strb1",
+                    value=500.0,
                     obs_type=IWFMObservationType.STREAM_BUDGET,
                     datetime=datetime(2020, 1, 1),
                     metadata={"component": "INFLOW", "budget_type": "stream"},
@@ -1228,7 +1234,8 @@ class TestBudgetInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="rzb1", value=200.0,
+                    name="rzb1",
+                    value=200.0,
                     obs_type=IWFMObservationType.ROOTZONE_BUDGET,
                     datetime=datetime(2020, 1, 1),
                     metadata={"component": "ET", "budget_type": "rootzone"},
@@ -1247,7 +1254,8 @@ class TestBudgetInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="lkb1", value=300.0,
+                    name="lkb1",
+                    value=300.0,
                     obs_type=IWFMObservationType.LAKE_BUDGET,
                     datetime=datetime(2020, 1, 1),
                     metadata={"component": "INFLOW"},
@@ -1266,13 +1274,15 @@ class TestBudgetInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="gwb_nodt", value=1000.0,
+                    name="gwb_nodt",
+                    value=1000.0,
                     obs_type=IWFMObservationType.GW_BUDGET,
                     datetime=None,
                     metadata={"component": "RECHARGE"},
                 ),
                 IWFMObservation(
-                    name="gwb_dt", value=1000.0,
+                    name="gwb_dt",
+                    value=1000.0,
                     obs_type=IWFMObservationType.GW_BUDGET,
                     datetime=datetime(2020, 1, 1),
                     metadata={"component": "RECHARGE"},
@@ -1292,7 +1302,8 @@ class TestBudgetInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="gwb1", value=1000.0,
+                    name="gwb1",
+                    value=1000.0,
                     obs_type=IWFMObservationType.GW_BUDGET,
                     datetime=datetime(2020, 1, 1),
                     metadata={},  # No component
@@ -1312,7 +1323,8 @@ class TestBudgetInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="gwb1", value=1000.0,
+                    name="gwb1",
+                    value=1000.0,
                     obs_type=IWFMObservationType.GW_BUDGET,
                     datetime=datetime(2020, 1, 1),
                     metadata={"component": "RECHARGE"},
@@ -1337,7 +1349,8 @@ class TestLakeInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="lks1", value=5000.0,
+                    name="lks1",
+                    value=5000.0,
                     obs_type=IWFMObservationType.LAKE_STORAGE,
                     datetime=datetime(2020, 1, 1, 0, 0),
                     group="lake_storage",
@@ -1368,7 +1381,8 @@ class TestLakeInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="lk1", value=100.0,
+                name="lk1",
+                value=100.0,
                 obs_type=IWFMObservationType.LAKE_LEVEL,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="lake_level",
@@ -1389,7 +1403,8 @@ class TestLakeInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="lks1", value=5000.0,
+                name="lks1",
+                value=5000.0,
                 obs_type=IWFMObservationType.LAKE_STORAGE,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="lake_storage",
@@ -1398,6 +1413,7 @@ class TestLakeInstructionsExtended:
 
             # Need to create the storage group since it's not a default
             from pyiwfm.runner.pest_observations import IWFMObservationGroup
+
             om._observation_groups["lake_storage"] = IWFMObservationGroup(
                 name="lake_storage",
                 obs_type=IWFMObservationType.LAKE_STORAGE,
@@ -1416,7 +1432,8 @@ class TestLakeInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="lk1", value=100.0,
+                    name="lk1",
+                    value=100.0,
                     obs_type=IWFMObservationType.LAKE_LEVEL,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1435,12 +1452,14 @@ class TestLakeInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="lk_nodt", value=100.0,
+                    name="lk_nodt",
+                    value=100.0,
                     obs_type=IWFMObservationType.LAKE_LEVEL,
                     datetime=None,
                 ),
                 IWFMObservation(
-                    name="lk_dt", value=101.0,
+                    name="lk_dt",
+                    value=101.0,
                     obs_type=IWFMObservationType.LAKE_LEVEL,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1458,7 +1477,8 @@ class TestLakeInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="lk1", value=100.0,
+                    name="lk1",
+                    value=100.0,
                     obs_type=IWFMObservationType.LAKE_LEVEL,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1493,7 +1513,8 @@ class TestSubsidenceInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="sub1", value=0.05,
+                name="sub1",
+                value=0.05,
                 obs_type=IWFMObservationType.SUBSIDENCE,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="subsidence",
@@ -1513,12 +1534,14 @@ class TestSubsidenceInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="sub_nodt", value=0.05,
+                    name="sub_nodt",
+                    value=0.05,
                     obs_type=IWFMObservationType.SUBSIDENCE,
                     datetime=None,
                 ),
                 IWFMObservation(
-                    name="sub_dt", value=0.06,
+                    name="sub_dt",
+                    value=0.06,
                     obs_type=IWFMObservationType.SUBSIDENCE,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1536,7 +1559,8 @@ class TestSubsidenceInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="sub1", value=0.05,
+                    name="sub1",
+                    value=0.05,
                     obs_type=IWFMObservationType.SUBSIDENCE,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1555,7 +1579,8 @@ class TestSubsidenceInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="sub1", value=0.05,
+                    name="sub1",
+                    value=0.05,
                     obs_type=IWFMObservationType.SUBSIDENCE,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1572,7 +1597,8 @@ class TestSubsidenceInstructionsExtended:
         with tempfile.TemporaryDirectory() as tmpdir:
             obs = [
                 IWFMObservation(
-                    name="sub1", value=0.05,
+                    name="sub1",
+                    value=0.05,
                     obs_type=IWFMObservationType.SUBSIDENCE,
                     datetime=datetime(2020, 1, 1, 0, 0),
                 ),
@@ -1679,7 +1705,7 @@ class TestFixedFormatInstructionsExtended:
                 ],
                 header_lines=1,
             )
-            content = ins.instruction_path.read_text()
+            ins.instruction_path.read_text()
             assert ins.instruction_path.exists()
             assert len(ins.observations) == 2
 
@@ -1761,7 +1787,8 @@ class TestGenerateAllInstructions:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="h1", value=100.0,
+                name="h1",
+                value=100.0,
                 obs_type=IWFMObservationType.HEAD,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="head",
@@ -1774,9 +1801,7 @@ class TestGenerateAllInstructions:
             output_file.write_text("header\n")
 
             im = IWFMInstructionManager(observation_manager=om, output_dir=tmpdir)
-            instructions = im.generate_all_instructions(
-                output_files={"head": output_file}
-            )
+            instructions = im.generate_all_instructions(output_files={"head": output_file})
             assert len(instructions) == 1
 
     def test_generate_all_empty_output_files(self):
@@ -1784,7 +1809,8 @@ class TestGenerateAllInstructions:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="h1", value=100.0,
+                name="h1",
+                value=100.0,
                 obs_type=IWFMObservationType.HEAD,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="head",
@@ -1801,7 +1827,8 @@ class TestGenerateAllInstructions:
             om = IWFMObservationManager()
 
             head_obs = IWFMObservation(
-                name="h1", value=100.0,
+                name="h1",
+                value=100.0,
                 obs_type=IWFMObservationType.HEAD,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="head",
@@ -1810,7 +1837,8 @@ class TestGenerateAllInstructions:
             om.get_observation_group("head").observations.append(head_obs)
 
             flow_obs = IWFMObservation(
-                name="f1", value=500.0,
+                name="f1",
+                value=500.0,
                 obs_type=IWFMObservationType.STREAM_FLOW,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="flow",
@@ -1842,7 +1870,8 @@ class TestGenerateAllInstructions:
         with tempfile.TemporaryDirectory() as tmpdir:
             om = IWFMObservationManager()
             obs = IWFMObservation(
-                name="sub1", value=0.05,
+                name="sub1",
+                value=0.05,
                 obs_type=IWFMObservationType.SUBSIDENCE,
                 datetime=datetime(2020, 1, 1, 0, 0),
                 group="subsidence",
@@ -1854,9 +1883,7 @@ class TestGenerateAllInstructions:
             sub_file.write_text("header\n")
 
             im = IWFMInstructionManager(observation_manager=om, output_dir=tmpdir)
-            instructions = im.generate_all_instructions(
-                output_files={"subsidence": sub_file}
-            )
+            instructions = im.generate_all_instructions(output_files={"subsidence": sub_file})
             assert len(instructions) == 1
 
 

@@ -9,19 +9,17 @@ Covers:
 
 from __future__ import annotations
 
-import shutil
-from datetime import timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import patch
 
 import pytest
 
+from pyiwfm.runner.results import SimulationResult
 from pyiwfm.runner.scenario import (
     Scenario,
     ScenarioManager,
     ScenarioResult,
 )
-from pyiwfm.runner.results import SimulationResult
 
 
 class TestScenarioValidation:
@@ -62,9 +60,7 @@ class TestApplyFactorDict:
         # Create test timeseries file
         ts_file = tmp_path / "test_ts.dat"
         ts_file.write_text(
-            "C Test timeseries\n"
-            "01/01/2020  100.0  200.0  300.0\n"
-            "02/01/2020  110.0  210.0  310.0\n"
+            "C Test timeseries\n01/01/2020  100.0  200.0  300.0\n02/01/2020  110.0  210.0  310.0\n"
         )
 
         # Apply dict factor: column 1 *= 2, column 2 *= 0.5
@@ -89,9 +85,7 @@ class TestApplyFactorDict:
         manager = ScenarioManager(baseline_dir=baseline)
 
         ts_file = tmp_path / "test_ts.dat"
-        ts_file.write_text(
-            "01/01/2020  100.0  200.0\n"
-        )
+        ts_file.write_text("01/01/2020  100.0  200.0\n")
 
         manager._apply_factor_to_timeseries(ts_file, 0.5)
 
@@ -229,7 +223,8 @@ class TestRunScenariosParallelExecution:
         scenarios = [Scenario(name="fail_p")]
 
         with patch.object(
-            manager, "_run_scenario_worker",
+            manager,
+            "_run_scenario_worker",
             side_effect=Exception("Worker crashed"),
         ):
             results = manager.run_scenarios(scenarios, parallel=2)

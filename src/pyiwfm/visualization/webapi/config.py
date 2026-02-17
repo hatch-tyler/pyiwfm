@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -84,7 +84,8 @@ class ModelState:
         return self._model is not None
 
     def set_model(
-        self, model: IWFMModel,
+        self,
+        model: IWFMModel,
         crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs",
     ) -> None:
         """Set the model and reset caches."""
@@ -146,8 +147,12 @@ class ModelState:
 
         from pyiwfm.visualization.vtk_export import VTKExporter
 
+        grid = self._model.grid
+        if grid is None:
+            raise ValueError("No grid loaded")
+
         exporter = VTKExporter(
-            grid=self._model.grid,
+            grid=grid,
             stratigraphy=self._model.stratigraphy,
         )
         vtk_grid = exporter.create_3d_mesh()
@@ -157,7 +162,7 @@ class ModelState:
         writer.SetInputData(vtk_grid)
         writer.Write()
 
-        return writer.GetOutputString().encode("utf-8")
+        return cast(bytes, writer.GetOutputString().encode("utf-8"))
 
     def _compute_mesh_surface(self) -> bytes:
         """Compute surface mesh as VTU XML string."""
@@ -168,7 +173,11 @@ class ModelState:
 
         from pyiwfm.visualization.vtk_export import VTKExporter
 
-        exporter = VTKExporter(grid=self._model.grid)
+        grid = self._model.grid
+        if grid is None:
+            raise ValueError("No grid loaded")
+
+        exporter = VTKExporter(grid=grid)
         vtk_grid = exporter.create_2d_mesh()
 
         writer = vtk.vtkXMLUnstructuredGridWriter()
@@ -176,7 +185,7 @@ class ModelState:
         writer.SetInputData(vtk_grid)
         writer.Write()
 
-        return writer.GetOutputString().encode("utf-8")
+        return cast(bytes, writer.GetOutputString().encode("utf-8"))
 
     def get_pyvista_3d(self) -> object:
         """Get the cached PyVista 3D mesh, computing if needed."""
@@ -188,9 +197,10 @@ class ModelState:
                 raise ValueError("3D mesh requires stratigraphy")
             from pyiwfm.visualization.vtk_export import VTKExporter
 
-            exporter = VTKExporter(
-                grid=self._model.grid, stratigraphy=strat
-            )
+            grid = self._model.grid
+            if grid is None:
+                raise ValueError("No grid loaded")
+            exporter = VTKExporter(grid=grid, stratigraphy=strat)
             self._pv_mesh_3d = exporter.to_pyvista_3d()
         return self._pv_mesh_3d
 
@@ -229,12 +239,10 @@ class ModelState:
 
         if layer > 0:
             # Filter to specific layer using threshold
-            filtered = pv_mesh.threshold(
-                value=[layer, layer], scalars="layer"
-            )
-            surface = filtered.extract_surface()
+            filtered = pv_mesh.threshold(value=[layer, layer], scalars="layer")  # type: ignore[attr-defined]
+            surface = filtered.extract_surface()  # type: ignore[attr-defined]
         else:
-            surface = pv_mesh.extract_surface()
+            surface = pv_mesh.extract_surface()  # type: ignore[attr-defined]
 
         # Flat points array: [x0, y0, z0, x1, y1, z1, ...]
         points_flat = surface.points.astype(np.float32).ravel().tolist()
@@ -264,9 +272,7 @@ class ModelState:
             "layer": layer_data,
         }
 
-    def get_slice_json(
-        self, angle: float, position: float
-    ) -> dict:
+    def get_slice_json(self, angle: float, position: float) -> dict:
         """Get a cross-section slice as flat JSON-serializable dict.
 
         Parameters
@@ -285,7 +291,7 @@ class ModelState:
         from pyiwfm.visualization.webapi.slicing import SlicingController
 
         pv_mesh = self.get_pyvista_3d()
-        slicer = SlicingController(pv_mesh)
+        slicer = SlicingController(pv_mesh)  # type: ignore[arg-type]
 
         # Convert angle to normal vector.
         # 0° = N-S face → normal (1,0,0) (east)
@@ -358,11 +364,13 @@ class ModelState:
                 if data.streams and data.streams.n_reaches > 0:
                     boundaries: list[tuple[int, int, int]] = []
                     for i in range(data.streams.n_reaches):
-                        boundaries.append((
-                            int(data.streams.reach_ids[i]),
-                            int(data.streams.reach_upstream_nodes[i]),
-                            int(data.streams.reach_downstream_nodes[i]),
-                        ))
+                        boundaries.append(
+                            (
+                                int(data.streams.reach_ids[i]),
+                                int(data.streams.reach_upstream_nodes[i]),
+                                int(data.streams.reach_downstream_nodes[i]),
+                            )
+                        )
                     self._stream_reach_boundaries = boundaries
                     logger.info(
                         "Loaded %d reach boundaries from preprocessor binary",
@@ -384,11 +392,13 @@ class ModelState:
                     boundaries = []
                     for rs in reach_specs:
                         if rs.node_ids:
-                            boundaries.append((
-                                rs.id,
-                                rs.node_ids[0],
-                                rs.node_ids[-1],
-                            ))
+                            boundaries.append(
+                                (
+                                    rs.id,
+                                    rs.node_ids[0],
+                                    rs.node_ids[-1],
+                                )
+                            )
                     if boundaries:
                         self._stream_reach_boundaries = boundaries
                         logger.info(
@@ -409,18 +419,18 @@ class ModelState:
                 pp_config = read_preprocessor_main(pp_path)
                 if pp_config.streams_file and pp_config.streams_file.exists():
                     spec_reader = StreamSpecReader()
-                    _nr, _nrt, reach_specs = spec_reader.read(
-                        pp_config.streams_file
-                    )
+                    _nr, _nrt, reach_specs = spec_reader.read(pp_config.streams_file)
                     if reach_specs:
                         boundaries = []
                         for rs in reach_specs:
                             if rs.node_ids:
-                                boundaries.append((
-                                    rs.id,
-                                    rs.node_ids[0],
-                                    rs.node_ids[-1],
-                                ))
+                                boundaries.append(
+                                    (
+                                        rs.id,
+                                        rs.node_ids[0],
+                                        rs.node_ids[-1],
+                                    )
+                                )
                         if boundaries:
                             self._stream_reach_boundaries = boundaries
                             logger.info(
@@ -429,9 +439,7 @@ class ModelState:
                             )
                             return boundaries
             except Exception as e:
-                logger.debug(
-                    "Could not read preprocessor main for reach boundaries: %s", e
-                )
+                logger.debug("Could not read preprocessor main for reach boundaries: %s", e)
 
         return None
 
@@ -471,7 +479,8 @@ class ModelState:
             self._diversion_ts_data = (times, values, metadata)
             logger.info(
                 "Diversion timeseries loaded: %d timesteps, %d columns",
-                len(times), values.shape[1] if values.ndim > 1 else 1,
+                len(times),
+                values.shape[1] if values.ndim > 1 else 1,
             )
             return self._diversion_ts_data
         except Exception as e:
@@ -491,9 +500,7 @@ class ModelState:
                 logger.warning("pyproj not installed; coordinates will not be reprojected")
                 return None
 
-            self._transformer = Transformer.from_crs(
-                self._crs, "EPSG:4326", always_xy=True
-            )
+            self._transformer = Transformer.from_crs(self._crs, "EPSG:4326", always_xy=True)
         return self._transformer
 
     def reproject_coords(self, x: float, y: float) -> tuple[float, float]:
@@ -542,11 +549,13 @@ class ModelState:
             if ring:
                 ring.append(ring[0])
 
-            features.append({
-                "type": "Feature",
-                "geometry": {"type": "Polygon", "coordinates": [ring]},
-                "properties": {"element_id": elem.id, "layer": layer},
-            })
+            features.append(
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Polygon", "coordinates": [ring]},
+                    "properties": {"element_id": elem.id, "layer": layer},
+                }
+            )
 
         return {"type": "FeatureCollection", "features": features}
 
@@ -600,7 +609,8 @@ class ModelState:
                     logger.warning(
                         "HDF head file has %d layer(s) but model has %d; "
                         "attempting re-conversion from text source",
-                        loader.shape[1], n_layers,
+                        loader.shape[1],
+                        n_layers,
                     )
                     loader = self._reconvert_head_hdf(head_path, n_layers)
                 self._head_loader = loader
@@ -609,6 +619,7 @@ class ModelState:
                 hdf_cache = head_path.with_suffix(".head_cache.hdf")
                 if not hdf_cache.exists() or hdf_cache.stat().st_mtime < head_path.stat().st_mtime:
                     from pyiwfm.io.head_all_converter import convert_headall_to_hdf
+
                     convert_headall_to_hdf(head_path, hdf_cache, n_layers=n_layers)
                 self._head_loader = LazyHeadDataLoader(hdf_cache)
             else:
@@ -628,9 +639,7 @@ class ModelState:
 
         return self._head_loader
 
-    def _reconvert_head_hdf(
-        self, hdf_path: Path, n_layers: int
-    ) -> LazyHeadDataLoader:
+    def _reconvert_head_hdf(self, hdf_path: Path, n_layers: int) -> LazyHeadDataLoader:
         """Re-convert a head HDF that has the wrong layer count.
 
         Looks for a companion ``.out`` text file (same stem) and converts it
@@ -648,16 +657,16 @@ class ModelState:
         text_source = next((p for p in text_candidates if p.exists()), None)
 
         if text_source is None:
-            logger.warning(
-                "No text source found for re-conversion; using existing HDF as-is"
-            )
+            logger.warning("No text source found for re-conversion; using existing HDF as-is")
             return LazyHeadDataLoader(hdf_path)
 
         from pyiwfm.io.head_all_converter import convert_headall_to_hdf
 
         logger.info(
             "Re-converting %s -> %s with n_layers=%d",
-            text_source.name, hdf_path.name, n_layers,
+            text_source.name,
+            hdf_path.name,
+            n_layers,
         )
         convert_headall_to_hdf(text_source, hdf_path, n_layers=n_layers)
         return LazyHeadDataLoader(hdf_path)
@@ -705,9 +714,7 @@ class ModelState:
     # Hydrograph readers (IWFM text output files)
     # ------------------------------------------------------------------
 
-    def _get_or_convert_hydrograph(
-        self, path: Path
-    ) -> IWFMHydrographReader | None:
+    def _get_or_convert_hydrograph(self, path: Path) -> IWFMHydrographReader | None:
         """Load a hydrograph file, auto-converting text to HDF5 cache.
 
         Mirrors the head loader auto-conversion pattern:
@@ -727,7 +734,9 @@ class ModelState:
                 if loader.n_timesteps > 0:
                     logger.info(
                         "Hydrograph HDF5 loaded: %d columns, %d timesteps from %s",
-                        loader.n_columns, loader.n_timesteps, path.name,
+                        loader.n_columns,
+                        loader.n_timesteps,
+                        path.name,
                     )
                     return loader  # type: ignore[return-value]
             except Exception as e:
@@ -737,10 +746,7 @@ class ModelState:
             # Try auto-converting to HDF5 cache
             hdf_cache = path.parent / (path.name + ".hydrograph_cache.hdf")
             try:
-                if (
-                    not hdf_cache.exists()
-                    or hdf_cache.stat().st_mtime < path.stat().st_mtime
-                ):
+                if not hdf_cache.exists() or hdf_cache.stat().st_mtime < path.stat().st_mtime:
                     from pyiwfm.io.hydrograph_converter import (
                         convert_hydrograph_to_hdf,
                     )
@@ -755,13 +761,16 @@ class ModelState:
                 if loader.n_timesteps > 0:
                     logger.info(
                         "Hydrograph auto-converted: %d columns, %d timesteps from %s",
-                        loader.n_columns, loader.n_timesteps, path.name,
+                        loader.n_columns,
+                        loader.n_timesteps,
+                        path.name,
                     )
                     return loader  # type: ignore[return-value]
             except Exception as e:
                 logger.warning(
                     "HDF5 auto-conversion failed for %s, falling back to text reader: %s",
-                    path.name, e,
+                    path.name,
+                    e,
                 )
 
             # Fallback: load text file directly
@@ -773,7 +782,9 @@ class ModelState:
                 reader = IWFMHydrographReader(path)
                 logger.info(
                     "Hydrograph text reader: %d columns, %d timesteps from %s",
-                    reader.n_columns, reader.n_timesteps, path.name,
+                    reader.n_columns,
+                    reader.n_timesteps,
+                    path.name,
                 )
                 return reader
             except Exception as e:
@@ -876,13 +887,15 @@ class ModelState:
         if self._model.groundwater:
             for idx, loc in enumerate(self._model.groundwater.hydrograph_locations):
                 lng, lat = self.reproject_coords(loc.x, loc.y)
-                result["gw"].append({
-                    "id": idx + 1,  # 1-based hydrograph ID
-                    "lng": lng,
-                    "lat": lat,
-                    "name": loc.name or f"GW Hydrograph {idx + 1}",
-                    "layer": loc.layer,
-                })
+                result["gw"].append(
+                    {
+                        "id": idx + 1,  # 1-based hydrograph ID
+                        "lng": lng,
+                        "lat": lat,
+                        "name": loc.name or f"GW Hydrograph {idx + 1}",
+                        "layer": loc.layer,
+                    }
+                )
 
         # Stream hydrograph locations — get coords from associated GW node
         stream_specs = self._model.metadata.get("stream_hydrograph_specs", [])
@@ -905,13 +918,15 @@ class ModelState:
                     continue  # Skip if still no valid coordinates
 
                 lng, lat = self.reproject_coords(x, y)
-                result["stream"].append({
-                    "id": nid,
-                    "lng": lng,
-                    "lat": lat,
-                    "name": spec.get("name", f"Stream Node {nid}"),
-                    "reach_id": getattr(node, "reach_id", 0),
-                })
+                result["stream"].append(
+                    {
+                        "id": nid,
+                        "lng": lng,
+                        "lat": lat,
+                        "name": spec.get("name", f"Stream Node {nid}"),
+                        "reach_id": getattr(node, "reach_id", 0),
+                    }
+                )
 
         # Subsidence hydrograph locations
         if self._model.groundwater:
@@ -935,13 +950,15 @@ class ModelState:
                         lng, lat = self.reproject_coords(x, y)
                     except Exception:
                         continue
-                    result["subsidence"].append({
-                        "id": spec.id,
-                        "lng": lng,
-                        "lat": lat,
-                        "name": spec.name or f"Subsidence Obs {spec.id}",
-                        "layer": spec.layer,
-                    })
+                    result["subsidence"].append(
+                        {
+                            "id": spec.id,
+                            "lng": lng,
+                            "lat": lat,
+                            "name": spec.name or f"Subsidence Obs {spec.id}",
+                            "layer": spec.layer,
+                        }
+                    )
 
         return result
 
@@ -1039,7 +1056,14 @@ class ModelState:
     def list_observations(self) -> list[dict]:
         """List all uploaded observations."""
         return [
-            {"id": k, **{key: v[key] for key in ("filename", "location_id", "type", "n_records") if key in v}}
+            {
+                "id": k,
+                **{
+                    key: v[key]
+                    for key in ("filename", "location_id", "type", "n_records")
+                    if key in v
+                },
+            }
             for k, v in self._observations.items()
         ]
 
@@ -1117,8 +1141,7 @@ class ModelState:
             info["has_stream_hydrographs"] = True
 
         info["has_results"] = bool(
-            budgets or (loader and loader.n_frames > 0)
-            or (gw_reader and gw_reader.n_timesteps > 0)
+            budgets or (loader and loader.n_frames > 0) or (gw_reader and gw_reader.n_timesteps > 0)
         )
 
         return info
@@ -1130,6 +1153,9 @@ class ModelState:
 
         grid = self._model.grid
         strat = self._model.stratigraphy
+
+        if grid is None:
+            return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
         xs = [n.x for n in grid.iter_nodes()]
         ys = [n.y for n in grid.iter_nodes()]
@@ -1150,3 +1176,18 @@ class ModelState:
 
 # Global model state instance
 model_state = ModelState()
+
+
+def require_model() -> IWFMModel:
+    """Return the loaded model or raise HTTPException(404).
+
+    Use this in route handlers to narrow ``model_state.model`` from
+    ``IWFMModel | None`` to ``IWFMModel``, satisfying mypy while also
+    giving a clean API error when no model is loaded.
+    """
+    from starlette.exceptions import HTTPException
+
+    m = model_state.model
+    if m is None:
+        raise HTTPException(status_code=404, detail="No model loaded")
+    return m

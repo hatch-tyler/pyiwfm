@@ -12,20 +12,19 @@ orchestrating the writing of all lake-related input files including:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.io.writer_base import TemplateWriter
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
-    from pyiwfm.core.model import IWFMModel
     from pyiwfm.components.lake import AppLake
+    from pyiwfm.core.model import IWFMModel
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +49,7 @@ class LakeWriterConfig:
     version : str
         IWFM lake component version
     """
+
     output_dir: Path
     lake_subdir: str = "Lake"
     version: str = "4.0"
@@ -103,7 +103,7 @@ class LakeComponentWriter(TemplateWriter):
 
     def __init__(
         self,
-        model: "IWFMModel",
+        model: IWFMModel,
         config: LakeWriterConfig,
         template_engine: TemplateEngine | None = None,
     ) -> None:
@@ -181,13 +181,19 @@ class LakeComponentWriter(TemplateWriter):
         lakes = self.model.lakes
 
         # Get lake data
-        if lakes is not None and hasattr(lakes, 'lakes') and lakes.lakes:
-            lake_list = sorted(lakes.lakes.values(), key=lambda l: l.id)
+        if lakes is not None and hasattr(lakes, "lakes") and lakes.lakes:
+            lake_list = sorted(lakes.lakes.values(), key=lambda lake: lake.id)
             n_lakes = len(lake_list)
         else:
             lake_list = []
             n_lakes = 0
 
+        # _render_lake_main accepts AppLake; when lakes is None we still
+        # need to write an empty lake file, so pass a dummy AppLake.
+        if lakes is None:
+            from pyiwfm.components.lake import AppLake as _AppLake
+
+            lakes = _AppLake()
         content = self._render_lake_main(
             lakes=lakes,
             lake_list=lake_list,
@@ -200,27 +206,29 @@ class LakeComponentWriter(TemplateWriter):
 
     def _render_lake_main(
         self,
-        lakes: "AppLake",
+        lakes: AppLake,
         lake_list: list,
         n_lakes: int,
     ) -> str:
         """Render the main lake file using Jinja2 template."""
         sep = "\\"
-        max_elev_file = f"{self.config.lake_subdir}{sep}{self.config.max_elev_file}" if n_lakes > 0 else ""
+        max_elev_file = (
+            f"{self.config.lake_subdir}{sep}{self.config.max_elev_file}" if n_lakes > 0 else ""
+        )
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         version = _parse_lake_version(self.config.version)
 
         # Build lake data for template
         lake_data = []
         for i, lake in enumerate(lake_list):
-            conductivity = getattr(lake, 'bed_conductivity', self.config.bed_conductivity)
-            thickness = getattr(lake, 'bed_thickness', self.config.bed_thickness)
-            ichlmax = getattr(lake, 'max_elev_column', i + 1)
-            icetlk = getattr(lake, 'et_column', 7)
-            icpcplk = getattr(lake, 'precip_column', 2)
-            name = getattr(lake, 'name', f"Lake{lake.id}")
-            initial_elev = getattr(lake, 'initial_elevation', 280.0)
+            conductivity = getattr(lake, "bed_conductivity", self.config.bed_conductivity)
+            thickness = getattr(lake, "bed_thickness", self.config.bed_thickness)
+            ichlmax = getattr(lake, "max_elev_column", i + 1)
+            icetlk = getattr(lake, "et_column", 7)
+            icpcplk = getattr(lake, "precip_column", 2)
+            name = getattr(lake, "name", f"Lake{lake.id}")
+            initial_elev = getattr(lake, "initial_elevation", 280.0)
 
             entry = {
                 "id": lake.id,
@@ -235,13 +243,12 @@ class LakeComponentWriter(TemplateWriter):
 
             # v5.0 rating table
             if version >= (5, 0):
-                rating_elevs = getattr(lake, 'outflow_rating_elevations', [])
-                rating_flows = getattr(lake, 'outflow_rating_flows', [])
+                rating_elevs = getattr(lake, "outflow_rating_elevations", [])
+                rating_flows = getattr(lake, "outflow_rating_flows", [])
                 n_pts = min(len(rating_elevs), len(rating_flows))
                 entry["n_rating_points"] = n_pts
                 entry["rating_points"] = [
-                    {"elevation": rating_elevs[j], "flow": rating_flows[j]}
-                    for j in range(n_pts)
+                    {"elevation": rating_elevs[j], "flow": rating_flows[j]} for j in range(n_pts)
                 ]
             else:
                 entry["n_rating_points"] = 0
@@ -300,7 +307,7 @@ class LakeComponentWriter(TemplateWriter):
 
         lakes = self.model.lakes
         n_cols = 0
-        if lakes is not None and hasattr(lakes, 'lakes'):
+        if lakes is not None and hasattr(lakes, "lakes"):
             n_cols = len(lakes.lakes)
 
         ts_config = make_max_lake_elev_ts_config(
@@ -315,7 +322,7 @@ class LakeComponentWriter(TemplateWriter):
 
 
 def write_lake_component(
-    model: "IWFMModel",
+    model: IWFMModel,
     output_dir: Path | str,
     config: LakeWriterConfig | None = None,
 ) -> dict[str, Path]:

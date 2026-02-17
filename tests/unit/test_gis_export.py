@@ -10,11 +10,10 @@ import pytest
 # Skip all tests if geopandas is not available
 geopandas = pytest.importorskip("geopandas")
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
-from pyiwfm.visualization.gis_export import GISExporter
-
+from pyiwfm.components.stream import AppStream, StrmNode, StrmReach  # noqa: E402
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.core.stratigraphy import Stratigraphy  # noqa: E402
+from pyiwfm.visualization.gis_export import GISExporter  # noqa: E402
 
 # Default CRS for tests (UTM Zone 10N - California)
 TEST_CRS = "EPSG:26910"
@@ -51,14 +50,18 @@ def simple_stratigraphy() -> Stratigraphy:
     n_nodes = 9
     n_layers = 2
     gs_elev = np.full(n_nodes, 100.0)
-    top_elev = np.column_stack([
-        np.full(n_nodes, 100.0),
-        np.full(n_nodes, 50.0),
-    ])
-    bottom_elev = np.column_stack([
-        np.full(n_nodes, 50.0),
-        np.full(n_nodes, 0.0),
-    ])
+    top_elev = np.column_stack(
+        [
+            np.full(n_nodes, 100.0),
+            np.full(n_nodes, 50.0),
+        ]
+    )
+    bottom_elev = np.column_stack(
+        [
+            np.full(n_nodes, 50.0),
+            np.full(n_nodes, 0.0),
+        ]
+    )
     active_node = np.ones((n_nodes, n_layers), dtype=bool)
     return Stratigraphy(
         n_layers=n_layers,
@@ -77,21 +80,25 @@ def simple_stream() -> AppStream:
 
     # Add stream nodes
     for i in range(1, 6):
-        stream.add_node(StrmNode(
-            id=i,
-            x=float(i * 40),
-            y=100.0,
-            reach_id=1,
-        ))
+        stream.add_node(
+            StrmNode(
+                id=i,
+                x=float(i * 40),
+                y=100.0,
+                reach_id=1,
+            )
+        )
 
     # Add reach
-    stream.add_reach(StrmReach(
-        id=1,
-        name="Test Stream",
-        upstream_node=1,
-        downstream_node=5,
-        nodes=[1, 2, 3, 4, 5],
-    ))
+    stream.add_reach(
+        StrmReach(
+            id=1,
+            name="Test Stream",
+            upstream_node=1,
+            downstream_node=5,
+            nodes=[1, 2, 3, 4, 5],
+        )
+    )
 
     return stream
 
@@ -140,9 +147,7 @@ class TestGISExporter:
         for geom in gdf.geometry:
             assert geom.geom_type == "Polygon"
 
-    def test_stream_to_geodataframe(
-        self, simple_grid: AppGrid, simple_stream: AppStream
-    ) -> None:
+    def test_stream_to_geodataframe(self, simple_grid: AppGrid, simple_stream: AppStream) -> None:
         """Test converting stream network to GeoDataFrame."""
         exporter = GISExporter(grid=simple_grid, streams=simple_stream, crs=TEST_CRS)
         gdf = exporter.streams_to_geodataframe()
@@ -152,9 +157,7 @@ class TestGISExporter:
         assert "reach_id" in gdf.columns
         assert gdf.iloc[0].geometry.geom_type == "LineString"
 
-    def test_export_to_geopackage(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_export_to_geopackage(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test exporting to GeoPackage."""
         exporter = GISExporter(grid=simple_grid, crs=TEST_CRS)
 
@@ -170,9 +173,7 @@ class TestGISExporter:
         assert len(nodes_gdf) == 9
         assert len(elements_gdf) == 4
 
-    def test_export_to_shapefile(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_export_to_shapefile(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test exporting to Shapefile."""
         exporter = GISExporter(grid=simple_grid, crs=TEST_CRS)
 
@@ -182,9 +183,7 @@ class TestGISExporter:
         assert (output_dir / "nodes.shp").exists()
         assert (output_dir / "elements.shp").exists()
 
-    def test_export_to_geojson(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_export_to_geojson(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test exporting to GeoJSON."""
         exporter = GISExporter(grid=simple_grid, crs=TEST_CRS)
 
@@ -298,27 +297,21 @@ class TestGISExporterExportGeojsonLayers:
         exporter.export_geojson(output_file, layer="streams")
         assert output_file.exists()
 
-    def test_export_geojson_subregions_layer(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_export_geojson_subregions_layer(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test exporting subregions layer to GeoJSON."""
         exporter = GISExporter(grid=simple_grid, crs=TEST_CRS)
         output_file = tmp_path / "subregions.geojson"
         exporter.export_geojson(output_file, layer="subregions")
         assert output_file.exists()
 
-    def test_export_geojson_boundary_layer(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_export_geojson_boundary_layer(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test exporting boundary layer to GeoJSON."""
         exporter = GISExporter(grid=simple_grid, crs=TEST_CRS)
         output_file = tmp_path / "boundary.geojson"
         exporter.export_geojson(output_file, layer="boundary")
         assert output_file.exists()
 
-    def test_export_geojson_invalid_layer(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_export_geojson_invalid_layer(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test exporting with an invalid layer name raises ValueError."""
         exporter = GISExporter(grid=simple_grid, crs=TEST_CRS)
         output_file = tmp_path / "invalid.geojson"
@@ -329,9 +322,7 @@ class TestGISExporterExportGeojsonLayers:
 class TestGISExporterStreamsEdgeCases:
     """Tests for stream-related edge cases."""
 
-    def test_streams_to_geodataframe_no_streams(
-        self, simple_grid: AppGrid
-    ) -> None:
+    def test_streams_to_geodataframe_no_streams(self, simple_grid: AppGrid) -> None:
         """Test streams_to_geodataframe returns empty GDF when no streams."""
         exporter = GISExporter(grid=simple_grid, streams=None, crs=TEST_CRS)
         gdf = exporter.streams_to_geodataframe()
@@ -399,9 +390,15 @@ class TestGISExporterStreamCoordinateResolution:
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1, gw_node=2))
         stream.add_node(StrmNode(id=2, x=0.0, y=0.0, reach_id=1, gw_node=3))
         stream.add_node(StrmNode(id=3, x=0.0, y=0.0, reach_id=1, gw_node=5))
-        stream.add_reach(StrmReach(
-            id=1, upstream_node=1, downstream_node=3, nodes=[1, 2, 3], name="R1",
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=3,
+                nodes=[1, 2, 3],
+                name="R1",
+            )
+        )
 
         exporter = GISExporter(grid=simple_grid, streams=stream, crs=TEST_CRS)
         gdf = exporter.streams_to_geodataframe()
@@ -419,9 +416,15 @@ class TestGISExporterStreamCoordinateResolution:
         # Node 1 has valid gw_node, node 2 has (0,0) and no gw_node
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1, gw_node=2))
         stream.add_node(StrmNode(id=2, x=0.0, y=0.0, reach_id=1, gw_node=None))
-        stream.add_reach(StrmReach(
-            id=1, upstream_node=1, downstream_node=2, nodes=[1, 2], name="R1",
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=2,
+                nodes=[1, 2],
+                name="R1",
+            )
+        )
 
         # No CRS to avoid empty-GDF CRS assignment error
         exporter = GISExporter(grid=simple_grid, streams=stream)
@@ -435,9 +438,15 @@ class TestGISExporterStreamCoordinateResolution:
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=50.0, y=50.0, reach_id=1, gw_node=None))
         stream.add_node(StrmNode(id=2, x=150.0, y=50.0, reach_id=1, gw_node=None))
-        stream.add_reach(StrmReach(
-            id=1, upstream_node=1, downstream_node=2, nodes=[1, 2], name="R1",
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=2,
+                nodes=[1, 2],
+                name="R1",
+            )
+        )
 
         exporter = GISExporter(grid=simple_grid, streams=stream, crs=TEST_CRS)
         gdf = exporter.streams_to_geodataframe()
@@ -453,9 +462,15 @@ class TestGISExporterStreamCoordinateResolution:
         # Use grid node 2 (100,0) so we can distinguish from direct coords
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0, reach_id=1, gw_node=2))
         stream.add_node(StrmNode(id=2, x=150.0, y=150.0, reach_id=1, gw_node=None))
-        stream.add_reach(StrmReach(
-            id=1, upstream_node=1, downstream_node=2, nodes=[1, 2], name="R1",
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=2,
+                nodes=[1, 2],
+                name="R1",
+            )
+        )
 
         exporter = GISExporter(grid=simple_grid, streams=stream, crs=TEST_CRS)
         gdf = exporter.streams_to_geodataframe()
@@ -471,9 +486,7 @@ class TestGISExporterStreamCoordinateResolution:
 class TestGISExporterImportError:
     """Tests for import error handling."""
 
-    def test_import_error_when_geopandas_missing(
-        self, simple_grid: AppGrid
-    ) -> None:
+    def test_import_error_when_geopandas_missing(self, simple_grid: AppGrid) -> None:
         """Test that ImportError is raised when geopandas unavailable."""
         import unittest.mock as mock
 

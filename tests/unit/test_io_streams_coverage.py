@@ -15,24 +15,20 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.streams import (
-    StreamFileConfig,
-    StreamWriter,
-    StreamReader,
-    write_stream,
-    read_stream_nodes,
-    read_diversions,
-)
 from pyiwfm.components.stream import (
     AppStream,
-    StrmNode,
-    StrmReach,
-    Diversion,
     Bypass,
-    StreamRating,
+    Diversion,
+    StrmNode,
 )
-from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.streams import (
+    StreamFileConfig,
+    StreamReader,
+    StreamWriter,
+    read_diversions,
+    read_stream_nodes,
+    write_stream,
+)
 
 # =============================================================================
 # StreamWriter Edge Cases
@@ -62,8 +58,12 @@ class TestStreamWriterEdgeCasesAdditional:
         """Test writing stream node without gw_node set."""
         nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1,
-                bottom_elev=50.0, wetted_perimeter=5.0,
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
                 gw_node=None,
             ),
         }
@@ -73,16 +73,21 @@ class TestStreamWriterEdgeCasesAdditional:
         writer = StreamWriter(config)
         filepath = writer.write_stream_nodes(stream)
 
-        content = filepath.read_text()
+        filepath.read_text()
         assert filepath.exists()
 
     def test_write_node_with_up_and_down_zero(self, tmp_path: Path) -> None:
         """Test writing node with upstream/downstream = None (becomes 0)."""
         nodes = {
             1: StrmNode(
-                id=1, x=100.0, y=200.0, reach_id=1,
-                bottom_elev=50.0, wetted_perimeter=5.0,
-                upstream_node=None, downstream_node=None,
+                id=1,
+                x=100.0,
+                y=200.0,
+                reach_id=1,
+                bottom_elev=50.0,
+                wetted_perimeter=5.0,
+                upstream_node=None,
+                downstream_node=None,
             ),
         }
         stream = AppStream(nodes=nodes, reaches={}, diversions={}, bypasses={})
@@ -99,8 +104,15 @@ class TestStreamWriterEdgeCasesAdditional:
         """Test write() with nodes and diversions but no reaches."""
         nodes = {1: StrmNode(id=1, x=0.0, y=0.0, reach_id=1, bottom_elev=0.0, wetted_perimeter=1.0)}
         diversions = {
-            1: Diversion(id=1, source_node=1, destination_type="element",
-                        destination_id=5, max_rate=100.0, priority=1, name="D1"),
+            1: Diversion(
+                id=1,
+                source_node=1,
+                destination_type="element",
+                destination_id=5,
+                max_rate=100.0,
+                priority=1,
+                name="D1",
+            ),
         }
         stream = AppStream(nodes=nodes, reaches={}, diversions=diversions, bypasses={})
 
@@ -205,7 +217,7 @@ class TestStreamReaderAdditional:
         """Test reading many stream nodes."""
         lines = ["C Stream nodes", "50                              / NSTRNODES"]
         for i in range(1, 51):
-            lines.append(f"{i}   {i*10.0:.4f}   {i*20.0:.4f}   1   0   50.0   5.0   0   0")
+            lines.append(f"{i}   {i * 10.0:.4f}   {i * 20.0:.4f}   1   0   50.0   5.0   0   0")
 
         filepath = tmp_path / "nodes.dat"
         filepath.write_text("\n".join(lines))

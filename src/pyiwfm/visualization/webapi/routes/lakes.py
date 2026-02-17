@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Path
 
-from pyiwfm.visualization.webapi.config import model_state
+from pyiwfm.visualization.webapi.config import model_state, require_model
 
 router = APIRouter(prefix="/api/lakes", tags=["lakes"])
 
@@ -19,14 +19,13 @@ def get_lakes_geojson() -> dict:
     Each lake is represented as a polygon built from the union of its
     element boundaries. Returns a FeatureCollection with lake properties.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if model.lakes is None or model.lakes.n_lakes == 0:
         return {"type": "FeatureCollection", "features": []}
 
     grid = model.grid
+    if grid is None:
+        return {"type": "FeatureCollection", "features": []}
     features: list[dict] = []
 
     for lake_id, lake in model.lakes.lakes.items():
@@ -110,21 +109,22 @@ def get_lakes_geojson() -> dict:
         if has_rating and lake.rating:
             n_rating_points = len(lake.rating.elevations)
 
-        features.append({
-            "type": "Feature",
-            "geometry": {"type": "Polygon", "coordinates": [coords]},
-            "properties": {
-                "lake_id": lake_id,
-                "name": lake.name or f"Lake {lake_id}",
-                "n_elements": len(lake.elements),
-                "initial_elevation": lake.initial_elevation,
-                "max_elevation": lake.max_elevation
-                    if lake.max_elevation < 1e10 else None,
-                "has_rating": has_rating,
-                "n_rating_points": n_rating_points,
-                "centroid": centroid,
-            },
-        })
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Polygon", "coordinates": [coords]},
+                "properties": {
+                    "lake_id": lake_id,
+                    "name": lake.name or f"Lake {lake_id}",
+                    "n_elements": len(lake.elements),
+                    "initial_elevation": lake.initial_elevation,
+                    "max_elevation": lake.max_elevation if lake.max_elevation < 1e10 else None,
+                    "has_rating": has_rating,
+                    "n_rating_points": n_rating_points,
+                    "centroid": centroid,
+                },
+            }
+        )
 
     return {"type": "FeatureCollection", "features": features}
 
@@ -138,18 +138,13 @@ def get_lake_rating(
 
     Returns arrays of elevations, areas, and volumes for charting.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if model.lakes is None:
         raise HTTPException(status_code=404, detail="No lake data in model")
 
     lake = model.lakes.lakes.get(lake_id)
     if lake is None:
-        raise HTTPException(
-            status_code=404, detail=f"Lake {lake_id} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Lake {lake_id} not found")
 
     if lake.rating is None:
         raise HTTPException(

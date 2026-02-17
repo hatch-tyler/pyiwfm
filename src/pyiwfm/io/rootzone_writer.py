@@ -12,20 +12,19 @@ orchestrating the writing of all root zone-related input files including:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.io.writer_base import TemplateWriter
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
+    from pyiwfm.components.rootzone import RootZone as AppRootZone
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.components.rootzone import AppRootZone
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +43,7 @@ class RootZoneWriterConfig:
     version : str
         IWFM root zone component version
     """
+
     output_dir: Path
     rootzone_subdir: str = "RootZone"
     version: str = "4.12"
@@ -96,8 +96,7 @@ class RootZoneWriterConfig:
         return self.rootzone_dir / self.main_file
 
 
-def _sp_val(obj: object, attr: str, default: float | int,
-            alt: str | None = None) -> float | int:
+def _sp_val(obj: object, attr: str, default: float | int, alt: str | None = None) -> float | int:
     """Get a numeric attribute from *obj*, trying *attr* first then *alt*.
 
     Returns *default* if neither attribute yields a real numeric value
@@ -128,7 +127,7 @@ class RootZoneComponentWriter(TemplateWriter):
 
     def __init__(
         self,
-        model: "IWFMModel",
+        model: IWFMModel,
         config: RootZoneWriterConfig,
         template_engine: TemplateEngine | None = None,
     ) -> None:
@@ -192,10 +191,10 @@ class RootZoneComponentWriter(TemplateWriter):
         if rootzone is not None:
             try:
                 from pyiwfm.io.rootzone_v4x import (
+                    NativeRiparianWriterV4x,
                     NonPondedCropWriterV4x,
                     PondedCropWriterV4x,
                     UrbanWriterV4x,
-                    NativeRiparianWriterV4x,
                 )
 
                 if rootzone.nonponded_config is not None:
@@ -205,21 +204,21 @@ class RootZoneComponentWriter(TemplateWriter):
                     results["nonponded"] = path
 
                 if rootzone.ponded_config is not None:
-                    writer = PondedCropWriterV4x()
+                    ponded_writer = PondedCropWriterV4x()
                     path = self.config.rootzone_dir / "PondedAg.dat"
-                    writer.write(rootzone.ponded_config, path)
+                    ponded_writer.write(rootzone.ponded_config, path)
                     results["ponded"] = path
 
                 if rootzone.urban_config is not None:
-                    writer = UrbanWriterV4x()
+                    urban_writer = UrbanWriterV4x()
                     path = self.config.rootzone_dir / "UrbanLandUse.dat"
-                    writer.write(rootzone.urban_config, path)
+                    urban_writer.write(rootzone.urban_config, path)
                     results["urban"] = path
 
                 if rootzone.native_riparian_config is not None:
-                    writer = NativeRiparianWriterV4x()
+                    nr_writer = NativeRiparianWriterV4x()
                     path = self.config.rootzone_dir / "NativeRiparian.dat"
-                    writer.write(rootzone.native_riparian_config, path)
+                    nr_writer.write(rootzone.native_riparian_config, path)
                     results["native_riparian"] = path
             except Exception:
                 pass  # sub-file writing is best-effort
@@ -240,6 +239,10 @@ class RootZoneComponentWriter(TemplateWriter):
         self._ensure_dir(output_path)
 
         rootzone = self.model.rootzone
+        if rootzone is None:
+            from pyiwfm.components.rootzone import RootZone
+
+            rootzone = RootZone(n_elements=0, n_layers=1)
 
         # Get element IDs from mesh
         if self.model.grid is not None:
@@ -261,7 +264,7 @@ class RootZoneComponentWriter(TemplateWriter):
 
     def _render_rootzone_main(
         self,
-        rootzone: "AppRootZone",
+        rootzone: AppRootZone,
         element_ids: list[int],
         n_elements: int,
     ) -> str:
@@ -274,7 +277,7 @@ class RootZoneComponentWriter(TemplateWriter):
         """
         from pyiwfm.io.rootzone import version_ge
 
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         ver = self.config.version
         is_v41 = version_ge(ver, (4, 1))
         is_v411 = version_ge(ver, (4, 11))
@@ -336,31 +339,30 @@ class RootZoneComponentWriter(TemplateWriter):
         # Add soil parameters for each element
         for elem_id in element_ids:
             sp = None
-            if rootzone is not None and hasattr(rootzone, 'soil_params') and rootzone.soil_params:
+            if rootzone is not None and hasattr(rootzone, "soil_params") and rootzone.soil_params:
                 sp = rootzone.soil_params.get(elem_id, None)
 
             # Use _sp_val helper to support both real SoilParameters
             # and legacy mocks (which may use old attribute names)
             if sp:
-                wp = _sp_val(sp, 'wilting_point', self.config.wilting_point)
-                fc = _sp_val(sp, 'field_capacity', self.config.field_capacity)
-                tn = _sp_val(sp, 'porosity',
-                             self.config.total_porosity,
-                             alt='total_porosity')
-                lam = _sp_val(sp, 'lambda_param',
-                              self.config.pore_size_index,
-                              alt='pore_size_index')
-                k = _sp_val(sp, 'saturated_kv',
-                            self.config.hydraulic_conductivity,
-                            alt='hydraulic_conductivity')
-                kp = _sp_val(sp, 'k_ponded', self.config.k_ponded)
-                rhc = _sp_val(sp, 'kunsat_method',
-                              self.config.rhc_method,
-                              alt='rhc_method')
-                cprise = _sp_val(sp, 'capillary_rise', self.config.capillary_rise)
-                irne = _sp_val(sp, 'precip_column', 1)
-                frne = _sp_val(sp, 'precip_factor', 1.0)
-                imsrc = _sp_val(sp, 'generic_moisture_column', 0)
+                wp = _sp_val(sp, "wilting_point", self.config.wilting_point)
+                fc = _sp_val(sp, "field_capacity", self.config.field_capacity)
+                tn = _sp_val(sp, "porosity", self.config.total_porosity, alt="total_porosity")
+                lam = _sp_val(
+                    sp, "lambda_param", self.config.pore_size_index, alt="pore_size_index"
+                )
+                k = _sp_val(
+                    sp,
+                    "saturated_kv",
+                    self.config.hydraulic_conductivity,
+                    alt="hydraulic_conductivity",
+                )
+                kp = _sp_val(sp, "k_ponded", self.config.k_ponded)
+                rhc = _sp_val(sp, "kunsat_method", self.config.rhc_method, alt="rhc_method")
+                cprise = _sp_val(sp, "capillary_rise", self.config.capillary_rise)
+                irne = _sp_val(sp, "precip_column", 1)
+                frne = _sp_val(sp, "precip_factor", 1.0)
+                imsrc = _sp_val(sp, "generic_moisture_column", 0)
             else:
                 wp = self.config.wilting_point
                 fc = self.config.field_capacity
@@ -376,10 +378,10 @@ class RootZoneComponentWriter(TemplateWriter):
 
             if is_v412:
                 # Get per-landuse destinations (use getattr for mock compat)
-                _dest_ag = getattr(rootzone, 'surface_flow_dest_ag', {}) if rootzone else {}
-                _dest_ui = getattr(rootzone, 'surface_flow_dest_urban_in', {}) if rootzone else {}
-                _dest_uo = getattr(rootzone, 'surface_flow_dest_urban_out', {}) if rootzone else {}
-                _dest_nv = getattr(rootzone, 'surface_flow_dest_nvrv', {}) if rootzone else {}
+                _dest_ag = getattr(rootzone, "surface_flow_dest_ag", {}) if rootzone else {}
+                _dest_ui = getattr(rootzone, "surface_flow_dest_urban_in", {}) if rootzone else {}
+                _dest_uo = getattr(rootzone, "surface_flow_dest_urban_out", {}) if rootzone else {}
+                _dest_nv = getattr(rootzone, "surface_flow_dest_nvrv", {}) if rootzone else {}
                 # Guard against non-dict (e.g. MagicMock)
                 dests_ag = _dest_ag.get(elem_id, (1, 0)) if isinstance(_dest_ag, dict) else (1, 0)
                 dests_ui = _dest_ui.get(elem_id, (1, 0)) if isinstance(_dest_ui, dict) else (1, 0)
@@ -393,7 +395,7 @@ class RootZoneComponentWriter(TemplateWriter):
                     f"           {dests_uo[0]}            {dests_nv[0]}"
                 )
             elif is_v41:
-                _dests = getattr(rootzone, 'surface_flow_destinations', {}) if rootzone else {}
+                _dests = getattr(rootzone, "surface_flow_destinations", {}) if rootzone else {}
                 dests = _dests.get(elem_id, (0, 0)) if isinstance(_dests, dict) else (0, 0)
                 lines.append(
                     f"   {elem_id:<6} {wp:>6.1f}     {fc:>4.2f}    {tn:>4.2f}"
@@ -402,7 +404,7 @@ class RootZoneComponentWriter(TemplateWriter):
                     f"     {imsrc}       {dests[0]}        {dests[1]}"
                 )
             else:
-                _dests = getattr(rootzone, 'surface_flow_destinations', {}) if rootzone else {}
+                _dests = getattr(rootzone, "surface_flow_destinations", {}) if rootzone else {}
                 dests = _dests.get(elem_id, (0, 0)) if isinstance(_dests, dict) else (0, 0)
                 lines.append(
                     f"   {elem_id:<6} {wp:>6.1f}     {fc:>4.2f}    {tn:>4.2f}"
@@ -412,7 +414,6 @@ class RootZoneComponentWriter(TemplateWriter):
                 )
 
         return "\n".join(lines) + "\n"
-
 
     def write_precip_ts(
         self,
@@ -424,6 +425,7 @@ class RootZoneComponentWriter(TemplateWriter):
             IWFMTimeSeriesDataWriter,
             make_precip_ts_config,
         )
+
         n_cols = len(self.model.grid.elements) if self.model.grid else 0
         ts_config = make_precip_ts_config(ncol=n_cols, dates=dates, data=data)
         output_path = self.config.rootzone_dir / "Precip.dat"
@@ -440,6 +442,7 @@ class RootZoneComponentWriter(TemplateWriter):
             IWFMTimeSeriesDataWriter,
             make_et_ts_config,
         )
+
         n_cols = len(self.model.grid.elements) if self.model.grid else 0
         ts_config = make_et_ts_config(ncol=n_cols, dates=dates, data=data)
         output_path = self.config.rootzone_dir / "ET.dat"
@@ -456,6 +459,7 @@ class RootZoneComponentWriter(TemplateWriter):
             IWFMTimeSeriesDataWriter,
             make_crop_coeff_ts_config,
         )
+
         n_cols = 1  # Placeholder; caller should specify
         ts_config = make_crop_coeff_ts_config(ncol=n_cols, dates=dates, data=data)
         output_path = self.config.rootzone_dir / "CropCoeff.dat"
@@ -472,6 +476,7 @@ class RootZoneComponentWriter(TemplateWriter):
             IWFMTimeSeriesDataWriter,
             make_return_flow_ts_config,
         )
+
         n_cols = len(self.model.grid.elements) if self.model.grid else 0
         ts_config = make_return_flow_ts_config(ncol=n_cols, dates=dates, data=data)
         output_path = self.config.rootzone_dir / self.config.return_flow_file
@@ -488,6 +493,7 @@ class RootZoneComponentWriter(TemplateWriter):
             IWFMTimeSeriesDataWriter,
             make_reuse_ts_config,
         )
+
         n_cols = len(self.model.grid.elements) if self.model.grid else 0
         ts_config = make_reuse_ts_config(ncol=n_cols, dates=dates, data=data)
         output_path = self.config.rootzone_dir / self.config.reuse_file
@@ -504,6 +510,7 @@ class RootZoneComponentWriter(TemplateWriter):
             IWFMTimeSeriesDataWriter,
             make_irig_period_ts_config,
         )
+
         n_cols = len(self.model.grid.elements) if self.model.grid else 0
         ts_config = make_irig_period_ts_config(ncol=n_cols, dates=dates, data=data)
         output_path = self.config.rootzone_dir / self.config.irig_period_file
@@ -520,6 +527,7 @@ class RootZoneComponentWriter(TemplateWriter):
             IWFMTimeSeriesDataWriter,
             make_ag_water_demand_ts_config,
         )
+
         n_cols = len(self.model.grid.elements) if self.model.grid else 0
         ts_config = make_ag_water_demand_ts_config(ncol=n_cols, dates=dates, data=data)
         output_path = self.config.rootzone_dir / "AgWaterDemand.dat"
@@ -528,7 +536,7 @@ class RootZoneComponentWriter(TemplateWriter):
 
 
 def write_rootzone_component(
-    model: "IWFMModel",
+    model: IWFMModel,
     output_dir: Path | str,
     config: RootZoneWriterConfig | None = None,
 ) -> dict[str, Path]:

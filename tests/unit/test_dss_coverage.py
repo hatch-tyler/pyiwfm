@@ -11,57 +11,55 @@ Covers:
 from __future__ import annotations
 
 import os
-import platform
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
 from pyiwfm.io.config import OutputFormat, TimeSeriesOutputConfig
-from pyiwfm.io.writer_base import (
-    TimeSeriesSpec,
-    TimeSeriesWriter,
-    _check_dss,
-    HAS_DSS,
-)
-from pyiwfm.io.dss.wrapper import (
-    DSSFile,
-    DSSFileMock,
-    DSSFileError,
-    DSSLibraryError,
-    DSSTimeSeriesInfo,
-    HAS_DSS_LIBRARY,
-    check_dss_available,
-    _get_library_path,
-    _load_library,
-    _configure_argtypes,
-    _zStructTimeSeries,
-    get_dss_file_class,
-    IFLTAB_SIZE,
-)
-from pyiwfm.io.dss.timeseries import (
-    DSSTimeSeriesWriter,
-    DSSTimeSeriesReader,
-    DSSWriteResult,
-    write_timeseries_to_dss,
-    read_timeseries_from_dss,
-    write_collection_to_dss,
-)
 from pyiwfm.io.dss.pathname import (
+    INTERVAL_MAPPING,
+    PARAMETER_CODES,
+    VALID_INTERVALS,
     DSSPathname,
     DSSPathnameTemplate,
     format_dss_date,
     format_dss_date_range,
-    parse_dss_date,
     interval_to_minutes,
     minutes_to_interval,
-    VALID_INTERVALS,
-    PARAMETER_CODES,
-    INTERVAL_MAPPING,
+    parse_dss_date,
 )
-
+from pyiwfm.io.dss.timeseries import (
+    DSSTimeSeriesReader,
+    DSSTimeSeriesWriter,
+    DSSWriteResult,
+    read_timeseries_from_dss,
+    write_collection_to_dss,
+    write_timeseries_to_dss,
+)
+from pyiwfm.io.dss.wrapper import (
+    HAS_DSS_LIBRARY,
+    IFLTAB_SIZE,
+    DSSFile,
+    DSSFileError,
+    DSSFileMock,
+    DSSLibraryError,
+    DSSTimeSeriesInfo,
+    _configure_argtypes,
+    _get_library_path,
+    _load_library,
+    _zStructTimeSeries,
+    check_dss_available,
+    get_dss_file_class,
+)
+from pyiwfm.io.writer_base import (
+    HAS_DSS,
+    TimeSeriesSpec,
+    TimeSeriesWriter,
+    _check_dss,
+)
 
 # =============================================================================
 # writer_base.py: DSS Write Path Tests
@@ -155,7 +153,8 @@ class TestTimeSeriesWriterDSSFormat:
             mock_write.assert_called_once()
             call_args = mock_write.call_args
             dss_path = call_args[0][0]
-            pathname = call_args[0][1]
+            # arg[1] is the TimeSeries object, arg[2] is the pathname
+            pathname = call_args[0][2]
 
             # Verify DSS path is relative to output_dir
             assert str(tmp_path / "output.dss") == dss_path
@@ -185,7 +184,8 @@ class TestTimeSeriesWriterDSSFormat:
             writer._write_dss_timeseries(ts_spec)
 
             call_args = mock_write.call_args
-            pathname = call_args[0][1]
+            # arg[1] is the TimeSeries object, arg[2] is the pathname
+            pathname = call_args[0][2]
             # b_part defaults to name when no location
             assert "/TestName/" in pathname
             # c_part defaults to VALUE when no parameter
@@ -225,7 +225,7 @@ class TestGetLibraryPathPlatform:
         """Test environment variable points to non-existent path."""
         with patch.dict(os.environ, {"HECDSS_LIB": "/nonexistent/path/lib.dll"}):
             # Should fall through to package dir, then common paths
-            path = _get_library_path()
+            _get_library_path()
             # May or may not find it depending on system, but shouldn't crash
 
     def test_package_lib_dir_search(self) -> None:
@@ -234,7 +234,7 @@ class TestGetLibraryPathPlatform:
             os.environ.pop("HECDSS_LIB", None)
             # Even without env var, _get_library_path should still work
             # (it will find the bundled lib or return None)
-            result = _get_library_path()
+            _get_library_path()
             # Result depends on system setup - just verify it doesn't crash
 
     def test_common_paths_not_found(self) -> None:
@@ -242,7 +242,7 @@ class TestGetLibraryPathPlatform:
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("HECDSS_LIB", None)
             with patch("pyiwfm.io.dss.wrapper.Path.exists", return_value=False):
-                path = _get_library_path()
+                _get_library_path()
                 # If package lib doesn't exist, falls through to common paths
 
 
@@ -647,7 +647,7 @@ class TestConfigureArgtypes:
     @pytest.mark.skipif(not HAS_DSS_LIBRARY, reason="DSS library not available")
     def test_configure_argtypes_sets_restype(self) -> None:
         """Test that _configure_argtypes sets restype on library functions."""
-        from pyiwfm.io.dss.wrapper import _dss_lib, c_void_p, c_int
+        from pyiwfm.io.dss.wrapper import _dss_lib, c_int, c_void_p
 
         assert _dss_lib.zopenExtended.restype == c_int
         assert _dss_lib.zclose.restype is None
@@ -792,8 +792,12 @@ class TestDSSPathname:
     def test_str_roundtrip(self) -> None:
         """Test str() produces a valid pathname that can be re-parsed."""
         original = DSSPathname(
-            a_part="A", b_part="B", c_part="C",
-            d_part="D", e_part="E", f_part="F",
+            a_part="A",
+            b_part="B",
+            c_part="C",
+            d_part="D",
+            e_part="E",
+            f_part="F",
         )
         s = str(original)
         reparsed = DSSPathname.from_string(s)
@@ -926,9 +930,7 @@ class TestDSSPathnameTemplate:
     def test_make_pathnames_with_date_range(self) -> None:
         """Test generating pathnames with shared date range."""
         template = DSSPathnameTemplate(c_part="HEAD")
-        pathnames = list(
-            template.make_pathnames(["W1", "W2"], date_range="01jan2020")
-        )
+        pathnames = list(template.make_pathnames(["W1", "W2"], date_range="01jan2020"))
         assert all(pn.d_part == "01JAN2020" for pn in pathnames)
 
 
@@ -947,9 +949,7 @@ class TestPathnameUtilities:
 
     def test_format_dss_date_range(self) -> None:
         """Test formatting a date range."""
-        result = format_dss_date_range(
-            datetime(2020, 1, 1), datetime(2020, 12, 31)
-        )
+        result = format_dss_date_range(datetime(2020, 1, 1), datetime(2020, 12, 31))
         assert result == "01JAN2020-31DEC2020"
 
     def test_parse_dss_date(self) -> None:
@@ -1217,7 +1217,7 @@ class TestGetLibraryPathEdgeCases:
         with patch.dict(os.environ, {"HECDSS_LIB": str(tmp_path)}):
             # tmp_path exists but is a directory, not a library file
             # _get_library_path checks exists(), which is True for dirs
-            result = _get_library_path()
+            _get_library_path()
             # Result depends on whether other paths exist
 
     def test_package_lib_dir_linux_platform(self, tmp_path: Path) -> None:
@@ -1317,15 +1317,13 @@ class TestDSSWriteConvenienceFunctions:
             MockWriter.return_value.__exit__ = MagicMock(return_value=False)
             mock_writer.close.return_value = mock_result
 
-            result = write_timeseries_to_dss(
+            write_timeseries_to_dss(
                 filepath="test.dss",
                 ts=mock_ts,
                 pathname=mock_pathname,
                 units="CFS",
             )
-            mock_writer.write_timeseries.assert_called_once_with(
-                mock_ts, mock_pathname, "CFS"
-            )
+            mock_writer.write_timeseries.assert_called_once_with(mock_ts, mock_pathname, "CFS")
 
     def test_read_timeseries_from_dss_mock(self) -> None:
         """Test read_timeseries_from_dss with mocked reader."""
@@ -1338,13 +1336,11 @@ class TestDSSWriteConvenienceFunctions:
             MockReader.return_value.__exit__ = MagicMock(return_value=False)
             mock_reader.read_timeseries.return_value = mock_ts
 
-            result = read_timeseries_from_dss(
+            read_timeseries_from_dss(
                 filepath="test.dss",
                 pathname=mock_pathname,
             )
-            mock_reader.read_timeseries.assert_called_once_with(
-                mock_pathname, None, None
-            )
+            mock_reader.read_timeseries.assert_called_once_with(mock_pathname, None, None)
 
     def test_write_collection_to_dss_mock(self) -> None:
         """Test write_collection_to_dss with mocked writer."""
@@ -1363,7 +1359,7 @@ class TestDSSWriteConvenienceFunctions:
             MockWriter.return_value.__exit__ = MagicMock(return_value=False)
             mock_writer.close.return_value = mock_result
 
-            result = write_collection_to_dss(
+            write_collection_to_dss(
                 filepath="test.dss",
                 collection=mock_collection,
                 template=mock_template,

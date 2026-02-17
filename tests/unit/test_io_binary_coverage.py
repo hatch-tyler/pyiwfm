@@ -14,9 +14,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.binary import FortranBinaryReader, FortranBinaryWriter
 from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.binary import FortranBinaryReader, FortranBinaryWriter
 
 # ---------------------------------------------------------------------------
 # Scalar roundtrip tests
@@ -202,11 +201,13 @@ class TestMixedAndCharacterRecords:
             f.write(marker + rec + marker)
 
         with FortranBinaryReader(path) as r:
-            result = r.read_mixed_record([
-                ("i4", 1),
-                ("f8", 2),
-                ("S10", 1),
-            ])
+            result = r.read_mixed_record(
+                [
+                    ("i4", 1),
+                    ("f8", 2),
+                    ("S10", 1),
+                ]
+            )
         assert result[0] == 42
         np.testing.assert_allclose(result[1], [1.5, 2.5])
         assert result[2] == "HELLO"

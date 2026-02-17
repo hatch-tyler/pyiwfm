@@ -20,7 +20,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 from pyiwfm.io.rootzone import (
-    ElementSoilParamRow,
     RootZoneMainFileConfig,
     RootZoneMainFileReader,
 )
@@ -32,10 +31,7 @@ def _make_config(version: str = "4.12") -> RootZoneMainFileConfig:
 
 def _make_soil_line_v412(elem_id: int) -> str:
     """Generate a v4.12 soil param row (16 columns)."""
-    return (
-        f"  {elem_id}  0.20  0.35  0.45  0.10  1.0  2.0  1  1  1"
-        f"  1.0  1  1  1  1  1\n"
-    )
+    return f"  {elem_id}  0.20  0.35  0.45  0.10  1.0  2.0  1  1  1  1.0  1  1  1  1  1\n"
 
 
 class TestSoilParamsRead:
@@ -72,10 +68,7 @@ class TestSoilParamsRead:
     def test_inline_hash_treated_as_data(self) -> None:
         """'#' is NOT a comment delimiter in IWFM — must not truncate."""
         # Row with '#' after the 16 values (shouldn't affect parsing)
-        lines = (
-            "  1  0.20  0.35  0.45  0.10  1.0  2.0  1  1  1"
-            "  1.0  1  1  1  1  1  # annotation\n"
-        )
+        lines = "  1  0.20  0.35  0.45  0.10  1.0  2.0  1  1  1  1.0  1  1  1  1  1  # annotation\n"
         f = io.StringIO(lines)
         reader = RootZoneMainFileReader.__new__(RootZoneMainFileReader)
         reader._line_num = 0
@@ -121,9 +114,7 @@ class TestSoilParamsRead:
         reader._line_num = 0
         config = _make_config("4.12")
         with patch("pyiwfm.io.rootzone.logger") as mock_logger:
-            rows = reader._read_element_soil_params(
-                f, config, n_elements=5
-            )
+            rows = reader._read_element_soil_params(f, config, n_elements=5)
         assert len(rows) == 2
         mock_logger.warning.assert_called_once()
 
@@ -155,6 +146,7 @@ class TestSoilParamsRead:
 
 
 # ── Helpers for full-file read() tests ───────────────────────────────
+
 
 def _v412_main_file(n_elements: int = 3) -> str:
     """Build a minimal v4.12 rootzone main file (no FMFL line).
@@ -191,9 +183,7 @@ def _v412_main_file(n_elements: int = 3) -> str:
         "C  IE  WP  FC  TN  LAMBDA  K  KPonded  RHC  CPRISE  IRNE  FRNE  IMSRC  ICDSTAG  ICDSTURBIN  ICDSTURBOUT  ICDSTNVRV",
     ]
     for i in range(1, n_elements + 1):
-        lines.append(
-            f"  {i}  0.20  0.35  0.45  0.10  2.60  -1.0  2  0.0  1  1.0  0  1  1  1  1"
-        )
+        lines.append(f"  {i}  0.20  0.35  0.45  0.10  2.60  -1.0  2  0.0  1  1.0  0  1  1  1  1")
     return "\n".join(lines) + "\n"
 
 
@@ -232,9 +222,7 @@ def _v411_main_file(n_elements: int = 3) -> str:
         "C  IE  WP  FC  TN  LAMBDA  K  RHC  CPRISE  IRNE  FRNE  IMSRC  IDEST_TYPE  IDEST",
     ]
     for i in range(1, n_elements + 1):
-        lines.append(
-            f"  {i}  0.20  0.35  0.45  0.10  2.60  2  0.0  1  1.0  0  1  0"
-        )
+        lines.append(f"  {i}  0.20  0.35  0.45  0.10  2.60  2  0.0  1  1.0  0  1  0")
     return "\n".join(lines) + "\n"
 
 

@@ -18,23 +18,22 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from pyiwfm.core.mesh import AppGrid
+from pyiwfm.core.model import IWFMModel
+from pyiwfm.core.stratigraphy import Stratigraphy
+from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.sample_models import (
-    create_sample_mesh,
-    create_sample_triangular_mesh,
-    create_sample_stratigraphy,
-    create_sample_scalar_field,
+    create_sample_budget_data,
     create_sample_element_field,
+    create_sample_mesh,
+    create_sample_model,
+    create_sample_scalar_field,
+    create_sample_stratigraphy,
+    create_sample_stream_network,
     create_sample_timeseries,
     create_sample_timeseries_collection,
-    create_sample_stream_network,
-    create_sample_budget_data,
-    create_sample_model,
+    create_sample_triangular_mesh,
 )
-from pyiwfm.core.mesh import AppGrid
-from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.core.model import IWFMModel
-from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
-
 
 # =============================================================================
 # Test create_sample_mesh
@@ -77,8 +76,8 @@ class TestCreateSampleMesh:
         """Test node coordinate spacing."""
         mesh = create_sample_mesh(nx=3, ny=3, dx=500.0, dy=1000.0)
 
-        x_coords = sorted(set(n.x for n in mesh.nodes.values()))
-        y_coords = sorted(set(n.y for n in mesh.nodes.values()))
+        x_coords = sorted({n.x for n in mesh.nodes.values()})
+        y_coords = sorted({n.y for n in mesh.nodes.values()})
 
         assert x_coords == [0.0, 500.0, 1000.0]
         assert y_coords == [0.0, 1000.0, 2000.0]
@@ -157,9 +156,7 @@ class TestCreateSampleTriangularMesh:
 
     def test_center_node(self) -> None:
         """Test center node is at specified center."""
-        mesh = create_sample_triangular_mesh(
-            center_x=1000.0, center_y=2000.0
-        )
+        mesh = create_sample_triangular_mesh(center_x=1000.0, center_y=2000.0)
 
         center = mesh.nodes[1]
         assert center.x == pytest.approx(1000.0)
@@ -169,9 +166,7 @@ class TestCreateSampleTriangularMesh:
         """Test node count based on rings and sectors."""
         n_rings = 3
         n_sectors = 8
-        mesh = create_sample_triangular_mesh(
-            n_rings=n_rings, n_sectors=n_sectors
-        )
+        mesh = create_sample_triangular_mesh(n_rings=n_rings, n_sectors=n_sectors)
 
         expected_nodes = 1 + n_rings * n_sectors  # center + ring nodes
         assert mesh.n_nodes == expected_nodes
@@ -180,9 +175,7 @@ class TestCreateSampleTriangularMesh:
         """Test element count based on rings and sectors."""
         n_rings = 3
         n_sectors = 8
-        mesh = create_sample_triangular_mesh(
-            n_rings=n_rings, n_sectors=n_sectors
-        )
+        mesh = create_sample_triangular_mesh(n_rings=n_rings, n_sectors=n_sectors)
 
         # Inner ring: n_sectors triangles
         # Each outer ring: 2 * n_sectors triangles (quads split in two)
@@ -207,16 +200,10 @@ class TestCreateSampleTriangularMesh:
 
     def test_radius_affects_extent(self) -> None:
         """Test that radius parameter affects mesh extent."""
-        mesh = create_sample_triangular_mesh(
-            radius=10000.0, center_x=0.0, center_y=0.0
-        )
+        mesh = create_sample_triangular_mesh(radius=10000.0, center_x=0.0, center_y=0.0)
 
         # Outer nodes should be approximately at the radius
-        max_dist = max(
-            (n.x**2 + n.y**2) ** 0.5
-            for nid, n in mesh.nodes.items()
-            if nid != 1
-        )
+        max_dist = max((n.x**2 + n.y**2) ** 0.5 for nid, n in mesh.nodes.items() if nid != 1)
         assert max_dist == pytest.approx(10000.0, rel=0.01)
 
     def test_areas_computed(self) -> None:
@@ -292,9 +279,7 @@ class TestCreateSampleStratigraphy:
     def test_layer_thickness(self, small_mesh: AppGrid) -> None:
         """Test layer thickness matches parameter."""
         thickness = 75.0
-        strat = create_sample_stratigraphy(
-            small_mesh, n_layers=2, layer_thickness=thickness
-        )
+        strat = create_sample_stratigraphy(small_mesh, n_layers=2, layer_thickness=thickness)
 
         actual_thickness = strat.top_elev[:, 0] - strat.bottom_elev[:, 0]
         np.testing.assert_allclose(actual_thickness, thickness)
@@ -333,45 +318,35 @@ class TestCreateSampleScalarField:
 
     def test_drawdown_field(self, mesh: AppGrid) -> None:
         """Test drawdown field (cone centered in domain)."""
-        values = create_sample_scalar_field(
-            mesh, field_type="drawdown", noise_level=0.0
-        )
+        values = create_sample_scalar_field(mesh, field_type="drawdown", noise_level=0.0)
 
         assert values.shape == (mesh.n_nodes,)
         assert values.max() > 0  # Peak at center
 
     def test_recharge_field(self, mesh: AppGrid) -> None:
         """Test recharge field."""
-        values = create_sample_scalar_field(
-            mesh, field_type="recharge", noise_level=0.0
-        )
+        values = create_sample_scalar_field(mesh, field_type="recharge", noise_level=0.0)
 
         assert values.shape == (mesh.n_nodes,)
         assert (values > 0).all()  # All positive
 
     def test_pumping_field(self, mesh: AppGrid) -> None:
         """Test pumping field (negative clusters)."""
-        values = create_sample_scalar_field(
-            mesh, field_type="pumping", noise_level=0.0
-        )
+        values = create_sample_scalar_field(mesh, field_type="pumping", noise_level=0.0)
 
         assert values.shape == (mesh.n_nodes,)
         assert values.min() < 0  # Pumping is negative
 
     def test_subsidence_field(self, mesh: AppGrid) -> None:
         """Test subsidence field."""
-        values = create_sample_scalar_field(
-            mesh, field_type="subsidence", noise_level=0.0
-        )
+        values = create_sample_scalar_field(mesh, field_type="subsidence", noise_level=0.0)
 
         assert values.shape == (mesh.n_nodes,)
         assert values.min() < 0  # Subsidence is negative
 
     def test_generic_field(self, mesh: AppGrid) -> None:
         """Test unknown field type produces generic values."""
-        values = create_sample_scalar_field(
-            mesh, field_type="unknown_type", noise_level=0.0
-        )
+        values = create_sample_scalar_field(mesh, field_type="unknown_type", noise_level=0.0)
 
         assert values.shape == (mesh.n_nodes,)
 
@@ -384,10 +359,8 @@ class TestCreateSampleScalarField:
 
     def test_noise_level_positive(self, mesh: AppGrid) -> None:
         """Test positive noise level adds randomness."""
-        # With noise, repeated calls produce different results
-        np.random.seed(42)
+        # With noise, repeated calls produce different results (each uses new rng)
         v1 = create_sample_scalar_field(mesh, field_type="head", noise_level=0.5)
-        np.random.seed(99)
         v2 = create_sample_scalar_field(mesh, field_type="head", noise_level=0.5)
 
         assert not np.array_equal(v1, v2)
@@ -408,7 +381,6 @@ class TestCreateSampleElementField:
 
     def test_land_use_field(self, mesh: AppGrid) -> None:
         """Test land use field (categorical 1-5)."""
-        np.random.seed(42)
         values = create_sample_element_field(mesh, field_type="land_use")
 
         assert values.shape == (mesh.n_elements,)
@@ -425,7 +397,6 @@ class TestCreateSampleElementField:
 
     def test_generic_element_field(self, mesh: AppGrid) -> None:
         """Test unknown field type produces random values."""
-        np.random.seed(42)
         values = create_sample_element_field(mesh, field_type="crop")
 
         assert values.shape == (mesh.n_elements,)
@@ -467,18 +438,14 @@ class TestCreateSampleTimeseries:
 
     def test_no_seasonal_pattern(self) -> None:
         """Test time series without seasonal pattern."""
-        ts = create_sample_timeseries(
-            n_years=2, seasonal=False, noise_level=0.0
-        )
+        ts = create_sample_timeseries(n_years=2, seasonal=False, noise_level=0.0)
 
         # Without seasonal or noise, should be monotonic with trend
         assert ts.n_times > 0
 
     def test_trend(self) -> None:
         """Test time series trend is applied."""
-        ts = create_sample_timeseries(
-            n_years=10, trend=-1.0, seasonal=False, noise_level=0.0
-        )
+        ts = create_sample_timeseries(n_years=10, trend=-1.0, seasonal=False, noise_level=0.0)
 
         # First value should be higher than last with negative trend
         assert ts.values[0] > ts.values[-1]
@@ -486,6 +453,7 @@ class TestCreateSampleTimeseries:
     def test_custom_start_date(self) -> None:
         """Test custom start date."""
         from datetime import datetime
+
         start = datetime(2000, 6, 15)
         ts = create_sample_timeseries(start_date=start, n_years=1)
 
@@ -525,9 +493,7 @@ class TestCreateSampleTimeseriesCollection:
 
     def test_each_series_valid(self) -> None:
         """Test each series in collection is valid."""
-        collection = create_sample_timeseries_collection(
-            n_locations=2, n_years=2
-        )
+        collection = create_sample_timeseries_collection(n_locations=2, n_years=2)
 
         for ts in collection:
             assert isinstance(ts, TimeSeries)
@@ -536,9 +502,7 @@ class TestCreateSampleTimeseriesCollection:
 
     def test_different_trends(self) -> None:
         """Test series have different trends."""
-        collection = create_sample_timeseries_collection(
-            n_locations=3, n_years=5
-        )
+        collection = create_sample_timeseries_collection(n_locations=3, n_years=5)
 
         # Each location should have slightly different data
         series_list = list(collection)

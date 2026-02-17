@@ -32,7 +32,6 @@ from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
 from pyiwfm.visualization.webapi.config import model_state
 from pyiwfm.visualization.webapi.server import create_app
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -101,9 +100,17 @@ def _reset_model_state():
     model_state._node_id_to_idx = None
     model_state._sorted_elem_ids = None
     # Restore any monkey-patched methods back to the class originals
-    for attr in ("get_budget_reader", "get_available_budgets", "reproject_coords",
-                 "get_stream_reach_boundaries", "get_head_loader", "get_gw_hydrograph_reader",
-                 "get_stream_hydrograph_reader", "get_area_manager", "get_subsidence_reader"):
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
         if attr in model_state.__dict__:
             del model_state.__dict__[attr]
 
@@ -245,9 +252,7 @@ class TestGetMeshJson:
     def test_value_error_from_get_surface_json_returns_400(self, client):
         model = _make_mock_model()
         _set_model(model)
-        with patch.object(
-            model_state, "get_surface_json", side_effect=ValueError("No 3D mesh")
-        ):
+        with patch.object(model_state, "get_surface_json", side_effect=ValueError("No 3D mesh")):
             resp = client.get("/api/mesh/json?layer=0")
         assert resp.status_code == 400
         assert "No 3D mesh" in resp.json()["detail"]
@@ -290,7 +295,10 @@ class TestGetMeshGeojson:
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    },
                     "properties": {"element_id": 1, "layer": 1},
                 },
             ],
@@ -352,14 +360,16 @@ class TestGetHeadMap:
         loader = MagicMock()
         loader.n_frames = 5
         # 6 nodes, 2 layers
-        frame = np.array([
-            [10.0, 20.0],
-            [11.0, 21.0],
-            [12.0, 22.0],
-            [13.0, 23.0],
-            [14.0, 24.0],
-            [15.0, 25.0],
-        ])
+        frame = np.array(
+            [
+                [10.0, 20.0],
+                [11.0, 21.0],
+                [12.0, 22.0],
+                [13.0, 23.0],
+                [14.0, 24.0],
+                [15.0, 25.0],
+            ]
+        )
         loader.get_frame.return_value = frame
         loader.times = [
             datetime.datetime(2020, 1, 1),
@@ -373,18 +383,26 @@ class TestGetHeadMap:
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+                    },
                     "properties": {"element_id": 1, "layer": 1},
                 },
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 1], [1, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 1], [1, 0]]],
+                    },
                     "properties": {"element_id": 2, "layer": 1},
                 },
             ],
         }
-        with patch.object(model_state, "get_head_loader", return_value=loader), \
-             patch.object(model_state, "get_mesh_geojson", return_value=geojson):
+        with (
+            patch.object(model_state, "get_head_loader", return_value=loader),
+            patch.object(model_state, "get_mesh_geojson", return_value=geojson),
+        ):
             resp = client.get("/api/mesh/head-map?timestep=0&layer=1")
         assert resp.status_code == 200
         body = resp.json()
@@ -409,13 +427,18 @@ class TestGetHeadMap:
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    },
                     "properties": {"element_id": 999, "layer": 1},  # not in grid
                 },
             ],
         }
-        with patch.object(model_state, "get_head_loader", return_value=loader), \
-             patch.object(model_state, "get_mesh_geojson", return_value=geojson):
+        with (
+            patch.object(model_state, "get_head_loader", return_value=loader),
+            patch.object(model_state, "get_mesh_geojson", return_value=geojson),
+        ):
             resp = client.get("/api/mesh/head-map?timestep=0&layer=1")
         assert resp.status_code == 200
         body = resp.json()
@@ -431,8 +454,10 @@ class TestGetHeadMap:
         loader.get_frame.return_value = frame
         loader.times = []  # empty times
         geojson = {"type": "FeatureCollection", "features": []}
-        with patch.object(model_state, "get_head_loader", return_value=loader), \
-             patch.object(model_state, "get_mesh_geojson", return_value=geojson):
+        with (
+            patch.object(model_state, "get_head_loader", return_value=loader),
+            patch.object(model_state, "get_mesh_geojson", return_value=geojson),
+        ):
             resp = client.get("/api/mesh/head-map?timestep=0&layer=1")
         assert resp.status_code == 200
         body = resp.json()
@@ -681,20 +706,29 @@ class TestGetPropertyMap:
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    },
                     "properties": {"element_id": 1, "layer": 1},
                 },
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 0]]],
+                    },
                     "properties": {"element_id": 2, "layer": 1},
                 },
             ],
         }
-        with patch(
-            "pyiwfm.visualization.webapi.routes.properties._compute_property_values",
-            return_value=values,
-        ), patch.object(model_state, "get_mesh_geojson", return_value=geojson):
+        with (
+            patch(
+                "pyiwfm.visualization.webapi.routes.properties._compute_property_values",
+                return_value=values,
+            ),
+            patch.object(model_state, "get_mesh_geojson", return_value=geojson),
+        ):
             resp = client.get("/api/mesh/property-map?property=kh&layer=1")
         assert resp.status_code == 200
         body = resp.json()
@@ -714,20 +748,29 @@ class TestGetPropertyMap:
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    },
                     "properties": {"element_id": 1, "layer": 1},
                 },
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 0]]],
+                    },
                     "properties": {"element_id": 2, "layer": 1},
                 },
             ],
         }
-        with patch(
-            "pyiwfm.visualization.webapi.routes.properties._compute_property_values",
-            return_value=values,
-        ), patch.object(model_state, "get_mesh_geojson", return_value=geojson):
+        with (
+            patch(
+                "pyiwfm.visualization.webapi.routes.properties._compute_property_values",
+                return_value=values,
+            ),
+            patch.object(model_state, "get_mesh_geojson", return_value=geojson),
+        ):
             resp = client.get("/api/mesh/property-map?property=kh&layer=1")
         assert resp.status_code == 200
         body = resp.json()
@@ -747,20 +790,29 @@ class TestGetPropertyMap:
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    },
                     "properties": {"element_id": 1, "layer": 1},
                 },
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[1, 0], [2, 0], [2, 1], [1, 0]]],
+                    },
                     "properties": {"element_id": 2, "layer": 1},
                 },
             ],
         }
-        with patch(
-            "pyiwfm.visualization.webapi.routes.properties._compute_property_values",
-            return_value=values,
-        ), patch.object(model_state, "get_mesh_geojson", return_value=geojson):
+        with (
+            patch(
+                "pyiwfm.visualization.webapi.routes.properties._compute_property_values",
+                return_value=values,
+            ),
+            patch.object(model_state, "get_mesh_geojson", return_value=geojson),
+        ):
             resp = client.get("/api/mesh/property-map?property=kh&layer=1")
         assert resp.status_code == 200
         body = resp.json()
@@ -778,15 +830,21 @@ class TestGetPropertyMap:
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]],
+                    },
                     "properties": {"element_id": 999, "layer": 1},
                 },
             ],
         }
-        with patch(
-            "pyiwfm.visualization.webapi.routes.properties._compute_property_values",
-            return_value=values,
-        ), patch.object(model_state, "get_mesh_geojson", return_value=geojson):
+        with (
+            patch(
+                "pyiwfm.visualization.webapi.routes.properties._compute_property_values",
+                return_value=values,
+            ),
+            patch.object(model_state, "get_mesh_geojson", return_value=geojson),
+        ):
             resp = client.get("/api/mesh/property-map?property=kh&layer=1")
         assert resp.status_code == 200
         body = resp.json()
@@ -819,8 +877,10 @@ class TestGetElementDetail:
         grid.subregions = {1: Subregion(id=1, name="TestSub")}
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=None)
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -840,8 +900,10 @@ class TestGetElementDetail:
         grid.subregions = {}
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=None)
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -851,32 +913,37 @@ class TestGetElementDetail:
         """Test layer properties with stratigraphy data."""
         grid = _make_grid()
         grid.subregions = {}
-        n_nodes = 6
         n_layers = 2
-        top_elev = np.array([
-            [100.0, 50.0],
-            [100.0, 50.0],
-            [100.0, 50.0],
-            [100.0, 50.0],
-            [100.0, 50.0],
-            [100.0, 50.0],
-        ])
-        bottom_elev = np.array([
-            [50.0, 0.0],
-            [50.0, 0.0],
-            [50.0, 0.0],
-            [50.0, 0.0],
-            [50.0, 0.0],
-            [50.0, 0.0],
-        ])
+        top_elev = np.array(
+            [
+                [100.0, 50.0],
+                [100.0, 50.0],
+                [100.0, 50.0],
+                [100.0, 50.0],
+                [100.0, 50.0],
+                [100.0, 50.0],
+            ]
+        )
+        bottom_elev = np.array(
+            [
+                [50.0, 0.0],
+                [50.0, 0.0],
+                [50.0, 0.0],
+                [50.0, 0.0],
+                [50.0, 0.0],
+                [50.0, 0.0],
+            ]
+        )
         strat = MagicMock()
         strat.n_layers = n_layers
         strat.top_elev = top_elev
         strat.bottom_elev = bottom_elev
         model = _make_mock_model(grid=grid, stratigraphy=strat, groundwater=None, rootzone=None)
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -913,12 +980,12 @@ class TestGetElementDetail:
         gw.aquifer_params = params
         gw.iter_wells.return_value = []
 
-        model = _make_mock_model(
-            grid=grid, stratigraphy=strat, groundwater=gw, rootzone=None
-        )
+        model = _make_mock_model(grid=grid, stratigraphy=strat, groundwater=gw, rootzone=None)
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -934,7 +1001,7 @@ class TestGetElementDetail:
         grid.subregions = {}
 
         kh_1d = np.full(6, 5.0)
-        kh_1d.ndim  # just accessing to ensure it's ndarray
+        assert kh_1d.ndim == 1  # ensure it's a 1D ndarray
 
         params = MagicMock()
         params.kh = kh_1d
@@ -950,8 +1017,10 @@ class TestGetElementDetail:
 
         model = _make_mock_model(grid=grid, groundwater=gw, rootzone=None)
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -985,8 +1054,10 @@ class TestGetElementDetail:
 
         model = _make_mock_model(grid=grid, groundwater=gw, rootzone=None)
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1006,18 +1077,22 @@ class TestGetElementDetail:
         loader = MagicMock()
         loader.n_frames = 3
         # shape (6 nodes, 2 layers)
-        frame = np.array([
-            [100.0, 80.0],
-            [101.0, 81.0],
-            [102.0, 82.0],
-            [103.0, 83.0],
-            [104.0, 84.0],
-            [105.0, 85.0],
-        ])
+        frame = np.array(
+            [
+                [100.0, 80.0],
+                [101.0, 81.0],
+                [102.0, 82.0],
+                [103.0, 83.0],
+                [104.0, 84.0],
+                [105.0, 85.0],
+            ]
+        )
         loader.get_frame.return_value = frame
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=loader):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=loader),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1034,8 +1109,10 @@ class TestGetElementDetail:
         grid.subregions = {}
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=None)
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1069,9 +1146,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1132,9 +1211,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1?timestep=3")
         assert resp.status_code == 200
         # Verify get_element_breakdown was called with timestep=3
@@ -1156,9 +1237,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1?timestep=100")
         assert resp.status_code == 200
         # Clamped to n_timesteps - 1 = 4
@@ -1180,9 +1263,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1")  # no timestep param, default=-1
         assert resp.status_code == 200
         # -1 < 0 => ts = n_timesteps - 1 = 4
@@ -1196,8 +1281,10 @@ class TestGetElementDetail:
         # Ensure hasattr(model, "rootzone") returns True but value is None
         model.rootzone = None
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1219,9 +1306,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1239,9 +1328,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1261,9 +1352,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1285,9 +1378,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1312,9 +1407,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1342,9 +1439,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1376,9 +1475,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1399,8 +1500,10 @@ class TestGetElementDetail:
         def offset_reproject(x, y):
             return (x + 1000.0, y + 2000.0)
 
-        with patch.object(model_state, "reproject_coords", side_effect=offset_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=offset_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1416,8 +1519,10 @@ class TestGetElementDetail:
         grid.subregions = {}
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=None)
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1434,8 +1539,10 @@ class TestGetElementDetail:
 
         model = _make_mock_model(grid=grid, groundwater=gw, rootzone=None)
         _set_model(model)
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()
@@ -1462,9 +1569,11 @@ class TestGetElementDetail:
         model = _make_mock_model(grid=grid, groundwater=None, rootzone=rz)
         _set_model(model)
 
-        with patch.object(model_state, "reproject_coords", side_effect=_identity_reproject), \
-             patch.object(model_state, "get_head_loader", return_value=None), \
-             patch.object(model_state, "get_area_manager", return_value=area_mgr):
+        with (
+            patch.object(model_state, "reproject_coords", side_effect=_identity_reproject),
+            patch.object(model_state, "get_head_loader", return_value=None),
+            patch.object(model_state, "get_area_manager", return_value=area_mgr),
+        ):
             resp = client.get("/api/mesh/element/1")
         assert resp.status_code == 200
         body = resp.json()

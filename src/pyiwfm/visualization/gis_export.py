@@ -36,11 +36,10 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import geopandas as gpd
-    from shapely.geometry import Point, Polygon, LineString
 
+    from pyiwfm.components.stream import AppStream
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.stratigraphy import Stratigraphy
-    from pyiwfm.components.stream import AppStream
 
 
 class GISExporter:
@@ -96,9 +95,9 @@ class GISExporter:
 
     def __init__(
         self,
-        grid: "AppGrid",
-        stratigraphy: "Stratigraphy | None" = None,
-        streams: "AppStream | None" = None,
+        grid: AppGrid,
+        stratigraphy: Stratigraphy | None = None,
+        streams: AppStream | None = None,
         crs: str | None = None,
     ) -> None:
         """
@@ -112,7 +111,7 @@ class GISExporter:
         """
         try:
             import geopandas  # noqa: F401
-            from shapely.geometry import Point, Polygon, LineString  # noqa: F401
+            from shapely.geometry import LineString, Point, Polygon  # noqa: F401
         except ImportError as e:
             raise ImportError(
                 "geopandas and shapely are required for GIS export. "
@@ -127,7 +126,7 @@ class GISExporter:
     def nodes_to_geodataframe(
         self,
         attributes: dict[str, dict[int, Any]] | None = None,
-    ) -> "gpd.GeoDataFrame":
+    ) -> gpd.GeoDataFrame:
         """
         Convert mesh nodes to a GeoDataFrame.
 
@@ -179,7 +178,7 @@ class GISExporter:
     def elements_to_geodataframe(
         self,
         attributes: dict[str, dict[int, Any]] | None = None,
-    ) -> "gpd.GeoDataFrame":
+    ) -> gpd.GeoDataFrame:
         """
         Convert mesh elements to a GeoDataFrame.
 
@@ -222,7 +221,7 @@ class GISExporter:
         gdf = gpd.GeoDataFrame(data, crs=self.crs)
         return gdf
 
-    def streams_to_geodataframe(self) -> "gpd.GeoDataFrame":
+    def streams_to_geodataframe(self) -> gpd.GeoDataFrame:
         """
         Convert stream network to a GeoDataFrame.
 
@@ -262,14 +261,13 @@ class GISExporter:
         gdf = gpd.GeoDataFrame(data, crs=self.crs)
         return gdf
 
-    def subregions_to_geodataframe(self) -> "gpd.GeoDataFrame":
+    def subregions_to_geodataframe(self) -> gpd.GeoDataFrame:
         """
         Convert subregions to a GeoDataFrame (dissolved elements).
 
         Returns:
             GeoDataFrame with subregion polygons
         """
-        import geopandas as gpd
 
         # Get elements GeoDataFrame
         elements_gdf = self.elements_to_geodataframe()
@@ -281,7 +279,7 @@ class GISExporter:
 
         return subregions_gdf
 
-    def boundary_to_geodataframe(self) -> "gpd.GeoDataFrame":
+    def boundary_to_geodataframe(self) -> gpd.GeoDataFrame:
         """
         Extract model boundary as a GeoDataFrame.
 
@@ -344,7 +342,7 @@ class GISExporter:
             boundary_gdf = self.boundary_to_geodataframe()
             boundary_gdf.to_file(output_path, layer="boundary", driver="GPKG")
 
-    def _shorten_columns_for_shapefile(self, gdf: "gpd.GeoDataFrame") -> "gpd.GeoDataFrame":
+    def _shorten_columns_for_shapefile(self, gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         """
         Shorten column names to fit Shapefile's 10-character limit.
 

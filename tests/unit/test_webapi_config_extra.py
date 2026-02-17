@@ -10,16 +10,17 @@ subsidence hydrograph locations, set_model with simulation_file.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
 pydantic = pytest.importorskip("pydantic")
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.visualization.webapi.config import ModelState, ViewerSettings
+from pydantic import ValidationError  # noqa: E402
 
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.visualization.webapi.config import ModelState, ViewerSettings  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -59,12 +60,8 @@ def _make_mock_model(
         strat = MagicMock()
         strat.n_layers = 2
         strat.gs_elev = np.array([10.0, 20.0, 30.0, 40.0])
-        strat.top_elev = np.array(
-            [[10.0, 5.0], [20.0, 10.0], [30.0, 15.0], [40.0, 20.0]]
-        )
-        strat.bottom_elev = np.array(
-            [[5.0, 0.0], [10.0, 5.0], [15.0, 10.0], [20.0, 15.0]]
-        )
+        strat.top_elev = np.array([[10.0, 5.0], [20.0, 10.0], [30.0, 15.0], [40.0, 20.0]])
+        strat.bottom_elev = np.array([[5.0, 0.0], [10.0, 5.0], [15.0, 10.0], [20.0, 15.0]])
         model.stratigraphy = strat
     else:
         model.stratigraphy = None
@@ -120,8 +117,12 @@ class TestViewerSettings:
 
     def test_custom_values(self):
         s = ViewerSettings(
-            host="0.0.0.0", port=9090, title="My Viewer",
-            open_browser=False, debug=True, reload=True,
+            host="0.0.0.0",
+            port=9090,
+            title="My Viewer",
+            open_browser=False,
+            debug=True,
+            reload=True,
         )
         assert s.host == "0.0.0.0"
         assert s.port == 9090
@@ -131,15 +132,15 @@ class TestViewerSettings:
         assert s.reload is True
 
     def test_port_validation_min(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ViewerSettings(port=0)
 
     def test_port_validation_max(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ViewerSettings(port=70000)
 
     def test_extra_fields_forbidden(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             ViewerSettings(unknown_field="bad")
 
 
@@ -498,12 +499,15 @@ class TestStreamReachBoundaries:
         mock_spec_reader_cls = MagicMock()
         mock_spec_reader_cls.return_value.read.return_value = (1, 3, [rs1])
 
-        with patch(
-            "pyiwfm.io.preprocessor.read_preprocessor_main",
-            return_value=mock_pp_config,
-        ), patch(
-            "pyiwfm.io.streams.StreamSpecReader",
-            mock_spec_reader_cls,
+        with (
+            patch(
+                "pyiwfm.io.preprocessor.read_preprocessor_main",
+                return_value=mock_pp_config,
+            ),
+            patch(
+                "pyiwfm.io.streams.StreamSpecReader",
+                mock_spec_reader_cls,
+            ),
         ):
             result = state.get_stream_reach_boundaries()
 
@@ -562,12 +566,15 @@ class TestStreamReachBoundaries:
         mock_spec_reader_cls = MagicMock()
         mock_spec_reader_cls.return_value.read.return_value = (1, 0, [rs1])
 
-        with patch(
-            "pyiwfm.io.preprocessor.read_preprocessor_main",
-            return_value=mock_pp_config,
-        ), patch(
-            "pyiwfm.io.streams.StreamSpecReader",
-            mock_spec_reader_cls,
+        with (
+            patch(
+                "pyiwfm.io.preprocessor.read_preprocessor_main",
+                return_value=mock_pp_config,
+            ),
+            patch(
+                "pyiwfm.io.streams.StreamSpecReader",
+                mock_spec_reader_cls,
+            ),
         ):
             result = state.get_stream_reach_boundaries()
 
@@ -589,12 +596,15 @@ class TestStreamReachBoundaries:
         mock_spec_reader_cls = MagicMock()
         mock_spec_reader_cls.return_value.read.return_value = (0, 0, [])
 
-        with patch(
-            "pyiwfm.io.preprocessor.read_preprocessor_main",
-            return_value=mock_pp_config,
-        ), patch(
-            "pyiwfm.io.streams.StreamSpecReader",
-            mock_spec_reader_cls,
+        with (
+            patch(
+                "pyiwfm.io.preprocessor.read_preprocessor_main",
+                return_value=mock_pp_config,
+            ),
+            patch(
+                "pyiwfm.io.streams.StreamSpecReader",
+                mock_spec_reader_cls,
+            ),
         ):
             result = state.get_stream_reach_boundaries()
 
@@ -617,9 +627,7 @@ class TestStreamReachBoundaries:
     def test_binary_path_does_not_exist(self, tmp_path):
         """Binary path in source_files but file doesn't exist, falls through."""
         state, model = _state_with_model()
-        model.source_files = {
-            "binary_preprocessor": str(tmp_path / "nonexistent.bin")
-        }
+        model.source_files = {"binary_preprocessor": str(tmp_path / "nonexistent.bin")}
         result = state.get_stream_reach_boundaries()
         assert result is None
 
@@ -658,9 +666,7 @@ class TestDiversionTimeseries:
 
     def test_returns_none_file_not_found(self, tmp_path):
         state, model = _state_with_model()
-        model.source_files = {
-            "stream_diversion_ts": str(tmp_path / "nonexistent.dat")
-        }
+        model.source_files = {"stream_diversion_ts": str(tmp_path / "nonexistent.dat")}
         result = state.get_diversion_timeseries()
         assert result is None
 
@@ -676,7 +682,9 @@ class TestDiversionTimeseries:
 
         mock_reader_cls = MagicMock()
         mock_reader_cls.return_value.read_file.return_value = (
-            mock_times, mock_values, mock_metadata,
+            mock_times,
+            mock_values,
+            mock_metadata,
         )
 
         with patch(
@@ -703,7 +711,9 @@ class TestDiversionTimeseries:
 
         mock_reader_cls = MagicMock()
         mock_reader_cls.return_value.read_file.return_value = (
-            mock_times, mock_values, mock_metadata,
+            mock_times,
+            mock_values,
+            mock_metadata,
         )
 
         with patch(
@@ -743,7 +753,9 @@ class TestDiversionTimeseries:
 
         mock_reader_cls = MagicMock()
         mock_reader_cls.return_value.read_file.return_value = (
-            mock_times, mock_values, mock_metadata,
+            mock_times,
+            mock_values,
+            mock_metadata,
         )
 
         with patch(
@@ -768,7 +780,9 @@ class TestDiversionTimeseries:
 
         mock_reader_cls = MagicMock()
         mock_reader_cls.return_value.read_file.return_value = (
-            mock_times, mock_values, mock_metadata,
+            mock_times,
+            mock_values,
+            mock_metadata,
         )
 
         with patch(
@@ -1082,12 +1096,15 @@ class TestHeadLoaderBranches:
 
         mock_convert = MagicMock()
 
-        with patch(
-            "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
-            return_value=mock_loader,
-        ), patch(
-            "pyiwfm.io.head_all_converter.convert_headall_to_hdf",
-            mock_convert,
+        with (
+            patch(
+                "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+                return_value=mock_loader,
+            ),
+            patch(
+                "pyiwfm.io.head_all_converter.convert_headall_to_hdf",
+                mock_convert,
+            ),
         ):
             result = state.get_head_loader()
 
@@ -1104,6 +1121,7 @@ class TestHeadLoaderBranches:
         head_file.write_text("fake data")
 
         import time
+
         time.sleep(0.05)
 
         hdf_cache = head_file.with_suffix(".head_cache.hdf")
@@ -1130,6 +1148,7 @@ class TestHeadLoaderBranches:
         hdf_cache.write_bytes(b"old cached")
 
         import time
+
         time.sleep(0.05)
 
         head_file = tmp_path / "head.dat"
@@ -1141,12 +1160,15 @@ class TestHeadLoaderBranches:
         mock_loader.n_frames = 10
         mock_convert = MagicMock()
 
-        with patch(
-            "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
-            return_value=mock_loader,
-        ), patch(
-            "pyiwfm.io.head_all_converter.convert_headall_to_hdf",
-            mock_convert,
+        with (
+            patch(
+                "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+                return_value=mock_loader,
+            ),
+            patch(
+                "pyiwfm.io.head_all_converter.convert_headall_to_hdf",
+                mock_convert,
+            ),
         ):
             result = state.get_head_loader()
 
@@ -1183,12 +1205,15 @@ class TestHeadLoaderBranches:
         mock_loader.n_frames = 10
         mock_convert = MagicMock()
 
-        with patch(
-            "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
-            return_value=mock_loader,
-        ), patch(
-            "pyiwfm.io.head_all_converter.convert_headall_to_hdf",
-            mock_convert,
+        with (
+            patch(
+                "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+                return_value=mock_loader,
+            ),
+            patch(
+                "pyiwfm.io.head_all_converter.convert_headall_to_hdf",
+                mock_convert,
+            ),
         ):
             result = state.get_head_loader()
 
@@ -1384,9 +1409,7 @@ class TestSubsidenceHydrographLocations:
         subs_config.hydrograph_specs = [spec1]
         model.groundwater.subsidence_config = subs_config
 
-        with patch.object(
-            state, "reproject_coords", side_effect=RuntimeError("proj error")
-        ):
+        with patch.object(state, "reproject_coords", side_effect=RuntimeError("proj error")):
             result = state.get_hydrograph_locations()
 
         assert len(result["subsidence"]) == 0
@@ -1550,4 +1573,5 @@ class TestGlobalModelState:
 
     def test_global_instance_exists(self):
         from pyiwfm.visualization.webapi.config import model_state
+
         assert isinstance(model_state, ModelState)

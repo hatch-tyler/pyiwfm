@@ -7,29 +7,26 @@ and parameterization strategies work correctly end-to-end.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 
-from pyiwfm.runner.pest_params import (
-    IWFMParameterType,
-    ParameterTransform,
-    Parameter,
-    ZoneParameterization,
-    PilotPointParameterization,
-    DirectParameterization,
-)
 from pyiwfm.components.groundwater import (
     AppGW,
     Subsidence,
 )
 from pyiwfm.io.groundwater import (
-    GWFileConfig,
-    GroundwaterWriter,
     GroundwaterReader,
+    GroundwaterWriter,
+    GWFileConfig,
 )
-
+from pyiwfm.runner.pest_params import (
+    DirectParameterization,
+    IWFMParameterType,
+    Parameter,
+    ParameterTransform,
+    PilotPointParameterization,
+    ZoneParameterization,
+)
 
 # =============================================================================
 # Test Subsidence Parameter Types
@@ -295,12 +292,27 @@ class TestSubsidenceEndToEnd:
         # Step 1: Create AppGW with subsidence data
         gw = AppGW(n_nodes=20, n_layers=2, n_elements=10)
         subsidence_data = [
-            Subsidence(element=1, layer=1, elastic_storage=1e-5,
-                      inelastic_storage=1e-4, preconsolidation_head=90.0),
-            Subsidence(element=1, layer=2, elastic_storage=2e-5,
-                      inelastic_storage=2e-4, preconsolidation_head=85.0),
-            Subsidence(element=5, layer=1, elastic_storage=5e-6,
-                      inelastic_storage=5e-5, preconsolidation_head=95.0),
+            Subsidence(
+                element=1,
+                layer=1,
+                elastic_storage=1e-5,
+                inelastic_storage=1e-4,
+                preconsolidation_head=90.0,
+            ),
+            Subsidence(
+                element=1,
+                layer=2,
+                elastic_storage=2e-5,
+                inelastic_storage=2e-4,
+                preconsolidation_head=85.0,
+            ),
+            Subsidence(
+                element=5,
+                layer=1,
+                elastic_storage=5e-6,
+                inelastic_storage=5e-5,
+                preconsolidation_head=95.0,
+            ),
         ]
         for sub in subsidence_data:
             gw.add_subsidence(sub)

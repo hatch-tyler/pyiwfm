@@ -17,25 +17,24 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.rootzone import (
-    RootZoneFileConfig,
-    RootZoneWriter,
-    RootZoneReader,
-    write_rootzone,
-    read_crop_types,
-    read_soil_params,
-    _is_comment_line,
-    _strip_comment,
-)
 from pyiwfm.components.rootzone import (
-    RootZone,
     CropType,
-    SoilParameters,
     ElementLandUse,
     LandUseType,
+    RootZone,
+    SoilParameters,
 )
 from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.rootzone import (
+    RootZoneFileConfig,
+    RootZoneReader,
+    RootZoneWriter,
+    _is_comment_line,
+    _strip_comment,
+    read_crop_types,
+    read_soil_params,
+    write_rootzone,
+)
 
 # =============================================================================
 # Test Helper Functions
@@ -163,23 +162,22 @@ class TestRootZoneWriter:
         rz.set_soil_parameters(3, SoilParameters(0.38, 0.28, 0.09, 0.015))
 
         # Add land use
-        rz.add_element_landuse(ElementLandUse(
-            element_id=1,
-            land_use_type=LandUseType.AGRICULTURAL,
-            area=100.0,
-            crop_fractions={1: 0.6, 2: 0.4}
-        ))
-        rz.add_element_landuse(ElementLandUse(
-            element_id=2,
-            land_use_type=LandUseType.URBAN,
-            area=50.0,
-            impervious_fraction=0.7
-        ))
-        rz.add_element_landuse(ElementLandUse(
-            element_id=3,
-            land_use_type=LandUseType.NATIVE_RIPARIAN,
-            area=75.0
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=1,
+                land_use_type=LandUseType.AGRICULTURAL,
+                area=100.0,
+                crop_fractions={1: 0.6, 2: 0.4},
+            )
+        )
+        rz.add_element_landuse(
+            ElementLandUse(
+                element_id=2, land_use_type=LandUseType.URBAN, area=50.0, impervious_fraction=0.7
+            )
+        )
+        rz.add_element_landuse(
+            ElementLandUse(element_id=3, land_use_type=LandUseType.NATIVE_RIPARIAN, area=75.0)
+        )
 
         return rz
 
@@ -203,7 +201,9 @@ class TestRootZoneWriter:
         assert "3.0" in content  # root depth
         assert "1.1" in content  # kc
 
-    def test_write_crop_types_with_header(self, config: RootZoneFileConfig, basic_rootzone: RootZone) -> None:
+    def test_write_crop_types_with_header(
+        self, config: RootZoneFileConfig, basic_rootzone: RootZone
+    ) -> None:
         """Test writing crop types with custom header."""
         writer = RootZoneWriter(config)
         filepath = writer.write_crop_types(basic_rootzone, header="Custom header")
@@ -219,7 +219,7 @@ class TestRootZoneWriter:
             name="Test",
             root_depth=2.0,
             kc=1.0,
-            monthly_kc=np.array([0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6])
+            monthly_kc=np.array([0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6]),
         )
         rz.add_crop_type(crop)
 
@@ -241,7 +241,9 @@ class TestRootZoneWriter:
         assert "0.4" in content  # porosity
         assert "0.3" in content  # field capacity
 
-    def test_write_soil_params_with_header(self, config: RootZoneFileConfig, basic_rootzone: RootZone) -> None:
+    def test_write_soil_params_with_header(
+        self, config: RootZoneFileConfig, basic_rootzone: RootZone
+    ) -> None:
         """Test writing soil parameters with custom header."""
         writer = RootZoneWriter(config)
         filepath = writer.write_soil_params(basic_rootzone, header="Custom soil header")
@@ -265,7 +267,9 @@ class TestRootZoneWriter:
         assert "50.0" in content  # urban area
         assert "0.7" in content  # impervious fraction
 
-    def test_write_landuse_with_header(self, config: RootZoneFileConfig, basic_rootzone: RootZone) -> None:
+    def test_write_landuse_with_header(
+        self, config: RootZoneFileConfig, basic_rootzone: RootZone
+    ) -> None:
         """Test writing land use with custom header."""
         writer = RootZoneWriter(config)
         filepath = writer.write_landuse(basic_rootzone, header="Custom landuse header")
@@ -273,14 +277,18 @@ class TestRootZoneWriter:
         content = filepath.read_text()
         assert "Custom landuse header" in content
 
-    def test_write_soil_moisture(self, config: RootZoneFileConfig, basic_rootzone: RootZone) -> None:
+    def test_write_soil_moisture(
+        self, config: RootZoneFileConfig, basic_rootzone: RootZone
+    ) -> None:
         """Test writing soil moisture file."""
         # Add soil moisture data
-        basic_rootzone.soil_moisture = np.array([
-            [0.25, 0.30],
-            [0.22, 0.28],
-            [0.20, 0.26],
-        ])
+        basic_rootzone.soil_moisture = np.array(
+            [
+                [0.25, 0.30],
+                [0.22, 0.28],
+                [0.20, 0.26],
+            ]
+        )
 
         writer = RootZoneWriter(config)
         filepath = writer.write_soil_moisture(basic_rootzone)
@@ -292,7 +300,9 @@ class TestRootZoneWriter:
         assert "NLAYERS" in content
         assert "0.25" in content
 
-    def test_write_soil_moisture_no_data_raises_error(self, config: RootZoneFileConfig, basic_rootzone: RootZone) -> None:
+    def test_write_soil_moisture_no_data_raises_error(
+        self, config: RootZoneFileConfig, basic_rootzone: RootZone
+    ) -> None:
         """Test writing soil moisture without data raises error."""
         writer = RootZoneWriter(config)
 
@@ -302,11 +312,13 @@ class TestRootZoneWriter:
     def test_write_all(self, config: RootZoneFileConfig, basic_rootzone: RootZone) -> None:
         """Test writing all files."""
         # Add soil moisture
-        basic_rootzone.soil_moisture = np.array([
-            [0.25, 0.30],
-            [0.22, 0.28],
-            [0.20, 0.26],
-        ])
+        basic_rootzone.soil_moisture = np.array(
+            [
+                [0.25, 0.30],
+                [0.22, 0.28],
+                [0.20, 0.26],
+            ]
+        )
 
         writer = RootZoneWriter(config)
         files = writer.write(basic_rootzone)
@@ -481,10 +493,7 @@ class TestConvenienceFunctions:
 
     def test_write_rootzone_with_config(self, tmp_path: Path) -> None:
         """Test write_rootzone with custom config."""
-        config = RootZoneFileConfig(
-            output_dir=tmp_path,
-            crop_types_file="custom_crops.dat"
-        )
+        config = RootZoneFileConfig(output_dir=tmp_path, crop_types_file="custom_crops.dat")
         rz = RootZone(n_elements=1, n_layers=1)
         rz.add_crop_type(CropType(id=1, name="Test", root_depth=2.0, kc=1.0))
 
@@ -598,7 +607,11 @@ class TestEdgeCases:
         """Test with many crops."""
         rz = RootZone(n_elements=1, n_layers=1)
         for i in range(50):
-            rz.add_crop_type(CropType(id=i+1, name=f"Crop{i+1}", root_depth=float(i % 5 + 1), kc=0.5 + i * 0.02))
+            rz.add_crop_type(
+                CropType(
+                    id=i + 1, name=f"Crop{i + 1}", root_depth=float(i % 5 + 1), kc=0.5 + i * 0.02
+                )
+            )
 
         config = RootZoneFileConfig(output_dir=tmp_path)
         writer = RootZoneWriter(config)
@@ -626,11 +639,9 @@ class TestEdgeCases:
     def test_water_landuse_type(self, tmp_path: Path) -> None:
         """Test water land use type."""
         rz = RootZone(n_elements=2, n_layers=1)
-        rz.add_element_landuse(ElementLandUse(
-            element_id=1,
-            land_use_type=LandUseType.WATER,
-            area=25.0
-        ))
+        rz.add_element_landuse(
+            ElementLandUse(element_id=1, land_use_type=LandUseType.WATER, area=25.0)
+        )
 
         config = RootZoneFileConfig(output_dir=tmp_path)
         writer = RootZoneWriter(config)

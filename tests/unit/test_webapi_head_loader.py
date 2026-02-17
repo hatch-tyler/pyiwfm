@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import h5py
 import numpy as np
@@ -13,10 +13,11 @@ import pytest
 
 from pyiwfm.visualization.webapi.head_loader import LazyHeadDataLoader
 
-
 # ---------------------------------------------------------------------------
 # Helpers -- real HDF5 fixtures
 # ---------------------------------------------------------------------------
+
+_rng = np.random.default_rng(42)
 
 
 def _create_pyiwfm_hdf5(
@@ -35,7 +36,7 @@ def _create_pyiwfm_hdf5(
     string_times : bool
         If True, store time strings as native str (not bytes).
     """
-    data = np.random.rand(n_timesteps, n_nodes, n_layers).astype(np.float64)
+    data = _rng.random((n_timesteps, n_nodes, n_layers)).astype(np.float64)
     base = datetime(2020, 1, 1)
     times = [(base + timedelta(days=i)).isoformat() for i in range(n_timesteps)]
 
@@ -57,7 +58,7 @@ def _create_pyiwfm_hdf5_2d(
     n_nodes: int = 15,
 ) -> Path:
     """Create a pyiwfm-format HDF5 file with a 2D ``head`` dataset (no layer dim)."""
-    data = np.random.rand(n_timesteps, n_nodes).astype(np.float64)
+    data = _rng.random((n_timesteps, n_nodes)).astype(np.float64)
     base = datetime(2020, 6, 1)
     times = [(base + timedelta(days=i)).isoformat().encode() for i in range(n_timesteps)]
 
@@ -80,7 +81,7 @@ def _create_iwfm_native_hdf5(
     """Create an IWFM-native-format HDF5 file with ``GWHeadAtAllNodes``."""
     # IWFM stores data as (n_timesteps, n_nodes * n_layers) with
     # columns ordered: [all_nodes_layer1, all_nodes_layer2, ...]
-    flat_data = np.random.rand(n_timesteps, n_nodes * n_layers).astype(np.float64)
+    flat_data = _rng.random((n_timesteps, n_nodes * n_layers)).astype(np.float64)
     base = datetime(2021, 3, 1)
     times = [(base + timedelta(days=30 * i)).isoformat().encode() for i in range(n_timesteps)]
 
@@ -176,11 +177,8 @@ class TestLazyHeadDataLoaderInit:
 
     def test_custom_dataset_name(self, tmp_path: Path) -> None:
         hdf = tmp_path / "custom.hdf5"
-        data = np.random.rand(4, 8, 2).astype(np.float64)
-        times = [
-            (datetime(2022, 1, 1) + timedelta(days=i)).isoformat().encode()
-            for i in range(4)
-        ]
+        data = _rng.random((4, 8, 2)).astype(np.float64)
+        times = [(datetime(2022, 1, 1) + timedelta(days=i)).isoformat().encode() for i in range(4)]
         with h5py.File(hdf, "w") as f:
             f.create_dataset("my_head", data=data)
             f.create_dataset("times", data=times)
@@ -243,7 +241,7 @@ class TestLoadTimes:
     def test_time_in_attrs_branch(self, tmp_path: Path) -> None:
         """When 'times' dataset is absent but 'time' is in file attrs."""
         hdf = tmp_path / "time_attr.hdf5"
-        data = np.random.rand(4, 6, 2).astype(np.float64)
+        data = _rng.random((4, 6, 2)).astype(np.float64)
         with h5py.File(hdf, "w") as f:
             f.create_dataset("head", data=data)
             f.attrs["time"] = "some_time_info"
@@ -255,7 +253,7 @@ class TestLoadTimes:
     def test_placeholder_times_generated(self, tmp_path: Path) -> None:
         """When neither 'times' dataset nor 'time' attr exist."""
         hdf = tmp_path / "no_times.hdf5"
-        data = np.random.rand(3, 10, 2).astype(np.float64)
+        data = _rng.random((3, 10, 2)).astype(np.float64)
         with h5py.File(hdf, "w") as f:
             f.create_dataset("head", data=data)
         loader = LazyHeadDataLoader(hdf)
@@ -305,7 +303,7 @@ class TestLoadFrame:
 
     def test_load_frame_iwfm_native_data_order(self, tmp_path: Path) -> None:
         """Verify the layer-by-layer reshape produces correct data ordering."""
-        n_nodes, n_layers = 3, 2
+        _n_nodes, n_layers = 3, 2
         hdf = tmp_path / "order.hdf5"
         # Construct known data: layer1 nodes=[10,20,30], layer2 nodes=[40,50,60]
         flat = np.array([[10.0, 20.0, 30.0, 40.0, 50.0, 60.0]])  # 1 timestep
@@ -516,10 +514,9 @@ class TestGetLayerRange:
         # Create data with known range
         data = np.full((n_ts, n_nd, n_ly), 100.0)
         data[:, :, 0] = np.linspace(50.0, 150.0, n_nd)  # layer 1: 50..150
-        data[:, :, 1] = np.linspace(10.0, 80.0, n_nd)   # layer 2: 10..80
+        data[:, :, 1] = np.linspace(10.0, 80.0, n_nd)  # layer 2: 10..80
         times = [
-            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode()
-            for i in range(n_ts)
+            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode() for i in range(n_ts)
         ]
         with h5py.File(hdf, "w") as f:
             f.create_dataset("head", data=data)
@@ -539,8 +536,7 @@ class TestGetLayerRange:
         data[0, 0, 0] = 100.0
         data[1, 1, 0] = 200.0
         times = [
-            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode()
-            for i in range(n_ts)
+            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode() for i in range(n_ts)
         ]
         with h5py.File(hdf, "w") as f:
             f.create_dataset("head", data=data)
@@ -559,8 +555,7 @@ class TestGetLayerRange:
         n_ts, n_nd, n_ly = 2, 5, 1
         data = np.full((n_ts, n_nd, n_ly), -9999.0)
         times = [
-            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode()
-            for i in range(n_ts)
+            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode() for i in range(n_ts)
         ]
         with h5py.File(hdf, "w") as f:
             f.create_dataset("head", data=data)
@@ -584,10 +579,9 @@ class TestGetLayerRange:
         """When max_frames < total, only a subset is scanned."""
         hdf = tmp_path / "sampled.hdf5"
         n_ts, n_nd, n_ly = 20, 10, 1
-        data = np.random.rand(n_ts, n_nd, n_ly).astype(np.float64) * 100
+        data = _rng.random((n_ts, n_nd, n_ly)).astype(np.float64) * 100
         times = [
-            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode()
-            for i in range(n_ts)
+            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode() for i in range(n_ts)
         ]
         with h5py.File(hdf, "w") as f:
             f.create_dataset("head", data=data)
@@ -631,8 +625,7 @@ class TestGetLayerRange:
         for t in range(n_ts):
             data[t, :, 0] = np.linspace(0.0, 1000.0, n_nd)
         times = [
-            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode()
-            for i in range(n_ts)
+            (datetime(2020, 1, 1) + timedelta(days=i)).isoformat().encode() for i in range(n_ts)
         ]
         with h5py.File(hdf, "w") as f:
             f.create_dataset("head", data=data)
@@ -682,26 +675,20 @@ class TestIWFMNativeIntegration:
     """Integration tests for full IWFM native format loading."""
 
     def test_native_get_frame(self, tmp_path: Path) -> None:
-        hdf = _create_iwfm_native_hdf5(
-            tmp_path / "int_native.hdf5", 5, 10, 2
-        )
+        hdf = _create_iwfm_native_hdf5(tmp_path / "int_native.hdf5", 5, 10, 2)
         loader = LazyHeadDataLoader(hdf)
         frame = loader.get_frame(0)
         assert frame.shape == (10, 2)
         assert frame.dtype == np.float64
 
     def test_native_getitem_int(self, tmp_path: Path) -> None:
-        hdf = _create_iwfm_native_hdf5(
-            tmp_path / "int_native2.hdf5", 3, 8, 2
-        )
+        hdf = _create_iwfm_native_hdf5(tmp_path / "int_native2.hdf5", 3, 8, 2)
         loader = LazyHeadDataLoader(hdf)
         frame = loader[2]
         assert frame.shape == (8, 2)
 
     def test_native_to_dict(self, tmp_path: Path) -> None:
-        hdf = _create_iwfm_native_hdf5(
-            tmp_path / "int_native3.hdf5", 3, 6, 2
-        )
+        hdf = _create_iwfm_native_hdf5(tmp_path / "int_native3.hdf5", 3, 6, 2)
         loader = LazyHeadDataLoader(hdf)
         d = loader.to_dict()
         assert len(d) == 3
@@ -713,7 +700,7 @@ class TestIWFMNativeIntegration:
         flat = np.zeros((n_ts, n_nd * n_ly))
         for t in range(n_ts):
             flat[t, :n_nd] = np.linspace(50.0, 150.0, n_nd)  # layer 1
-            flat[t, n_nd:] = np.linspace(10.0, 80.0, n_nd)   # layer 2
+            flat[t, n_nd:] = np.linspace(10.0, 80.0, n_nd)  # layer 2
         times = [
             (datetime(2021, 1, 1) + timedelta(days=30 * i)).isoformat().encode()
             for i in range(n_ts)

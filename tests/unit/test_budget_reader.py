@@ -10,26 +10,23 @@ Tests cover:
 """
 
 import struct
+from datetime import datetime
 
-import pytest
 import numpy as np
-from pathlib import Path
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch, mock_open
+import pytest
 
 from pyiwfm.io.budget import (
-    BudgetReader,
-    BudgetHeader,
-    TimeStepInfo,
-    ASCIIOutputInfo,
-    LocationData,
-    parse_iwfm_datetime,
-    julian_to_datetime,
-    excel_julian_to_datetime,
     BUDGET_DATA_TYPES,
     UNIT_MARKERS,
+    ASCIIOutputInfo,
+    BudgetHeader,
+    BudgetReader,
+    LocationData,
+    TimeStepInfo,
+    excel_julian_to_datetime,
+    julian_to_datetime,
+    parse_iwfm_datetime,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -53,8 +50,7 @@ def mock_hdf5_file(tmp_path):
         attrs.create_dataset("NTimeSteps", data=12)
         attrs.create_dataset("nLocations", data=3)
         attrs.create_dataset(
-            "cLocationNames",
-            data=[b"Subregion 1", b"Subregion 2", b"Subregion 3"]
+            "cLocationNames", data=[b"Subregion 1", b"Subregion 2", b"Subregion 3"]
         )
         attrs.create_dataset("NLocationData", data=1)
         attrs.create_dataset("NDataColumns", data=5)
@@ -66,17 +62,17 @@ def mock_hdf5_file(tmp_path):
                 b"Net Stream-GW (@UNITVL@)",
                 b"Subsidence (@UNITLT@)",
                 b"Storage Change (@UNITVL@)",
-            ]
+            ],
         )
         attrs.create_dataset("iDataColumnTypes", data=[1, 1, 1, 5, 1])
         attrs.create_dataset("iColWidth", data=[15, 15, 15, 15, 15])
 
         # Create location data
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
         for name in ["Subregion 1", "Subregion 2", "Subregion 3"]:
             loc_group = f.create_group(name)
             # Data shape: (n_columns, n_timesteps)
-            data = np.random.rand(5, 12) * 1000
+            data = rng.random((5, 12)) * 1000
             loc_group.create_dataset("data", data=data)
 
     return filepath
@@ -265,8 +261,8 @@ class TestBudgetReaderInit:
 
         # HDF5 detection will fail without valid content
         # but we can test the extension-based detection
-        with pytest.raises(Exception):
-            reader = BudgetReader(hdf_file)
+        with pytest.raises(OSError):
+            BudgetReader(hdf_file)
 
 
 # =============================================================================
@@ -441,18 +437,18 @@ class TestDataFrame:
 
     def test_get_dataframe_with_columns(self, mock_hdf5_file):
         """Test getting DataFrame with specific columns."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = BudgetReader(mock_hdf5_file)
 
         # Get column names first
-        headers = reader.get_column_headers(0)
+        reader.get_column_headers(0)
         df = reader.get_dataframe("Subregion 1", columns=[0, 1])
 
         assert len(df.columns) == 2
 
     def test_get_all_dataframes(self, mock_hdf5_file):
         """Test getting DataFrames for all locations."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = BudgetReader(mock_hdf5_file)
         dfs = reader.get_all_dataframes()
 
@@ -591,10 +587,10 @@ def mock_hdf5_no_time(tmp_path):
         attrs.create_dataset("iColWidth", data=[15, 15, 15])
 
         # Create location data
-        np.random.seed(99)
+        rng = np.random.default_rng(99)
         for name in ["Reach 1", "Reach 2"]:
             loc_group = f.create_group(name)
-            data = np.random.rand(3, 6) * 500
+            data = rng.random((3, 6)) * 500
             loc_group.create_dataset("data", data=data)
 
     return filepath
@@ -640,12 +636,12 @@ def mock_hdf5_multi_locdata(tmp_path):
         attrs.create_dataset("LocationData2%iColWidth", data=[12, 12])
 
         # Create location data
-        np.random.seed(77)
+        rng = np.random.default_rng(77)
         loc_group = f.create_group("Zone A")
-        loc_group.create_dataset("data", data=np.random.rand(3, 4) * 100)
+        loc_group.create_dataset("data", data=rng.random((3, 4)) * 100)
 
         loc_group = f.create_group("Zone B")
-        loc_group.create_dataset("data", data=np.random.rand(2, 4) * 100)
+        loc_group.create_dataset("data", data=rng.random((2, 4)) * 100)
 
     return filepath
 
@@ -666,9 +662,7 @@ def mock_hdf5_alt_keys(tmp_path):
         attrs.create_dataset("NTimeSteps", data=3)
         # Use "NLocations" instead of "nLocations"
         attrs.create_dataset("NLocations", data=1)
-        attrs.create_dataset(
-            "cLocationNames", data=[b"Lake 1"]
-        )
+        attrs.create_dataset("cLocationNames", data=[b"Lake 1"])
         # Use ASCIIOutput% prefix keys
         attrs.create_dataset("ASCIIOutput%TitleLen", data=80)
         attrs.create_dataset("ASCIIOutput%NTitles", data=1)
@@ -744,10 +738,10 @@ def mock_hdf5_with_datetime(tmp_path):
         attrs.create_dataset("iDataColumnTypes", data=[1, 1, 3])
         attrs.create_dataset("iColWidth", data=[15, 15, 15])
 
-        np.random.seed(123)
+        rng = np.random.default_rng(123)
         for name in ["Sub 1", "Sub 2"]:
             loc_group = f.create_group(name)
-            data = np.random.rand(3, 24) * 1000
+            data = rng.random((3, 24)) * 1000
             loc_group.create_dataset("data", data=data)
 
     return filepath
@@ -793,7 +787,7 @@ class TestBudgetReaderEdgeCases:
 
     def test_get_dataframe_with_string_column_names(self, mock_hdf5_file):
         """Test get_dataframe with column names as strings."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = BudgetReader(mock_hdf5_file)
         headers = reader.get_column_headers(0)
         # Select the first column by name
@@ -803,7 +797,7 @@ class TestBudgetReaderEdgeCases:
 
     def test_get_dataframe_with_case_insensitive_column_names(self, mock_hdf5_file):
         """Test get_dataframe with case-insensitive string column matching."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = BudgetReader(mock_hdf5_file)
         headers = reader.get_column_headers(0)
         # Use all-uppercase version of the column name
@@ -813,7 +807,7 @@ class TestBudgetReaderEdgeCases:
 
     def test_get_dataframe_invalid_column_name(self, mock_hdf5_file):
         """Test get_dataframe with invalid column name raises KeyError."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = BudgetReader(mock_hdf5_file)
         with pytest.raises(KeyError, match="not found"):
             reader.get_dataframe("Subregion 1", columns=["Nonexistent Column"])
@@ -830,7 +824,6 @@ class TestBudgetReaderEdgeCases:
 
     def test_format_detection_bin_extension(self, tmp_path):
         """Test format detection for .bin files."""
-        import struct
 
         bin_file = tmp_path / "test.bin"
         # Write minimal data so _detect_format works (it checks extension first)
@@ -930,7 +923,7 @@ class TestBudgetReaderMultiLocation:
             all_data[loc] = (times, values)
 
         assert len(all_data) == 3
-        for loc, (t, v) in all_data.items():
+        for _loc, (t, v) in all_data.items():
             assert len(t) == 12
             assert v.shape == (12, 5)
 
@@ -1016,7 +1009,7 @@ class TestBudgetReaderTimeSeries:
 
     def test_cumulative_values_nondecreasing(self, mock_hdf5_file):
         """Test that cumulative values are non-decreasing for positive data."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         reader = BudgetReader(mock_hdf5_file)
         df = reader.get_cumulative("Subregion 1")
         # For all-positive data (random), cumulative should be non-decreasing
@@ -1133,9 +1126,9 @@ class TestBudgetReaderBinary:
         f.write(data)
         f.write(struct.pack("i", len(data)))
 
-    def _create_minimal_binary_budget(self, filepath, n_timesteps=4,
-                                       track_time=True, n_areas=2,
-                                       n_locations=2, n_columns=3):
+    def _create_minimal_binary_budget(
+        self, filepath, n_timesteps=4, track_time=True, n_areas=2, n_locations=2, n_columns=3
+    ):
         """Create a minimal binary budget file for testing."""
         import struct
 
@@ -1144,15 +1137,15 @@ class TestBudgetReaderBinary:
             self._write_fortran_string(f, "TEST BINARY BUDGET", 100)
 
             # Timestep info
-            self._write_fortran_int(f, n_timesteps)          # n_timesteps
-            self._write_fortran_logical(f, track_time)        # track_time
-            self._write_fortran_real8(f, 1.0)                 # delta_t
-            self._write_fortran_int(f, 43200)                 # delta_t_minutes (30 days)
-            self._write_fortran_string(f, "1MON", 10)         # unit
+            self._write_fortran_int(f, n_timesteps)  # n_timesteps
+            self._write_fortran_logical(f, track_time)  # track_time
+            self._write_fortran_real8(f, 1.0)  # delta_t
+            self._write_fortran_int(f, 43200)  # delta_t_minutes (30 days)
+            self._write_fortran_string(f, "1MON", 10)  # unit
 
             if track_time:
                 self._write_fortran_string(f, "10/01/2020_00:00", 21)  # start date
-            self._write_fortran_real8(f, 0.0)                 # start_time
+            self._write_fortran_real8(f, 0.0)  # start_time
 
             # Areas
             self._write_fortran_int(f, n_areas)
@@ -1160,33 +1153,33 @@ class TestBudgetReaderBinary:
                 self._write_fortran_real8_array(f, [1000.0 * (i + 1) for i in range(n_areas)])
 
             # ASCII output info
-            self._write_fortran_int(f, 160)                   # title_len
+            self._write_fortran_int(f, 160)  # title_len
             n_titles = 1
-            self._write_fortran_int(f, n_titles)              # n_titles
+            self._write_fortran_int(f, n_titles)  # n_titles
             for _ in range(n_titles):
                 self._write_fortran_string(f, "Test Budget Title", 1000)
             for _ in range(n_titles):
-                self._write_fortran_logical(f, True)          # title_persist
+                self._write_fortran_logical(f, True)  # title_persist
             self._write_fortran_string(f, "(A10,3F15.2)", 500)  # format_spec
             n_col_header_lines = 3
-            self._write_fortran_int(f, n_col_header_lines)    # n_column_header_lines
+            self._write_fortran_int(f, n_col_header_lines)  # n_column_header_lines
 
             # Locations
             self._write_fortran_int(f, n_locations)
             for i in range(n_locations):
-                self._write_fortran_string(f, f"Location {i+1}", 100)
+                self._write_fortran_string(f, f"Location {i + 1}", 100)
 
             # Location data (1 shared structure)
             n_loc_data = 1
             self._write_fortran_int(f, n_loc_data)
 
             for _ in range(n_loc_data):
-                self._write_fortran_int(f, n_columns)             # n_columns
-                self._write_fortran_int(f, n_columns)             # storage_units
+                self._write_fortran_int(f, n_columns)  # n_columns
+                self._write_fortran_int(f, n_columns)  # storage_units
                 for c in range(n_columns):
-                    self._write_fortran_string(f, f"Column {c+1}", 100)
+                    self._write_fortran_string(f, f"Column {c + 1}", 100)
                 self._write_fortran_int_array(f, [1] * n_columns)  # column_types
-                self._write_fortran_int_array(f, [15] * n_columns) # column_widths
+                self._write_fortran_int_array(f, [15] * n_columns)  # column_widths
 
                 # Multi-line column headers
                 for _ in range(n_col_header_lines):
@@ -1197,18 +1190,17 @@ class TestBudgetReaderBinary:
                     self._write_fortran_string(f, "", 500)
 
             # DSS output info
-            self._write_fortran_int(f, 0)                     # n_dss_pathnames
-            self._write_fortran_int(f, 0)                     # n_dss_types
-            self._write_fortran_int_array(f, [])               # empty array
+            self._write_fortran_int(f, 0)  # n_dss_pathnames
+            self._write_fortran_int(f, 0)  # n_dss_types
+            self._write_fortran_int_array(f, [])  # empty array
 
             # Record file_position after header
-            header_end = f.tell()
+            f.tell()
 
             # Write data: for each timestep, write all locations' data
             for t in range(n_timesteps):
                 for loc in range(n_locations):
-                    data = [(t + 1) * 100.0 + (loc + 1) * 10.0 + c
-                            for c in range(n_columns)]
+                    data = [(t + 1) * 100.0 + (loc + 1) * 10.0 + c for c in range(n_columns)]
                     # Write as raw REAL(8) (no Fortran record wrappers for data)
                     for val in data:
                         f.write(struct.pack("d", val))
@@ -1217,7 +1209,6 @@ class TestBudgetReaderBinary:
 
     def test_binary_header_parsing(self, tmp_path):
         """Test that binary header is parsed correctly."""
-        import struct
 
         filepath = tmp_path / "test_budget.bin"
         self._create_minimal_binary_budget(filepath)
@@ -1251,9 +1242,7 @@ class TestBudgetReaderBinary:
 
         reader = BudgetReader(filepath)
         assert reader.header.n_areas == 3
-        np.testing.assert_array_almost_equal(
-            reader.header.areas, [1000.0, 2000.0, 3000.0]
-        )
+        np.testing.assert_array_almost_equal(reader.header.areas, [1000.0, 2000.0, 3000.0])
 
     def test_binary_header_ascii_output(self, tmp_path):
         """Test that binary ASCII output info is parsed correctly."""
@@ -1300,9 +1289,7 @@ class TestBudgetReaderBinary:
     def test_binary_read_values(self, tmp_path):
         """Test reading values from binary file."""
         filepath = tmp_path / "test_budget.bin"
-        self._create_minimal_binary_budget(
-            filepath, n_timesteps=4, n_locations=2, n_columns=3
-        )
+        self._create_minimal_binary_budget(filepath, n_timesteps=4, n_locations=2, n_columns=3)
 
         reader = BudgetReader(filepath)
         times, values = reader.get_values(0)
@@ -1605,7 +1592,8 @@ class TestHDF5EdgeCases:
             attrs.create_dataset("iColWidth", data=[15, 15])
 
             loc_group = f.create_group("Infer Loc")
-            loc_group.create_dataset("data", data=np.random.rand(2, 7))
+            rng = np.random.default_rng(42)
+            loc_group.create_dataset("data", data=rng.random((2, 7)))
 
         reader = BudgetReader(filepath)
         # n_timesteps should be inferred from the data shape

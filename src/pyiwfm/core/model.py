@@ -55,12 +55,14 @@ def _build_reaches_from_node_reach_ids(stream: AppStream) -> None:
 
     for rid, node_ids in sorted(by_reach.items()):
         node_ids.sort()
-        stream.add_reach(StrmReach(
-            id=rid,
-            upstream_node=node_ids[0],
-            downstream_node=node_ids[-1],
-            nodes=node_ids,
-        ))
+        stream.add_reach(
+            StrmReach(
+                id=rid,
+                upstream_node=node_ids[0],
+                downstream_node=node_ids[-1],
+                nodes=node_ids,
+            )
+        )
 
 
 def _apply_kh_anomalies(
@@ -149,12 +151,14 @@ def _apply_parametric_grids(
         # Build ParametricGrid from raw data
         pnodes = []
         for j in range(grid_data.n_nodes):
-            pnodes.append(ParamNode(
-                node_id=j,
-                x=grid_data.node_coords[j, 0],
-                y=grid_data.node_coords[j, 1],
-                values=grid_data.node_values[j],
-            ))
+            pnodes.append(
+                ParamNode(
+                    node_id=j,
+                    x=grid_data.node_coords[j, 0],
+                    y=grid_data.node_coords[j, 1],
+                    values=grid_data.node_values[j],
+                )
+            )
         pelems = []
         for j, verts in enumerate(grid_data.elements):
             pelems.append(ParamElement(elem_id=j, vertices=verts))
@@ -278,12 +282,14 @@ class IWFMModel:
         # Read nodes
         if config.nodes_file is None:
             from pyiwfm.core.exceptions import FileFormatError
+
             raise FileFormatError("Nodes file not specified in PreProcessor file")
         nodes = read_nodes(config.nodes_file)
 
         # Read elements
         if config.elements_file is None:
             from pyiwfm.core.exceptions import FileFormatError
+
             raise FileFormatError("Elements file not specified in PreProcessor file")
         elements, n_subregions, subregion_names = read_elements(config.elements_file)
 
@@ -293,8 +299,7 @@ class IWFMModel:
             subregions = read_subregions_file(config.subregions_file)
         elif subregion_names:
             subregions = {
-                sr_id: Subregion(id=sr_id, name=name)
-                for sr_id, name in subregion_names.items()
+                sr_id: Subregion(id=sr_id, name=name) for sr_id, name in subregion_names.items()
             }
 
         # Create mesh
@@ -343,25 +348,29 @@ class IWFMModel:
                 if not stream.nodes:
                     try:
                         spec_reader = StreamSpecReader()
-                        n_reaches, _n_rt, reach_specs = spec_reader.read(
-                            config.streams_file
-                        )
+                        n_reaches, _n_rt, reach_specs = spec_reader.read(config.streams_file)
                         for rs in reach_specs:
                             for sn_id in rs.node_ids:
                                 if sn_id not in stream.nodes:
                                     gw = rs.node_to_gw_node.get(sn_id)
-                                    stream.add_node(StrmNode(
-                                        id=sn_id, x=0.0, y=0.0,
-                                        reach_id=rs.id,
-                                        gw_node=gw if gw and gw > 0 else None,
-                                    ))
-                            stream.add_reach(StrmReach(
-                                id=rs.id,
-                                upstream_node=rs.node_ids[0] if rs.node_ids else 0,
-                                downstream_node=rs.node_ids[-1] if rs.node_ids else 0,
-                                nodes=list(rs.node_ids),
-                                name=rs.name,
-                            ))
+                                    stream.add_node(
+                                        StrmNode(
+                                            id=sn_id,
+                                            x=0.0,
+                                            y=0.0,
+                                            reach_id=rs.id,
+                                            gw_node=gw if gw and gw > 0 else None,
+                                        )
+                                    )
+                            stream.add_reach(
+                                StrmReach(
+                                    id=rs.id,
+                                    upstream_node=rs.node_ids[0] if rs.node_ids else 0,
+                                    downstream_node=rs.node_ids[-1] if rs.node_ids else 0,
+                                    nodes=list(rs.node_ids),
+                                    name=rs.name,
+                                )
+                            )
                     except Exception:
                         # Both paths failed — re-raise original error
                         if first_error is not None:
@@ -380,8 +389,8 @@ class IWFMModel:
                 from pyiwfm.components.lake import AppLake
                 from pyiwfm.io.lakes import LakeReader
 
-                reader = LakeReader()
-                lakes_dict = reader.read_lake_definitions(config.lakes_file)
+                lake_reader = LakeReader()
+                lakes_dict = lake_reader.read_lake_definitions(config.lakes_file)
 
                 lakes = AppLake()
                 for lake in lakes_dict.values():
@@ -609,26 +618,18 @@ class IWFMModel:
 
         # Store additional file paths (resolve to absolute using base_dir)
         if sim_config.binary_preprocessor_file:
-            model.metadata["binary_preprocessor_file"] = str(
-                sim_config.binary_preprocessor_file
-            )
+            model.metadata["binary_preprocessor_file"] = str(sim_config.binary_preprocessor_file)
             model.source_files["binary_preprocessor"] = _resolve_path(
                 base_dir, str(sim_config.binary_preprocessor_file)
             )
         if sim_config.irrigation_fractions_file:
-            model.metadata["irrigation_fractions_file"] = str(
-                sim_config.irrigation_fractions_file
-            )
+            model.metadata["irrigation_fractions_file"] = str(sim_config.irrigation_fractions_file)
             model.source_files["irig_frac_ts"] = _resolve_path(
                 base_dir, str(sim_config.irrigation_fractions_file)
             )
         if sim_config.supply_adjust_file:
-            model.metadata["supply_adjust_file"] = str(
-                sim_config.supply_adjust_file
-            )
-            sa_path = _resolve_path(
-                base_dir, str(sim_config.supply_adjust_file)
-            )
+            model.metadata["supply_adjust_file"] = str(sim_config.supply_adjust_file)
+            sa_path = _resolve_path(base_dir, str(sim_config.supply_adjust_file))
             model.source_files["supply_adjust"] = sa_path
             if sa_path.exists():
                 try:
@@ -642,17 +643,13 @@ class IWFMModel:
                         exc_info=True,
                     )
         if sim_config.precipitation_file:
-            model.metadata["precipitation_file"] = str(
-                sim_config.precipitation_file
-            )
+            model.metadata["precipitation_file"] = str(sim_config.precipitation_file)
             model.source_files["precipitation_ts"] = _resolve_path(
                 base_dir, str(sim_config.precipitation_file)
             )
         if sim_config.et_file:
             model.metadata["et_file"] = str(sim_config.et_file)
-            model.source_files["et_ts"] = _resolve_path(
-                base_dir, str(sim_config.et_file)
-            )
+            model.source_files["et_ts"] = _resolve_path(base_dir, str(sim_config.et_file))
         if sim_config.title_lines:
             model.metadata["title_lines"] = sim_config.title_lines
 
@@ -688,7 +685,9 @@ class IWFMModel:
                         if gw_config.head_all_output_file:
                             model.metadata["gw_head_all_file"] = str(gw_config.head_all_output_file)
                         if gw_config.hydrograph_output_file:
-                            model.metadata["gw_hydrograph_file"] = str(gw_config.hydrograph_output_file)
+                            model.metadata["gw_hydrograph_file"] = str(
+                                gw_config.hydrograph_output_file
+                            )
 
                         # Store GW-specific output units for budget display
                         if gw_config.volume_output_unit:
@@ -706,53 +705,68 @@ class IWFMModel:
                                     gw_config.bc_file,
                                     base_dir=base_dir,
                                 )
-                                model.metadata["gw_n_specified_flow_bc"] = bc_config.n_specified_flow
-                                model.metadata["gw_n_specified_head_bc"] = bc_config.n_specified_head
+                                model.metadata["gw_n_specified_flow_bc"] = (
+                                    bc_config.n_specified_flow
+                                )
+                                model.metadata["gw_n_specified_head_bc"] = (
+                                    bc_config.n_specified_head
+                                )
                                 model.metadata["gw_n_general_head_bc"] = bc_config.n_general_head
-                                model.metadata["gw_n_constrained_gh_bc"] = bc_config.n_constrained_gh
+                                model.metadata["gw_n_constrained_gh_bc"] = (
+                                    bc_config.n_constrained_gh
+                                )
                                 if bc_config.ts_data_file:
                                     model.source_files["gw_bc_ts"] = bc_config.ts_data_file
 
                                 # Add BCs to the GW component
                                 from pyiwfm.components.groundwater import BoundaryCondition
-                                for bc in bc_config.specified_head_bcs:
-                                    gw.add_boundary_condition(BoundaryCondition(
-                                        id=bc.node_id,
-                                        bc_type="specified_head",
-                                        nodes=[bc.node_id],
-                                        values=[bc.head_value],
-                                        layer=bc.layer,
-                                    ))
-                                for bc in bc_config.specified_flow_bcs:
-                                    gw.add_boundary_condition(BoundaryCondition(
-                                        id=bc.node_id,
-                                        bc_type="specified_flow",
-                                        nodes=[bc.node_id],
-                                        values=[bc.base_flow],
-                                        layer=bc.layer,
-                                    ))
-                                for bc in bc_config.general_head_bcs:
-                                    gw.add_boundary_condition(BoundaryCondition(
-                                        id=bc.node_id,
-                                        bc_type="general_head",
-                                        nodes=[bc.node_id],
-                                        values=[bc.external_head],
-                                        layer=bc.layer,
-                                        conductance=[bc.conductance],
-                                    ))
-                                for bc in bc_config.constrained_gh_bcs:
-                                    gw.add_boundary_condition(BoundaryCondition(
-                                        id=bc.node_id,
-                                        bc_type="constrained_general_head",
-                                        nodes=[bc.node_id],
-                                        values=[bc.external_head],
-                                        layer=bc.layer,
-                                        conductance=[bc.conductance],
-                                        constraining_head=bc.constraining_head,
-                                        max_flow=bc.max_flow,
-                                        ts_column=bc.ts_column,
-                                        max_flow_ts_column=bc.max_flow_ts_column,
-                                    ))
+
+                                for sh_bc in bc_config.specified_head_bcs:
+                                    gw.add_boundary_condition(
+                                        BoundaryCondition(
+                                            id=sh_bc.node_id,
+                                            bc_type="specified_head",
+                                            nodes=[sh_bc.node_id],
+                                            values=[sh_bc.head_value],
+                                            layer=sh_bc.layer,
+                                        )
+                                    )
+                                for sf_bc in bc_config.specified_flow_bcs:
+                                    gw.add_boundary_condition(
+                                        BoundaryCondition(
+                                            id=sf_bc.node_id,
+                                            bc_type="specified_flow",
+                                            nodes=[sf_bc.node_id],
+                                            values=[sf_bc.base_flow],
+                                            layer=sf_bc.layer,
+                                        )
+                                    )
+                                for gh_bc in bc_config.general_head_bcs:
+                                    gw.add_boundary_condition(
+                                        BoundaryCondition(
+                                            id=gh_bc.node_id,
+                                            bc_type="general_head",
+                                            nodes=[gh_bc.node_id],
+                                            values=[gh_bc.external_head],
+                                            layer=gh_bc.layer,
+                                            conductance=[gh_bc.conductance],
+                                        )
+                                    )
+                                for cgh_bc in bc_config.constrained_gh_bcs:
+                                    gw.add_boundary_condition(
+                                        BoundaryCondition(
+                                            id=cgh_bc.node_id,
+                                            bc_type="constrained_general_head",
+                                            nodes=[cgh_bc.node_id],
+                                            values=[cgh_bc.external_head],
+                                            layer=cgh_bc.layer,
+                                            conductance=[cgh_bc.conductance],
+                                            constraining_head=cgh_bc.constraining_head,
+                                            max_flow=cgh_bc.max_flow,
+                                            ts_column=cgh_bc.ts_column,
+                                            max_flow_ts_column=cgh_bc.max_flow_ts_column,
+                                        )
+                                    )
                                 # Store BC time series file path
                                 if bc_config.ts_data_file:
                                     gw.bc_ts_file = bc_config.ts_data_file
@@ -780,17 +794,20 @@ class IWFMModel:
                                     ElementPumping,
                                     Well,
                                 )
+
                                 for ws in pump_config.well_specs:
-                                    gw.add_well(Well(
-                                        id=ws.id,
-                                        x=ws.x,
-                                        y=ws.y,
-                                        element=0,
-                                        name=ws.name,
-                                        top_screen=ws.perf_top,
-                                        bottom_screen=ws.perf_bottom,
-                                        radius=ws.radius,
-                                    ))
+                                    gw.add_well(
+                                        Well(
+                                            id=ws.id,
+                                            x=ws.x,
+                                            y=ws.y,
+                                            element=0,
+                                            name=ws.name,
+                                            top_screen=ws.perf_top,
+                                            bottom_screen=ws.perf_bottom,
+                                            radius=ws.radius,
+                                        )
+                                    )
 
                                 # Merge pumping spec data onto wells
                                 for wps in pump_config.well_pumping_specs:
@@ -808,22 +825,24 @@ class IWFMModel:
 
                                 # Convert element pumping specs
                                 for eps in pump_config.elem_pumping_specs:
-                                    gw.add_element_pumping(ElementPumping(
-                                        element_id=eps.element_id,
-                                        layer=0,
-                                        pump_rate=0.0,
-                                        layer_fraction=1.0,
-                                        pump_column=eps.pump_column,
-                                        pump_fraction=eps.pump_fraction,
-                                        dist_method=eps.dist_method,
-                                        layer_factors=eps.layer_factors,
-                                        dest_type=eps.dest_type,
-                                        dest_id=eps.dest_id,
-                                        irig_frac_column=eps.irig_frac_column,
-                                        adjust_column=eps.adjust_column,
-                                        pump_max_column=eps.pump_max_column,
-                                        pump_max_fraction=eps.pump_max_fraction,
-                                    ))
+                                    gw.add_element_pumping(
+                                        ElementPumping(
+                                            element_id=eps.element_id,
+                                            layer=0,
+                                            pump_rate=0.0,
+                                            layer_fraction=1.0,
+                                            pump_column=eps.pump_column,
+                                            pump_fraction=eps.pump_fraction,
+                                            dist_method=eps.dist_method,
+                                            layer_factors=eps.layer_factors,
+                                            dest_type=eps.dest_type,
+                                            dest_id=eps.dest_id,
+                                            irig_frac_column=eps.irig_frac_column,
+                                            adjust_column=eps.adjust_column,
+                                            pump_max_column=eps.pump_max_column,
+                                            pump_max_fraction=eps.pump_max_fraction,
+                                        )
+                                    )
 
                                 # Store pumping TS file path
                                 if pump_config.ts_data_file:
@@ -852,24 +871,31 @@ class IWFMModel:
                                     SubIrrigation,
                                     TileDrain,
                                 )
+
                                 for td in td_config.tile_drains:
                                     dest_type = "stream" if td.dest_type == 2 else "outside"
-                                    gw.add_tile_drain(TileDrain(
-                                        id=td.id,
-                                        element=td.gw_node,
-                                        elevation=td.elevation,
-                                        conductance=td.conductance,
-                                        destination_type=dest_type,
-                                        destination_id=td.dest_id if td.dest_type == 2 else None,
-                                    ))
+                                    gw.add_tile_drain(
+                                        TileDrain(
+                                            id=td.id,
+                                            element=td.gw_node,
+                                            elevation=td.elevation,
+                                            conductance=td.conductance,
+                                            destination_type=dest_type,
+                                            destination_id=td.dest_id
+                                            if td.dest_type == 2
+                                            else None,
+                                        )
+                                    )
                                 # Load sub-irrigation data
                                 for si in td_config.sub_irrigations:
-                                    gw.add_sub_irrigation(SubIrrigation(
-                                        id=si.id,
-                                        gw_node=si.gw_node,
-                                        elevation=si.elevation,
-                                        conductance=si.conductance,
-                                    ))
+                                    gw.add_sub_irrigation(
+                                        SubIrrigation(
+                                            id=si.id,
+                                            gw_node=si.gw_node,
+                                            elevation=si.elevation,
+                                            conductance=si.conductance,
+                                        )
+                                    )
                                 # Preserve conversion factors for roundtrip writing
                                 gw.td_elev_factor = td_config.drain_height_factor
                                 gw.td_cond_factor = td_config.drain_conductance_factor
@@ -893,7 +919,9 @@ class IWFMModel:
                                     n_layers=n_layers,
                                 )
                                 model.metadata["gw_subsidence_version"] = subs_config.version
-                                model.metadata["gw_subsidence_n_nodes"] = len(subs_config.node_params)
+                                model.metadata["gw_subsidence_n_nodes"] = len(
+                                    subs_config.node_params
+                                )
 
                                 # Store full config for roundtrip
                                 gw.subsidence_config = subs_config
@@ -905,28 +933,43 @@ class IWFMModel:
                                 from pyiwfm.components.groundwater import (
                                     Subsidence as SubsidenceComp,
                                 )
-                                for sp in subs_config.node_params:
-                                    gw.add_node_subsidence(NodeSubsidence(
-                                        node_id=sp.node_id,
-                                        elastic_sc=sp.elastic_sc,
-                                        inelastic_sc=sp.inelastic_sc,
-                                        interbed_thick=sp.interbed_thick,
-                                        interbed_thick_min=sp.interbed_thick_min,
-                                        precompact_head=sp.precompact_head,
-                                        kv_sub=sp.kv_sub,
-                                        n_eq=sp.n_eq,
-                                    ))
+
+                                for sub_p in subs_config.node_params:
+                                    gw.add_node_subsidence(
+                                        NodeSubsidence(
+                                            node_id=sub_p.node_id,
+                                            elastic_sc=sub_p.elastic_sc,
+                                            inelastic_sc=sub_p.inelastic_sc,
+                                            interbed_thick=sub_p.interbed_thick,
+                                            interbed_thick_min=sub_p.interbed_thick_min,
+                                            precompact_head=sub_p.precompact_head,
+                                            kv_sub=sub_p.kv_sub,
+                                            n_eq=sub_p.n_eq,
+                                        )
+                                    )
                                     # Also populate legacy Subsidence list
-                                    for layer_idx in range(len(sp.elastic_sc)):
-                                        gw.add_subsidence(SubsidenceComp(
-                                            element=sp.node_id,
-                                            layer=layer_idx + 1,
-                                            elastic_storage=sp.elastic_sc[layer_idx],
-                                            inelastic_storage=sp.inelastic_sc[layer_idx],
-                                            preconsolidation_head=sp.precompact_head[layer_idx] if layer_idx < len(sp.precompact_head) else 0.0,
-                                            interbed_thick=sp.interbed_thick[layer_idx] if layer_idx < len(sp.interbed_thick) else 0.0,
-                                            interbed_thick_min=sp.interbed_thick_min[layer_idx] if layer_idx < len(sp.interbed_thick_min) else 0.0,
-                                        ))
+                                    for layer_idx in range(len(sub_p.elastic_sc)):
+                                        gw.add_subsidence(
+                                            SubsidenceComp(
+                                                element=sub_p.node_id,
+                                                layer=layer_idx + 1,
+                                                elastic_storage=sub_p.elastic_sc[layer_idx],
+                                                inelastic_storage=sub_p.inelastic_sc[layer_idx],
+                                                preconsolidation_head=sub_p.precompact_head[
+                                                    layer_idx
+                                                ]
+                                                if layer_idx < len(sub_p.precompact_head)
+                                                else 0.0,
+                                                interbed_thick=sub_p.interbed_thick[layer_idx]
+                                                if layer_idx < len(sub_p.interbed_thick)
+                                                else 0.0,
+                                                interbed_thick_min=sub_p.interbed_thick_min[
+                                                    layer_idx
+                                                ]
+                                                if layer_idx < len(sub_p.interbed_thick_min)
+                                                else 0.0,
+                                            )
+                                        )
 
                                 # Store subsidence hydrograph output metadata
                                 if subs_config.hydrograph_output_file:
@@ -944,8 +987,12 @@ class IWFMModel:
                             try:
                                 gw.set_aquifer_parameters(gw_config.aquifer_params)
                                 model.metadata["gw_aquifer_params_loaded"] = True
-                                model.metadata["gw_aquifer_n_nodes"] = gw_config.aquifer_params.n_nodes
-                                model.metadata["gw_aquifer_n_layers"] = gw_config.aquifer_params.n_layers
+                                model.metadata["gw_aquifer_n_nodes"] = (
+                                    gw_config.aquifer_params.n_nodes
+                                )
+                                model.metadata["gw_aquifer_n_layers"] = (
+                                    gw_config.aquifer_params.n_layers
+                                )
                             except ValueError:
                                 # n_nodes/n_layers mismatch — store anyway
                                 gw.aquifer_params = gw_config.aquifer_params
@@ -955,7 +1002,9 @@ class IWFMModel:
                             # Parametric grid: interpolate onto model nodes
                             try:
                                 ok = _apply_parametric_grids(
-                                    gw, gw_config.parametric_grids, model.mesh,
+                                    gw,
+                                    gw_config.parametric_grids,
+                                    model.mesh,
                                 )
                                 if ok:
                                     model.metadata["gw_aquifer_params_loaded"] = True
@@ -966,18 +1015,14 @@ class IWFMModel:
                                 pass
 
                         # Apply Kh anomaly overwrites
-                        if (gw_config.kh_anomalies
-                                and gw.aquifer_params is not None
-                                and model.mesh):
+                        if gw_config.kh_anomalies and gw.aquifer_params is not None and model.mesh:
                             try:
                                 applied = _apply_kh_anomalies(
                                     gw.aquifer_params,
                                     gw_config.kh_anomalies,
                                     model.mesh,
                                 )
-                                model.metadata["gw_kh_anomaly_count"] = len(
-                                    gw_config.kh_anomalies
-                                )
+                                model.metadata["gw_kh_anomaly_count"] = len(gw_config.kh_anomalies)
                                 model.metadata["gw_kh_anomaly_applied"] = applied
                             except Exception:
                                 pass
@@ -1029,13 +1074,13 @@ class IWFMModel:
                     # Try hierarchical reader first (for component main files)
                     try:
                         stream_main_reader = StreamMainFileReader()
-                        stream_config = stream_main_reader.read(
-                            stream_file, base_dir=base_dir
-                        )
+                        stream_config = stream_main_reader.read(stream_file, base_dir=base_dir)
 
                         model.metadata["stream_version"] = stream_config.version
                         model.metadata["stream_hydrograph_count"] = stream_config.hydrograph_count
-                        model.metadata["stream_hydrograph_output_type"] = stream_config.hydrograph_output_type
+                        model.metadata["stream_hydrograph_output_type"] = (
+                            stream_config.hydrograph_output_type
+                        )
 
                         # Store output file paths
                         if stream_config.budget_output_file:
@@ -1062,53 +1107,62 @@ class IWFMModel:
                         if stream_config.inflow_file:
                             model.source_files["stream_inflow_ts"] = stream_config.inflow_file
                         if stream_config.diversion_spec_file:
-                            model.source_files["stream_diversion_spec"] = stream_config.diversion_spec_file
+                            model.source_files["stream_diversion_spec"] = (
+                                stream_config.diversion_spec_file
+                            )
                         if stream_config.bypass_spec_file:
-                            model.source_files["stream_bypass_spec"] = stream_config.bypass_spec_file
+                            model.source_files["stream_bypass_spec"] = (
+                                stream_config.bypass_spec_file
+                            )
                         if stream_config.diversion_file:
                             model.source_files["stream_diversion_ts"] = stream_config.diversion_file
 
                         # Load diversions from sub-file
-                        if (stream_config.diversion_spec_file
-                                and stream_config.diversion_spec_file.exists()):
+                        if (
+                            stream_config.diversion_spec_file
+                            and stream_config.diversion_spec_file.exists()
+                        ):
                             try:
                                 div_reader = DiversionSpecReader()
-                                div_config = div_reader.read(
-                                    stream_config.diversion_spec_file
-                                )
+                                div_config = div_reader.read(stream_config.diversion_spec_file)
                                 model.metadata["stream_n_diversions"] = div_config.n_diversions
-                                model.metadata["stream_n_element_groups"] = div_config.n_element_groups
+                                model.metadata["stream_n_element_groups"] = (
+                                    div_config.n_element_groups
+                                )
 
                                 # Convert to Diversion objects
                                 dest_map = {
-                                    0: "outside", 1: "element",
-                                    2: "subregion", 3: "outside",
-                                    4: "element_set", 6: "element_set",
+                                    0: "outside",
+                                    1: "element",
+                                    2: "subregion",
+                                    3: "outside",
+                                    4: "element_set",
+                                    6: "element_set",
                                 }
                                 for ds in div_config.diversions:
-                                    stream.add_diversion(Diversion(
-                                        id=ds.id,
-                                        source_node=ds.stream_node,
-                                        destination_type=dest_map.get(
-                                            ds.dest_type, "outside"
-                                        ),
-                                        destination_id=ds.dest_id,
-                                        name=ds.name,
-                                        max_div_column=ds.max_diver_col,
-                                        max_div_fraction=ds.frac_max_diver,
-                                        recoverable_loss_column=ds.recv_loss_col,
-                                        recoverable_loss_fraction=ds.frac_recv_loss,
-                                        non_recoverable_loss_column=ds.non_recv_loss_col,
-                                        non_recoverable_loss_fraction=ds.frac_non_recv_loss,
-                                        spill_column=ds.spill_col,
-                                        spill_fraction=ds.frac_spill,
-                                        delivery_dest_type=ds.dest_type,
-                                        delivery_dest_id=ds.dest_id,
-                                        delivery_column=ds.delivery_col,
-                                        delivery_fraction=ds.frac_delivery,
-                                        irrigation_fraction_column=ds.irrig_frac_col,
-                                        adjustment_column=ds.adjustment_col,
-                                    ))
+                                    stream.add_diversion(
+                                        Diversion(
+                                            id=ds.id,
+                                            source_node=ds.stream_node,
+                                            destination_type=dest_map.get(ds.dest_type, "outside"),
+                                            destination_id=ds.dest_id,
+                                            name=ds.name,
+                                            max_div_column=ds.max_diver_col,
+                                            max_div_fraction=ds.frac_max_diver,
+                                            recoverable_loss_column=ds.recv_loss_col,
+                                            recoverable_loss_fraction=ds.frac_recv_loss,
+                                            non_recoverable_loss_column=ds.non_recv_loss_col,
+                                            non_recoverable_loss_fraction=ds.frac_non_recv_loss,
+                                            spill_column=ds.spill_col,
+                                            spill_fraction=ds.frac_spill,
+                                            delivery_dest_type=ds.dest_type,
+                                            delivery_dest_id=ds.dest_id,
+                                            delivery_column=ds.delivery_col,
+                                            delivery_fraction=ds.frac_delivery,
+                                            irrigation_fraction_column=ds.irrig_frac_col,
+                                            adjustment_column=ds.adjustment_col,
+                                        )
+                                    )
 
                                 # Store element groups and recharge zones
                                 stream.diversion_element_groups = div_config.element_groups
@@ -1119,13 +1173,13 @@ class IWFMModel:
                                 pass
 
                         # Load bypasses from sub-file
-                        if (stream_config.bypass_spec_file
-                                and stream_config.bypass_spec_file.exists()):
+                        if (
+                            stream_config.bypass_spec_file
+                            and stream_config.bypass_spec_file.exists()
+                        ):
                             try:
                                 byp_reader = BypassSpecReader()
-                                byp_config = byp_reader.read(
-                                    stream_config.bypass_spec_file
-                                )
+                                byp_config = byp_reader.read(stream_config.bypass_spec_file)
                                 model.metadata["stream_n_bypasses"] = byp_config.n_bypasses
 
                                 # Convert to Bypass objects
@@ -1141,22 +1195,24 @@ class IWFMModel:
                                             rt_flows = bs.inline_rating.flows.tolist()
                                         rt_spills = bs.inline_rating.fractions.tolist()
 
-                                    stream.add_bypass(Bypass(
-                                        id=bs.id,
-                                        source_node=bs.export_stream_node,
-                                        destination_node=bs.dest_id,
-                                        dest_type=bs.dest_type,
-                                        name=bs.name,
-                                        flow_factor=byp_config.flow_factor,
-                                        flow_time_unit=byp_config.flow_time_unit,
-                                        spill_factor=byp_config.bypass_factor,
-                                        spill_time_unit=byp_config.bypass_time_unit,
-                                        diversion_column=bs.rating_table_col,
-                                        recoverable_loss_fraction=bs.frac_recoverable,
-                                        non_recoverable_loss_fraction=bs.frac_non_recoverable,
-                                        rating_table_flows=rt_flows,
-                                        rating_table_spills=rt_spills,
-                                    ))
+                                    stream.add_bypass(
+                                        Bypass(
+                                            id=bs.id,
+                                            source_node=bs.export_stream_node,
+                                            destination_node=bs.dest_id,
+                                            dest_type=bs.dest_type,
+                                            name=bs.name,
+                                            flow_factor=byp_config.flow_factor,
+                                            flow_time_unit=byp_config.flow_time_unit,
+                                            spill_factor=byp_config.bypass_factor,
+                                            spill_time_unit=byp_config.bypass_time_unit,
+                                            diversion_column=bs.rating_table_col,
+                                            recoverable_loss_fraction=bs.frac_recoverable,
+                                            non_recoverable_loss_fraction=bs.frac_non_recoverable,
+                                            rating_table_flows=rt_flows,
+                                            rating_table_spills=rt_spills,
+                                        )
+                                    )
 
                                 # Map seepage zones to bypass objects
                                 for sz in byp_config.seepage_zones:
@@ -1166,13 +1222,10 @@ class IWFMModel:
                                 pass
 
                         # Load inflow info from sub-file
-                        if (stream_config.inflow_file
-                                and stream_config.inflow_file.exists()):
+                        if stream_config.inflow_file and stream_config.inflow_file.exists():
                             try:
                                 inflow_reader = InflowReader()
-                                inflow_config = inflow_reader.read(
-                                    stream_config.inflow_file
-                                )
+                                inflow_config = inflow_reader.read(stream_config.inflow_file)
                                 model.metadata["stream_n_inflows"] = inflow_config.n_inflows
                                 model.metadata["stream_inflow_nodes"] = inflow_config.inflow_nodes
                             except Exception:
@@ -1183,9 +1236,13 @@ class IWFMModel:
                             for bp in stream_config.bed_params:
                                 if bp.node_id not in stream.nodes:
                                     # Create minimal node when nodes dict is empty
-                                    stream.add_node(StrmNode(
-                                        id=bp.node_id, x=0.0, y=0.0,
-                                    ))
+                                    stream.add_node(
+                                        StrmNode(
+                                            id=bp.node_id,
+                                            x=0.0,
+                                            y=0.0,
+                                        )
+                                    )
                                 node = stream.nodes[bp.node_id]
                                 node.conductivity = bp.conductivity
                                 node.bed_thickness = bp.bed_thickness
@@ -1206,6 +1263,7 @@ class IWFMModel:
                             stream.evap_area_file = str(stream_config.evap_area_file)
                         if stream_config.evap_node_specs:
                             from pyiwfm.components.stream import StrmEvapNodeSpec
+
                             stream.evap_node_specs = [
                                 StrmEvapNodeSpec(
                                     node_id=ns[0],
@@ -1218,15 +1276,20 @@ class IWFMModel:
                         # v5.0 cross-section data
                         if stream_config.cross_section_data:
                             from pyiwfm.components.stream import CrossSectionData
+
                             for cs in stream_config.cross_section_data:
                                 if cs.node_id in stream.nodes:
                                     stream.nodes[cs.node_id].cross_section = CrossSectionData(
                                         bottom_elev=cs.bottom_elev,
-                                        B0=cs.B0, s=cs.s, n=cs.n,
+                                        B0=cs.B0,
+                                        s=cs.s,
+                                        n=cs.n,
                                         max_flow_depth=cs.max_flow_depth,
                                     )
                             stream.roughness_factor = stream_config.roughness_factor
-                            stream.cross_section_length_factor = stream_config.cross_section_length_factor
+                            stream.cross_section_length_factor = (
+                                stream_config.cross_section_length_factor
+                            )
 
                         # v5.0 initial conditions
                         if stream_config.initial_conditions:
@@ -1271,17 +1334,12 @@ class IWFMModel:
                             from pyiwfm.io.preprocessor import read_preprocessor_main
 
                             pp_config = read_preprocessor_main(preprocessor_file)
-                            if (pp_config.streams_file
-                                    and pp_config.streams_file.exists()):
+                            if pp_config.streams_file and pp_config.streams_file.exists():
                                 # Store the path so the viewer can use it
                                 # as a fallback for reach boundaries
-                                model.source_files["streams_spec"] = (
-                                    pp_config.streams_file
-                                )
+                                model.source_files["streams_spec"] = pp_config.streams_file
                                 spec_reader = StreamSpecReader()
-                                _nr, _nrt, reach_specs = spec_reader.read(
-                                    pp_config.streams_file
-                                )
+                                _nr, _nrt, reach_specs = spec_reader.read(pp_config.streams_file)
                                 for rs in reach_specs:
                                     # Enrich existing nodes with reach_id and gw_node
                                     for sn_id in rs.node_ids:
@@ -1289,23 +1347,22 @@ class IWFMModel:
                                             sn = stream.nodes[sn_id]
                                             if not getattr(sn, "reach_id", 0):
                                                 sn.reach_id = rs.id
-                                            gw = rs.node_to_gw_node.get(sn_id)
-                                            if gw and gw > 0 and sn.gw_node is None:
-                                                sn.gw_node = gw
-                                    stream.add_reach(StrmReach(
-                                        id=rs.id,
-                                        upstream_node=(
-                                            rs.node_ids[0] if rs.node_ids else 0
-                                        ),
-                                        downstream_node=(
-                                            rs.node_ids[-1] if rs.node_ids else 0
-                                        ),
-                                        nodes=list(rs.node_ids),
-                                        name=rs.name,
-                                    ))
+                                            gw_nid = rs.node_to_gw_node.get(sn_id)
+                                            if gw_nid and gw_nid > 0 and sn.gw_node is None:
+                                                sn.gw_node = gw_nid
+                                    stream.add_reach(
+                                        StrmReach(
+                                            id=rs.id,
+                                            upstream_node=(rs.node_ids[0] if rs.node_ids else 0),
+                                            downstream_node=(rs.node_ids[-1] if rs.node_ids else 0),
+                                            nodes=list(rs.node_ids),
+                                            name=rs.name,
+                                        )
+                                    )
                         except Exception as e:
                             logger.warning(
-                                "Could not enrich stream reaches from preprocessor: %s", e,
+                                "Could not enrich stream reaches from preprocessor: %s",
+                                e,
                             )
                             model.metadata["stream_reach_enrichment_error"] = str(e)
 
@@ -1314,7 +1371,8 @@ class IWFMModel:
 
                     logger.debug(
                         "Stream loading complete: %d nodes, %d reaches",
-                        len(stream.nodes), len(stream.reaches) if stream.reaches else 0,
+                        len(stream.nodes),
+                        len(stream.reaches) if stream.reaches else 0,
                     )
 
                 except Exception as e:
@@ -1333,9 +1391,7 @@ class IWFMModel:
                     # Try hierarchical reader first (for component main files)
                     try:
                         lake_main_reader = LakeMainFileReader()
-                        lake_config = lake_main_reader.read(
-                            lake_file, base_dir=base_dir
-                        )
+                        lake_config = lake_main_reader.read(lake_file, base_dir=base_dir)
 
                         model.metadata["lake_version"] = lake_config.version
                         model.metadata["lake_n_lakes"] = len(lake_config.lake_params)
@@ -1344,12 +1400,11 @@ class IWFMModel:
 
                         # Store output file paths
                         if lake_config.budget_output_file:
-                            model.metadata["lake_budget_file"] = str(
-                                lake_config.budget_output_file
-                            )
+                            model.metadata["lake_budget_file"] = str(lake_config.budget_output_file)
 
                         # Create Lake objects from param specs
                         from pyiwfm.components.lake import Lake
+
                         for lp in lake_config.lake_params:
                             lake = Lake(
                                 id=lp.lake_id,
@@ -1419,15 +1474,23 @@ class IWFMModel:
                         if rz_config.native_veg_file:
                             model.source_files["rootzone_native"] = rz_config.native_veg_file
                         if rz_config.return_flow_file:
-                            model.source_files["rootzone_return_flow_ts"] = rz_config.return_flow_file
+                            model.source_files["rootzone_return_flow_ts"] = (
+                                rz_config.return_flow_file
+                            )
                         if rz_config.reuse_file:
                             model.source_files["rootzone_reuse_ts"] = rz_config.reuse_file
                         if rz_config.irrigation_period_file:
-                            model.source_files["rootzone_irig_period_ts"] = rz_config.irrigation_period_file
+                            model.source_files["rootzone_irig_period_ts"] = (
+                                rz_config.irrigation_period_file
+                            )
                         if rz_config.ag_water_demand_file:
-                            model.source_files["rootzone_ag_demand_ts"] = rz_config.ag_water_demand_file
+                            model.source_files["rootzone_ag_demand_ts"] = (
+                                rz_config.ag_water_demand_file
+                            )
                         if rz_config.surface_flow_dest_file:
-                            model.source_files["rootzone_surface_flow_dest"] = rz_config.surface_flow_dest_file
+                            model.source_files["rootzone_surface_flow_dest"] = (
+                                rz_config.surface_flow_dest_file
+                            )
 
                         # Store sub-file paths as metadata
                         if rz_config.nonponded_crop_file:
@@ -1435,13 +1498,9 @@ class IWFMModel:
                                 rz_config.nonponded_crop_file
                             )
                         if rz_config.ponded_crop_file:
-                            model.metadata["rootzone_ponded_file"] = str(
-                                rz_config.ponded_crop_file
-                            )
+                            model.metadata["rootzone_ponded_file"] = str(rz_config.ponded_crop_file)
                         if rz_config.urban_file:
-                            model.metadata["rootzone_urban_file"] = str(
-                                rz_config.urban_file
-                            )
+                            model.metadata["rootzone_urban_file"] = str(rz_config.urban_file)
                         if rz_config.native_veg_file:
                             model.metadata["rootzone_native_veg_file"] = str(
                                 rz_config.native_veg_file
@@ -1463,17 +1522,11 @@ class IWFMModel:
                                 porosity=row.total_porosity,
                                 field_capacity=row.field_capacity,
                                 wilting_point=row.wilting_point,
-                                saturated_kv=(
-                                    row.hydraulic_conductivity
-                                    * rz_config.k_factor
-                                ),
+                                saturated_kv=(row.hydraulic_conductivity * rz_config.k_factor),
                                 lambda_param=row.lambda_param,
                                 kunsat_method=row.kunsat_method,
                                 k_ponded=row.k_ponded,
-                                capillary_rise=(
-                                    row.capillary_rise
-                                    * rz_config.k_exdth_factor
-                                ),
+                                capillary_rise=(row.capillary_rise * rz_config.k_exdth_factor),
                                 precip_column=row.precip_column,
                                 precip_factor=row.precip_factor,
                                 generic_moisture_column=row.generic_moisture_column,
@@ -1488,16 +1541,20 @@ class IWFMModel:
                             # convention for downstream interpretation.
                             if version_ge(rz_config.version, (4, 12)):
                                 rootzone.surface_flow_dest_ag[row.element_id] = (
-                                    row.dest_ag, abs(row.dest_ag)
+                                    row.dest_ag,
+                                    abs(row.dest_ag),
                                 )
                                 rootzone.surface_flow_dest_urban_in[row.element_id] = (
-                                    row.dest_urban_in, abs(row.dest_urban_in)
+                                    row.dest_urban_in,
+                                    abs(row.dest_urban_in),
                                 )
                                 rootzone.surface_flow_dest_urban_out[row.element_id] = (
-                                    row.dest_urban_out, abs(row.dest_urban_out)
+                                    row.dest_urban_out,
+                                    abs(row.dest_urban_out),
                                 )
                                 rootzone.surface_flow_dest_nvrv[row.element_id] = (
-                                    row.dest_nvrv, abs(row.dest_nvrv)
+                                    row.dest_nvrv,
+                                    abs(row.dest_nvrv),
                                 )
                             else:
                                 rootzone.surface_flow_destinations[row.element_id] = (
@@ -1536,11 +1593,9 @@ class IWFMModel:
                                 and rz_config.nonponded_crop_file.exists()
                             ):
                                 try:
-                                    rootzone.nonponded_config = (
-                                        NonPondedCropReader().read(
-                                            rz_config.nonponded_crop_file,
-                                            base_dir,
-                                        )
+                                    rootzone.nonponded_config = NonPondedCropReader().read(
+                                        rz_config.nonponded_crop_file,
+                                        base_dir,
                                     )
                                 except Exception as exc:
                                     logger.warning(
@@ -1548,16 +1603,11 @@ class IWFMModel:
                                         exc,
                                     )
 
-                            if (
-                                rz_config.ponded_crop_file
-                                and rz_config.ponded_crop_file.exists()
-                            ):
+                            if rz_config.ponded_crop_file and rz_config.ponded_crop_file.exists():
                                 try:
-                                    rootzone.ponded_config = (
-                                        PondedCropReader().read(
-                                            rz_config.ponded_crop_file,
-                                            base_dir,
-                                        )
+                                    rootzone.ponded_config = PondedCropReader().read(
+                                        rz_config.ponded_crop_file,
+                                        base_dir,
                                     )
                                 except Exception as exc:
                                     logger.warning(
@@ -1565,20 +1615,15 @@ class IWFMModel:
                                         exc,
                                     )
 
-                            if (
-                                rz_config.urban_file
-                                and rz_config.urban_file.exists()
-                            ):
+                            if rz_config.urban_file and rz_config.urban_file.exists():
                                 try:
                                     from pyiwfm.io.rootzone_urban import (
                                         UrbanLandUseReader,
                                     )
 
-                                    rootzone.urban_config = (
-                                        UrbanLandUseReader().read(
-                                            rz_config.urban_file,
-                                            base_dir,
-                                        )
+                                    rootzone.urban_config = UrbanLandUseReader().read(
+                                        rz_config.urban_file,
+                                        base_dir,
                                     )
                                 except Exception as exc:
                                     logger.warning(
@@ -1586,16 +1631,11 @@ class IWFMModel:
                                         exc,
                                     )
 
-                            if (
-                                rz_config.native_veg_file
-                                and rz_config.native_veg_file.exists()
-                            ):
+                            if rz_config.native_veg_file and rz_config.native_veg_file.exists():
                                 try:
-                                    rootzone.native_riparian_config = (
-                                        NativeRiparianReader().read(
-                                            rz_config.native_veg_file,
-                                            base_dir,
-                                        )
+                                    rootzone.native_riparian_config = NativeRiparianReader().read(
+                                        rz_config.native_veg_file,
+                                        base_dir,
                                     )
                                 except Exception as exc:
                                     logger.warning(
@@ -1616,9 +1656,7 @@ class IWFMModel:
                                 and rz_config.nonponded_crop_file.exists()
                             ):
                                 try:
-                                    reader = NonPondedCropReaderV4x(
-                                        n_elements=n_elements
-                                    )
+                                    reader = NonPondedCropReaderV4x(n_elements=n_elements)
                                     rootzone.nonponded_config = reader.read(
                                         rz_config.nonponded_crop_file,
                                         base_dir,
@@ -1629,15 +1667,10 @@ class IWFMModel:
                                         exc,
                                     )
 
-                            if (
-                                rz_config.ponded_crop_file
-                                and rz_config.ponded_crop_file.exists()
-                            ):
+                            if rz_config.ponded_crop_file and rz_config.ponded_crop_file.exists():
                                 try:
-                                    reader = PondedCropReaderV4x(
-                                        n_elements=n_elements
-                                    )
-                                    rootzone.ponded_config = reader.read(
+                                    ponded_reader = PondedCropReaderV4x(n_elements=n_elements)
+                                    rootzone.ponded_config = ponded_reader.read(
                                         rz_config.ponded_crop_file, base_dir
                                     )
                                 except Exception as exc:
@@ -1646,15 +1679,10 @@ class IWFMModel:
                                         exc,
                                     )
 
-                            if (
-                                rz_config.urban_file
-                                and rz_config.urban_file.exists()
-                            ):
+                            if rz_config.urban_file and rz_config.urban_file.exists():
                                 try:
-                                    reader = UrbanReaderV4x(
-                                        n_elements=n_elements
-                                    )
-                                    rootzone.urban_config = reader.read(
+                                    urban_reader = UrbanReaderV4x(n_elements=n_elements)
+                                    rootzone.urban_config = urban_reader.read(
                                         rz_config.urban_file, base_dir
                                     )
                                 except Exception as exc:
@@ -1663,19 +1691,12 @@ class IWFMModel:
                                         exc,
                                     )
 
-                            if (
-                                rz_config.native_veg_file
-                                and rz_config.native_veg_file.exists()
-                            ):
+                            if rz_config.native_veg_file and rz_config.native_veg_file.exists():
                                 try:
-                                    reader = NativeRiparianReaderV4x(
-                                        n_elements=n_elements
-                                    )
-                                    rootzone.native_riparian_config = (
-                                        reader.read(
-                                            rz_config.native_veg_file,
-                                            base_dir,
-                                        )
+                                    nr_reader = NativeRiparianReaderV4x(n_elements=n_elements)
+                                    rootzone.native_riparian_config = nr_reader.read(
+                                        rz_config.native_veg_file,
+                                        base_dir,
                                     )
                                 except Exception as exc:
                                     logger.warning(
@@ -1701,8 +1722,11 @@ class IWFMModel:
 
                         if rootzone.ponded_config is not None:
                             _PONDED_NAMES = [
-                                "RICE_FL", "RICE_NFL", "RICE_NDC",
-                                "REFUGE_SL", "REFUGE_PR",
+                                "RICE_FL",
+                                "RICE_NFL",
+                                "RICE_NDC",
+                                "REFUGE_SL",
+                                "REFUGE_PR",
                             ]
                             p_cfg = rootzone.ponded_config
                             for i, depth in enumerate(p_cfg.root_depths):
@@ -1713,9 +1737,7 @@ class IWFMModel:
                                     else f"PONDED_{i + 1}"
                                 )
                                 rootzone.add_crop_type(
-                                    CropType(
-                                        id=crop_id, name=name, root_depth=depth
-                                    )
+                                    CropType(id=crop_id, name=name, root_depth=depth)
                                 )
 
                     except Exception:
@@ -1744,9 +1766,7 @@ class IWFMModel:
                             cfg = getattr(rootzone, cfg_attr, None)
                             if cfg is None:
                                 continue
-                            af = getattr(
-                                cfg, "area_data_file", None
-                            ) or getattr(
+                            af = getattr(cfg, "area_data_file", None) or getattr(
                                 cfg, "elemental_area_file", None
                             )
                             if af is not None:
@@ -1754,12 +1774,12 @@ class IWFMModel:
                                 setattr(rootzone, rz_attr, resolved)
                                 logger.debug(
                                     "Wired %s -> %s (exists=%s)",
-                                    rz_attr, resolved, resolved.exists(),
+                                    rz_attr,
+                                    resolved,
+                                    resolved.exists(),
                                 )
                     except Exception as exc:
-                        logger.warning(
-                            "Failed to wire area data file paths: %s", exc
-                        )
+                        logger.warning("Failed to wire area data file paths: %s", exc)
 
                     model.rootzone = rootzone
                 except Exception as e:
@@ -1785,9 +1805,7 @@ class IWFMModel:
 
                     # Build component from config
                     if sw_config.n_watersheds > 0:
-                        model.small_watersheds = AppSmallWatershed.from_config(
-                            sw_config
-                        )
+                        model.small_watersheds = AppSmallWatershed.from_config(sw_config)
                 except Exception as e:
                     model.metadata["small_watershed_load_error"] = str(e)
 
@@ -1805,15 +1823,11 @@ class IWFMModel:
                     model.metadata["unsat_zone_version"] = uz_config.version
                     model.metadata["unsat_zone_n_layers"] = uz_config.n_layers
                     if uz_config.budget_file:
-                        model.metadata["unsat_zone_budget_file"] = str(
-                            uz_config.budget_file
-                        )
+                        model.metadata["unsat_zone_budget_file"] = str(uz_config.budget_file)
 
                     # Build component from config
                     if uz_config.n_layers > 0:
-                        model.unsaturated_zone = AppUnsatZone.from_config(
-                            uz_config
-                        )
+                        model.unsaturated_zone = AppUnsatZone.from_config(uz_config)
                 except Exception as e:
                     model.metadata["unsat_zone_load_error"] = str(e)
 

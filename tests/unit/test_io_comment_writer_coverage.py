@@ -21,7 +21,6 @@ from pyiwfm.io.comment_writer import (
     CommentWriter,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -102,9 +101,7 @@ class TestCommentWriterWithMetadata:
         assert "SHOULD NOT APPEAR" not in header
         assert "Preserved header" in header
 
-    def test_restore_section_header(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_restore_section_header(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         section_hdr = writer.restore_section_header("NODES")
         assert "Node section header" in section_hdr
@@ -125,9 +122,7 @@ class TestCommentWriterWithMetadata:
         result = writer.restore_section_header("NONEXISTENT")
         assert result == ""
 
-    def test_restore_section_trailing(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_restore_section_trailing(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         trailing = writer.restore_section_trailing("NODES")
         assert "End of nodes" in trailing
@@ -136,9 +131,7 @@ class TestCommentWriterWithMetadata:
         self, metadata_with_comments: CommentMetadata
     ) -> None:
         writer = CommentWriter(metadata_with_comments, use_fallback=True)
-        result = writer.restore_section_trailing(
-            "MISSING", fallback_lines=["C  Trailing fallback"]
-        )
+        result = writer.restore_section_trailing("MISSING", fallback_lines=["C  Trailing fallback"])
         assert "Trailing fallback" in result
 
     def test_format_data_with_comment_preserved(
@@ -159,9 +152,7 @@ class TestCommentWriterWithMetadata:
         assert "200" in line
         assert "FB" in line
 
-    def test_format_data_with_comment_no_comment(
-        self, empty_metadata: CommentMetadata
-    ) -> None:
+    def test_format_data_with_comment_no_comment(self, empty_metadata: CommentMetadata) -> None:
         writer = CommentWriter(empty_metadata)
         line = writer.format_data_with_comment("300", "NODES", "KEY")
         assert line == "300"
@@ -182,15 +173,11 @@ class TestCommentWriterWithMetadata:
         # Value field should be padded to width 15
         assert line.startswith("42")
 
-    def test_has_preserved_comments_true(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_has_preserved_comments_true(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         assert writer.has_preserved_comments() is True
 
-    def test_has_section_comments_true(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_has_section_comments_true(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         assert writer.has_section_comments("NODES") is True
 
@@ -200,16 +187,12 @@ class TestCommentWriterWithMetadata:
         writer = CommentWriter(metadata_with_comments)
         assert writer.has_section_comments("NONEXISTENT") is False
 
-    def test_get_data_comment(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_get_data_comment(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         comment = writer.get_data_comment("NODES", "node", 1)
         assert comment == "SW corner"
 
-    def test_get_data_comment_missing(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_get_data_comment_missing(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         comment = writer.get_data_comment("NODES", "node", 999)
         assert comment is None
@@ -218,34 +201,26 @@ class TestCommentWriterWithMetadata:
 class TestCommentWriterFileIO:
     """Tests for write_*_to_file convenience methods."""
 
-    def test_write_header_to_file(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_write_header_to_file(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         buf = io.StringIO()
         writer.write_header_to_file(buf)
         content = buf.getvalue()
         assert "Preserved header" in content
 
-    def test_write_section_header_to_file(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_write_section_header_to_file(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         buf = io.StringIO()
         writer.write_section_header_to_file(buf, "NODES")
         assert "Node section header" in buf.getvalue()
 
-    def test_write_section_trailing_to_file(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_write_section_trailing_to_file(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         buf = io.StringIO()
         writer.write_section_trailing_to_file(buf, "NODES")
         assert "End of nodes" in buf.getvalue()
 
-    def test_write_data_line(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_write_data_line(self, metadata_with_comments: CommentMetadata) -> None:
         writer = CommentWriter(metadata_with_comments)
         buf = io.StringIO()
         writer.write_data_line(buf, "100", "NODES", "NNODES")
@@ -266,34 +241,23 @@ class TestCommentInjector:
         content = "C***** old header\nC  line\n100\n"
         assert injector.inject_header(content) == content
 
-    def test_inject_header_replaces(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_inject_header_replaces(self, metadata_with_comments: CommentMetadata) -> None:
         injector = CommentInjector(metadata_with_comments)
-        content = (
-            "C***** template header\n"
-            "C  template line\n"
-            "100  / NNODES\n"
-            "1.0  / FACTXY\n"
-        )
+        content = "C***** template header\nC  template line\n100  / NNODES\n1.0  / FACTXY\n"
         result = injector.inject_header(content)
         assert "Preserved header comment line 1" in result
         assert "template header" not in result
         # Data lines should be preserved
         assert "100" in result
 
-    def test_inject_header_no_marker_found(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_inject_header_no_marker_found(self, metadata_with_comments: CommentMetadata) -> None:
         """When the header marker is absent, content is returned unchanged."""
         injector = CommentInjector(metadata_with_comments)
         content = "100  / NNODES\n"
         result = injector.inject_header(content, header_marker="C*****")
         assert result == content
 
-    def test_inject_section_comments(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_inject_section_comments(self, metadata_with_comments: CommentMetadata) -> None:
         injector = CommentInjector(metadata_with_comments)
         content = "C  NODES section\n100  / NNODES\n"
         result = injector.inject_section_comments(content, "NODES", "C  NODES")
@@ -305,9 +269,7 @@ class TestCommentInjector:
         """When the marker is absent, content is returned unchanged."""
         injector = CommentInjector(metadata_with_comments)
         content = "100\n200\n"
-        result = injector.inject_section_comments(
-            content, "NODES", "NONEXISTENT_MARKER"
-        )
+        result = injector.inject_section_comments(content, "NODES", "NONEXISTENT_MARKER")
         assert result == content
 
     def test_inject_section_comments_no_section(
@@ -316,37 +278,21 @@ class TestCommentInjector:
         """When the section does not exist in metadata, content is unchanged."""
         injector = CommentInjector(metadata_with_comments)
         content = "C  ELEMENTS\n50\n"
-        result = injector.inject_section_comments(
-            content, "MISSING_SECTION", "C  ELEMENTS"
-        )
+        result = injector.inject_section_comments(content, "MISSING_SECTION", "C  ELEMENTS")
         assert result == content
 
     def test_process_content_header_and_sections(
         self, metadata_with_comments: CommentMetadata
     ) -> None:
         injector = CommentInjector(metadata_with_comments)
-        content = (
-            "C***** template header\n"
-            "C  old\n"
-            "100  / NNODES\n"
-            "C  NODES section\n"
-            "data line\n"
-        )
-        result = injector.process_content(
-            content, sections={"NODES": "C  NODES"}
-        )
+        content = "C***** template header\nC  old\n100  / NNODES\nC  NODES section\ndata line\n"
+        result = injector.process_content(content, sections={"NODES": "C  NODES"})
         assert "Preserved header" in result
         assert "Node section header" in result
 
-    def test_process_content_no_sections_arg(
-        self, metadata_with_comments: CommentMetadata
-    ) -> None:
+    def test_process_content_no_sections_arg(self, metadata_with_comments: CommentMetadata) -> None:
         injector = CommentInjector(metadata_with_comments)
-        content = (
-            "C***** template header\n"
-            "C  old\n"
-            "100  / data\n"
-        )
+        content = "C***** template header\nC  old\n100  / data\n"
         result = injector.process_content(content, sections=None)
         # Header injection still happens
         assert "Preserved header" in result

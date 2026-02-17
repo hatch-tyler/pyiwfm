@@ -9,7 +9,6 @@ Covers:
 from __future__ import annotations
 
 import subprocess
-from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -249,12 +248,14 @@ class TestIWFMExecutables:
     def test_available_none(self) -> None:
         """No executables -> empty list."""
         from pyiwfm.runner.runner import IWFMExecutables
+
         exes = IWFMExecutables()
         assert exes.available == []
 
     def test_repr(self) -> None:
         """Repr shows available list."""
         from pyiwfm.runner.runner import IWFMExecutables
+
         exes = IWFMExecutables()
         r = repr(exes)
         assert "IWFMExecutables" in r
@@ -262,6 +263,7 @@ class TestIWFMExecutables:
     def test_post_init_nonexistent(self, tmp_path: Path) -> None:
         """Non-existent path -> set to None."""
         from pyiwfm.runner.runner import IWFMExecutables
+
         exes = IWFMExecutables(simulation=tmp_path / "nonexistent.exe")
         assert exes.simulation is None
 
@@ -314,10 +316,14 @@ class TestFindExecutablesPathSearch:
         empty_dir = tmp_path / "empty_search"
         empty_dir.mkdir()
 
-        with patch("pyiwfm.runner.runner.Path.cwd", return_value=empty_dir), \
-             patch("pyiwfm.runner.runner.Path.__file__", tmp_path / "fake.py", create=True), \
-             patch("pyiwfm.runner.runner.shutil.which",
-                    side_effect=lambda name: str(fake_exe) if "Simulation" in name.lower() else None):
+        with (
+            patch("pyiwfm.runner.runner.Path.cwd", return_value=empty_dir),
+            patch("pyiwfm.runner.runner.Path.__file__", tmp_path / "fake.py", create=True),
+            patch(
+                "pyiwfm.runner.runner.shutil.which",
+                side_effect=lambda name: str(fake_exe) if "Simulation" in name.lower() else None,
+            ),
+        ):
             result = find_iwfm_executables(search_paths=[empty_dir])
 
         # The real Bin directory may still find exes due to package path resolution.

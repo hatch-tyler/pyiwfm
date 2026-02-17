@@ -18,10 +18,10 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import Iterator, Sequence
 
 from pyiwfm.io.comment_metadata import (
     CommentMetadata,
@@ -151,7 +151,7 @@ class CommentExtractor:
         )
 
         # Read and parse file
-        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+        with open(filepath, encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
 
         parsed_lines = list(self._parse_lines(lines))
@@ -194,9 +194,7 @@ class CommentExtractor:
             stripped = raw_line.rstrip()
             yield self._classify_line(i, raw_line, stripped)
 
-    def _classify_line(
-        self, line_number: int, raw: str, stripped: str
-    ) -> ParsedLine:
+    def _classify_line(self, line_number: int, raw: str, stripped: str) -> ParsedLine:
         """Classify a single line.
 
         Args:
@@ -241,15 +239,15 @@ class CommentExtractor:
         if inline_result[1] is not None:
             # Has inline comment
             data_part, comment_part = inline_result
-            keyword = self._extract_keyword(comment_part)
+            keyword = self._extract_keyword(comment_part) if comment_part is not None else ""
             return ParsedLine(
                 line_number=line_number,
                 raw=raw,
                 stripped=stripped,
                 line_type=LineType.INLINE_COMMENT,
                 data_part=data_part,
-                comment_part=comment_part,
-                keyword=keyword,
+                comment_part=comment_part or "",
+                keyword=keyword or "",
             )
 
         # Plain data line
@@ -495,9 +493,7 @@ class CommentExtractor:
         Returns:
             Version string if found, empty string otherwise.
         """
-        version_pattern = re.compile(
-            r"(?:IWFM|Version|ver\.?)\s*(\d+\.?\d*\.?\d*)", re.IGNORECASE
-        )
+        version_pattern = re.compile(r"(?:IWFM|Version|ver\.?)\s*(\d+\.?\d*\.?\d*)", re.IGNORECASE)
         for line in header_lines:
             match = version_pattern.search(line)
             if match:

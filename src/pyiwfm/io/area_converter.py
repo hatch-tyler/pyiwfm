@@ -87,9 +87,7 @@ def convert_area_to_hdf(
         while len(header_vals) < 3:
             line = fh.readline()
             if not line:
-                raise ValueError(
-                    f"Unexpected end of file reading header from {text_path}"
-                )
+                raise ValueError(f"Unexpected end of file reading header from {text_path}")
             if _is_comment(line):
                 continue
             val = _strip_description(line)
@@ -227,9 +225,7 @@ def convert_area_to_hdf(
                     elem_id = int(parts[0])
                     val_tokens = parts[1:]
 
-                values = [
-                    float(v) * factor for v in val_tokens[:n_cols]
-                ]
+                values = [float(v) * factor for v in val_tokens[:n_cols]]
 
                 if current_date is None:
                     current_date = date_str
@@ -253,7 +249,7 @@ def convert_area_to_hdf(
 
                 idx = elem_to_idx.get(elem_id)
                 if idx is not None:
-                    row_buf[idx, :len(values)] = values
+                    row_buf[idx, : len(values)] = values
                     rows_in_block += 1
 
             # Flush final block

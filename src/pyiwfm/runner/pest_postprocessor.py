@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -58,12 +57,13 @@ class ResidualData:
     @property
     def weighted_residuals(self) -> NDArray:
         """Weighted residuals."""
-        return self.residuals * self.weights
+        wr: NDArray = self.residuals * self.weights
+        return wr
 
     @property
     def phi(self) -> float:
         """Total objective function (sum of squared weighted residuals)."""
-        return float(np.sum(self.weighted_residuals ** 2))
+        return float(np.sum(self.weighted_residuals**2))
 
     def group_phi(self) -> dict[str, float]:
         """Objective function contribution by group."""
@@ -71,7 +71,7 @@ class ResidualData:
         for group in set(self.groups):
             mask = np.array([g == group for g in self.groups])
             wr = self.weighted_residuals[mask]
-            result[group] = float(np.sum(wr ** 2))
+            result[group] = float(np.sum(wr**2))
         return result
 
 
@@ -109,10 +109,7 @@ class SensitivityData:
             Sorted (name, sensitivity) pairs.
         """
         indices = np.argsort(self.composite_sensitivities)[::-1][:n]
-        return [
-            (self.parameter_names[i], float(self.composite_sensitivities[i]))
-            for i in indices
-        ]
+        return [(self.parameter_names[i], float(self.composite_sensitivities[i])) for i in indices]
 
     def least_sensitive(self, n: int = 10) -> list[tuple[str, float]]:
         """Get least sensitive parameters.
@@ -128,10 +125,7 @@ class SensitivityData:
             Sorted (name, sensitivity) pairs.
         """
         indices = np.argsort(self.composite_sensitivities)[:n]
-        return [
-            (self.parameter_names[i], float(self.composite_sensitivities[i]))
-            for i in indices
-        ]
+        return [(self.parameter_names[i], float(self.composite_sensitivities[i])) for i in indices]
 
 
 @dataclass
@@ -183,22 +177,21 @@ class CalibrationResults:
         if group:
             mask = np.array([g == group for g in self.residuals.groups])
             obs = self.residuals.observed[mask]
-            sim = self.residuals.simulated[mask]
+            self.residuals.simulated[mask]
             res = self.residuals.residuals[mask]
         else:
             obs = self.residuals.observed
-            sim = self.residuals.simulated
             res = self.residuals.residuals
 
         if len(obs) == 0:
             return {}
 
-        rmse = float(np.sqrt(np.mean(res ** 2)))
+        rmse = float(np.sqrt(np.mean(res**2)))
         mae = float(np.mean(np.abs(res)))
         bias = float(np.mean(res))
 
         # R² (coefficient of determination)
-        ss_res = np.sum(res ** 2)
+        ss_res = np.sum(res**2)
         ss_tot = np.sum((obs - np.mean(obs)) ** 2)
         r_squared = float(1.0 - ss_res / ss_tot) if ss_tot > 0 else 0.0
 
@@ -498,9 +491,7 @@ class PestPostProcessor:
 
         return {
             name: float(s / max_sens)
-            for name, s in zip(
-                results.sensitivities.parameter_names, sens
-            )
+            for name, s in zip(results.sensitivities.parameter_names, sens, strict=False)
         }
 
     def summary_report(self) -> str:
@@ -535,7 +526,9 @@ class PestPostProcessor:
             lines.append("-" * 40)
             stats = results.fit_statistics()
             for key, val in stats.items():
-                lines.append(f"  {key:20s}: {val:.4f}" if isinstance(val, float) else f"  {key:20s}: {val}")
+                lines.append(
+                    f"  {key:20s}: {val:.4f}" if isinstance(val, float) else f"  {key:20s}: {val}"
+                )
 
             # Per-group statistics
             lines.append("")

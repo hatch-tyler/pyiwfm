@@ -13,23 +13,19 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from types import SimpleNamespace
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
-import pytest
 
 from pyiwfm.core.model import (
     IWFMModel,
-    _apply_kh_anomalies,
-    _apply_parametric_grids,
     _build_reaches_from_node_reach_ids,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _sim_config(base_dir: Path, **overrides):
     """Build a minimal SimulationConfig-like mock."""
@@ -72,8 +68,9 @@ def _pp_model(mesh_n_nodes=4, mesh_n_elements=1, n_layers=2):
     mock_mesh = MagicMock()
     mock_mesh.n_nodes = mesh_n_nodes
     mock_mesh.n_elements = mesh_n_elements
-    mock_mesh.nodes = {i: MagicMock(id=i, x=float(i), y=float(i))
-                       for i in range(1, mesh_n_nodes + 1)}
+    mock_mesh.nodes = {
+        i: MagicMock(id=i, x=float(i), y=float(i)) for i in range(1, mesh_n_nodes + 1)
+    }
     mock_mesh.elements = {i: MagicMock(id=i) for i in range(1, mesh_n_elements + 1)}
     mock_strat = MagicMock()
     mock_strat.n_layers = n_layers

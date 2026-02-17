@@ -8,14 +8,11 @@ Tests:
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
 import pytest
 
+from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
 from pyiwfm.core.zones import Zone, ZoneDefinition
-from pyiwfm.core.mesh import AppGrid, Node, Element, Subregion
-
 
 # =============================================================================
 # Test Zone Dataclass

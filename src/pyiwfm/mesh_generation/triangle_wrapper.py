@@ -12,16 +12,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from numpy.typing import NDArray
 
 from pyiwfm.mesh_generation.generators import MeshGenerator, MeshResult
 
 if TYPE_CHECKING:
     from pyiwfm.mesh_generation.constraints import (
         Boundary,
-        StreamConstraint,
-        RefinementZone,
         PointConstraint,
+        RefinementZone,
+        StreamConstraint,
     )
 
 
@@ -52,12 +51,12 @@ class TriangleMeshGenerator(MeshGenerator):
 
     def generate(
         self,
-        boundary: "Boundary",
+        boundary: Boundary,
         max_area: float | None = None,
         min_angle: float | None = None,
-        streams: list["StreamConstraint"] | None = None,
-        refinement_zones: list["RefinementZone"] | None = None,
-        points: list["PointConstraint"] | None = None,
+        streams: list[StreamConstraint] | None = None,
+        refinement_zones: list[RefinementZone] | None = None,
+        points: list[PointConstraint] | None = None,
     ) -> MeshResult:
         """
         Generate a triangular mesh within the boundary.
@@ -76,9 +75,7 @@ class TriangleMeshGenerator(MeshGenerator):
         import triangle
 
         # Build input for Triangle
-        tri_input = self._build_triangle_input(
-            boundary, streams, points
-        )
+        tri_input = self._build_triangle_input(boundary, streams, points)
 
         # Build Triangle options string
         opts = self._build_options(max_area, min_angle)
@@ -88,18 +85,16 @@ class TriangleMeshGenerator(MeshGenerator):
 
         # Apply refinement zones if specified
         if refinement_zones:
-            tri_output = self._apply_refinement(
-                tri_output, refinement_zones, min_angle
-            )
+            tri_output = self._apply_refinement(tri_output, refinement_zones, min_angle)
 
         # Convert to MeshResult
         return self._convert_output(tri_output)
 
     def _build_triangle_input(
         self,
-        boundary: "Boundary",
-        streams: list["StreamConstraint"] | None = None,
-        points: list["PointConstraint"] | None = None,
+        boundary: Boundary,
+        streams: list[StreamConstraint] | None = None,
+        points: list[PointConstraint] | None = None,
     ) -> dict:
         """Build input dictionary for Triangle."""
         # Start with boundary vertices
@@ -177,7 +172,7 @@ class TriangleMeshGenerator(MeshGenerator):
     def _apply_refinement(
         self,
         tri_output: dict,
-        refinement_zones: list["RefinementZone"],
+        refinement_zones: list[RefinementZone],
         min_angle: float | None = None,
     ) -> dict:
         """Apply local refinement to mesh."""
@@ -197,10 +192,7 @@ class TriangleMeshGenerator(MeshGenerator):
 
             # Calculate area
             v0, v1, v2 = vertices[tri[0]], vertices[tri[1]], vertices[tri[2]]
-            area = 0.5 * abs(
-                (v1[0] - v0[0]) * (v2[1] - v0[1])
-                - (v2[0] - v0[0]) * (v1[1] - v0[1])
-            )
+            area = 0.5 * abs((v1[0] - v0[0]) * (v2[1] - v0[1]) - (v2[0] - v0[0]) * (v1[1] - v0[1]))
 
             # Check each refinement zone
             for zone in refinement_zones:

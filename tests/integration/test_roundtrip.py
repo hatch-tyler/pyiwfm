@@ -11,18 +11,16 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.groundwater import (
-    GWFileConfig,
-    GroundwaterWriter,
-    GroundwaterReader,
-    read_subsidence,
-)
 from pyiwfm.components.groundwater import (
     AppGW,
-    Well,
     Subsidence,
+    Well,
 )
-
+from pyiwfm.io.groundwater import (
+    GroundwaterReader,
+    GroundwaterWriter,
+    GWFileConfig,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -39,16 +37,18 @@ class TestGroundwaterRoundtrip:
         """Test wells write -> read roundtrip with realistic data."""
         gw = AppGW(n_nodes=100, n_layers=3, n_elements=50)
         for i in range(20):
-            gw.add_well(Well(
-                id=i + 1,
-                x=1e6 + float(i * 5280),
-                y=2e6 + float(i * 2640),
-                element=i % 50 + 1,
-                name=f"Production Well {i + 1}",
-                top_screen=200.0 - i * 5,
-                bottom_screen=100.0 - i * 5,
-                max_pump_rate=500.0 + i * 10.0,
-            ))
+            gw.add_well(
+                Well(
+                    id=i + 1,
+                    x=1e6 + float(i * 5280),
+                    y=2e6 + float(i * 2640),
+                    element=i % 50 + 1,
+                    name=f"Production Well {i + 1}",
+                    top_screen=200.0 - i * 5,
+                    bottom_screen=100.0 - i * 5,
+                    max_pump_rate=500.0 + i * 10.0,
+                )
+            )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -73,13 +73,15 @@ class TestGroundwaterRoundtrip:
         # Create subsidence entries across elements and layers
         for elem in range(1, 11):
             for layer in range(1, 4):
-                gw.add_subsidence(Subsidence(
-                    element=elem,
-                    layer=layer,
-                    elastic_storage=1e-5 * (1 + elem * 0.1),
-                    inelastic_storage=1e-4 * (1 + elem * 0.2),
-                    preconsolidation_head=100.0 - layer * 10.0 - elem * 2.0,
-                ))
+                gw.add_subsidence(
+                    Subsidence(
+                        element=elem,
+                        layer=layer,
+                        elastic_storage=1e-5 * (1 + elem * 0.1),
+                        inelastic_storage=1e-4 * (1 + elem * 0.2),
+                        preconsolidation_head=100.0 - layer * 10.0 - elem * 2.0,
+                    )
+                )
 
         config = GWFileConfig(output_dir=tmp_path)
         writer = GroundwaterWriter(config)
@@ -89,14 +91,12 @@ class TestGroundwaterRoundtrip:
         result = reader.read_subsidence(filepath)
 
         assert len(result) == 30  # 10 elements x 3 layers
-        for orig, read in zip(gw.subsidence, result):
+        for orig, read in zip(gw.subsidence, result, strict=False):
             assert read.element == orig.element
             assert read.layer == orig.layer
             assert read.elastic_storage == pytest.approx(orig.elastic_storage, rel=1e-3)
             assert read.inelastic_storage == pytest.approx(orig.inelastic_storage, rel=1e-3)
-            assert read.preconsolidation_head == pytest.approx(
-                orig.preconsolidation_head, rel=1e-3
-            )
+            assert read.preconsolidation_head == pytest.approx(orig.preconsolidation_head, rel=1e-3)
 
     def test_initial_heads_roundtrip(self, tmp_path: Path) -> None:
         """Test initial heads write -> read roundtrip with realistic data."""

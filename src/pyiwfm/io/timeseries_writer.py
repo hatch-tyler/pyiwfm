@@ -20,9 +20,8 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Sequence
+from typing import IO, Any
 
-import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.templates.engine import TemplateEngine
@@ -172,9 +171,7 @@ class IWFMTimeSeriesDataWriter:
         }
 
         # Render header via template
-        header = self._engine.render_template(
-            "timeseries/timeseries_data.j2", **context
-        )
+        header = self._engine.render_template("timeseries/timeseries_data.j2", **context)
 
         with open(filepath, "w") as f:
             f.write(header)
@@ -186,9 +183,7 @@ class IWFMTimeSeriesDataWriter:
         logger.info("Wrote time series data file: %s", filepath)
         return filepath
 
-    def write_dss_mode(
-        self, config: TimeSeriesDataConfig, filepath: Path
-    ) -> Path:
+    def write_dss_mode(self, config: TimeSeriesDataConfig, filepath: Path) -> Path:
         """Write with DSS pathname references instead of inline data.
 
         This is a convenience wrapper that ensures use_dss is True.
@@ -211,7 +206,7 @@ class IWFMTimeSeriesDataWriter:
 
     @staticmethod
     def _write_data_rows(
-        f,
+        f: IO[str],
         dates: list[str],
         data: NDArray,
         fmt: str = "%14.6f",
@@ -252,7 +247,7 @@ def make_pumping_ts_config(
     factor: float = 1.0,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig pre-configured for pumping TS files."""
     return TimeSeriesDataConfig(
@@ -275,7 +270,7 @@ def make_stream_inflow_ts_config(
     factor: float = 1.0,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig pre-configured for stream inflow TS."""
     return TimeSeriesDataConfig(
@@ -298,7 +293,7 @@ def make_diversion_ts_config(
     factor: float = 1.0,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig pre-configured for diversion data TS."""
     return TimeSeriesDataConfig(
@@ -321,7 +316,7 @@ def make_precip_ts_config(
     factor: float = 1.0,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig pre-configured for precipitation TS."""
     return TimeSeriesDataConfig(
@@ -344,7 +339,7 @@ def make_et_ts_config(
     factor: float = 1.0,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig pre-configured for ET TS files."""
     return TimeSeriesDataConfig(
@@ -366,7 +361,7 @@ def make_crop_coeff_ts_config(
     ncol: int,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig pre-configured for crop coeff TS."""
     return TimeSeriesDataConfig(
@@ -388,7 +383,7 @@ def make_return_flow_ts_config(
     ncol: int,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig for return flow fraction TS."""
     return TimeSeriesDataConfig(
@@ -410,7 +405,7 @@ def make_reuse_ts_config(
     ncol: int,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig for reuse fraction TS."""
     return TimeSeriesDataConfig(
@@ -432,7 +427,7 @@ def make_irig_period_ts_config(
     ncol: int,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig for irrigation period TS."""
     return TimeSeriesDataConfig(
@@ -455,7 +450,7 @@ def make_ag_water_demand_ts_config(
     factor: float = 1.0,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig for ag water demand TS."""
     return TimeSeriesDataConfig(
@@ -478,7 +473,7 @@ def make_max_lake_elev_ts_config(
     factor: float = 1.0,
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig for max lake elevation TS."""
     return TimeSeriesDataConfig(
@@ -503,7 +498,7 @@ def make_stream_surface_area_ts_config(
     time_unit: str = "1DAY",
     nsp: int = 1,
     nfq: int = 0,
-    **kwargs,
+    **kwargs: Any,
 ) -> TimeSeriesDataConfig:
     """Create a TimeSeriesDataConfig for stream surface area TS."""
     return TimeSeriesDataConfig(

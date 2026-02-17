@@ -98,10 +98,7 @@ def get_head_diff(
 
     # Replace extreme values (dry cells) with NaN
     mask = (vals_a < -9000) | (vals_b < -9000)
-    diff_list = [
-        None if mask[i] else round(float(diff[i]), 3)
-        for i in range(len(diff))
-    ]
+    diff_list = [None if mask[i] else round(float(diff[i]), 3) for i in range(len(diff))]
 
     valid = diff[~mask]
     vmin = float(np.min(valid)) if len(valid) > 0 else 0.0
@@ -138,9 +135,7 @@ def get_head_times() -> dict:
 @router.get("/head-range")
 def get_head_range(
     layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
-    max_frames: int = Query(
-        default=50, ge=0, description="Max frames to sample (0=all)"
-    ),
+    max_frames: int = Query(default=50, ge=0, description="Max frames to sample (0=all)"),
 ) -> dict:
     """Get the global head value range across all timesteps for a layer.
 
@@ -150,9 +145,7 @@ def get_head_range(
     if loader is None:
         raise HTTPException(status_code=404, detail="No head data available")
 
-    lo, hi, n_scanned = loader.get_layer_range(
-        layer=layer, max_frames=max_frames
-    )
+    lo, hi, n_scanned = loader.get_layer_range(layer=layer, max_frames=max_frames)
 
     return {
         "layer": layer,
@@ -251,9 +244,7 @@ def get_hydrograph(
     elif type == "stream":
         reader = model_state.get_stream_hydrograph_reader()
         if reader is None or reader.n_timesteps == 0:
-            raise HTTPException(
-                status_code=404, detail="No stream hydrograph data available"
-            )
+            raise HTTPException(status_code=404, detail="No stream hydrograph data available")
 
         # location_id is the stream node ID — find its column
         col_idx = reader.find_column_by_node_id(location_id)
@@ -270,8 +261,7 @@ def get_hydrograph(
 
         # Get location name from stream specs
         name = f"Stream Node {location_id}"
-        stream_specs = (model.metadata.get("stream_hydrograph_specs", [])
-                        if model else [])
+        stream_specs = model.metadata.get("stream_hydrograph_specs", []) if model else []
         for spec in stream_specs:
             if spec["node_id"] == location_id:
                 name = spec.get("name", name)
@@ -279,8 +269,7 @@ def get_hydrograph(
 
         # Stream files may have flow + stage columns (interleaved or sequential)
         # Check hydrograph_output_type from metadata
-        output_type = (model.metadata.get("stream_hydrograph_output_type", 0)
-                       if model else 0)
+        output_type = model.metadata.get("stream_hydrograph_output_type", 0) if model else 0
         n_specs = len(stream_specs) if stream_specs else 0
 
         times, flow_values = reader.get_time_series(col_idx)
@@ -317,7 +306,7 @@ def get_hydrograph(
 
         # location_id matches the 1-based hydrograph spec index
         # Try column index first, then node ID lookup
-        col_idx: int | None = None
+        subs_col_idx: int | None = None
 
         # Check subsidence hydrograph specs for matching ID
         subs_config = None
@@ -328,27 +317,27 @@ def get_hydrograph(
         # Match by spec ID (1-based)
         for i, spec in enumerate(specs):
             if spec.id == location_id:
-                col_idx = i
+                subs_col_idx = i
                 break
 
         # Fallback: try as 1-based column index
-        if col_idx is None:
+        if subs_col_idx is None:
             candidate = location_id - 1
             if 0 <= candidate < reader.n_columns:
-                col_idx = candidate
+                subs_col_idx = candidate
 
-        if col_idx is None:
+        if subs_col_idx is None:
             raise HTTPException(
                 status_code=404,
                 detail=f"Subsidence location {location_id} not found in hydrograph data",
             )
 
-        times, values = reader.get_time_series(col_idx)
+        times, subs_values = reader.get_time_series(subs_col_idx)
 
         name = f"Subsidence Obs {location_id}"
         layer = 1
-        if col_idx < len(specs):
-            spec = specs[col_idx]
+        if subs_col_idx < len(specs):
+            spec = specs[subs_col_idx]
             name = spec.name or name
             layer = spec.layer
 
@@ -358,7 +347,7 @@ def get_hydrograph(
             "type": "subsidence",
             "layer": layer,
             "times": times,
-            "values": _sanitize_values(values),
+            "values": _sanitize_values(subs_values),
             "units": "ft",
         }
 
@@ -436,10 +425,12 @@ def get_gw_hydrograph_all_layers(
 
     layers_data: list[dict] = []
     for layer_idx in range(n_layers):
-        layers_data.append({
-            "layer": layer_idx + 1,
-            "values": _sanitize_values(layer_values[layer_idx]),
-        })
+        layers_data.append(
+            {
+                "layer": layer_idx + 1,
+                "values": _sanitize_values(layer_values[layer_idx]),
+            }
+        )
 
     return {
         "location_id": location_id,
@@ -511,35 +502,37 @@ def get_hydrographs_multi(
                             frame = loader.get_frame(ts)
                             v = float(frame[node_idx, layer_idx])
                             values.append(None if v < -9000 else round(v, 3))
-                        results.append({
-                            "location_id": loc_id,
-                            "name": name,
-                            "type": "gw",
-                            "layer": layer,
-                            "times": times_iso,
-                            "values": _sanitize_values(values),
-                            "units": "ft",
-                        })
+                        results.append(
+                            {
+                                "location_id": loc_id,
+                                "name": name,
+                                "type": "gw",
+                                "layer": layer,
+                                "times": times_iso,
+                                "values": _sanitize_values(values),
+                                "units": "ft",
+                            }
+                        )
                         continue
 
             # Fall back to hydrograph reader
             if reader is not None and reader.n_timesteps > 0:
                 if 0 <= column_index < reader.n_columns:
                     times_raw, values_raw = reader.get_time_series(column_index)
-                    results.append({
-                        "location_id": loc_id,
-                        "name": name,
-                        "type": "gw",
-                        "layer": layer,
-                        "times": times_raw,
-                        "values": _sanitize_values(values_raw),
-                        "units": "ft",
-                    })
+                    results.append(
+                        {
+                            "location_id": loc_id,
+                            "name": name,
+                            "type": "gw",
+                            "layer": layer,
+                            "times": times_raw,
+                            "values": _sanitize_values(values_raw),
+                            "units": "ft",
+                        }
+                    )
 
         if not results and (reader is None or reader.n_timesteps == 0):
-            raise HTTPException(
-                status_code=404, detail="No GW hydrograph data available"
-            )
+            raise HTTPException(status_code=404, detail="No GW hydrograph data available")
 
     elif type == "stream":
         reader = model_state.get_stream_hydrograph_reader()
@@ -556,27 +549,25 @@ def get_hydrographs_multi(
             if col_idx is None:
                 continue
 
-            times, values = reader.get_time_series(col_idx)
+            stream_times, stream_values = reader.get_time_series(col_idx)
 
             name = f"Stream Node {loc_id}"
-            stream_specs = (
-                model.metadata.get("stream_hydrograph_specs", [])
-                if model
-                else []
-            )
+            stream_specs = model.metadata.get("stream_hydrograph_specs", []) if model else []
             for spec in stream_specs:
                 if spec["node_id"] == loc_id:
                     name = spec.get("name", name)
                     break
 
-            results.append({
-                "location_id": loc_id,
-                "name": name,
-                "type": "stream",
-                "times": times,
-                "values": _sanitize_values(values),
-                "units": "cfs",
-            })
+            results.append(
+                {
+                    "location_id": loc_id,
+                    "name": name,
+                    "type": "stream",
+                    "times": stream_times,
+                    "values": _sanitize_values(stream_values),
+                    "units": "cfs",
+                }
+            )
     else:
         raise HTTPException(
             status_code=400,
@@ -630,10 +621,7 @@ def get_drawdown(
 
         # Mask dry cells
         mask = (ref_values < -9000) | (vals < -9000)
-        diff_list = [
-            None if mask[i] else round(float(diff[i]), 2)
-            for i in range(len(diff))
-        ]
+        diff_list = [None if mask[i] else round(float(diff[i]), 2) for i in range(len(diff))]
 
         valid = diff[~mask]
         vmin = float(np.min(valid)) if len(valid) > 0 else 0.0
@@ -641,13 +629,15 @@ def get_drawdown(
 
         dt = loader.times[ts] if ts < len(loader.times) else None
 
-        timesteps.append({
-            "timestep": ts,
-            "datetime": dt.isoformat() if dt else None,
-            "values": diff_list,
-            "min": round(vmin, 2),
-            "max": round(vmax, 2),
-        })
+        timesteps.append(
+            {
+                "timestep": ts,
+                "datetime": dt.isoformat() if dt else None,
+                "values": diff_list,
+                "min": round(vmin, 2),
+                "max": round(vmax, 2),
+            }
+        )
 
     return {
         "layer": layer,

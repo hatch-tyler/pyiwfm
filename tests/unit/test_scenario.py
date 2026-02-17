@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -140,14 +139,10 @@ class TestScenarioManager:
         # Create mock input files
         (baseline / "Simulation.in").write_text("C Simulation main file\n")
         (baseline / "Pumping.dat").write_text(
-            "C Pumping data\n"
-            "10/01/2000  100.0  200.0  300.0\n"
-            "11/01/2000  110.0  220.0  330.0\n"
+            "C Pumping data\n10/01/2000  100.0  200.0  300.0\n11/01/2000  110.0  220.0  330.0\n"
         )
         (baseline / "Diversions.dat").write_text(
-            "C Diversion data\n"
-            "10/01/2000  50.0\n"
-            "11/01/2000  55.0\n"
+            "C Diversion data\n10/01/2000  50.0\n11/01/2000  55.0\n"
         )
 
         return baseline
@@ -226,7 +221,7 @@ class TestScenarioManager:
         # Check that diversion values were zeroed
         div_content = (scenario_dir / "Diversions.dat").read_text()
         # Values should be 0
-        lines = [l for l in div_content.splitlines() if not l.strip().startswith("C")]
+        lines = [line for line in div_content.splitlines() if not line.strip().startswith("C")]
         for line in lines:
             if line.strip():
                 parts = line.split()
@@ -368,9 +363,7 @@ class TestScenarioManagerTimeSeries:
 
         # Create recharge file
         (baseline / "DeepPerc.dat").write_text(
-            "C Deep percolation\n"
-            "10/01/2000_24:00  500.0\n"
-            "11/01/2000_24:00  600.0\n"
+            "C Deep percolation\n10/01/2000_24:00  500.0\n11/01/2000_24:00  600.0\n"
         )
 
         return baseline
@@ -592,10 +585,7 @@ class TestScenarioManagerCreateDir:
         baseline = tmp_path / "baseline"
         baseline.mkdir()
         (baseline / "Simulation.in").write_text("C Simulation main file\n")
-        (baseline / "Pumping.dat").write_text(
-            "C Pumping data\n"
-            "10/01/2000  100.0  200.0  300.0\n"
-        )
+        (baseline / "Pumping.dat").write_text("C Pumping data\n10/01/2000  100.0  200.0  300.0\n")
         return baseline
 
     def test_create_scenario_dir_with_copy_outputs_true(self, tmp_path):
@@ -623,7 +613,7 @@ class TestScenarioManagerCreateDir:
         scenario_dir = manager.create_scenario_dir(scenario)
 
         content = (scenario_dir / "Pumping.dat").read_text()
-        lines = [l for l in content.splitlines() if not l.strip().startswith("C")]
+        lines = [line for line in content.splitlines() if not line.strip().startswith("C")]
         for line in lines:
             if line.strip():
                 parts = line.split()
@@ -657,15 +647,12 @@ class TestApplyFactorToTimeseries:
         """Test that dict factor applies column-specific multipliers."""
         manager, work_dir = manager_and_dir
         ts_file = work_dir / "data.dat"
-        ts_file.write_text(
-            "C Header\n"
-            "10/01/2000  100.0  200.0  300.0\n"
-        )
+        ts_file.write_text("C Header\n10/01/2000  100.0  200.0  300.0\n")
         # Factor dict: column 1 gets 0.5, column 2 gets 2.0, column 3 stays 1.0 (default)
         manager._apply_factor_to_timeseries(ts_file, {1: 0.5, 2: 2.0})
 
         content = ts_file.read_text()
-        lines = [l for l in content.splitlines() if not l.strip().startswith("C")]
+        lines = [line for line in content.splitlines() if not line.strip().startswith("C")]
         parts = lines[0].split()
         assert float(parts[1]) == pytest.approx(50.0, rel=1e-4)
         assert float(parts[2]) == pytest.approx(400.0, rel=1e-4)
@@ -701,16 +688,13 @@ class TestApplyFactorToTimeseries:
         """Test that lines with only one part are preserved as-is."""
         manager, work_dir = manager_and_dir
         ts_file = work_dir / "data.dat"
-        ts_file.write_text(
-            "HEADER_ONLY\n"
-            "10/01/2000  100.0\n"
-        )
+        ts_file.write_text("HEADER_ONLY\n10/01/2000  100.0\n")
         manager._apply_factor_to_timeseries(ts_file, 2.0)
 
         content = ts_file.read_text()
         assert "HEADER_ONLY" in content
         lines = content.splitlines()
-        data_line = [l for l in lines if "10/01/2000" in l][0]
+        data_line = [line for line in lines if "10/01/2000" in line][0]
         parts = data_line.split()
         assert float(parts[1]) == pytest.approx(200.0, rel=1e-4)
 
@@ -718,9 +702,7 @@ class TestApplyFactorToTimeseries:
         """Test that non-numeric values in data lines are preserved unchanged."""
         manager, work_dir = manager_and_dir
         ts_file = work_dir / "data.dat"
-        ts_file.write_text(
-            "10/01/2000  100.0  LABEL  300.0\n"
-        )
+        ts_file.write_text("10/01/2000  100.0  LABEL  300.0\n")
         manager._apply_factor_to_timeseries(ts_file, 2.0)
 
         content = ts_file.read_text()
@@ -733,9 +715,7 @@ class TestApplyFactorToTimeseries:
         """Test that factor of 0.0 zeroes all values."""
         manager, work_dir = manager_and_dir
         ts_file = work_dir / "data.dat"
-        ts_file.write_text(
-            "10/01/2000  100.0  200.0\n"
-        )
+        ts_file.write_text("10/01/2000  100.0  200.0\n")
         manager._apply_factor_to_timeseries(ts_file, 0.0)
 
         content = ts_file.read_text()
@@ -768,14 +748,9 @@ class TestModifyStreamInflow:
         baseline.mkdir()
         (baseline / "Simulation.in").write_text("C Main\n")
         (baseline / "StreamInflow.dat").write_text(
-            "C Stream inflow\n"
-            "10/01/2000  500.0\n"
-            "11/01/2000  600.0\n"
+            "C Stream inflow\n10/01/2000  500.0\n11/01/2000  600.0\n"
         )
-        (baseline / "BoundaryInflows.dat").write_text(
-            "C Boundary inflows\n"
-            "10/01/2000  750.0\n"
-        )
+        (baseline / "BoundaryInflows.dat").write_text("C Boundary inflows\n10/01/2000  750.0\n")
         return baseline
 
     def test_modify_stream_inflow(self, baseline_with_inflow):
@@ -788,7 +763,7 @@ class TestModifyStreamInflow:
         scenario_dir = manager.create_scenario_dir(scenario)
 
         content = (scenario_dir / "StreamInflow.dat").read_text()
-        lines = [l for l in content.splitlines() if not l.strip().startswith("C")]
+        lines = [line for line in content.splitlines() if not line.strip().startswith("C")]
         parts = lines[0].split()
         assert float(parts[1]) == pytest.approx(250.0, rel=1e-4)
 
@@ -802,7 +777,7 @@ class TestModifyStreamInflow:
         scenario_dir = manager.create_scenario_dir(scenario)
 
         content = (scenario_dir / "BoundaryInflows.dat").read_text()
-        lines = [l for l in content.splitlines() if not l.strip().startswith("C")]
+        lines = [line for line in content.splitlines() if not line.strip().startswith("C")]
         parts = lines[0].split()
         assert float(parts[1]) == pytest.approx(1500.0, rel=1e-4)
 
@@ -815,10 +790,7 @@ class TestModifyRecharge:
         baseline = tmp_path / "baseline"
         baseline.mkdir()
         (baseline / "Simulation.in").write_text("C Main\n")
-        (baseline / "Recharge.dat").write_text(
-            "C Recharge data\n"
-            "10/01/2000  400.0\n"
-        )
+        (baseline / "Recharge.dat").write_text("C Recharge data\n10/01/2000  400.0\n")
 
         manager = ScenarioManager(baseline)
         scenario = Scenario(
@@ -828,7 +800,7 @@ class TestModifyRecharge:
         scenario_dir = manager.create_scenario_dir(scenario)
 
         content = (scenario_dir / "Recharge.dat").read_text()
-        lines = [l for l in content.splitlines() if not l.strip().startswith("C")]
+        lines = [line for line in content.splitlines() if not line.strip().startswith("C")]
         parts = lines[0].split()
         assert float(parts[1]) == pytest.approx(1200.0, rel=1e-4)
 
@@ -842,22 +814,10 @@ class TestApplyModifications:
         baseline = tmp_path / "baseline"
         baseline.mkdir()
         (baseline / "Simulation.in").write_text("C Main\n")
-        (baseline / "Pumping.dat").write_text(
-            "C Pumping\n"
-            "10/01/2000  100.0\n"
-        )
-        (baseline / "Diversions.dat").write_text(
-            "C Diversions\n"
-            "10/01/2000  50.0\n"
-        )
-        (baseline / "Recharge.dat").write_text(
-            "C Recharge\n"
-            "10/01/2000  200.0\n"
-        )
-        (baseline / "StreamInflow.dat").write_text(
-            "C Stream inflow\n"
-            "10/01/2000  300.0\n"
-        )
+        (baseline / "Pumping.dat").write_text("C Pumping\n10/01/2000  100.0\n")
+        (baseline / "Diversions.dat").write_text("C Diversions\n10/01/2000  50.0\n")
+        (baseline / "Recharge.dat").write_text("C Recharge\n10/01/2000  200.0\n")
+        (baseline / "StreamInflow.dat").write_text("C Stream inflow\n10/01/2000  300.0\n")
         return baseline
 
     def test_multiple_modifications_applied(self, rich_baseline):
@@ -876,25 +836,31 @@ class TestApplyModifications:
 
         # Check pumping
         pump_content = (scenario_dir / "Pumping.dat").read_text()
-        pump_lines = [l for l in pump_content.splitlines() if not l.strip().startswith("C")]
+        pump_lines = [
+            line for line in pump_content.splitlines() if not line.strip().startswith("C")
+        ]
         # Factor may be applied multiple times due to overlapping glob patterns
         pump_val = float(pump_lines[0].split()[1])
         assert pump_val < 100.0  # Was 100.0, factor 0.5 applied
 
         # Check diversions
         div_content = (scenario_dir / "Diversions.dat").read_text()
-        div_lines = [l for l in div_content.splitlines() if not l.strip().startswith("C")]
+        div_lines = [line for line in div_content.splitlines() if not line.strip().startswith("C")]
         assert float(div_lines[0].split()[1]) == pytest.approx(0.0, abs=1e-6)
 
         # Check recharge
         rech_content = (scenario_dir / "Recharge.dat").read_text()
-        rech_lines = [l for l in rech_content.splitlines() if not l.strip().startswith("C")]
+        rech_lines = [
+            line for line in rech_content.splitlines() if not line.strip().startswith("C")
+        ]
         rech_val = float(rech_lines[0].split()[1])
         assert rech_val > 200.0  # Was 200.0, factor 2.0 applied
 
         # Check stream inflow
         inflow_content = (scenario_dir / "StreamInflow.dat").read_text()
-        inflow_lines = [l for l in inflow_content.splitlines() if not l.strip().startswith("C")]
+        inflow_lines = [
+            line for line in inflow_content.splitlines() if not line.strip().startswith("C")
+        ]
         inflow_val = float(inflow_lines[0].split()[1])
         assert inflow_val > 300.0  # Was 300.0, factor 1.5 applied
 
@@ -928,7 +894,9 @@ class TestApplyModifications:
         assert (scenario_dir / "custom_marker.txt").exists()
         # Pumping should also be modified
         pump_content = (scenario_dir / "Pumping.dat").read_text()
-        pump_lines = [l for l in pump_content.splitlines() if not l.strip().startswith("C")]
+        pump_lines = [
+            line for line in pump_content.splitlines() if not line.strip().startswith("C")
+        ]
         pump_val = float(pump_lines[0].split()[1])
         assert pump_val < 100.0  # Was 100.0, factor 0.5 applied
 
@@ -951,9 +919,7 @@ class TestRunScenario:
         scenario = Scenario(name="run_test")
 
         mock_runner = MagicMock()
-        mock_runner.run_simulation.return_value = SimulationResult(
-            success=True, return_code=0
-        )
+        mock_runner.run_simulation.return_value = SimulationResult(success=True, return_code=0)
 
         result = manager.run_scenario(scenario, runner=mock_runner)
 
@@ -966,9 +932,7 @@ class TestRunScenario:
     def test_run_scenario_creates_runner_when_none(self, mock_runner_cls, baseline_dir):
         """Test that run_scenario creates a runner when none is provided."""
         mock_instance = MagicMock()
-        mock_instance.run_simulation.return_value = SimulationResult(
-            success=True, return_code=0
-        )
+        mock_instance.run_simulation.return_value = SimulationResult(success=True, return_code=0)
         mock_runner_cls.return_value = mock_instance
 
         manager = ScenarioManager(baseline_dir)
@@ -1233,10 +1197,7 @@ class TestModifyDiversions:
         baseline = tmp_path / "baseline"
         baseline.mkdir()
         (baseline / "Simulation.in").write_text("C Main\n")
-        (baseline / "Diversion_Specs.dat").write_text(
-            "C Diversion specs\n"
-            "10/01/2000  80.0\n"
-        )
+        (baseline / "Diversion_Specs.dat").write_text("C Diversion specs\n10/01/2000  80.0\n")
 
         manager = ScenarioManager(baseline)
         scenario = Scenario(
@@ -1246,7 +1207,7 @@ class TestModifyDiversions:
         scenario_dir = manager.create_scenario_dir(scenario)
 
         content = (scenario_dir / "Diversion_Specs.dat").read_text()
-        lines = [l for l in content.splitlines() if not l.strip().startswith("C")]
+        lines = [line for line in content.splitlines() if not line.strip().startswith("C")]
         parts = lines[0].split()
         assert float(parts[1]) == pytest.approx(20.0, rel=1e-4)
 
@@ -1259,10 +1220,7 @@ class TestModifyPumpingDict:
         baseline = tmp_path / "baseline"
         baseline.mkdir()
         (baseline / "Simulation.in").write_text("C Main\n")
-        (baseline / "Pumping.dat").write_text(
-            "C Pumping\n"
-            "10/01/2000  100.0  200.0  300.0\n"
-        )
+        (baseline / "Pumping.dat").write_text("C Pumping\n10/01/2000  100.0  200.0  300.0\n")
 
         manager = ScenarioManager(baseline)
         scenario = Scenario(
@@ -1272,7 +1230,7 @@ class TestModifyPumpingDict:
         scenario_dir = manager.create_scenario_dir(scenario)
 
         content = (scenario_dir / "Pumping.dat").read_text()
-        lines = [l for l in content.splitlines() if not l.strip().startswith("C")]
+        lines = [line for line in content.splitlines() if not line.strip().startswith("C")]
         parts = lines[0].split()
         # Column 1 => factor 0.5 applied (may be multiple times)
         assert float(parts[1]) < 100.0

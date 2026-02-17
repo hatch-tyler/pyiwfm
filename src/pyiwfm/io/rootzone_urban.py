@@ -18,12 +18,14 @@ from pathlib import Path
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     LineBuffer as _LineBuffer,
+)
+from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
 )
-
 
 # ── Data classes ──────────────────────────────────────────────────────
 
@@ -122,12 +124,8 @@ class UrbanLandUseConfig:
     demand_file: Path | None = None
     water_use_specs_file: Path | None = None
     management: list[UrbanManagementRow] = field(default_factory=list)
-    surface_flow_destinations: list[SurfaceFlowDestRow] = field(
-        default_factory=list
-    )
-    initial_conditions: list[UrbanInitialConditionRow] = field(
-        default_factory=list
-    )
+    surface_flow_destinations: list[SurfaceFlowDestRow] = field(default_factory=list)
+    initial_conditions: list[UrbanInitialConditionRow] = field(default_factory=list)
 
 
 # ── Reader ────────────────────────────────────────────────────────────
@@ -171,7 +169,7 @@ class UrbanLandUseReader:
         if base_dir is None:
             base_dir = filepath.parent
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             lines = f.readlines()
         buf = _LineBuffer(lines)
         config = UrbanLandUseConfig()
@@ -235,7 +233,10 @@ class UrbanLandUseReader:
         return base_dir / p
 
     def _read_rows(
-        self, buf: _LineBuffer, min_cols: int, n_expected: int | None = None,
+        self,
+        buf: _LineBuffer,
+        min_cols: int,
+        n_expected: int | None = None,
     ) -> list[list[str]]:
         """Read tabular data rows with comment-based section boundaries."""
         rows: list[list[str]] = []
@@ -276,16 +277,12 @@ class UrbanLandUseReader:
             try:
                 sub_id = int(parts[0])
                 vals = [float(v) for v in parts[1:]]
-                result.append(
-                    UrbanCurveNumberRow(subregion_id=sub_id, cn_values=vals)
-                )
+                result.append(UrbanCurveNumberRow(subregion_id=sub_id, cn_values=vals))
             except ValueError:
                 break
         return result
 
-    def _read_management_rows(
-        self, buf: _LineBuffer
-    ) -> list[UrbanManagementRow]:
+    def _read_management_rows(self, buf: _LineBuffer) -> list[UrbanManagementRow]:
         raw_rows = self._read_rows(buf, min_cols=7, n_expected=self._n_sub)
         result: list[UrbanManagementRow] = []
         for parts in raw_rows:
@@ -306,9 +303,7 @@ class UrbanLandUseReader:
                 break
         return result
 
-    def _read_dest_rows(
-        self, buf: _LineBuffer
-    ) -> list[SurfaceFlowDestRow]:
+    def _read_dest_rows(self, buf: _LineBuffer) -> list[SurfaceFlowDestRow]:
         raw_rows = self._read_rows(buf, min_cols=3, n_expected=self._n_elem)
         result: list[SurfaceFlowDestRow] = []
         for parts in raw_rows:
@@ -327,9 +322,7 @@ class UrbanLandUseReader:
                 break
         return result
 
-    def _read_initial_conditions(
-        self, buf: _LineBuffer
-    ) -> list[UrbanInitialConditionRow]:
+    def _read_initial_conditions(self, buf: _LineBuffer) -> list[UrbanInitialConditionRow]:
         raw_rows = self._read_rows(buf, min_cols=3, n_expected=self._n_sub)
         result: list[UrbanInitialConditionRow] = []
         for parts in raw_rows:
@@ -370,7 +363,5 @@ def read_urban_landuse(
     Returns:
         :class:`UrbanLandUseConfig` with parsed values.
     """
-    reader = UrbanLandUseReader(
-        n_subregions=n_subregions, n_elements=n_elements
-    )
+    reader = UrbanLandUseReader(n_subregions=n_subregions, n_elements=n_elements)
     return reader.read(filepath, base_dir)

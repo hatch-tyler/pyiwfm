@@ -14,7 +14,11 @@ from pathlib import Path
 from pyiwfm.io.gw_pumping import PumpingConfig
 from pyiwfm.io.iwfm_writer import (
     ensure_parent_dir as _ensure_parent_dir,
+)
+from pyiwfm.io.iwfm_writer import (
     write_comment as _write_comment,
+)
+from pyiwfm.io.iwfm_writer import (
     write_value as _write_value,
 )
 
@@ -45,9 +49,7 @@ def write_pumping_main(config: PumpingConfig, filepath: Path | str) -> Path:
     return filepath
 
 
-def write_well_spec_file(
-    config: PumpingConfig, filepath: Path | str
-) -> Path:
+def write_well_spec_file(config: PumpingConfig, filepath: Path | str) -> Path:
     """Write the well specification file.
 
     Args:
@@ -72,8 +74,9 @@ def write_well_spec_file(
             x = ws.x / config.factor_xy if config.factor_xy else ws.x
             y = ws.y / config.factor_xy if config.factor_xy else ws.y
             # Radius was stored as diameter/2 * factor, write back as diameter
-            diameter = (ws.radius * 2.0 / config.factor_radius
-                        if config.factor_radius else ws.radius * 2.0)
+            diameter = (
+                ws.radius * 2.0 / config.factor_radius if config.factor_radius else ws.radius * 2.0
+            )
             pt = ws.perf_top / config.factor_length if config.factor_length else ws.perf_top
             pb = ws.perf_bottom / config.factor_length if config.factor_length else ws.perf_bottom
             name_part = f"  / {ws.name}" if ws.name else ""
@@ -104,9 +107,7 @@ def write_well_spec_file(
     return filepath
 
 
-def write_elem_pump_file(
-    config: PumpingConfig, filepath: Path | str, n_layers: int = 1
-) -> Path:
+def write_elem_pump_file(config: PumpingConfig, filepath: Path | str, n_layers: int = 1) -> Path:
     """Write the element pumping specification file.
 
     Args:

@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 if TYPE_CHECKING:
-    from pyiwfm.core.mesh import AppGrid, Node, Element
+    from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.stratigraphy import Stratigraphy
 
 
@@ -189,13 +189,13 @@ def assert_arrays_equal(a: np.ndarray, b: np.ndarray, rtol: float = 1e-7) -> Non
     np.testing.assert_allclose(a, b, rtol=rtol)
 
 
-def make_simple_grid() -> "AppGrid":
+def make_simple_grid() -> AppGrid:
     """
     Create a simple 2x2 quad grid for testing.
 
     Returns an AppGrid with 9 nodes and 4 quadrilateral elements.
     """
-    from pyiwfm.core.mesh import AppGrid, Node, Element, Subregion
+    from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
 
     # Create nodes
     nodes = {}
@@ -242,7 +242,7 @@ def mock_model_dir(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def make_simple_stratigraphy(n_nodes: int = 9, n_layers: int = 2) -> "Stratigraphy":
+def make_simple_stratigraphy(n_nodes: int = 9, n_layers: int = 2) -> Stratigraphy:
     """
     Create a simple stratigraphy for testing.
 

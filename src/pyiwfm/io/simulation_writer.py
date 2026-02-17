@@ -9,7 +9,7 @@ component input files.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -33,6 +33,7 @@ class SimulationMainConfig:
     output_dir : Path
         Base output directory for simulation files
     """
+
     output_dir: Path
 
     # File names
@@ -60,7 +61,7 @@ class SimulationMainConfig:
 
     # Output options
     istrt: int = 0  # Restart file generation
-    kdeb: int = 0   # Debug output
+    kdeb: int = 0  # Debug output
     cache_size: int = 500000
 
     # Solution scheme
@@ -102,7 +103,7 @@ class SimulationMainWriter(TemplateWriter):
 
     def __init__(
         self,
-        model: "IWFMModel",
+        model: IWFMModel,
         config: SimulationMainConfig,
         template_engine: TemplateEngine | None = None,
     ) -> None:
@@ -150,7 +151,7 @@ class SimulationMainWriter(TemplateWriter):
 
     def _render_simulation_main(self) -> str:
         """Render the simulation main file using Jinja2 template."""
-        generation_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         context = {
             "generation_time": generation_time,
@@ -190,7 +191,7 @@ class SimulationMainWriter(TemplateWriter):
 
 
 def write_simulation_main(
-    model: "IWFMModel",
+    model: IWFMModel,
     output_dir: Path | str,
     config: SimulationMainConfig | None = None,
 ) -> Path:

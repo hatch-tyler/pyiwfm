@@ -5,9 +5,9 @@ from __future__ import annotations
 from pyiwfm.mesh_generation.constraints import (
     Boundary,
     BoundarySegment,
-    StreamConstraint,
-    RefinementZone,
     PointConstraint,
+    RefinementZone,
+    StreamConstraint,
 )
 from pyiwfm.mesh_generation.generators import (
     MeshGenerator,

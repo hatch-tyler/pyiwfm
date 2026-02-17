@@ -13,9 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pytest
-
 
 # ============================================================================
 # Phase 4: Component class tests
@@ -106,7 +104,10 @@ class TestWellExpanded:
         from pyiwfm.components.groundwater import Well
 
         w = Well(
-            id=1, x=100.0, y=200.0, element=5,
+            id=1,
+            x=100.0,
+            y=200.0,
+            element=5,
             name="Test Well",
             radius=0.5,
             pump_column=3,
@@ -140,10 +141,15 @@ class TestElementPumpingExpanded:
         from pyiwfm.components.groundwater import ElementPumping
 
         ep = ElementPumping(
-            element_id=10, layer=0, pump_rate=0.0,
-            pump_column=5, pump_fraction=0.5,
-            dist_method=3, layer_factors=[0.3, 0.7],
-            dest_type=2, dest_id=15,
+            element_id=10,
+            layer=0,
+            pump_rate=0.0,
+            pump_column=5,
+            pump_fraction=0.5,
+            dist_method=3,
+            layer_factors=[0.3, 0.7],
+            dest_type=2,
+            dest_id=15,
         )
         assert ep.pump_column == 5
         assert ep.layer_factors == [0.3, 0.7]
@@ -156,10 +162,13 @@ class TestSubsidenceExpanded:
         from pyiwfm.components.groundwater import Subsidence
 
         s = Subsidence(
-            element=100, layer=1,
-            elastic_storage=0.001, inelastic_storage=0.01,
+            element=100,
+            layer=1,
+            elastic_storage=0.001,
+            inelastic_storage=0.01,
             preconsolidation_head=50.0,
-            interbed_thick=10.0, interbed_thick_min=2.0,
+            interbed_thick=10.0,
+            interbed_thick_min=2.0,
         )
         assert s.interbed_thick == 10.0
         assert s.interbed_thick_min == 2.0
@@ -509,7 +518,12 @@ class TestTileDrainWriterRoundtrip:
     """Test tile drain writer → reader roundtrip."""
 
     def test_roundtrip(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_tiledrain import TileDrainConfig, TileDrainSpec, SubIrrigationSpec, TileDrainReader
+        from pyiwfm.io.gw_tiledrain import (
+            SubIrrigationSpec,
+            TileDrainConfig,
+            TileDrainReader,
+            TileDrainSpec,
+        )
         from pyiwfm.io.gw_tiledrain_writer import write_tile_drain_file
 
         config = TileDrainConfig(
@@ -519,8 +533,12 @@ class TestTileDrainWriterRoundtrip:
             drain_conductance_factor=1.0,
             drain_time_unit="1DAY",
             tile_drains=[
-                TileDrainSpec(id=1, gw_node=10, elevation=100.0, conductance=0.5, dest_type=2, dest_id=5),
-                TileDrainSpec(id=2, gw_node=20, elevation=110.0, conductance=0.6, dest_type=1, dest_id=0),
+                TileDrainSpec(
+                    id=1, gw_node=10, elevation=100.0, conductance=0.5, dest_type=2, dest_id=5
+                ),
+                TileDrainSpec(
+                    id=2, gw_node=20, elevation=110.0, conductance=0.6, dest_type=1, dest_id=0
+                ),
             ],
             n_sub_irrigation=1,
             subirig_height_factor=1.0,
@@ -549,10 +567,12 @@ class TestBoundaryWriterRoundtrip:
 
     def test_constrained_gh_roundtrip(self, tmp_path: Path) -> None:
         from pyiwfm.io.gw_boundary import (
-            GWBoundaryConfig, ConstrainedGeneralHeadBC, GWBoundaryReader,
+            ConstrainedGeneralHeadBC,
+            GWBoundaryConfig,
+            GWBoundaryReader,
         )
         from pyiwfm.io.gw_boundary_writer import (
-            write_bc_main, write_constrained_gh_bc,
+            write_constrained_gh_bc,
         )
 
         cgh_file = tmp_path / "cgh.dat"
@@ -560,10 +580,14 @@ class TestBoundaryWriterRoundtrip:
             cgh_file=cgh_file,
             constrained_gh_bcs=[
                 ConstrainedGeneralHeadBC(
-                    node_id=100, layer=1, ts_column=3,
-                    external_head=50.0, conductance=0.5,
+                    node_id=100,
+                    layer=1,
+                    ts_column=3,
+                    external_head=50.0,
+                    conductance=0.5,
                     constraining_head=30.0,
-                    max_flow_ts_column=5, max_flow=100.0,
+                    max_flow_ts_column=5,
+                    max_flow=100.0,
                 ),
             ],
             cgh_head_factor=1.0,
@@ -590,7 +614,10 @@ class TestPumpingWriterRoundtrip:
 
     def test_well_spec_roundtrip(self, tmp_path: Path) -> None:
         from pyiwfm.io.gw_pumping import (
-            PumpingConfig, WellSpec, WellPumpingSpec, PumpingReader,
+            PumpingConfig,
+            PumpingReader,
+            WellPumpingSpec,
+            WellSpec,
         )
         from pyiwfm.io.gw_pumping_writer import write_well_spec_file
 
@@ -599,7 +626,15 @@ class TestPumpingWriterRoundtrip:
             factor_radius=1.0,
             factor_length=1.0,
             well_specs=[
-                WellSpec(id=1, x=100.0, y=200.0, radius=0.5, perf_top=50.0, perf_bottom=10.0, name="TestWell"),
+                WellSpec(
+                    id=1,
+                    x=100.0,
+                    y=200.0,
+                    radius=0.5,
+                    perf_top=50.0,
+                    perf_bottom=10.0,
+                    name="TestWell",
+                ),
             ],
             well_pumping_specs=[
                 WellPumpingSpec(well_id=1, pump_column=3, pump_fraction=0.8, dist_method=2),
@@ -632,9 +667,7 @@ class TestSubsidenceHydrographSpec:
     def test_create(self) -> None:
         from pyiwfm.io.gw_subsidence import SubsidenceHydrographSpec
 
-        spec = SubsidenceHydrographSpec(
-            id=1, hydtyp=0, layer=2, x=100.0, y=200.0, name="InSAR_1"
-        )
+        spec = SubsidenceHydrographSpec(id=1, hydtyp=0, layer=2, x=100.0, y=200.0, name="InSAR_1")
         assert spec.id == 1
         assert spec.name == "InSAR_1"
         assert spec.layer == 2

@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -110,9 +110,7 @@ class SectionComments:
         key = f"{data_type}:{data_id}"
         return self.data_comments.get(key)
 
-    def set_data_comment(
-        self, data_type: str, data_id: int | str, comment: str
-    ) -> None:
+    def set_data_comment(self, data_type: str, data_id: int | str, comment: str) -> None:
         """Set comment for a specific data item.
 
         Args:
@@ -161,9 +159,7 @@ class CommentMetadata:
             "iwfm_version": self.iwfm_version,
             "preserve_mode": self.preserve_mode.value,
             "header_block": self.header_block,
-            "sections": {
-                name: section.to_dict() for name, section in self.sections.items()
-            },
+            "sections": {name: section.to_dict() for name, section in self.sections.items()},
             "file_metadata": self.file_metadata,
         }
 
@@ -210,7 +206,7 @@ class CommentMetadata:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(self.to_dict(), f, indent=2)
             logger.debug(f"Saved comment metadata to {path}")
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Failed to save comment metadata to {path}: {e}")
             raise
 
@@ -231,10 +227,10 @@ class CommentMetadata:
             return None
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             return cls.from_dict(data)
-        except (IOError, json.JSONDecodeError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.warning(f"Failed to load comment metadata from {path}: {e}")
             return None
 

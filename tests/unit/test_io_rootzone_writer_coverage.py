@@ -19,12 +19,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from pyiwfm.io.rootzone_writer import (
-    RootZoneWriterConfig,
     RootZoneComponentWriter,
+    RootZoneWriterConfig,
     _sp_val,
     write_rootzone_component,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -80,10 +79,16 @@ def model_with_rootzone():
     # Root zone
     rootzone = MagicMock()
     sp1 = SimpleNamespace(
-        wilting_point=0.1, field_capacity=0.25, porosity=0.50,
-        lambda_param=0.7, saturated_kv=3.0, k_ponded=-1.0,
-        kunsat_method=2, capillary_rise=0.5,
-        precip_column=1, precip_factor=1.0,
+        wilting_point=0.1,
+        field_capacity=0.25,
+        porosity=0.50,
+        lambda_param=0.7,
+        saturated_kv=3.0,
+        k_ponded=-1.0,
+        kunsat_method=2,
+        capillary_rise=0.5,
+        precip_column=1,
+        precip_factor=1.0,
         generic_moisture_column=0,
     )
     rootzone.soil_params = {1: sp1, 2: sp1}
@@ -208,9 +213,7 @@ class TestRootZoneWriteAll:
     ) -> None:
         """write_all(write_defaults=False) returns empty when no rootzone."""
         config = RootZoneWriterConfig(output_dir=tmp_path)
-        writer = RootZoneComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(bare_model, config, template_engine=mock_engine)
         results = writer.write_all(write_defaults=False)
         assert results == {}
 
@@ -219,9 +222,7 @@ class TestRootZoneWriteAll:
     ) -> None:
         """write_all(write_defaults=True) writes main even without rootzone."""
         config = RootZoneWriterConfig(output_dir=tmp_path)
-        writer = RootZoneComponentWriter(
-            model_with_grid, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(model_with_grid, config, template_engine=mock_engine)
         results = writer.write_all(write_defaults=True)
         assert "main" in results
         assert results["main"].exists()
@@ -231,9 +232,7 @@ class TestRootZoneWriteAll:
     ) -> None:
         """write_all() with rootzone component writes main file."""
         config = RootZoneWriterConfig(output_dir=tmp_path)
-        writer = RootZoneComponentWriter(
-            model_with_rootzone, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(model_with_rootzone, config, template_engine=mock_engine)
         results = writer.write_all()
         assert "main" in results
         assert results["main"].exists()
@@ -252,9 +251,7 @@ class TestRootZoneWriteMain:
     ) -> None:
         """write_main() creates the main output file."""
         config = RootZoneWriterConfig(output_dir=tmp_path)
-        writer = RootZoneComponentWriter(
-            model_with_grid, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(model_with_grid, config, template_engine=mock_engine)
         path = writer.write_main()
         assert path.exists()
         assert path == config.main_path
@@ -264,9 +261,7 @@ class TestRootZoneWriteMain:
     ) -> None:
         """write_main() includes soil parameter rows from rootzone data."""
         config = RootZoneWriterConfig(output_dir=tmp_path, version="4.12")
-        writer = RootZoneComponentWriter(
-            model_with_rootzone, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(model_with_rootzone, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
         # Should contain element soil parameter rows
@@ -279,11 +274,9 @@ class TestRootZoneWriteMain:
     ) -> None:
         """v4.0 format omits capillary rise column."""
         config = RootZoneWriterConfig(output_dir=tmp_path, version="4.0")
-        writer = RootZoneComponentWriter(
-            model_with_rootzone, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(model_with_rootzone, config, template_engine=mock_engine)
         path = writer.write_main()
-        content = path.read_text()
+        path.read_text()
         # v4.0 should still produce valid output
         assert path.exists()
 
@@ -292,9 +285,7 @@ class TestRootZoneWriteMain:
     ) -> None:
         """write_main() with no grid writes file with zero elements."""
         config = RootZoneWriterConfig(output_dir=tmp_path)
-        writer = RootZoneComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(bare_model, config, template_engine=mock_engine)
         path = writer.write_main()
         assert path.exists()
 
@@ -312,9 +303,7 @@ class TestRootZoneWriterMisc:
     ) -> None:
         """format property returns 'iwfm_rootzone'."""
         config = RootZoneWriterConfig(output_dir=tmp_path)
-        writer = RootZoneComponentWriter(
-            bare_model, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(bare_model, config, template_engine=mock_engine)
         assert writer.format == "iwfm_rootzone"
 
     def test_write_method_delegates(
@@ -322,9 +311,7 @@ class TestRootZoneWriterMisc:
     ) -> None:
         """write() delegates to write_all()."""
         config = RootZoneWriterConfig(output_dir=tmp_path)
-        writer = RootZoneComponentWriter(
-            model_with_grid, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(model_with_grid, config, template_engine=mock_engine)
         writer.write()
         assert config.main_path.exists()
 
@@ -332,9 +319,7 @@ class TestRootZoneWriterMisc:
         self, tmp_path: Path, bare_model: MagicMock, mock_engine: MagicMock
     ) -> None:
         """write_rootzone_component() convenience function works."""
-        with patch(
-            "pyiwfm.io.rootzone_writer.TemplateEngine", return_value=mock_engine
-        ):
+        with patch("pyiwfm.io.rootzone_writer.TemplateEngine", return_value=mock_engine):
             results = write_rootzone_component(bare_model, tmp_path)
         assert "main" in results
 
@@ -345,9 +330,7 @@ class TestRootZoneWriterMisc:
         config = RootZoneWriterConfig(output_dir=tmp_path, version="4.0")
         new_dir = tmp_path / "out2"
         new_dir.mkdir()
-        with patch(
-            "pyiwfm.io.rootzone_writer.TemplateEngine", return_value=mock_engine
-        ):
+        with patch("pyiwfm.io.rootzone_writer.TemplateEngine", return_value=mock_engine):
             results = write_rootzone_component(bare_model, new_dir, config=config)
         assert config.output_dir == new_dir
         assert "main" in results
@@ -518,9 +501,7 @@ class TestV41FormatBranch:
     ) -> None:
         """v4.1 format includes capillary rise column between RHC and IRNE."""
         config = RootZoneWriterConfig(output_dir=tmp_path, version="4.1")
-        writer = RootZoneComponentWriter(
-            model_with_rootzone, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(model_with_rootzone, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
         assert path.exists()
@@ -547,9 +528,7 @@ class TestV41FormatBranch:
             2: (4, 6),
         }
         config = RootZoneWriterConfig(output_dir=tmp_path, version="4.1")
-        writer = RootZoneComponentWriter(
-            model_with_rootzone, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(model_with_rootzone, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
         lines = content.strip().split("\n")
@@ -568,9 +547,7 @@ class TestV41FormatBranch:
     ) -> None:
         """v4.11 is >= 4.1 but < 4.12, so should use the v4.1 row format branch."""
         config = RootZoneWriterConfig(output_dir=tmp_path, version="4.11")
-        writer = RootZoneComponentWriter(
-            model_with_rootzone, config, template_engine=mock_engine
-        )
+        writer = RootZoneComponentWriter(model_with_rootzone, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
         assert path.exists()
@@ -675,9 +652,7 @@ class TestTimeSeriesMethods:
         # IWFMTimeSeriesDataWriter was instantiated
         MockTSWriter.assert_called_once()
         # .write() was called with the config and path
-        mock_ts_writer_instance.write.assert_called_once_with(
-            mock_ts_config, expected_path
-        )
+        mock_ts_writer_instance.write.assert_called_once_with(mock_ts_config, expected_path)
         assert result == expected_path
 
     @pytest.mark.parametrize(
@@ -752,9 +727,7 @@ class TestTimeSeriesMethods:
             "write_ag_water_demand_ts",
         ],
     )
-    def test_ts_method_passes_dates_and_data(
-        self, method_name: str, writer_with_grid
-    ) -> None:
+    def test_ts_method_passes_dates_and_data(self, method_name: str, writer_with_grid) -> None:
         """Time-series methods pass dates and data kwargs to the config maker."""
         mock_ts_config = MagicMock()
         mock_ts_writer_instance = MagicMock()

@@ -14,20 +14,12 @@ import pytest
 
 from pyiwfm.io.preprocessor_binary import (
     AppElementData,
-    AppFaceData,
     AppNodeData,
-    LakeData,
-    LakeGWConnectorData,
     PreprocessorBinaryData,
     PreprocessorBinaryReader,
-    StreamData,
-    StreamGWConnectorData,
-    StreamLakeConnectorData,
     StratigraphyData,
-    SubregionData,
     read_preprocessor_binary,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -169,69 +161,95 @@ class TestReadFullFile:
 
         # Sequences of return values for read_int, read_double, etc.
         # Grid dimensions (5 ints), then per-node reads, per-element reads, ...
-        int_values = iter([
-            # _read_grid_data: dimensions
-            n_nodes, n_elements, n_faces, n_subregions, n_boundary_faces,
-            # _read_app_node (node 1): id, boundary, n_connected, n_face_id, n_surround, n_connected_arr
-            1, 0, 2, 0, 0, 0,
-            # _read_app_node (node 2):
-            2, 1, 1, 0, 0, 0,
-            # _read_app_element (elem 1): id, subregion, n_faces, n_vert_area, n_del_shp, n_rot_shp
-            1, 1, 0, 0, 0, 0,
-            # _read_stratigraphy: n_layers
-            n_layers,
-            # _read_stream_lake_connector: n_connections=0
-            0,
-            # _read_stream_gw_connector: n_stream_nodes=0
-            0,
-            # _read_lake_gw_connector: n_lakes=0
-            0,
-            # _read_lake_data: n_lakes=0
-            0,
-            # _read_stream_data: n_reaches=0, n_stream_nodes=0
-            0, 0,
-            # _read_matrix_data: matrix_n_equations=0
-            0,
-        ])
+        int_values = iter(
+            [
+                # _read_grid_data: dimensions
+                n_nodes,
+                n_elements,
+                n_faces,
+                n_subregions,
+                n_boundary_faces,
+                # _read_app_node (node 1): id, boundary, n_connected, n_face_id, n_surround, n_connected_arr
+                1,
+                0,
+                2,
+                0,
+                0,
+                0,
+                # _read_app_node (node 2):
+                2,
+                1,
+                1,
+                0,
+                0,
+                0,
+                # _read_app_element (elem 1): id, subregion, n_faces, n_vert_area, n_del_shp, n_rot_shp
+                1,
+                1,
+                0,
+                0,
+                0,
+                0,
+                # _read_stratigraphy: n_layers
+                n_layers,
+                # _read_stream_lake_connector: n_connections=0
+                0,
+                # _read_stream_gw_connector: n_stream_nodes=0
+                0,
+                # _read_lake_gw_connector: n_lakes=0
+                0,
+                # _read_lake_data: n_lakes=0
+                0,
+                # _read_stream_data: n_reaches=0, n_stream_nodes=0
+                0,
+                0,
+                # _read_matrix_data: matrix_n_equations=0
+                0,
+            ]
+        )
         f.read_int.side_effect = lambda: next(int_values)
 
-        double_values = iter([
-            # _read_app_node (node 1): area
-            50.0,
-            # _read_app_node (node 2): area
-            75.0,
-            # _read_app_element (elem 1): area
-            200.0,
-        ])
+        double_values = iter(
+            [
+                # _read_app_node (node 1): area
+                50.0,
+                # _read_app_node (node 2): area
+                75.0,
+                # _read_app_element (elem 1): area
+                200.0,
+            ]
+        )
         f.read_double.side_effect = lambda: next(double_values)
 
         # Arrays: x, y, n_vertex, vertex for grid; then stratigraphy arrays
-        array_calls = iter([
-            # _read_grid_data: x
-            np.array([0.0, 1.0]),
-            # _read_grid_data: y
-            np.array([0.0, 1.0]),
-            # _read_grid_data: n_vertex
-            np.array([3], dtype=np.int32),
-            # _read_grid_data: vertex
-            np.array([1, 2, 1], dtype=np.int32),
-            # _read_stratigraphy: gs_elev
-            np.array([100.0, 110.0]),
-            # top_flat (n_nodes * n_layers = 2)
-            np.array([90.0, 95.0]),
-            # bottom_flat
-            np.array([10.0, 15.0]),
-            # active_flat
-            np.array([1, 1], dtype=np.int32),
-            # active_above_flat
-            np.array([-1, -1], dtype=np.int32),
-            # active_below_flat
-            np.array([-1, -1], dtype=np.int32),
-            # top_active
-            np.array([1, 1], dtype=np.int32),
-            # bottom_active
-            np.array([1, 1], dtype=np.int32),
-        ])
+        array_calls = iter(
+            [
+                # _read_grid_data: x
+                np.array([0.0, 1.0]),
+                # _read_grid_data: y
+                np.array([0.0, 1.0]),
+                # _read_grid_data: n_vertex
+                np.array([3], dtype=np.int32),
+                # _read_grid_data: vertex
+                np.array([1, 2, 1], dtype=np.int32),
+                # _read_stratigraphy: gs_elev
+                np.array([100.0, 110.0]),
+                # top_flat (n_nodes * n_layers = 2)
+                np.array([90.0, 95.0]),
+                # bottom_flat
+                np.array([10.0, 15.0]),
+                # active_flat
+                np.array([1, 1], dtype=np.int32),
+                # active_above_flat
+                np.array([-1, -1], dtype=np.int32),
+                # active_below_flat
+                np.array([-1, -1], dtype=np.int32),
+                # top_active
+                np.array([1, 1], dtype=np.int32),
+                # bottom_active
+                np.array([1, 1], dtype=np.int32),
+            ]
+        )
 
         def _double_or_int_array() -> np.ndarray:
             return next(array_calls)
@@ -270,36 +288,74 @@ class TestReadGridData:
     def test_reads_dimensions_and_coordinates(self) -> None:
         f = _make_mock_binary_reader()
 
-        int_values = iter([
-            # dimensions
-            3, 2, 0, 0, 0,
-            # node 1: id, boundary, n_connected, n_face_id, n_surround, n_connected_arr
-            1, 0, 2, 0, 0, 0,
-            # node 2
-            2, 0, 2, 0, 0, 0,
-            # node 3
-            3, 1, 1, 0, 0, 0,
-            # elem 1: id, subregion, n_faces, n_vert_area, n_del_shp, n_rot_shp
-            1, 1, 0, 0, 0, 0,
-            # elem 2
-            2, 1, 0, 0, 0, 0,
-        ])
+        int_values = iter(
+            [
+                # dimensions
+                3,
+                2,
+                0,
+                0,
+                0,
+                # node 1: id, boundary, n_connected, n_face_id, n_surround, n_connected_arr
+                1,
+                0,
+                2,
+                0,
+                0,
+                0,
+                # node 2
+                2,
+                0,
+                2,
+                0,
+                0,
+                0,
+                # node 3
+                3,
+                1,
+                1,
+                0,
+                0,
+                0,
+                # elem 1: id, subregion, n_faces, n_vert_area, n_del_shp, n_rot_shp
+                1,
+                1,
+                0,
+                0,
+                0,
+                0,
+                # elem 2
+                2,
+                1,
+                0,
+                0,
+                0,
+                0,
+            ]
+        )
         f.read_int.side_effect = lambda: next(int_values)
 
-        double_values = iter([
-            # node areas (3 nodes)
-            10.0, 20.0, 30.0,
-            # element areas (2 elems)
-            100.0, 200.0,
-        ])
+        double_values = iter(
+            [
+                # node areas (3 nodes)
+                10.0,
+                20.0,
+                30.0,
+                # element areas (2 elems)
+                100.0,
+                200.0,
+            ]
+        )
         f.read_double.side_effect = lambda: next(double_values)
 
-        array_calls = iter([
-            np.array([0.0, 1.0, 2.0]),  # x
-            np.array([0.0, 1.0, 2.0]),  # y
-            np.array([3, 4], dtype=np.int32),  # n_vertex
-            np.array([1, 2, 3, 1, 2, 3, 4], dtype=np.int32),  # vertex
-        ])
+        array_calls = iter(
+            [
+                np.array([0.0, 1.0, 2.0]),  # x
+                np.array([0.0, 1.0, 2.0]),  # y
+                np.array([3, 4], dtype=np.int32),  # n_vertex
+                np.array([1, 2, 3, 1, 2, 3, 4], dtype=np.int32),  # vertex
+            ]
+        )
         f.read_double_array.side_effect = lambda: next(array_calls)
         f.read_int_array.side_effect = lambda: next(array_calls)
 
@@ -325,13 +381,15 @@ class TestReadAppNode:
         f.read_int.side_effect = lambda: next(int_values)
         f.read_double.return_value = 250.0
 
-        arr_calls = iter([
-            np.array([1, 2, 3, 4], dtype=np.int32),  # surrounding
-            np.array([10, 20, 30], dtype=np.int32),  # connected
-            np.array([100, 200], dtype=np.int32),  # face_ids
-            np.array([1, 2], dtype=np.int32),  # elem_ccw
-            np.array([0.1, 0.2], dtype=np.float64),  # irrot_coeff
-        ])
+        arr_calls = iter(
+            [
+                np.array([1, 2, 3, 4], dtype=np.int32),  # surrounding
+                np.array([10, 20, 30], dtype=np.int32),  # connected
+                np.array([100, 200], dtype=np.int32),  # face_ids
+                np.array([1, 2], dtype=np.int32),  # elem_ccw
+                np.array([0.1, 0.2], dtype=np.float64),  # irrot_coeff
+            ]
+        )
         f.read_int_array.side_effect = lambda: next(arr_calls)
         f.read_double_array.side_effect = lambda: next(arr_calls)
 
@@ -377,13 +435,15 @@ class TestReadAppElement:
         f.read_int.side_effect = lambda: next(int_values)
         f.read_double.return_value = 1500.0
 
-        arr_calls = iter([
-            np.array([1, 2, 3], dtype=np.int32),  # face_ids
-            np.array([375.0, 375.0, 375.0, 375.0], dtype=np.float64),  # vert_areas
-            np.array([0.25, 0.25, 0.25, 0.25], dtype=np.float64),  # vert_fracs
-            np.ones(9, dtype=np.float64),  # del_shp
-            np.zeros(9, dtype=np.float64),  # rot_shp
-        ])
+        arr_calls = iter(
+            [
+                np.array([1, 2, 3], dtype=np.int32),  # face_ids
+                np.array([375.0, 375.0, 375.0, 375.0], dtype=np.float64),  # vert_areas
+                np.array([0.25, 0.25, 0.25, 0.25], dtype=np.float64),  # vert_fracs
+                np.ones(9, dtype=np.float64),  # del_shp
+                np.zeros(9, dtype=np.float64),  # rot_shp
+            ]
+        )
         f.read_int_array.side_effect = lambda: next(arr_calls)
         f.read_double_array.side_effect = lambda: next(arr_calls)
 
@@ -418,12 +478,14 @@ class TestReadAppFaces:
     def test_nonzero_faces_reads_all_arrays(self) -> None:
         f = _make_mock_binary_reader()
 
-        arr_calls = iter([
-            np.array([1, 2, 3, 4], dtype=np.int32),  # nodes_flat (2 faces x 2)
-            np.array([10, 0, 20, 30], dtype=np.int32),  # elements_flat (2 faces x 2)
-            np.array([1, 0], dtype=np.int32),  # boundary_int
-            np.array([5.5, 8.3], dtype=np.float64),  # lengths
-        ])
+        arr_calls = iter(
+            [
+                np.array([1, 2, 3, 4], dtype=np.int32),  # nodes_flat (2 faces x 2)
+                np.array([10, 0, 20, 30], dtype=np.int32),  # elements_flat (2 faces x 2)
+                np.array([1, 0], dtype=np.int32),  # boundary_int
+                np.array([5.5, 8.3], dtype=np.float64),  # lengths
+            ]
+        )
         f.read_int_array.side_effect = lambda: next(arr_calls)
         f.read_double_array.side_effect = lambda: next(arr_calls)
 
@@ -445,22 +507,26 @@ class TestReadSubregion:
     def test_reads_subregion_with_neighbors(self) -> None:
         f = _make_mock_binary_reader()
 
-        int_values = iter([
-            1,  # sub_id
-            3,  # n_elements
-            2,  # n_neighbors
-        ])
+        int_values = iter(
+            [
+                1,  # sub_id
+                3,  # n_elements
+                2,  # n_neighbors
+            ]
+        )
         f.read_int.side_effect = lambda: next(int_values)
         f.read_string.return_value = "Region_A"
         f.read_double.return_value = 999.0
 
-        arr_calls = iter([
-            np.array([10, 20, 30], dtype=np.int32),  # elements
-            np.array([2, 3], dtype=np.int32),  # neighbor_ids
-            np.array([1, 2], dtype=np.int32),  # neighbor_n_faces
-            np.array([55], dtype=np.int32),  # neighbor 1 boundary faces (1 face)
-            np.array([66, 77], dtype=np.int32),  # neighbor 2 boundary faces (2 faces)
-        ])
+        arr_calls = iter(
+            [
+                np.array([10, 20, 30], dtype=np.int32),  # elements
+                np.array([2, 3], dtype=np.int32),  # neighbor_ids
+                np.array([1, 2], dtype=np.int32),  # neighbor_n_faces
+                np.array([55], dtype=np.int32),  # neighbor 1 boundary faces (1 face)
+                np.array([66, 77], dtype=np.int32),  # neighbor 2 boundary faces (2 faces)
+            ]
+        )
         f.read_int_array.side_effect = lambda: next(arr_calls)
 
         reader = PreprocessorBinaryReader()
@@ -486,24 +552,26 @@ class TestReadStratigraphy:
 
         f.read_int.return_value = n_layers
 
-        arr_calls = iter([
-            # gs_elev
-            np.array([100.0, 110.0, 120.0]),
-            # top_flat (n_nodes * n_layers = 6)
-            np.array([90.0, 80.0, 95.0, 85.0, 100.0, 90.0]),
-            # bottom_flat
-            np.array([50.0, 40.0, 55.0, 45.0, 60.0, 50.0]),
-            # active_flat
-            np.array([1, 1, 1, 0, 1, 1], dtype=np.int32),
-            # active_above_flat
-            np.array([-1, -1, -1, 1, -1, -1], dtype=np.int32),
-            # active_below_flat
-            np.array([2, -1, 2, -1, 2, -1], dtype=np.int32),
-            # top_active
-            np.array([1, 1, 1], dtype=np.int32),
-            # bottom_active
-            np.array([2, 1, 2], dtype=np.int32),
-        ])
+        arr_calls = iter(
+            [
+                # gs_elev
+                np.array([100.0, 110.0, 120.0]),
+                # top_flat (n_nodes * n_layers = 6)
+                np.array([90.0, 80.0, 95.0, 85.0, 100.0, 90.0]),
+                # bottom_flat
+                np.array([50.0, 40.0, 55.0, 45.0, 60.0, 50.0]),
+                # active_flat
+                np.array([1, 1, 1, 0, 1, 1], dtype=np.int32),
+                # active_above_flat
+                np.array([-1, -1, -1, 1, -1, -1], dtype=np.int32),
+                # active_below_flat
+                np.array([2, -1, 2, -1, 2, -1], dtype=np.int32),
+                # top_active
+                np.array([1, 1, 1], dtype=np.int32),
+                # bottom_active
+                np.array([2, 1, 2], dtype=np.int32),
+            ]
+        )
         f.read_double_array.side_effect = lambda: next(arr_calls)
         f.read_int_array.side_effect = lambda: next(arr_calls)
 
@@ -546,10 +614,12 @@ class TestReadStreamGWConnector:
         f = _make_mock_binary_reader()
         f.read_int.return_value = 3
 
-        arr_calls = iter([
-            np.array([10, 20, 30], dtype=np.int32),  # gw_nodes
-            np.array([1, 1, 2], dtype=np.int32),  # layers
-        ])
+        arr_calls = iter(
+            [
+                np.array([10, 20, 30], dtype=np.int32),  # gw_nodes
+                np.array([1, 1, 2], dtype=np.int32),  # layers
+            ]
+        )
         f.read_int_array.side_effect = lambda: next(arr_calls)
 
         reader = PreprocessorBinaryReader()
@@ -584,21 +654,25 @@ class TestReadLakeGWConnector:
         f = _make_mock_binary_reader()
 
         # n_lakes=2, then for each lake: n_elems, elements, n_nodes, nodes
-        int_values = iter([
-            2,     # n_lakes
-            3,     # lake 1 n_elems
-            2,     # lake 1 n_nodes
-            0,     # lake 2 n_elems
-            1,     # lake 2 n_nodes
-        ])
+        int_values = iter(
+            [
+                2,  # n_lakes
+                3,  # lake 1 n_elems
+                2,  # lake 1 n_nodes
+                0,  # lake 2 n_elems
+                1,  # lake 2 n_nodes
+            ]
+        )
         f.read_int.side_effect = lambda: next(int_values)
 
-        arr_calls = iter([
-            np.array([1, 2, 3], dtype=np.int32),  # lake 1 elements
-            np.array([10, 20], dtype=np.int32),  # lake 1 nodes
-            # lake 2 elements: n_elems=0, so no read_int_array
-            np.array([30], dtype=np.int32),  # lake 2 nodes
-        ])
+        arr_calls = iter(
+            [
+                np.array([1, 2, 3], dtype=np.int32),  # lake 1 elements
+                np.array([10, 20], dtype=np.int32),  # lake 1 nodes
+                # lake 2 elements: n_elems=0, so no read_int_array
+                np.array([30], dtype=np.int32),  # lake 2 nodes
+            ]
+        )
         f.read_int_array.side_effect = lambda: next(arr_calls)
 
         reader = PreprocessorBinaryReader()
@@ -638,12 +712,14 @@ class TestReadStreamData:
         int_values = iter([2, 10])  # n_reaches=2, n_stream_nodes=10
         f.read_int.side_effect = lambda: next(int_values)
 
-        arr_calls = iter([
-            np.array([1, 2], dtype=np.int32),  # reach_ids
-            np.array([1, 5], dtype=np.int32),  # upstream_nodes
-            np.array([4, 10], dtype=np.int32),  # downstream_nodes
-            np.array([2, 0], dtype=np.int32),  # outflow_dest
-        ])
+        arr_calls = iter(
+            [
+                np.array([1, 2], dtype=np.int32),  # reach_ids
+                np.array([1, 5], dtype=np.int32),  # upstream_nodes
+                np.array([4, 10], dtype=np.int32),  # downstream_nodes
+                np.array([2, 0], dtype=np.int32),  # outflow_dest
+            ]
+        )
         f.read_int_array.side_effect = lambda: next(arr_calls)
 
         name_calls = iter(["Sacramento", "San_Joaquin"])
@@ -685,18 +761,22 @@ class TestReadLakeData:
     def test_with_lakes_reads_details(self) -> None:
         f = _make_mock_binary_reader()
 
-        int_values = iter([
-            2,  # n_lakes
-            3,  # lake 1 n_elems
-            2,  # lake 2 n_elems
-        ])
+        int_values = iter(
+            [
+                2,  # n_lakes
+                3,  # lake 1 n_elems
+                2,  # lake 2 n_elems
+            ]
+        )
         f.read_int.side_effect = lambda: next(int_values)
 
-        arr_calls = iter([
-            np.array([1, 2], dtype=np.int32),  # lake_ids
-            np.array([10, 11, 12], dtype=np.int32),  # lake 1 elements
-            np.array([20, 21], dtype=np.int32),  # lake 2 elements
-        ])
+        arr_calls = iter(
+            [
+                np.array([1, 2], dtype=np.int32),  # lake_ids
+                np.array([10, 11, 12], dtype=np.int32),  # lake 1 elements
+                np.array([20, 21], dtype=np.int32),  # lake 2 elements
+            ]
+        )
         f.read_int_array.side_effect = lambda: next(arr_calls)
 
         name_calls = iter(["Clear_Lake", "Tulare_Lake"])
@@ -780,10 +860,12 @@ class TestReadStreamLakeConnector:
         f = _make_mock_binary_reader()
         f.read_int.return_value = 2
 
-        arr_calls = iter([
-            np.array([5, 10], dtype=np.int32),  # stream_nodes
-            np.array([1, 2], dtype=np.int32),  # lake_ids
-        ])
+        arr_calls = iter(
+            [
+                np.array([5, 10], dtype=np.int32),  # stream_nodes
+                np.array([1, 2], dtype=np.int32),  # lake_ids
+            ]
+        )
         f.read_int_array.side_effect = lambda: next(arr_calls)
 
         reader = PreprocessorBinaryReader()
@@ -811,35 +893,44 @@ class TestConvenienceFunction:
         mock_fbr_cls.return_value = f
 
         # Minimal mock: 0 nodes/elements so no loops
-        int_values = iter([
-            0, 0, 0, 0, 0,  # grid dimensions all zero
-            1,  # stratigraphy n_layers
-            0,  # stream_lake n_connections
-            0,  # stream_gw n_stream_nodes
-            0,  # lake_gw n_lakes
-            0,  # lake_data n_lakes
-            0, 0,  # stream_data n_reaches, n_stream_nodes
-            0,  # matrix n_equations
-        ])
+        int_values = iter(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,  # grid dimensions all zero
+                1,  # stratigraphy n_layers
+                0,  # stream_lake n_connections
+                0,  # stream_gw n_stream_nodes
+                0,  # lake_gw n_lakes
+                0,  # lake_data n_lakes
+                0,
+                0,  # stream_data n_reaches, n_stream_nodes
+                0,  # matrix n_equations
+            ]
+        )
         f.read_int.side_effect = lambda: next(int_values)
 
         # Stratigraphy needs arrays for n_nodes=0: each should be empty
         empty_double = np.array([], dtype=np.float64)
         empty_int = np.array([], dtype=np.int32)
-        arr_calls = iter([
-            empty_double,  # x
-            empty_double,  # y
-            empty_int,  # n_vertex
-            empty_int,  # vertex
-            empty_double,  # gs_elev
-            empty_double,  # top_flat
-            empty_double,  # bottom_flat
-            empty_int,  # active_flat
-            empty_int,  # active_above_flat
-            empty_int,  # active_below_flat
-            empty_int,  # top_active
-            empty_int,  # bottom_active
-        ])
+        arr_calls = iter(
+            [
+                empty_double,  # x
+                empty_double,  # y
+                empty_int,  # n_vertex
+                empty_int,  # vertex
+                empty_double,  # gs_elev
+                empty_double,  # top_flat
+                empty_double,  # bottom_flat
+                empty_int,  # active_flat
+                empty_int,  # active_above_flat
+                empty_int,  # active_below_flat
+                empty_int,  # top_active
+                empty_int,  # bottom_active
+            ]
+        )
         f.read_double_array.side_effect = lambda: next(arr_calls)
         f.read_int_array.side_effect = lambda: next(arr_calls)
 

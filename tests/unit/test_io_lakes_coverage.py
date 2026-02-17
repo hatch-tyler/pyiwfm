@@ -14,25 +14,18 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.lakes import (
-    LakeFileConfig,
-    LakeWriter,
-    LakeReader,
-    write_lakes,
-    read_lake_definitions,
-    read_lake_elements,
-    _is_comment_line,
-    _strip_comment,
-)
 from pyiwfm.components.lake import (
     AppLake,
     Lake,
-    LakeElement,
-    LakeRating,
     LakeOutflow,
+    LakeRating,
 )
-from pyiwfm.core.exceptions import FileFormatError
-
+from pyiwfm.io.lakes import (
+    LakeFileConfig,
+    LakeReader,
+    LakeWriter,
+    write_lakes,
+)
 
 # =============================================================================
 # LakeWriter Additional Tests
@@ -57,8 +50,10 @@ class TestLakeWriterAdditional:
             elements=[1, 2],
             rating=rating,
             outflow=LakeOutflow(
-                lake_id=1, destination_type="stream",
-                destination_id=5, max_rate=1000.0,
+                lake_id=1,
+                destination_type="stream",
+                destination_id=5,
+                max_rate=1000.0,
             ),
         )
         return AppLake(lakes={1: lake})
@@ -94,11 +89,15 @@ class TestLakeWriterAdditional:
         """Test writing multiple lakes."""
         lakes = {
             1: Lake(
-                id=1, name="Lake A", max_elevation=100.0,
+                id=1,
+                name="Lake A",
+                max_elevation=100.0,
                 elements=[1],
             ),
             2: Lake(
-                id=2, name="Lake B", max_elevation=95.0,
+                id=2,
+                name="Lake B",
+                max_elevation=95.0,
                 elements=[2, 3],
             ),
         }
@@ -183,7 +182,9 @@ class TestLakeConvenienceAdditional:
         """Test write_lakes with string output directory."""
         lakes = {
             1: Lake(
-                id=1, name="StringPath Lake", max_elevation=100.0,
+                id=1,
+                name="StringPath Lake",
+                max_elevation=100.0,
                 elements=[1],
             ),
         }
@@ -198,7 +199,9 @@ class TestLakeConvenienceAdditional:
         """Test write_lakes with custom config."""
         lakes = {
             1: Lake(
-                id=1, name="Custom Config Lake", max_elevation=100.0,
+                id=1,
+                name="Custom Config Lake",
+                max_elevation=100.0,
                 elements=[1],
             ),
         }

@@ -29,7 +29,6 @@ from pyiwfm.io.groundwater import (
     read_subsidence,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -265,9 +264,7 @@ class TestSectionExceptionHandlers:
         _write_file(filepath, lines)
 
         reader = GWMainFileReader()
-        with patch.object(
-            reader, "_read_aquifer_parameters", side_effect=RuntimeError("boom")
-        ):
+        with patch.object(reader, "_read_aquifer_parameters", side_effect=RuntimeError("boom")):
             config = reader.read(filepath)
         # Should not raise; aquifer_params remains None
         assert config.aquifer_params is None
@@ -298,9 +295,7 @@ class TestSectionExceptionHandlers:
         _write_file(filepath, lines)
 
         reader = GWMainFileReader()
-        with patch.object(
-            reader, "_read_kh_anomaly", side_effect=RuntimeError("boom")
-        ):
+        with patch.object(reader, "_read_kh_anomaly", side_effect=RuntimeError("boom")):
             config = reader.read(filepath)
         # Should not raise; kh_anomalies remains empty
         assert config.kh_anomalies == []
@@ -333,9 +328,7 @@ class TestSectionExceptionHandlers:
         _write_file(filepath, lines)
 
         reader = GWMainFileReader()
-        with patch.object(
-            reader, "_read_initial_heads", side_effect=RuntimeError("boom")
-        ):
+        with patch.object(reader, "_read_initial_heads", side_effect=RuntimeError("boom")):
             config = reader.read(filepath)
         # Should not raise; initial_heads remains None
         assert config.initial_heads is None
@@ -352,23 +345,27 @@ class TestReadVersionBlankLines:
     def test_version_after_blank_lines(self, tmp_path: Path) -> None:
         """Blank lines before the version header are skipped."""
         filepath = tmp_path / "gw_main.dat"
-        lines = [
-            "\n",  # blank line
-            "   \n",  # whitespace-only line
-            "# 4.2\n",
-            # Minimal rest
-            "  / BCFL\n",
-            "  / TDFL\n",
-            "  / PUMPFL\n",
-            "  / SUBSFL\n",
-            "  / OVRWRTFL\n",
-            "1.0\n",
-            "FT\n",
-            "1.0\n",
-            "TAF\n",
-            "1.0\n",
-            "FT/DAY\n",
-        ] + _gw_main_output_files_empty() + _gw_main_tail_minimal()
+        lines = (
+            [
+                "\n",  # blank line
+                "   \n",  # whitespace-only line
+                "# 4.2\n",
+                # Minimal rest
+                "  / BCFL\n",
+                "  / TDFL\n",
+                "  / PUMPFL\n",
+                "  / SUBSFL\n",
+                "  / OVRWRTFL\n",
+                "1.0\n",
+                "FT\n",
+                "1.0\n",
+                "TAF\n",
+                "1.0\n",
+                "FT/DAY\n",
+            ]
+            + _gw_main_output_files_empty()
+            + _gw_main_tail_minimal()
+        )
         _write_file(filepath, lines)
 
         config = GWMainFileReader().read(filepath)
@@ -479,13 +476,7 @@ class TestSkipDataLines:
 
         reader = GWMainFileReader()
         reader._line_num = 0
-        text = (
-            "C  comment\n"
-            "data line 1\n"
-            "C  another comment\n"
-            "data line 2\n"
-            "data line 3\n"
-        )
+        text = "C  comment\ndata line 1\nC  another comment\ndata line 2\ndata line 3\n"
         f = io.StringIO(text)
         reader._skip_data_lines(f, 2)
         # After skipping 2 data lines, line_num should be 4
@@ -675,9 +666,7 @@ class TestAquiferParamsEarlyReturns:
 class TestAquiferParamsParsingEdgeCases:
     """Cover edge cases in per-node aquifer parameter parsing."""
 
-    def _build_aq_params_file(
-        self, tmp_path: Path, aq_lines: list[str]
-    ) -> Path:
+    def _build_aq_params_file(self, tmp_path: Path, aq_lines: list[str]) -> Path:
         filepath = tmp_path / "gw_main.dat"
         lines = (
             _gw_main_header_lines()
@@ -741,9 +730,7 @@ class TestAquiferParamsParsingEdgeCases:
         # Only the first node was finalized before ValueError
         assert config.aquifer_params.n_nodes == 1
 
-    def test_value_error_in_5field_continuation_breaks(
-        self, tmp_path: Path
-    ) -> None:
+    def test_value_error_in_5field_continuation_breaks(self, tmp_path: Path) -> None:
         """ValueError in a 5-field continuation line ends section (lines 1400-1401).
 
         The first node must be finalized first.  Here, node 1 is complete
@@ -806,9 +793,7 @@ class TestAquiferParamsParsingEdgeCases:
 class TestParametricGridEdgeCases:
     """Cover edge cases in _read_parametric_aquifer_params."""
 
-    def _build_parametric_file(
-        self, tmp_path: Path, param_lines: list[str]
-    ) -> Path:
+    def _build_parametric_file(self, tmp_path: Path, param_lines: list[str]) -> Path:
         filepath = tmp_path / "gw_main.dat"
         lines = (
             _gw_main_header_lines()
@@ -1106,9 +1091,7 @@ class TestKhAnomalyEdgeCases:
 class TestInitialHeadsEdgeCases:
     """Cover edge cases in _read_initial_heads."""
 
-    def _build_initial_heads_file(
-        self, tmp_path: Path, heads_lines: list[str]
-    ) -> Path:
+    def _build_initial_heads_file(self, tmp_path: Path, heads_lines: list[str]) -> Path:
         filepath = tmp_path / "gw_main.dat"
         lines = (
             _gw_main_header_lines()
@@ -1207,11 +1190,7 @@ class TestReadGwMainFileConvenience:
 
     def test_read_gw_main_file(self, tmp_path: Path) -> None:
         filepath = tmp_path / "gw_main.dat"
-        lines = (
-            _gw_main_header_lines()
-            + _gw_main_output_files_empty()
-            + _gw_main_tail_minimal()
-        )
+        lines = _gw_main_header_lines() + _gw_main_output_files_empty() + _gw_main_tail_minimal()
         _write_file(filepath, lines)
 
         config = read_gw_main_file(filepath)

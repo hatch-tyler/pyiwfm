@@ -7,9 +7,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
 from pyiwfm.core.stratigraphy import Stratigraphy
-
 
 # ---------------------------------------------------------------------------
 # Strategies
@@ -106,12 +104,14 @@ class TestIWFMReaderProperties:
     @given(st.text(min_size=0, max_size=200))
     def test_is_comment_line_returns_bool(self, line: str) -> None:
         from pyiwfm.io.iwfm_reader import is_comment_line
+
         result = is_comment_line(line)
         assert isinstance(result, bool)
 
     @given(st.text(min_size=1, max_size=200))
     def test_strip_inline_comment_returns_pair(self, line: str) -> None:
         from pyiwfm.io.iwfm_reader import strip_inline_comment
+
         value, desc = strip_inline_comment(line)
         assert isinstance(value, str)
         assert isinstance(desc, str)
@@ -119,6 +119,7 @@ class TestIWFMReaderProperties:
     @given(st.text(min_size=1, max_size=200).filter(lambda s: "/" not in s))
     def test_no_slash_means_no_comment(self, line: str) -> None:
         from pyiwfm.io.iwfm_reader import strip_inline_comment
+
         value, desc = strip_inline_comment(line)
         assert desc == ""
         assert value == line.strip()
@@ -129,6 +130,7 @@ class TestIWFMReaderProperties:
     )
     def test_parse_int_roundtrip(self, num_str: str, ctx: str) -> None:
         from pyiwfm.io.iwfm_reader import parse_int
+
         result = parse_int(num_str, ctx)
         assert result == int(num_str)
 
@@ -137,12 +139,26 @@ class TestIWFMReaderProperties:
     )
     def test_parse_float_roundtrip(self, num: float) -> None:
         from pyiwfm.io.iwfm_reader import parse_float
+
         result = parse_float(str(num))
         np.testing.assert_allclose(result, num, rtol=1e-10)
 
-    @given(st.text(min_size=1, max_size=50).filter(lambda s: not s.strip().replace(".", "").replace("-", "").replace("+", "").replace("e", "").replace("E", "").isdigit()))
+    @given(
+        st.text(min_size=1, max_size=50).filter(
+            lambda s: (
+                not s.strip()
+                .replace(".", "")
+                .replace("-", "")
+                .replace("+", "")
+                .replace("e", "")
+                .replace("E", "")
+                .isdigit()
+            )
+        )
+    )
     def test_parse_int_bad_input_raises(self, bad_str: str) -> None:
-        from pyiwfm.io.iwfm_reader import parse_int
         from pyiwfm.core.exceptions import FileFormatError
+        from pyiwfm.io.iwfm_reader import parse_int
+
         with pytest.raises(FileFormatError):
             parse_int(bad_str, "test")

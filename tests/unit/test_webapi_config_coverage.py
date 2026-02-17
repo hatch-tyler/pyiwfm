@@ -8,7 +8,6 @@ GeoJSON generation, observation management, and results info aggregation.
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -16,9 +15,8 @@ import pytest
 
 pydantic = pytest.importorskip("pydantic")
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.visualization.webapi.config import ModelState
-
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.visualization.webapi.config import ModelState  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -124,8 +122,10 @@ class TestMesh3D:
 
         mock_exporter_cls = MagicMock()
 
-        with patch.dict("sys.modules", {"vtk": mock_vtk}), \
-             patch("pyiwfm.visualization.vtk_export.VTKExporter", mock_exporter_cls):
+        with (
+            patch.dict("sys.modules", {"vtk": mock_vtk}),
+            patch("pyiwfm.visualization.vtk_export.VTKExporter", mock_exporter_cls),
+        ):
             result = state._compute_mesh_3d()
 
         assert isinstance(result, bytes)
@@ -210,10 +210,22 @@ class TestSurfaceJson:
         """Different layers are cached separately."""
         state, _ = _state_with_model()
 
-        layer0_data = {"n_points": 8, "n_cells": 6, "n_layers": 2,
-                       "points": [], "polys": [], "layer": []}
-        layer1_data = {"n_points": 4, "n_cells": 3, "n_layers": 1,
-                       "points": [], "polys": [], "layer": []}
+        layer0_data = {
+            "n_points": 8,
+            "n_cells": 6,
+            "n_layers": 2,
+            "points": [],
+            "polys": [],
+            "layer": [],
+        }
+        layer1_data = {
+            "n_points": 4,
+            "n_cells": 3,
+            "n_layers": 1,
+            "points": [],
+            "polys": [],
+            "layer": [],
+        }
 
         with patch.object(state, "_compute_surface_json", side_effect=[layer0_data, layer1_data]):
             r0 = state.get_surface_json(layer=0)
@@ -230,8 +242,7 @@ class TestSurfaceJson:
     def test_get_surface_json_layer0_legacy_cache(self):
         """Layer 0 result is also stored in _surface_json_data for legacy compat."""
         state, _ = _state_with_model()
-        data = {"n_points": 10, "n_cells": 5, "n_layers": 2,
-                "points": [], "polys": [], "layer": []}
+        data = {"n_points": 10, "n_cells": 5, "n_layers": 2, "points": [], "polys": [], "layer": []}
 
         with patch.object(state, "_compute_surface_json", return_value=data):
             state.get_surface_json(layer=0)
@@ -299,10 +310,10 @@ class TestSliceJson:
         mock_slice.faces = np.array([3, 0, 1, 2, 3, 3, 4, 5])
         mock_slice.cell_data = {"layer": np.array([1, 1, 2])}
 
-        with patch.object(state, "get_pyvista_3d", return_value=mock_pv), \
-             patch(
-                 "pyiwfm.visualization.webapi.slicing.SlicingController"
-             ) as mock_slicer_cls:
+        with (
+            patch.object(state, "get_pyvista_3d", return_value=mock_pv),
+            patch("pyiwfm.visualization.webapi.slicing.SlicingController") as mock_slicer_cls,
+        ):
             mock_slicer = mock_slicer_cls.return_value
             mock_slicer.normalized_to_position_along.return_value = (50.0, 50.0, 0.0)
             mock_slicer.slice_arbitrary.return_value = mock_slice
@@ -325,10 +336,10 @@ class TestSliceJson:
         mock_slice = MagicMock()
         mock_slice.n_cells = 0
 
-        with patch.object(state, "get_pyvista_3d", return_value=mock_pv), \
-             patch(
-                 "pyiwfm.visualization.webapi.slicing.SlicingController"
-             ) as mock_slicer_cls:
+        with (
+            patch.object(state, "get_pyvista_3d", return_value=mock_pv),
+            patch("pyiwfm.visualization.webapi.slicing.SlicingController") as mock_slicer_cls,
+        ):
             mock_slicer = mock_slicer_cls.return_value
             mock_slicer.normalized_to_position_along.return_value = (0.0, 0.0, 0.0)
             mock_slicer.slice_arbitrary.return_value = mock_slice
@@ -353,10 +364,10 @@ class TestSliceJson:
         mock_slice.faces = np.array([3, 0, 1, 2, 3, 1, 2, 3])
         mock_slice.cell_data = {}  # No 'layer' key
 
-        with patch.object(state, "get_pyvista_3d", return_value=mock_pv), \
-             patch(
-                 "pyiwfm.visualization.webapi.slicing.SlicingController"
-             ) as mock_slicer_cls:
+        with (
+            patch.object(state, "get_pyvista_3d", return_value=mock_pv),
+            patch("pyiwfm.visualization.webapi.slicing.SlicingController") as mock_slicer_cls,
+        ):
             mock_slicer = mock_slicer_cls.return_value
             mock_slicer.normalized_to_position_along.return_value = (50.0, 50.0, 0.0)
             mock_slicer.slice_arbitrary.return_value = mock_slice
@@ -691,8 +702,14 @@ class TestObservations:
 
     def test_add_and_get(self):
         state = ModelState()
-        data = {"filename": "obs.csv", "type": "gw", "n_records": 5,
-                "location_id": 42, "times": [], "values": []}
+        data = {
+            "filename": "obs.csv",
+            "type": "gw",
+            "n_records": 5,
+            "location_id": 42,
+            "times": [],
+            "values": [],
+        }
         state.add_observation("obs-1", data)
         retrieved = state.get_observation("obs-1")
         assert retrieved is data
@@ -704,10 +721,12 @@ class TestObservations:
 
     def test_list_observations_returns_all(self):
         state = ModelState()
-        state.add_observation("a", {"filename": "a.csv", "type": "gw",
-                                     "location_id": 1, "n_records": 3})
-        state.add_observation("b", {"filename": "b.csv", "type": "stream",
-                                     "location_id": 2, "n_records": 7})
+        state.add_observation(
+            "a", {"filename": "a.csv", "type": "gw", "location_id": 1, "n_records": 3}
+        )
+        state.add_observation(
+            "b", {"filename": "b.csv", "type": "stream", "location_id": 2, "n_records": 7}
+        )
         obs_list = state.list_observations()
         assert len(obs_list) == 2
         ids = {o["id"] for o in obs_list}
@@ -715,9 +734,16 @@ class TestObservations:
 
     def test_list_observations_includes_summary_fields(self):
         state = ModelState()
-        state.add_observation("x", {"filename": "x.csv", "type": "gw",
-                                     "location_id": 10, "n_records": 20,
-                                     "extra_field": "should_not_appear"})
+        state.add_observation(
+            "x",
+            {
+                "filename": "x.csv",
+                "type": "gw",
+                "location_id": 10,
+                "n_records": 20,
+                "extra_field": "should_not_appear",
+            },
+        )
         obs_list = state.list_observations()
         entry = obs_list[0]
         assert entry["id"] == "x"
@@ -770,10 +796,12 @@ class TestResultsInfo:
         mock_loader.n_frames = 24
         mock_loader.times = [datetime(2000, 1, 1), datetime(2001, 12, 31)]
 
-        with patch.object(state, "get_head_loader", return_value=mock_loader), \
-             patch.object(state, "get_available_budgets", return_value=[]), \
-             patch.object(state, "get_gw_hydrograph_reader", return_value=None), \
-             patch.object(state, "get_stream_hydrograph_reader", return_value=None):
+        with (
+            patch.object(state, "get_head_loader", return_value=mock_loader),
+            patch.object(state, "get_available_budgets", return_value=[]),
+            patch.object(state, "get_gw_hydrograph_reader", return_value=None),
+            patch.object(state, "get_stream_hydrograph_reader", return_value=None),
+        ):
             info = state.get_results_info()
 
         assert info["has_results"] is True
@@ -784,10 +812,12 @@ class TestResultsInfo:
     def test_with_budgets(self):
         state, model = _state_with_model()
 
-        with patch.object(state, "get_head_loader", return_value=None), \
-             patch.object(state, "get_available_budgets", return_value=["gw", "stream"]), \
-             patch.object(state, "get_gw_hydrograph_reader", return_value=None), \
-             patch.object(state, "get_stream_hydrograph_reader", return_value=None):
+        with (
+            patch.object(state, "get_head_loader", return_value=None),
+            patch.object(state, "get_available_budgets", return_value=["gw", "stream"]),
+            patch.object(state, "get_gw_hydrograph_reader", return_value=None),
+            patch.object(state, "get_stream_hydrograph_reader", return_value=None),
+        ):
             info = state.get_results_info()
 
         assert info["has_results"] is True
@@ -799,10 +829,12 @@ class TestResultsInfo:
         mock_gw_reader = MagicMock()
         mock_gw_reader.n_timesteps = 50
 
-        with patch.object(state, "get_head_loader", return_value=None), \
-             patch.object(state, "get_available_budgets", return_value=[]), \
-             patch.object(state, "get_gw_hydrograph_reader", return_value=mock_gw_reader), \
-             patch.object(state, "get_stream_hydrograph_reader", return_value=None):
+        with (
+            patch.object(state, "get_head_loader", return_value=None),
+            patch.object(state, "get_available_budgets", return_value=[]),
+            patch.object(state, "get_gw_hydrograph_reader", return_value=mock_gw_reader),
+            patch.object(state, "get_stream_hydrograph_reader", return_value=None),
+        ):
             info = state.get_results_info()
 
         assert info["has_results"] is True
@@ -819,10 +851,12 @@ class TestResultsInfo:
         mock_stream_reader = MagicMock()
         mock_stream_reader.n_timesteps = 30
 
-        with patch.object(state, "get_head_loader", return_value=None), \
-             patch.object(state, "get_available_budgets", return_value=[]), \
-             patch.object(state, "get_gw_hydrograph_reader", return_value=None), \
-             patch.object(state, "get_stream_hydrograph_reader", return_value=mock_stream_reader):
+        with (
+            patch.object(state, "get_head_loader", return_value=None),
+            patch.object(state, "get_available_budgets", return_value=[]),
+            patch.object(state, "get_gw_hydrograph_reader", return_value=None),
+            patch.object(state, "get_stream_hydrograph_reader", return_value=mock_stream_reader),
+        ):
             info = state.get_results_info()
 
         assert info["has_stream_hydrographs"] is True
@@ -831,10 +865,12 @@ class TestResultsInfo:
     def test_has_results_false_when_all_empty(self):
         state, model = _state_with_model()
 
-        with patch.object(state, "get_head_loader", return_value=None), \
-             patch.object(state, "get_available_budgets", return_value=[]), \
-             patch.object(state, "get_gw_hydrograph_reader", return_value=None), \
-             patch.object(state, "get_stream_hydrograph_reader", return_value=None):
+        with (
+            patch.object(state, "get_head_loader", return_value=None),
+            patch.object(state, "get_available_budgets", return_value=[]),
+            patch.object(state, "get_gw_hydrograph_reader", return_value=None),
+            patch.object(state, "get_stream_hydrograph_reader", return_value=None),
+        ):
             info = state.get_results_info()
 
         assert info["has_results"] is False
@@ -846,10 +882,12 @@ class TestResultsInfo:
         mock_loader.n_frames = 0
         mock_loader.times = []
 
-        with patch.object(state, "get_head_loader", return_value=mock_loader), \
-             patch.object(state, "get_available_budgets", return_value=[]), \
-             patch.object(state, "get_gw_hydrograph_reader", return_value=None), \
-             patch.object(state, "get_stream_hydrograph_reader", return_value=None):
+        with (
+            patch.object(state, "get_head_loader", return_value=mock_loader),
+            patch.object(state, "get_available_budgets", return_value=[]),
+            patch.object(state, "get_gw_hydrograph_reader", return_value=None),
+            patch.object(state, "get_stream_hydrograph_reader", return_value=None),
+        ):
             info = state.get_results_info()
 
         assert info["head_time_range"] is None
@@ -878,10 +916,10 @@ class TestComputeMeshSurfaceBody:
         mock_2d_mesh = MagicMock()
         mock_exporter_cls.return_value.create_2d_mesh.return_value = mock_2d_mesh
 
-        with patch.dict("sys.modules", {"vtk": mock_vtk}), \
-             patch(
-                 "pyiwfm.visualization.vtk_export.VTKExporter", mock_exporter_cls
-             ):
+        with (
+            patch.dict("sys.modules", {"vtk": mock_vtk}),
+            patch("pyiwfm.visualization.vtk_export.VTKExporter", mock_exporter_cls),
+        ):
             result = state._compute_mesh_surface()
 
         assert isinstance(result, bytes)
@@ -900,8 +938,12 @@ class TestSurfaceJsonLegacyCache:
         """When layer=0 is NOT in _layer_surface_cache but IS in _surface_json_data."""
         state, _ = _state_with_model()
         legacy_data = {
-            "n_points": 42, "n_cells": 10, "n_layers": 2,
-            "points": [], "polys": [], "layer": [],
+            "n_points": 42,
+            "n_cells": 10,
+            "n_layers": 2,
+            "points": [],
+            "polys": [],
+            "layer": [],
         }
         # Set the legacy cache directly, but NOT in _layer_surface_cache
         state._surface_json_data = legacy_data
@@ -921,8 +963,7 @@ class TestComputeSurfaceJsonBody:
         mock_surface.n_points = 8
         mock_surface.n_cells = 6
         mock_surface.points = MagicMock()
-        mock_surface.points.astype.return_value.ravel.return_value.tolist.return_value = [
-            0.0] * 24
+        mock_surface.points.astype.return_value.ravel.return_value.tolist.return_value = [0.0] * 24
         mock_surface.faces = MagicMock()
         mock_surface.faces.tolist.return_value = [3, 0, 1, 2, 3, 2, 3, 4]
         mock_surface.cell_data = {"layer": MagicMock()}
@@ -950,8 +991,7 @@ class TestComputeSurfaceJsonBody:
         mock_surface.n_points = 4
         mock_surface.n_cells = 2
         mock_surface.points = MagicMock()
-        mock_surface.points.astype.return_value.ravel.return_value.tolist.return_value = [
-            1.0] * 12
+        mock_surface.points.astype.return_value.ravel.return_value.tolist.return_value = [1.0] * 12
         mock_surface.faces = MagicMock()
         mock_surface.faces.tolist.return_value = [3, 0, 1, 2]
         mock_surface.cell_data = {"layer": MagicMock()}
@@ -980,8 +1020,7 @@ class TestComputeSurfaceJsonBody:
         mock_surface.n_points = 4
         mock_surface.n_cells = 3
         mock_surface.points = MagicMock()
-        mock_surface.points.astype.return_value.ravel.return_value.tolist.return_value = [
-            0.0] * 12
+        mock_surface.points.astype.return_value.ravel.return_value.tolist.return_value = [0.0] * 12
         mock_surface.faces = MagicMock()
         mock_surface.faces.tolist.return_value = [3, 0, 1, 2]
         mock_surface.cell_data = {}  # No 'layer' key
@@ -1004,8 +1043,7 @@ class TestComputeSurfaceJsonBody:
         mock_surface.n_points = 2
         mock_surface.n_cells = 1
         mock_surface.points = MagicMock()
-        mock_surface.points.astype.return_value.ravel.return_value.tolist.return_value = [
-            0.0] * 6
+        mock_surface.points.astype.return_value.ravel.return_value.tolist.return_value = [0.0] * 6
         mock_surface.faces = MagicMock()
         mock_surface.faces.tolist.return_value = [3, 0, 1, 2]
         mock_surface.cell_data = {}
@@ -1056,6 +1094,7 @@ class TestGetTransformerImportError:
         state._transformer = None  # Ensure not cached
 
         import builtins
+
         real_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
@@ -1344,10 +1383,12 @@ class TestResultsInfoHeadTimeRange:
         mock_gw_reader = MagicMock()
         mock_gw_reader.n_timesteps = 100
 
-        with patch.object(state, "get_head_loader", return_value=mock_loader), \
-             patch.object(state, "get_available_budgets", return_value=["gw"]), \
-             patch.object(state, "get_gw_hydrograph_reader", return_value=mock_gw_reader), \
-             patch.object(state, "get_stream_hydrograph_reader", return_value=None):
+        with (
+            patch.object(state, "get_head_loader", return_value=mock_loader),
+            patch.object(state, "get_available_budgets", return_value=["gw"]),
+            patch.object(state, "get_gw_hydrograph_reader", return_value=mock_gw_reader),
+            patch.object(state, "get_stream_hydrograph_reader", return_value=None),
+        ):
             info = state.get_results_info()
 
         assert info["has_results"] is True
@@ -1364,10 +1405,12 @@ class TestResultsInfoHeadTimeRange:
         mock_loader.n_frames = 5
         mock_loader.times = []  # Empty - truthy n_frames but falsy times
 
-        with patch.object(state, "get_head_loader", return_value=mock_loader), \
-             patch.object(state, "get_available_budgets", return_value=[]), \
-             patch.object(state, "get_gw_hydrograph_reader", return_value=None), \
-             patch.object(state, "get_stream_hydrograph_reader", return_value=None):
+        with (
+            patch.object(state, "get_head_loader", return_value=mock_loader),
+            patch.object(state, "get_available_budgets", return_value=[]),
+            patch.object(state, "get_gw_hydrograph_reader", return_value=None),
+            patch.object(state, "get_stream_hydrograph_reader", return_value=None),
+        ):
             info = state.get_results_info()
 
         assert info["has_results"] is True
@@ -1400,10 +1443,10 @@ class TestGetSliceJsonFullCoverage:
         mock_slice.faces = np.array([3, 0, 1, 2])
         mock_slice.cell_data = {"layer": np.array([1])}
 
-        with patch.object(state, "get_pyvista_3d", return_value=mock_pv), \
-             patch(
-                 "pyiwfm.visualization.webapi.slicing.SlicingController"
-             ) as mock_slicer_cls:
+        with (
+            patch.object(state, "get_pyvista_3d", return_value=mock_pv),
+            patch("pyiwfm.visualization.webapi.slicing.SlicingController") as mock_slicer_cls,
+        ):
             mock_slicer = mock_slicer_cls.return_value
             mock_slicer.normalized_to_position_along.return_value = (50.0, 0.0, 0.0)
             mock_slicer.slice_arbitrary.return_value = mock_slice

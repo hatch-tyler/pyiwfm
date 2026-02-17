@@ -5,16 +5,15 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from pyiwfm.core.zones import Zone, ZoneDefinition
 from pyiwfm.io.zones import (
-    read_iwfm_zone_file,
-    write_iwfm_zone_file,
-    read_geojson_zones,
-    write_geojson_zones,
     auto_detect_zone_file,
+    read_geojson_zones,
+    read_iwfm_zone_file,
     read_zone_file,
+    write_geojson_zones,
+    write_iwfm_zone_file,
     write_zone_file,
 )
 
@@ -66,13 +65,7 @@ class TestReadIWFMZoneFile:
         """Test various comment line styles."""
         with tempfile.TemporaryDirectory() as tmpdir:
             content = (
-                "C Standard comment\n"
-                "* Star comment\n"
-                "# Hash comment\n"
-                "1\n"
-                "1  Test Zone\n"
-                "/\n"
-                "1    1\n"
+                "C Standard comment\n* Star comment\n# Hash comment\n1\n1  Test Zone\n/\n1    1\n"
             )
             filepath = Path(tmpdir) / "zones.dat"
             filepath.write_text(content)
@@ -83,13 +76,7 @@ class TestReadIWFMZoneFile:
     def test_with_element_areas(self):
         """Test reading with element areas."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            content = (
-                "1\n"
-                "1  Zone A\n"
-                "/\n"
-                "1    1\n"
-                "2    1\n"
-            )
+            content = "1\n1  Zone A\n/\n1    1\n2    1\n"
             filepath = Path(tmpdir) / "zones.dat"
             filepath.write_text(content)
 
@@ -165,9 +152,7 @@ class TestWriteIWFMZoneFile:
 
             assert loaded.n_zones == zone_def.n_zones
             assert loaded.extent == zone_def.extent
-            np.testing.assert_array_equal(
-                loaded.element_zones[:4], zone_def.element_zones
-            )
+            np.testing.assert_array_equal(loaded.element_zones[:4], zone_def.element_zones)
 
     def test_header_comment(self):
         """Test header comment is included."""
@@ -190,7 +175,9 @@ class TestWriteIWFMZoneFile:
             content = filepath.read_text()
             # Find the ZExtent line (starts with 0 for vertical)
             lines = content.split("\n")
-            data_lines = [l for l in lines if l.strip() and not l.strip().startswith("C")]
+            data_lines = [
+                line for line in lines if line.strip() and not line.strip().startswith("C")
+            ]
             assert data_lines[0].strip().startswith("0")
 
 

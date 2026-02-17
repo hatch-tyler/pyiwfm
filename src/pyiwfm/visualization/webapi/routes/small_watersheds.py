@@ -4,9 +4,9 @@ Small watershed data API routes.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
-from pyiwfm.visualization.webapi.config import model_state
+from pyiwfm.visualization.webapi.config import model_state, require_model
 
 router = APIRouter(prefix="/api/small-watersheds", tags=["small_watersheds"])
 
@@ -20,14 +20,13 @@ def get_small_watersheds() -> dict:
     enriched GW node data (max_perc_rate, raw_qmaxwb), and root zone /
     aquifer parameters for the detail panel.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     if model.small_watersheds is None:
         return {"n_watersheds": 0, "watersheds": []}
 
     grid = model.grid
+    if grid is None:
+        return {"n_watersheds": 0, "watersheds": []}
     watersheds: list[dict] = []
 
     for ws in model.small_watersheds.iter_watersheds():
@@ -43,15 +42,17 @@ def get_small_watersheds() -> dict:
             #   baseflow nodes: -layer (negative),  percolation nodes: +max_perc_rate
             raw_qmaxwb = -float(gwn.layer) if gwn.is_baseflow else gwn.max_perc_rate
 
-            gw_coords.append({
-                "node_id": gwn.gw_node_id,
-                "lng": lng,
-                "lat": lat,
-                "is_baseflow": gwn.is_baseflow,
-                "layer": gwn.layer,
-                "max_perc_rate": gwn.max_perc_rate,
-                "raw_qmaxwb": raw_qmaxwb,
-            })
+            gw_coords.append(
+                {
+                    "node_id": gwn.gw_node_id,
+                    "lng": lng,
+                    "lat": lat,
+                    "is_baseflow": gwn.is_baseflow,
+                    "layer": gwn.layer,
+                    "max_perc_rate": gwn.max_perc_rate,
+                    "raw_qmaxwb": raw_qmaxwb,
+                }
+            )
 
         if not gw_coords:
             continue
@@ -72,28 +73,30 @@ def get_small_watersheds() -> dict:
                     dlng, dlat = model_state.reproject_coords(node.x, node.y)
                     dest_coords = {"lng": dlng, "lat": dlat}
 
-        watersheds.append({
-            "id": ws.id,
-            "area": ws.area,
-            "dest_stream_node": ws.dest_stream_node,
-            "dest_coords": dest_coords,
-            "marker_position": marker_position,
-            "n_gw_nodes": len(gw_coords),
-            "gw_nodes": gw_coords,
-            "curve_number": ws.curve_number,
-            # Root zone parameters
-            "wilting_point": ws.wilting_point,
-            "field_capacity": ws.field_capacity,
-            "total_porosity": ws.total_porosity,
-            "lambda_param": ws.lambda_param,
-            "root_depth": ws.root_depth,
-            "hydraulic_cond": ws.hydraulic_cond,
-            "kunsat_method": ws.kunsat_method,
-            # Aquifer parameters
-            "gw_threshold": ws.gw_threshold,
-            "max_gw_storage": ws.max_gw_storage,
-            "surface_flow_coeff": ws.surface_flow_coeff,
-            "baseflow_coeff": ws.baseflow_coeff,
-        })
+        watersheds.append(
+            {
+                "id": ws.id,
+                "area": ws.area,
+                "dest_stream_node": ws.dest_stream_node,
+                "dest_coords": dest_coords,
+                "marker_position": marker_position,
+                "n_gw_nodes": len(gw_coords),
+                "gw_nodes": gw_coords,
+                "curve_number": ws.curve_number,
+                # Root zone parameters
+                "wilting_point": ws.wilting_point,
+                "field_capacity": ws.field_capacity,
+                "total_porosity": ws.total_porosity,
+                "lambda_param": ws.lambda_param,
+                "root_depth": ws.root_depth,
+                "hydraulic_cond": ws.hydraulic_cond,
+                "kunsat_method": ws.kunsat_method,
+                # Aquifer parameters
+                "gw_threshold": ws.gw_threshold,
+                "max_gw_storage": ws.max_gw_storage,
+                "surface_flow_coeff": ws.surface_flow_coeff,
+                "baseflow_coeff": ws.baseflow_coeff,
+            }
+        )
 
     return {"n_watersheds": len(watersheds), "watersheds": watersheds}

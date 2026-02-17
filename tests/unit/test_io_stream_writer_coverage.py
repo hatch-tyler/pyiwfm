@@ -20,11 +20,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from pyiwfm.io.stream_writer import (
-    StreamWriterConfig,
     StreamComponentWriter,
+    StreamWriterConfig,
     write_stream_component,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -75,14 +74,22 @@ def model_with_full_streams():
     streams = MagicMock()
 
     node1 = SimpleNamespace(
-        id=1, wetted_perimeter=200.0, conductivity=15.0,
-        bed_thickness=2.0, gw_node=5,
-        cross_section=None, initial_condition=0.0,
+        id=1,
+        wetted_perimeter=200.0,
+        conductivity=15.0,
+        bed_thickness=2.0,
+        gw_node=5,
+        cross_section=None,
+        initial_condition=0.0,
     )
     node2 = SimpleNamespace(
-        id=2, wetted_perimeter=150.0, conductivity=10.0,
-        bed_thickness=1.0, gw_node=8,
-        cross_section=None, initial_condition=0.0,
+        id=2,
+        wetted_perimeter=150.0,
+        conductivity=10.0,
+        bed_thickness=1.0,
+        gw_node=8,
+        cross_section=None,
+        initial_condition=0.0,
     )
     streams.nodes = {1: node1, 2: node2}
     streams.reaches = {}
@@ -93,12 +100,20 @@ def model_with_full_streams():
 
     # Diversions
     div = SimpleNamespace(
-        id=1, source_node=10, max_div_column=1, max_div_fraction=1.0,
-        recoverable_loss_column=0, recoverable_loss_fraction=0.0,
-        non_recoverable_loss_column=0, non_recoverable_loss_fraction=0.0,
-        delivery_dest_type=0, delivery_dest_id=5,
-        delivery_column=0, delivery_fraction=1.0,
-        irrigation_fraction_column=0, adjustment_column=0,
+        id=1,
+        source_node=10,
+        max_div_column=1,
+        max_div_fraction=1.0,
+        recoverable_loss_column=0,
+        recoverable_loss_fraction=0.0,
+        non_recoverable_loss_column=0,
+        non_recoverable_loss_fraction=0.0,
+        delivery_dest_type=0,
+        delivery_dest_id=5,
+        delivery_column=0,
+        delivery_fraction=1.0,
+        irrigation_fraction_column=0,
+        adjustment_column=0,
         name="Div1",
     )
     streams.diversions = {1: div}
@@ -108,12 +123,21 @@ def model_with_full_streams():
 
     # Bypasses
     bp = SimpleNamespace(
-        id=1, source_node=15, destination_node=20, dest_type=0,
-        flow_factor=1.0, flow_time_unit="1DAY",
-        spill_factor=1.0, spill_time_unit="1DAY",
-        diversion_column=1, rating_table_flows=[], rating_table_spills=[],
-        recoverable_loss_fraction=0.0, non_recoverable_loss_fraction=0.0,
-        name="Bypass1", seepage_locations=[],
+        id=1,
+        source_node=15,
+        destination_node=20,
+        dest_type=0,
+        flow_factor=1.0,
+        flow_time_unit="1DAY",
+        spill_factor=1.0,
+        spill_time_unit="1DAY",
+        diversion_column=1,
+        rating_table_flows=[],
+        rating_table_spills=[],
+        recoverable_loss_fraction=0.0,
+        non_recoverable_loss_fraction=0.0,
+        name="Bypass1",
+        seepage_locations=[],
     )
     streams.bypasses = {1: bp}
 
@@ -148,9 +172,7 @@ class TestStreamWriterConfigProperties:
 
     def test_main_path_custom_file(self, tmp_path: Path) -> None:
         """Test main_path with custom main_file and subdir."""
-        config = StreamWriterConfig(
-            output_dir=tmp_path, stream_subdir="S", main_file="ctrl.dat"
-        )
+        config = StreamWriterConfig(output_dir=tmp_path, stream_subdir="S", main_file="ctrl.dat")
         assert config.main_path == tmp_path / "S" / "ctrl.dat"
 
     def test_v50_fields_defaults(self, tmp_path: Path) -> None:
@@ -196,9 +218,7 @@ class TestStreamWriteAll:
     ) -> None:
         """write_all() includes diver_specs when diversions exist."""
         config = StreamWriterConfig(output_dir=tmp_path)
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         results = writer.write_all()
         assert "main" in results
         assert "diver_specs" in results
@@ -253,9 +273,7 @@ class TestStreamWriteMain:
     ) -> None:
         """v4.0 bed params include WETPR and IRGW columns."""
         config = StreamWriterConfig(output_dir=tmp_path, version="4.0")
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
         assert "WETPR" in content
@@ -266,9 +284,7 @@ class TestStreamWriteMain:
     ) -> None:
         """v5.0 bed params omit WETPR/IRGW and include cross-section data."""
         config = StreamWriterConfig(output_dir=tmp_path, version="5.0")
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
         # v5.0 format has "IR    CSTRM   DSTRM" not "WETPR"
@@ -343,9 +359,7 @@ class TestStreamWriteDiverSpecs:
     ) -> None:
         """write_diver_specs() creates the diversion specification file."""
         config = StreamWriterConfig(output_dir=tmp_path)
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         path = writer.write_diver_specs()
         assert path.exists()
         content = path.read_text()
@@ -366,30 +380,32 @@ class TestStreamWriteBypassSpecs:
     ) -> None:
         """write_bypass_specs() creates the bypass specification file."""
         config = StreamWriterConfig(output_dir=tmp_path)
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         path = writer.write_bypass_specs()
         assert path.exists()
         content = path.read_text()
         assert "NBYPASS" in content
         assert "Bypass1" in content
 
-    def test_write_bypass_with_rating_table(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_write_bypass_with_rating_table(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """Bypasses with inline rating tables (IDIVC < 0) write table rows."""
         model = MagicMock()
         bp = SimpleNamespace(
-            id=1, source_node=15, destination_node=20, dest_type=0,
-            flow_factor=1.0, flow_time_unit="1DAY",
-            spill_factor=1.0, spill_time_unit="1DAY",
+            id=1,
+            source_node=15,
+            destination_node=20,
+            dest_type=0,
+            flow_factor=1.0,
+            flow_time_unit="1DAY",
+            spill_factor=1.0,
+            spill_time_unit="1DAY",
             diversion_column=0,
             rating_table_flows=[100.0, 200.0, 300.0],
             rating_table_spills=[0.0, 50.0, 150.0],
             recoverable_loss_fraction=0.05,
             non_recoverable_loss_fraction=0.02,
-            name="RatedBypass", seepage_locations=[],
+            name="RatedBypass",
+            seepage_locations=[],
         )
         streams = MagicMock()
         streams.bypasses = {1: bp}
@@ -455,9 +471,7 @@ class TestStreamWriteMainRenderContext:
     ) -> None:
         """write_main() renders v4.0 template with inflow/diversion/bypass paths."""
         config = StreamWriterConfig(output_dir=tmp_path, version="4.0")
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
         # Should contain bed params header for v4.0 (with WETPR)
@@ -469,9 +483,7 @@ class TestStreamWriteMainRenderContext:
     ) -> None:
         """write_main() renders v5.0 template with v5.0-specific sections."""
         config = StreamWriterConfig(output_dir=tmp_path, version="5.0")
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         # The mock engine returns generic header text via render_template
         mock_engine.render_template.return_value = "C  MOCK HEADER v5.0\n"
         path = writer.write_main()
@@ -490,9 +502,7 @@ class TestStreamWriteInflowTs:
     ) -> None:
         """write_stream_inflow_ts() creates inflow file via IWFMTimeSeriesDataWriter."""
         config = StreamWriterConfig(output_dir=tmp_path)
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
 
         mock_ts_writer = MagicMock()
         expected_path = config.stream_dir / config.inflow_file
@@ -511,20 +521,27 @@ class TestStreamWriteInflowTs:
 class TestStreamWriteDiverSpecsDetailed:
     """Detailed tests for write_diver_specs() (lines 621-637, 667)."""
 
-    def test_diver_specs_with_spills(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_diver_specs_with_spills(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """write_diver_specs() writes 16-column format with spill columns."""
         model = MagicMock()
         streams = MagicMock()
         div = SimpleNamespace(
-            id=1, source_node=10, max_div_column=1, max_div_fraction=1.0,
-            recoverable_loss_column=0, recoverable_loss_fraction=0.0,
-            non_recoverable_loss_column=0, non_recoverable_loss_fraction=0.0,
-            spill_column=2, spill_fraction=0.5,
-            delivery_dest_type=0, delivery_dest_id=5,
-            delivery_column=0, delivery_fraction=1.0,
-            irrigation_fraction_column=0, adjustment_column=0,
+            id=1,
+            source_node=10,
+            max_div_column=1,
+            max_div_fraction=1.0,
+            recoverable_loss_column=0,
+            recoverable_loss_fraction=0.0,
+            non_recoverable_loss_column=0,
+            non_recoverable_loss_fraction=0.0,
+            spill_column=2,
+            spill_fraction=0.5,
+            delivery_dest_type=0,
+            delivery_dest_id=5,
+            delivery_column=0,
+            delivery_fraction=1.0,
+            irrigation_fraction_column=0,
+            adjustment_column=0,
             name="DivSpill",
         )
         streams.diversions = {1: div}
@@ -541,19 +558,25 @@ class TestStreamWriteDiverSpecsDetailed:
         assert "ICOLSP" in content
         assert "DivSpill" in content
 
-    def test_diver_specs_with_element_groups(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_diver_specs_with_element_groups(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """write_diver_specs() writes element groups section."""
         model = MagicMock()
         streams = MagicMock()
         div = SimpleNamespace(
-            id=1, source_node=10, max_div_column=1, max_div_fraction=1.0,
-            recoverable_loss_column=0, recoverable_loss_fraction=0.0,
-            non_recoverable_loss_column=0, non_recoverable_loss_fraction=0.0,
-            delivery_dest_type=0, delivery_dest_id=5,
-            delivery_column=0, delivery_fraction=1.0,
-            irrigation_fraction_column=0, adjustment_column=0,
+            id=1,
+            source_node=10,
+            max_div_column=1,
+            max_div_fraction=1.0,
+            recoverable_loss_column=0,
+            recoverable_loss_fraction=0.0,
+            non_recoverable_loss_column=0,
+            non_recoverable_loss_fraction=0.0,
+            delivery_dest_type=0,
+            delivery_dest_id=5,
+            delivery_column=0,
+            delivery_fraction=1.0,
+            irrigation_fraction_column=0,
+            adjustment_column=0,
             name="DivEG",
         )
         streams.diversions = {1: div}
@@ -565,8 +588,7 @@ class TestStreamWriteDiverSpecsDetailed:
 
         # Recharge zone
         rz = SimpleNamespace(
-            diversion_id=1, n_zones=2,
-            zone_ids=[10, 20], zone_fractions=[0.6, 0.4]
+            diversion_id=1, n_zones=2, zone_ids=[10, 20], zone_fractions=[0.6, 0.4]
         )
         streams.diversion_recharge_zones = [rz]
         model.streams = streams
@@ -583,20 +605,27 @@ class TestStreamWriteDiverSpecsDetailed:
         assert "0.6000" in content
         assert "0.4000" in content
 
-    def test_diver_specs_with_spill_zones(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_diver_specs_with_spill_zones(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """write_diver_specs() writes spill zones section when has_spills is True."""
         model = MagicMock()
         streams = MagicMock()
         div = SimpleNamespace(
-            id=1, source_node=10, max_div_column=1, max_div_fraction=1.0,
-            recoverable_loss_column=0, recoverable_loss_fraction=0.0,
-            non_recoverable_loss_column=0, non_recoverable_loss_fraction=0.0,
-            spill_column=2, spill_fraction=0.5,
-            delivery_dest_type=0, delivery_dest_id=5,
-            delivery_column=0, delivery_fraction=1.0,
-            irrigation_fraction_column=0, adjustment_column=0,
+            id=1,
+            source_node=10,
+            max_div_column=1,
+            max_div_fraction=1.0,
+            recoverable_loss_column=0,
+            recoverable_loss_fraction=0.0,
+            non_recoverable_loss_column=0,
+            non_recoverable_loss_fraction=0.0,
+            spill_column=2,
+            spill_fraction=0.5,
+            delivery_dest_type=0,
+            delivery_dest_id=5,
+            delivery_column=0,
+            delivery_fraction=1.0,
+            irrigation_fraction_column=0,
+            adjustment_column=0,
             name="SpillDiv",
         )
         streams.diversions = {1: div}
@@ -605,10 +634,7 @@ class TestStreamWriteDiverSpecsDetailed:
         streams.diversion_recharge_zones = []
 
         # Spill zone
-        sz = SimpleNamespace(
-            diversion_id=1, n_zones=1,
-            zone_ids=[50], zone_fractions=[1.0]
-        )
+        sz = SimpleNamespace(diversion_id=1, n_zones=1, zone_ids=[50], zone_fractions=[1.0])
         streams.diversion_spill_zones = [sz]
         model.streams = streams
 
@@ -623,9 +649,7 @@ class TestStreamWriteDiverSpecsDetailed:
 class TestStreamWriteBypassSpecsDetailed:
     """Detailed tests for write_bypass_specs() (lines 782-831)."""
 
-    def test_bypass_with_seepage_locations(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_bypass_with_seepage_locations(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """write_bypass_specs() writes seepage location data."""
         model = MagicMock()
         sl = SimpleNamespace(
@@ -634,14 +658,21 @@ class TestStreamWriteBypassSpecsDetailed:
             element_fractions=[0.7, 0.3],
         )
         bp = SimpleNamespace(
-            id=1, source_node=15, destination_node=20, dest_type=0,
-            flow_factor=1.0, flow_time_unit="1DAY",
-            spill_factor=1.0, spill_time_unit="1DAY",
+            id=1,
+            source_node=15,
+            destination_node=20,
+            dest_type=0,
+            flow_factor=1.0,
+            flow_time_unit="1DAY",
+            spill_factor=1.0,
+            spill_time_unit="1DAY",
             diversion_column=1,
-            rating_table_flows=[], rating_table_spills=[],
+            rating_table_flows=[],
+            rating_table_spills=[],
             recoverable_loss_fraction=0.0,
             non_recoverable_loss_fraction=0.0,
-            name="SeepBypass", seepage_locations=[sl],
+            name="SeepBypass",
+            seepage_locations=[sl],
         )
         streams = MagicMock()
         streams.bypasses = {1: bp}
@@ -655,9 +686,7 @@ class TestStreamWriteBypassSpecsDetailed:
         assert "0.7000" in content
         assert "0.3000" in content
 
-    def test_bypass_empty_seepage_location(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_bypass_empty_seepage_location(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """write_bypass_specs() handles seepage location with 0 elements."""
         model = MagicMock()
         sl = SimpleNamespace(
@@ -666,14 +695,21 @@ class TestStreamWriteBypassSpecsDetailed:
             element_fractions=[],
         )
         bp = SimpleNamespace(
-            id=1, source_node=15, destination_node=20, dest_type=0,
-            flow_factor=1.0, flow_time_unit="1DAY",
-            spill_factor=1.0, spill_time_unit="1DAY",
+            id=1,
+            source_node=15,
+            destination_node=20,
+            dest_type=0,
+            flow_factor=1.0,
+            flow_time_unit="1DAY",
+            spill_factor=1.0,
+            spill_time_unit="1DAY",
             diversion_column=1,
-            rating_table_flows=[], rating_table_spills=[],
+            rating_table_flows=[],
+            rating_table_spills=[],
             recoverable_loss_fraction=0.0,
             non_recoverable_loss_fraction=0.0,
-            name="EmptySeep", seepage_locations=[sl],
+            name="EmptySeep",
+            seepage_locations=[sl],
         )
         streams = MagicMock()
         streams.bypasses = {1: bp}
@@ -690,9 +726,7 @@ class TestStreamWriteBypassSpecsDetailed:
 class TestStreamBedParamsFromModelData:
     """Tests for _render_bed_params_section using model data (lines 400-463)."""
 
-    def test_bed_params_uses_model_factors(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_bed_params_uses_model_factors(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """_render_bed_params_section uses model conductivity/time/length factors."""
         model = MagicMock()
         streams = MagicMock()
@@ -723,18 +757,18 @@ class TestStreamBedParamsFromModelData:
 class TestStreamV50CrossSection:
     """Tests for _render_cross_section() with model data (lines 509-570)."""
 
-    def test_cross_section_with_data(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_cross_section_with_data(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """_render_cross_section writes actual cross-section values from nodes."""
         model = MagicMock()
-        cs = SimpleNamespace(
-            bottom_elev=100.0, B0=50.0, s=1.5, n=0.035, max_flow_depth=15.0
-        )
+        cs = SimpleNamespace(bottom_elev=100.0, B0=50.0, s=1.5, n=0.035, max_flow_depth=15.0)
         node1 = SimpleNamespace(
-            id=1, wetted_perimeter=200.0, conductivity=15.0,
-            bed_thickness=2.0, gw_node=5,
-            cross_section=cs, initial_condition=5.0,
+            id=1,
+            wetted_perimeter=200.0,
+            conductivity=15.0,
+            bed_thickness=2.0,
+            gw_node=5,
+            cross_section=cs,
+            initial_condition=5.0,
         )
         streams = MagicMock()
         streams.nodes = {1: node1}
@@ -758,27 +792,31 @@ class TestStreamV50CrossSection:
         path = writer.write_main()
         content = path.read_text()
         assert "100.00" in content  # bottom_elev
-        assert "50.00" in content   # B0
+        assert "50.00" in content  # B0
         assert "0.0350" in content  # n
-        assert "15.00" in content   # max_flow_depth
+        assert "15.00" in content  # max_flow_depth
         assert "5.0000" in content  # initial_condition
 
 
 class TestStreamEvaporationSection:
     """Tests for _render_evaporation() with evap specs (lines 621-637, 667)."""
 
-    def test_evaporation_with_specs_and_file(
-        self, tmp_path: Path, mock_engine: MagicMock
-    ) -> None:
+    def test_evaporation_with_specs_and_file(self, tmp_path: Path, mock_engine: MagicMock) -> None:
         """_render_evaporation writes ET column and area column from specs."""
         model = MagicMock()
         spec = SimpleNamespace(node_id=1, et_column=3, area_column=5)
         streams = MagicMock()
-        streams.nodes = {1: SimpleNamespace(
-            id=1, wetted_perimeter=100.0, conductivity=10.0,
-            bed_thickness=1.0, gw_node=1,
-            cross_section=None, initial_condition=0.0,
-        )}
+        streams.nodes = {
+            1: SimpleNamespace(
+                id=1,
+                wetted_perimeter=100.0,
+                conductivity=10.0,
+                bed_thickness=1.0,
+                gw_node=1,
+                cross_section=None,
+                initial_condition=0.0,
+            )
+        }
         streams.reaches = {}
         streams.budget_node_ids = []
         streams.budget_node_count = 0
@@ -804,11 +842,17 @@ class TestStreamEvaporationSection:
         model = MagicMock()
         spec = SimpleNamespace(node_id=1, et_column=3, area_column=5)
         streams = MagicMock()
-        streams.nodes = {1: SimpleNamespace(
-            id=1, wetted_perimeter=100.0, conductivity=10.0,
-            bed_thickness=1.0, gw_node=1,
-            cross_section=None, initial_condition=0.0,
-        )}
+        streams.nodes = {
+            1: SimpleNamespace(
+                id=1,
+                wetted_perimeter=100.0,
+                conductivity=10.0,
+                bed_thickness=1.0,
+                gw_node=1,
+                cross_section=None,
+                initial_condition=0.0,
+            )
+        }
         streams.reaches = {}
         streams.budget_node_ids = []
         streams.budget_node_count = 0
@@ -827,8 +871,9 @@ class TestStreamEvaporationSection:
         # With no evap file, columns should be zeroed
         lines = content.split("\n")
         evap_data_lines = [
-            l for l in lines
-            if l.strip() and not l.strip().startswith("C") and "0        0" in l
+            line
+            for line in lines
+            if line.strip() and not line.strip().startswith("C") and "0        0" in line
         ]
         assert len(evap_data_lines) >= 1
 
@@ -841,9 +886,7 @@ class TestStreamDiversionDataTs:
     ) -> None:
         """write_diversion_data_ts() creates diversion time series file."""
         config = StreamWriterConfig(output_dir=tmp_path)
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
 
         mock_ts_writer = MagicMock()
         expected_path = config.stream_dir / config.diversions_file
@@ -863,9 +906,7 @@ class TestStreamDiversionDataTs:
     ) -> None:
         """write_surface_area_ts() creates surface area time series file."""
         config = StreamWriterConfig(output_dir=tmp_path)
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
 
         mock_ts_writer = MagicMock()
         expected_path = config.stream_dir / config.evap_area_file
@@ -875,7 +916,7 @@ class TestStreamDiversionDataTs:
             "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
             return_value=mock_ts_writer,
         ):
-            path = writer.write_surface_area_ts()
+            writer.write_surface_area_ts()
 
         mock_ts_writer.write.assert_called_once()
 
@@ -917,11 +958,9 @@ class TestStreamEmptySubdir:
     ) -> None:
         """When stream_subdir is empty, file paths have no prefix."""
         config = StreamWriterConfig(output_dir=tmp_path, stream_subdir="")
-        writer = StreamComponentWriter(
-            model_with_full_streams, config, template_engine=mock_engine
-        )
+        writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         # Should render without prefix in the template call
-        path = writer.write_main()
+        writer.write_main()
         # The engine's render_template should have been called with
         # inflow_file that has no backslash prefix
         render_call = mock_engine.render_template.call_args

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -11,31 +10,30 @@ import pytest
 # Skip all tests if matplotlib is not available
 plt = pytest.importorskip("matplotlib.pyplot")
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
-from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
-from pyiwfm.visualization.plotting import (
+from pyiwfm.components.stream import AppStream, StrmNode, StrmReach  # noqa: E402
+from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
+from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection  # noqa: E402
+from pyiwfm.visualization.plotting import (  # noqa: E402
+    # Budget plotting
+    BudgetPlotter,
+    MeshPlotter,
+    plot_boundary,
+    plot_budget_bar,
+    plot_budget_pie,
+    plot_budget_stacked,
+    plot_budget_timeseries,
+    plot_elements,
     # Mesh plotting
     plot_mesh,
     plot_nodes,
-    plot_elements,
     plot_scalar_field,
     plot_streams,
-    plot_boundary,
-    MeshPlotter,
     # Time series plotting
     plot_timeseries,
-    plot_timeseries_comparison,
     plot_timeseries_collection,
-    # Budget plotting
-    BudgetPlotter,
-    plot_budget_bar,
-    plot_budget_stacked,
-    plot_budget_pie,
+    plot_timeseries_comparison,
     plot_water_balance,
     plot_zbudget,
-    plot_budget_timeseries,
 )
 
 
@@ -71,21 +69,25 @@ def simple_stream() -> AppStream:
 
     # Add stream nodes
     for i in range(1, 6):
-        stream.add_node(StrmNode(
-            id=i,
-            x=float(i * 40),
-            y=100.0,
-            reach_id=1,
-        ))
+        stream.add_node(
+            StrmNode(
+                id=i,
+                x=float(i * 40),
+                y=100.0,
+                reach_id=1,
+            )
+        )
 
     # Add reach
-    stream.add_reach(StrmReach(
-        id=1,
-        name="Test Stream",
-        upstream_node=1,
-        downstream_node=5,
-        nodes=[1, 2, 3, 4, 5],
-    ))
+    stream.add_reach(
+        StrmReach(
+            id=1,
+            name="Test Stream",
+            upstream_node=1,
+            downstream_node=5,
+            nodes=[1, 2, 3, 4, 5],
+        )
+    )
 
     return stream
 
@@ -171,18 +173,14 @@ class TestPlotScalarField:
     def test_plot_with_colorbar(self, simple_grid: AppGrid) -> None:
         """Test adding colorbar to scalar plot."""
         values = np.arange(9, dtype=float) * 10
-        fig, ax = plot_scalar_field(
-            simple_grid, values, field_type="node", show_colorbar=True
-        )
+        fig, ax = plot_scalar_field(simple_grid, values, field_type="node", show_colorbar=True)
         assert fig is not None
         plt.close(fig)
 
     def test_plot_with_custom_cmap(self, simple_grid: AppGrid) -> None:
         """Test using custom colormap."""
         values = np.arange(9, dtype=float) * 10
-        fig, ax = plot_scalar_field(
-            simple_grid, values, field_type="node", cmap="coolwarm"
-        )
+        fig, ax = plot_scalar_field(simple_grid, values, field_type="node", cmap="coolwarm")
         assert fig is not None
         plt.close(fig)
 
@@ -198,9 +196,7 @@ class TestPlotStreams:
         assert fig is not None
         plt.close(fig)
 
-    def test_plot_streams_with_nodes(
-        self, simple_grid: AppGrid, simple_stream: AppStream
-    ) -> None:
+    def test_plot_streams_with_nodes(self, simple_grid: AppGrid, simple_stream: AppStream) -> None:
         """Test plotting streams with node markers."""
         fig, ax = plot_streams(simple_stream, show_nodes=True)
         assert fig is not None
@@ -232,27 +228,21 @@ class TestMeshPlotter:
         assert fig is not None
         plt.close(fig)
 
-    def test_plotter_with_streams(
-        self, simple_grid: AppGrid, simple_stream: AppStream
-    ) -> None:
+    def test_plotter_with_streams(self, simple_grid: AppGrid, simple_stream: AppStream) -> None:
         """Test MeshPlotter with stream network."""
         plotter = MeshPlotter(simple_grid, streams=simple_stream)
         fig, ax = plotter.plot_mesh(show_streams=True)
         assert fig is not None
         plt.close(fig)
 
-    def test_plotter_save_figure(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_plotter_save_figure(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test saving figure to file."""
         plotter = MeshPlotter(simple_grid)
         output_file = tmp_path / "mesh.png"
         plotter.save(output_file)
         assert output_file.exists()
 
-    def test_plotter_composite_plot(
-        self, simple_grid: AppGrid, simple_stream: AppStream
-    ) -> None:
+    def test_plotter_composite_plot(self, simple_grid: AppGrid, simple_stream: AppStream) -> None:
         """Test creating composite plot with multiple layers."""
         plotter = MeshPlotter(simple_grid, streams=simple_stream)
 
@@ -277,11 +267,23 @@ class TestMeshPlotter:
 @pytest.fixture
 def sample_timeseries() -> TimeSeries:
     """Create a sample time series for testing."""
-    times = np.array([
-        "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01",
-        "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01",
-        "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01",
-    ], dtype="datetime64[D]")
+    times = np.array(
+        [
+            "2020-01-01",
+            "2020-02-01",
+            "2020-03-01",
+            "2020-04-01",
+            "2020-05-01",
+            "2020-06-01",
+            "2020-07-01",
+            "2020-08-01",
+            "2020-09-01",
+            "2020-10-01",
+            "2020-11-01",
+            "2020-12-01",
+        ],
+        dtype="datetime64[D]",
+    )
     values = np.array([100.0, 98.5, 97.2, 96.0, 95.1, 94.8, 95.5, 96.2, 97.0, 98.1, 99.0, 99.8])
     return TimeSeries(times=times, values=values, name="Well_1", units="ft")
 
@@ -289,10 +291,17 @@ def sample_timeseries() -> TimeSeries:
 @pytest.fixture
 def sample_timeseries_list() -> list[TimeSeries]:
     """Create multiple time series for testing."""
-    times = np.array([
-        "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01",
-        "2020-05-01", "2020-06-01",
-    ], dtype="datetime64[D]")
+    times = np.array(
+        [
+            "2020-01-01",
+            "2020-02-01",
+            "2020-03-01",
+            "2020-04-01",
+            "2020-05-01",
+            "2020-06-01",
+        ],
+        dtype="datetime64[D]",
+    )
 
     ts1 = TimeSeries(
         times=times,
@@ -318,10 +327,17 @@ def sample_timeseries_list() -> list[TimeSeries]:
 @pytest.fixture
 def observed_simulated_pair() -> tuple[TimeSeries, TimeSeries]:
     """Create observed and simulated time series for comparison testing."""
-    times = np.array([
-        "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01",
-        "2020-05-01", "2020-06-01",
-    ], dtype="datetime64[D]")
+    times = np.array(
+        [
+            "2020-01-01",
+            "2020-02-01",
+            "2020-03-01",
+            "2020-04-01",
+            "2020-05-01",
+            "2020-06-01",
+        ],
+        dtype="datetime64[D]",
+    )
 
     observed = TimeSeries(
         times=times,
@@ -370,11 +386,23 @@ def sample_budget_components() -> dict[str, float]:
 @pytest.fixture
 def sample_budget_timeseries() -> tuple[np.ndarray, dict[str, np.ndarray]]:
     """Create time-varying budget components for testing."""
-    times = np.array([
-        "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01",
-        "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01",
-        "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01",
-    ], dtype="datetime64[D]")
+    times = np.array(
+        [
+            "2020-01-01",
+            "2020-02-01",
+            "2020-03-01",
+            "2020-04-01",
+            "2020-05-01",
+            "2020-06-01",
+            "2020-07-01",
+            "2020-08-01",
+            "2020-09-01",
+            "2020-10-01",
+            "2020-11-01",
+            "2020-12-01",
+        ],
+        dtype="datetime64[D]",
+    )
 
     components = {
         "Precipitation": np.array([200, 180, 150, 100, 50, 20, 10, 15, 40, 80, 150, 180]),
@@ -468,9 +496,7 @@ class TestPlotTimeseries:
 class TestPlotTimeseriesComparison:
     """Tests for observed vs simulated comparison plots."""
 
-    def test_comparison_plot(
-        self, observed_simulated_pair: tuple[TimeSeries, TimeSeries]
-    ) -> None:
+    def test_comparison_plot(self, observed_simulated_pair: tuple[TimeSeries, TimeSeries]) -> None:
         """Test basic comparison plot."""
         observed, simulated = observed_simulated_pair
         fig, ax = plot_timeseries_comparison(observed, simulated)
@@ -482,9 +508,7 @@ class TestPlotTimeseriesComparison:
     ) -> None:
         """Test comparison plot with title."""
         observed, simulated = observed_simulated_pair
-        fig, ax = plot_timeseries_comparison(
-            observed, simulated, title="Head Calibration"
-        )
+        fig, ax = plot_timeseries_comparison(observed, simulated, title="Head Calibration")
         assert fig is not None
         plt.close(fig)
 
@@ -493,9 +517,7 @@ class TestPlotTimeseriesComparison:
     ) -> None:
         """Test comparison plot with residuals subplot."""
         observed, simulated = observed_simulated_pair
-        fig, ax = plot_timeseries_comparison(
-            observed, simulated, show_residuals=True
-        )
+        fig, ax = plot_timeseries_comparison(observed, simulated, show_residuals=True)
         assert fig is not None
         plt.close(fig)
 
@@ -504,9 +526,7 @@ class TestPlotTimeseriesComparison:
     ) -> None:
         """Test comparison plot showing metrics."""
         observed, simulated = observed_simulated_pair
-        fig, ax = plot_timeseries_comparison(
-            observed, simulated, show_metrics=True
-        )
+        fig, ax = plot_timeseries_comparison(observed, simulated, show_metrics=True)
         assert fig is not None
         plt.close(fig)
 
@@ -520,13 +540,9 @@ class TestPlotTimeseriesCollection:
         assert fig is not None
         plt.close(fig)
 
-    def test_plot_specific_locations(
-        self, sample_collection: TimeSeriesCollection
-    ) -> None:
+    def test_plot_specific_locations(self, sample_collection: TimeSeriesCollection) -> None:
         """Test plotting specific locations from collection."""
-        fig, ax = plot_timeseries_collection(
-            sample_collection, locations=["Well_1", "Well_2"]
-        )
+        fig, ax = plot_timeseries_collection(sample_collection, locations=["Well_1", "Well_2"])
         assert fig is not None
         plt.close(fig)
 
@@ -553,23 +569,17 @@ class TestPlotBudgetBar:
 
     def test_budget_bar_with_title(self, sample_budget_components: dict[str, float]) -> None:
         """Test bar chart with custom title."""
-        fig, ax = plot_budget_bar(
-            sample_budget_components, title="Annual Water Budget"
-        )
+        fig, ax = plot_budget_bar(sample_budget_components, title="Annual Water Budget")
         assert ax.get_title() == "Annual Water Budget"
         plt.close(fig)
 
-    def test_budget_bar_without_values(
-        self, sample_budget_components: dict[str, float]
-    ) -> None:
+    def test_budget_bar_without_values(self, sample_budget_components: dict[str, float]) -> None:
         """Test bar chart without value labels."""
         fig, ax = plot_budget_bar(sample_budget_components, show_values=False)
         assert fig is not None
         plt.close(fig)
 
-    def test_budget_bar_custom_colors(
-        self, sample_budget_components: dict[str, float]
-    ) -> None:
+    def test_budget_bar_custom_colors(self, sample_budget_components: dict[str, float]) -> None:
         """Test bar chart with custom colors."""
         fig, ax = plot_budget_bar(
             sample_budget_components,
@@ -648,9 +658,7 @@ class TestPlotWaterBalance:
         """Test water balance with custom title."""
         inflows = {"Recharge": 500}
         outflows = {"Pumping": 400}
-        fig, ax = plot_water_balance(
-            inflows, outflows, title="Subregion 1 Balance"
-        )
+        fig, ax = plot_water_balance(inflows, outflows, title="Subregion 1 Balance")
         assert fig is not None
         plt.close(fig)
 
@@ -930,9 +938,7 @@ class TestPlotScalarFieldEdgeCases:
 class TestPlotStreamsEdgeCases:
     """Tests for stream plotting edge cases."""
 
-    def test_plot_streams_with_existing_axes(
-        self, simple_stream: AppStream
-    ) -> None:
+    def test_plot_streams_with_existing_axes(self, simple_stream: AppStream) -> None:
         """Test plot_streams with pre-created axes."""
         fig, ax = plt.subplots()
         fig2, ax2 = plot_streams(simple_stream, ax=ax)
@@ -986,9 +992,7 @@ class TestPlotBoundaryEdgeCases:
 class TestMeshPlotterEdgeCases:
     """Tests for MeshPlotter edge cases."""
 
-    def test_plotter_composite_cell_values(
-        self, simple_grid: AppGrid
-    ) -> None:
+    def test_plotter_composite_cell_values(self, simple_grid: AppGrid) -> None:
         """Test composite plot with cell values instead of node values."""
         plotter = MeshPlotter(simple_grid)
         cell_values = np.array([10.0, 20.0, 30.0, 40.0])
@@ -1010,9 +1014,7 @@ class TestMeshPlotterEdgeCases:
         assert fig is not None
         plt.close(fig)
 
-    def test_plotter_composite_no_mesh_no_values(
-        self, simple_grid: AppGrid
-    ) -> None:
+    def test_plotter_composite_no_mesh_no_values(self, simple_grid: AppGrid) -> None:
         """Test composite plot with show_mesh=False and no values."""
         plotter = MeshPlotter(simple_grid)
         fig, ax = plotter.plot_composite(show_mesh=False)
@@ -1031,18 +1033,14 @@ class TestMeshPlotterEdgeCases:
         assert fig is not None
         plt.close(fig)
 
-    def test_plotter_save_without_prior_plot(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_plotter_save_without_prior_plot(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test save creates a default plot when none exists."""
         plotter = MeshPlotter(simple_grid)
         output_file = tmp_path / "auto_mesh.png"
         plotter.save(output_file)
         assert output_file.exists()
 
-    def test_plotter_save_with_custom_dpi(
-        self, simple_grid: AppGrid, tmp_path: Path
-    ) -> None:
+    def test_plotter_save_with_custom_dpi(self, simple_grid: AppGrid, tmp_path: Path) -> None:
         """Test save with custom DPI."""
         plotter = MeshPlotter(simple_grid)
         plotter.plot_mesh()
@@ -1050,9 +1048,7 @@ class TestMeshPlotterEdgeCases:
         plotter.save(output_file, dpi=300)
         assert output_file.exists()
 
-    def test_plotter_plot_mesh_without_streams(
-        self, simple_grid: AppGrid
-    ) -> None:
+    def test_plotter_plot_mesh_without_streams(self, simple_grid: AppGrid) -> None:
         """Test MeshPlotter.plot_mesh with show_streams=True but no streams set."""
         plotter = MeshPlotter(simple_grid, streams=None)
         fig, ax = plotter.plot_mesh(show_streams=True)
@@ -1088,9 +1084,7 @@ class TestPlotTimeseriesEdgeCases:
         assert fig2 is fig
         plt.close(fig)
 
-    def test_plot_with_linestyles(
-        self, sample_timeseries_list: list[TimeSeries]
-    ) -> None:
+    def test_plot_with_linestyles(self, sample_timeseries_list: list[TimeSeries]) -> None:
         """Test plotting with custom linestyles."""
         fig, ax = plot_timeseries(
             sample_timeseries_list,
@@ -1099,9 +1093,7 @@ class TestPlotTimeseriesEdgeCases:
         assert fig is not None
         plt.close(fig)
 
-    def test_plot_single_series_no_legend(
-        self, sample_timeseries: TimeSeries
-    ) -> None:
+    def test_plot_single_series_no_legend(self, sample_timeseries: TimeSeries) -> None:
         """Test that legend is not shown for single series (even with legend=True)."""
         fig, ax = plot_timeseries(sample_timeseries, legend=True)
         assert fig is not None
@@ -1117,9 +1109,7 @@ class TestPlotTimeseriesComparisonEdgeCases:
         """Test comparison plot with pre-created axes (no residuals)."""
         observed, simulated = observed_simulated_pair
         fig, ax = plt.subplots()
-        fig2, ax2 = plot_timeseries_comparison(
-            observed, simulated, ax=ax, show_residuals=False
-        )
+        fig2, ax2 = plot_timeseries_comparison(observed, simulated, ax=ax, show_residuals=False)
         assert fig2 is fig
         plt.close(fig)
 
@@ -1128,9 +1118,7 @@ class TestPlotTimeseriesComparisonEdgeCases:
     ) -> None:
         """Test comparison plot without metrics display."""
         observed, simulated = observed_simulated_pair
-        fig, ax = plot_timeseries_comparison(
-            observed, simulated, show_metrics=False
-        )
+        fig, ax = plot_timeseries_comparison(observed, simulated, show_metrics=False)
         assert fig is not None
         plt.close(fig)
 
@@ -1153,29 +1141,19 @@ class TestPlotTimeseriesComparisonEdgeCases:
 class TestPlotTimeseriesCollectionEdgeCases:
     """Tests for time series collection plotting edge cases."""
 
-    def test_plot_collection_with_max_series(
-        self, sample_collection: TimeSeriesCollection
-    ) -> None:
+    def test_plot_collection_with_max_series(self, sample_collection: TimeSeriesCollection) -> None:
         """Test plotting collection limited by max_series."""
-        fig, ax = plot_timeseries_collection(
-            sample_collection, max_series=2
-        )
+        fig, ax = plot_timeseries_collection(sample_collection, max_series=2)
         assert fig is not None
         plt.close(fig)
 
-    def test_plot_collection_with_title(
-        self, sample_collection: TimeSeriesCollection
-    ) -> None:
+    def test_plot_collection_with_title(self, sample_collection: TimeSeriesCollection) -> None:
         """Test collection plot uses custom title."""
-        fig, ax = plot_timeseries_collection(
-            sample_collection, title="Custom Title"
-        )
+        fig, ax = plot_timeseries_collection(sample_collection, title="Custom Title")
         assert fig is not None
         plt.close(fig)
 
-    def test_plot_collection_auto_title(
-        self, sample_collection: TimeSeriesCollection
-    ) -> None:
+    def test_plot_collection_auto_title(self, sample_collection: TimeSeriesCollection) -> None:
         """Test collection plot auto-uses collection name as title."""
         fig, ax = plot_timeseries_collection(sample_collection)
         assert fig is not None
@@ -1270,9 +1248,7 @@ class TestPlotBudgetPieEdgeCases:
         assert fig2 is fig
         plt.close(fig)
 
-    def test_budget_pie_both_custom_cmap(
-        self, sample_budget_components: dict[str, float]
-    ) -> None:
+    def test_budget_pie_both_custom_cmap(self, sample_budget_components: dict[str, float]) -> None:
         """Test pie chart both with custom colormap."""
         fig, ax = plot_budget_pie(
             sample_budget_components,
@@ -1355,9 +1331,7 @@ class TestPlotBudgetTimeseriesEdgeCases:
     ) -> None:
         """Test cumulative budget timeseries with net line shown."""
         times, components = sample_budget_timeseries
-        fig, ax = plot_budget_timeseries(
-            times, components, cumulative=True, show_net=True
-        )
+        fig, ax = plot_budget_timeseries(times, components, cumulative=True, show_net=True)
         assert fig is not None
         plt.close(fig)
 

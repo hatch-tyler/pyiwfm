@@ -6,7 +6,7 @@ Tests all route groups using TestClient with a mock model.
 from __future__ import annotations
 
 import io
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -16,10 +16,9 @@ pytest.importorskip("pydantic", reason="Pydantic not available")
 
 from fastapi.testclient import TestClient
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
-from pyiwfm.visualization.webapi.config import ModelState, model_state
+from pyiwfm.core.mesh import AppGrid, Element, Node
+from pyiwfm.visualization.webapi.config import model_state
 from pyiwfm.visualization.webapi.server import create_app
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

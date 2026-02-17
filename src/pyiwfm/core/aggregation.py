@@ -31,13 +31,17 @@ Aggregate element values to zones:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import Enum
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.core.zones import ZoneDefinition
+
+if TYPE_CHECKING:
+    from pyiwfm.core.mesh import AppGrid
 
 
 class AggregationMethod(Enum):
@@ -150,6 +154,7 @@ class DataAggregator:
             zone_values = values[indices]
 
             if method == "area_weighted_mean":
+                assert self.element_areas is not None
                 zone_areas = self.element_areas[indices]
                 result[zone_id] = agg_func(zone_values, zone_areas)
             else:
@@ -297,11 +302,11 @@ class DataAggregator:
 
     def __repr__(self) -> str:
         has_areas = self.element_areas is not None
-        n_elements = len(self.element_areas) if has_areas else 0
+        n_elements = len(self.element_areas) if self.element_areas is not None else 0
         return f"DataAggregator(n_elements={n_elements}, has_areas={has_areas})"
 
 
-def create_aggregator_from_grid(grid: "AppGrid") -> DataAggregator:
+def create_aggregator_from_grid(grid: AppGrid) -> DataAggregator:
     """
     Create a DataAggregator with element areas from an AppGrid.
 
@@ -322,7 +327,6 @@ def create_aggregator_from_grid(grid: "AppGrid") -> DataAggregator:
     >>> aggregator = create_aggregator_from_grid(grid)
     >>> zone_values = aggregator.aggregate(heads, zone_def, "area_weighted_mean")
     """
-    from pyiwfm.core.mesh import AppGrid
 
     # Build element areas array
     max_elem_id = max(grid.elements.keys()) if grid.elements else 0

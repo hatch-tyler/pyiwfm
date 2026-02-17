@@ -4,18 +4,17 @@ Comprehensive tests for pyiwfm.io.gw_writer module.
 Tests the groundwater component writer for IWFM models.
 """
 
-import pytest
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+
 import numpy as np
+import pytest
 
 from pyiwfm.io.gw_writer import (
-    GWWriterConfig,
     GWComponentWriter,
+    GWWriterConfig,
     write_gw_component,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -222,7 +221,7 @@ class TestGWComponentWriter:
         """Test write method calls write_all."""
         writer = GWComponentWriter(mock_model, config)
 
-        with patch.object(writer, 'write_all') as mock_write_all:
+        with patch.object(writer, "write_all") as mock_write_all:
             writer.write()
             mock_write_all.assert_called_once()
 

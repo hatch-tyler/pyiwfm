@@ -22,8 +22,8 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm.runner.pest_geostat import GeostatManager, Variogram
 from pyiwfm.runner.pest_params import Parameter
-from pyiwfm.runner.pest_geostat import Variogram, GeostatManager
 
 
 @dataclass
@@ -202,8 +202,7 @@ class IWFMEnsembleManager:
         NDArray
             Observation ensemble (n_realizations x n_observations).
         """
-        if seed is not None:
-            np.random.seed(seed)
+        rng = np.random.default_rng(seed)
 
         n_obs = len(observation_values)
 
@@ -213,9 +212,9 @@ class IWFMEnsembleManager:
 
         # Generate noise
         if noise_type == "gaussian":
-            noise = np.random.randn(n_realizations, n_obs)
+            noise = rng.standard_normal((n_realizations, n_obs))
         else:
-            noise = np.random.randn(n_realizations, n_obs)
+            noise = rng.standard_normal((n_realizations, n_obs))
 
         # Scale noise by standard deviations
         ensemble = observation_values[np.newaxis, :] + noise * stds[np.newaxis, :]
@@ -315,7 +314,7 @@ class IWFMEnsembleManager:
             raise FileNotFoundError(f"Posterior ensemble file not found: {filepath}")
 
         lines = filepath.read_text().strip().split("\n")
-        header = lines[0].split(",")
+        lines[0].split(",")
 
         # Parse data rows
         data_rows = []
@@ -352,7 +351,7 @@ class IWFMEnsembleManager:
             q95=np.percentile(ensemble, 95, axis=0),
             n_realizations=ensemble.shape[0],
             n_parameters=ensemble.shape[1],
-            parameter_names=self.parameter_names[:ensemble.shape[1]],
+            parameter_names=self.parameter_names[: ensemble.shape[1]],
         )
 
     def compute_reduction_factor(

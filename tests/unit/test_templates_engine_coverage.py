@@ -14,7 +14,12 @@ import pytest
 # Skip the entire module if jinja2 is not installed
 jinja2 = pytest.importorskip("jinja2")
 
-from pyiwfm.templates.engine import (
+from pyiwfm.io.comment_metadata import (  # noqa: E402
+    CommentMetadata,
+    PreserveMode,
+    SectionComments,
+)
+from pyiwfm.templates.engine import (  # noqa: E402
     IWFMFileWriter,
     TemplateEngine,
     _fortran_float,
@@ -23,12 +28,6 @@ from pyiwfm.templates.engine import (
     _pad_left,
     _pad_right,
 )
-from pyiwfm.io.comment_metadata import (
-    CommentMetadata,
-    PreserveMode,
-    SectionComments,
-)
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -47,9 +46,7 @@ def custom_template_dir(tmp_path: Path) -> Path:
     tpl_dir = tmp_path / "templates"
     tpl_dir.mkdir()
     (tpl_dir / "hello.j2").write_text("Hello, {{ name }}!\n")
-    (tpl_dir / "header.j2").write_text(
-        "C  Test file\n{{ n_values }}  / COUNT\n"
-    )
+    (tpl_dir / "header.j2").write_text("C  Test file\n{{ n_values }}  / COUNT\n")
     return tpl_dir
 
 
@@ -92,9 +89,7 @@ class TestTemplateEngineCreation:
 
     def test_no_loaders(self) -> None:
         """Creation with no template dirs and no package templates."""
-        engine = TemplateEngine(
-            template_dir=None, use_package_templates=False
-        )
+        engine = TemplateEngine(template_dir=None, use_package_templates=False)
         # Should still support string rendering
         result = engine.render_string("{{ x }}", x=42)
         assert result == "42"
@@ -113,15 +108,11 @@ class TestRenderString:
         assert result == "Value is 99"
 
     def test_with_context_variables(self, engine: TemplateEngine) -> None:
-        result = engine.render_string(
-            "{{ a }} + {{ b }} = {{ a + b }}", a=3, b=7
-        )
+        result = engine.render_string("{{ a }} + {{ b }} = {{ a + b }}", a=3, b=7)
         assert result == "3 + 7 = 10"
 
     def test_with_filter(self, engine: TemplateEngine) -> None:
-        result = engine.render_string(
-            "{{ v | fortran_float(10, 2) }}", v=3.14
-        )
+        result = engine.render_string("{{ v | fortran_float(10, 2) }}", v=3.14)
         assert "3.14" in result
 
 
@@ -147,18 +138,14 @@ class TestRenderTemplate:
 class TestRenderToFile:
     """Tests for TemplateEngine.render_to_file()."""
 
-    def test_creates_file(
-        self, custom_template_dir: Path, tmp_path: Path
-    ) -> None:
+    def test_creates_file(self, custom_template_dir: Path, tmp_path: Path) -> None:
         engine = TemplateEngine(template_dir=custom_template_dir)
         output = tmp_path / "output.txt"
         engine.render_to_file("hello.j2", output, name="pyiwfm")
         assert output.exists()
         assert "Hello, pyiwfm!" in output.read_text()
 
-    def test_creates_parent_dirs(
-        self, custom_template_dir: Path, tmp_path: Path
-    ) -> None:
+    def test_creates_parent_dirs(self, custom_template_dir: Path, tmp_path: Path) -> None:
         engine = TemplateEngine(template_dir=custom_template_dir)
         output = tmp_path / "sub" / "dir" / "out.txt"
         engine.render_to_file("hello.j2", output, name="deep")
@@ -176,9 +163,7 @@ class TestRenderWithComments:
     def test_without_metadata(self, custom_template_dir: Path) -> None:
         """Without metadata, returns plain rendered content."""
         engine = TemplateEngine(template_dir=custom_template_dir)
-        result = engine.render_with_comments(
-            "hello.j2", comment_metadata=None, name="Test"
-        )
+        result = engine.render_with_comments("hello.j2", comment_metadata=None, name="Test")
         assert "Hello, Test!" in result
 
     def test_with_metadata_injects_header(
@@ -202,9 +187,7 @@ class TestRenderWithComments:
         """Metadata with no comments returns plain rendered content."""
         empty_meta = CommentMetadata()
         engine = TemplateEngine(template_dir=custom_template_dir)
-        result = engine.render_with_comments(
-            "hello.j2", comment_metadata=empty_meta, name="Test"
-        )
+        result = engine.render_with_comments("hello.j2", comment_metadata=empty_meta, name="Test")
         assert "Hello, Test!" in result
 
 
@@ -247,9 +230,7 @@ class TestRenderHybrid:
         engine.render_hybrid("C  Just a header\n", output)
         assert output.read_text() == "C  Just a header\n"
 
-    def test_with_j2_file(
-        self, custom_template_dir: Path, tmp_path: Path
-    ) -> None:
+    def test_with_j2_file(self, custom_template_dir: Path, tmp_path: Path) -> None:
         engine = TemplateEngine(template_dir=custom_template_dir)
         output = tmp_path / "from_j2.dat"
         data = np.array([10.0, 20.0])
@@ -290,9 +271,7 @@ class TestRenderHybridWithComments:
         assert "PRESERVED HEADER" in content
         assert "1.00" in content
 
-    def test_without_metadata(
-        self, engine: TemplateEngine, tmp_path: Path
-    ) -> None:
+    def test_without_metadata(self, engine: TemplateEngine, tmp_path: Path) -> None:
         output = tmp_path / "hybrid_no_meta.dat"
         engine.render_hybrid_with_comments(
             "C  plain header\n",

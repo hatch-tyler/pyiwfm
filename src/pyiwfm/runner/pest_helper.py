@@ -25,40 +25,34 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, TextIO
-
-import numpy as np
+from typing import Any
 
 from pyiwfm.runner.pest import (
+    InstructionFile,
     PESTInterface,
     TemplateFile,
-    InstructionFile,
+)
+from pyiwfm.runner.pest_geostat import (
+    GeostatManager,
+    Variogram,
+)
+from pyiwfm.runner.pest_instructions import IWFMInstructionManager
+from pyiwfm.runner.pest_manager import IWFMParameterManager
+from pyiwfm.runner.pest_obs_manager import IWFMObservationManager
+from pyiwfm.runner.pest_observations import (
+    IWFMObservation,
+    IWFMObservationGroup,
+    IWFMObservationType,
 )
 from pyiwfm.runner.pest_params import (
     IWFMParameterType,
     Parameter,
-    ParameterGroup,
-    ParameterTransform,
 )
-from pyiwfm.runner.pest_manager import IWFMParameterManager
-from pyiwfm.runner.pest_observations import (
-    IWFMObservationType,
-    IWFMObservation,
-    IWFMObservationGroup,
-    WeightStrategy,
-)
-from pyiwfm.runner.pest_obs_manager import IWFMObservationManager
 from pyiwfm.runner.pest_templates import IWFMTemplateManager
-from pyiwfm.runner.pest_instructions import IWFMInstructionManager
-from pyiwfm.runner.pest_geostat import (
-    Variogram,
-    VariogramType,
-    GeostatManager,
-)
 
 
 class RegularizationType(Enum):
@@ -472,7 +466,7 @@ class IWFMPestHelper:
         created = []
         location = ObservationLocation(x=x, y=y, layer=layer)
 
-        for t, v in zip(times, values):
+        for t, v in zip(times, values, strict=False):
             date_str = t.strftime("%Y%m%d")
             obs_name = f"{well_id[:12]}_{date_str}"
             # Ensure unique name
@@ -541,7 +535,7 @@ class IWFMPestHelper:
             )
 
         created = []
-        for t, v in zip(times, values):
+        for t, v in zip(times, values, strict=False):
             date_str = t.strftime("%Y%m%d")
             obs_name = f"{gage_id[:12]}_{date_str}"
             obs_name = self.observations._make_valid_obs_name(obs_name)
@@ -713,7 +707,7 @@ class IWFMPestHelper:
                 lower_bound=param.lower_bound,
                 upper_bound=param.upper_bound,
                 group=param.group or "default",
-                transform=param.transform or "none",
+                transform=param.transform.value if param.transform else "none",
             )
 
         # Add observations
@@ -957,8 +951,7 @@ if __name__ == "__main__":
         exe = shutil.which(program)
         if exe is None:
             raise FileNotFoundError(
-                f"PEST++ executable not found: {program}. "
-                f"Ensure PEST++ is installed and on PATH."
+                f"PEST++ executable not found: {program}. Ensure PEST++ is installed and on PATH."
             )
 
         cmd = [exe, str(pst_file)]
@@ -1091,9 +1084,7 @@ if __name__ == "__main__":
             "n_instructions": len(self._built_instructions),
             "svd_configured": self._svd_config is not None,
             "regularization": (
-                self._regularization.reg_type.value
-                if self._regularization
-                else "none"
+                self._regularization.reg_type.value if self._regularization else "none"
             ),
             "is_built": self._is_built,
             "pestpp_options": dict(self._pestpp_options),

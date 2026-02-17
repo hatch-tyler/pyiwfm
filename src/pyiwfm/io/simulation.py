@@ -8,22 +8,24 @@ and output control settings.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import re as _re
-from datetime import datetime, timedelta
+from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, TextIO
 
-import numpy as np
-from numpy.typing import NDArray
-
-from pyiwfm.core.timeseries import TimeUnit, SimulationPeriod
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.core.timeseries import SimulationPeriod, TimeUnit
 from pyiwfm.io.iwfm_reader import (
-    COMMENT_CHARS,
     is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
+)
+from pyiwfm.io.iwfm_reader import (
     resolve_path as _resolve_path_f,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
 )
 
@@ -34,6 +36,7 @@ def _format_iwfm_datetime(dt: datetime) -> str:
     Midnight (00:00) is represented as 24:00 of the previous day.
     """
     from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+
     return format_iwfm_timestamp(dt)
 
 
@@ -216,9 +219,7 @@ class SimulationWriter:
 
         return filepath
 
-    def _write_header(
-        self, f: TextIO, header: str | None, config: SimulationConfig
-    ) -> None:
+    def _write_header(self, f: TextIO, header: str | None, config: SimulationConfig) -> None:
         """Write file header."""
         if header:
             for line in header.strip().split("\n"):
@@ -251,7 +252,9 @@ class SimulationWriter:
 
         # Time step
         f.write(f"{config.time_step_length:<10}                              / TIME_STEP_LENGTH\n")
-        f.write(f"{config.time_step_unit.value:<10}                              / TIME_STEP_UNIT\n")
+        f.write(
+            f"{config.time_step_unit.value:<10}                              / TIME_STEP_UNIT\n"
+        )
 
         f.write("C\n")
 
@@ -354,8 +357,12 @@ class SimulationWriter:
             f.write(f"{str(config.output_dir):<60} / OUTPUT_DIR\n")
 
         f.write(f"{config.output_interval:<10}                              / OUTPUT_INTERVAL\n")
-        f.write(f"{config.budget_output_interval:<10}                              / BUDGET_OUTPUT_INTERVAL\n")
-        f.write(f"{config.heads_output_interval:<10}                              / HEADS_OUTPUT_INTERVAL\n")
+        f.write(
+            f"{config.budget_output_interval:<10}                              / BUDGET_OUTPUT_INTERVAL\n"
+        )
+        f.write(
+            f"{config.heads_output_interval:<10}                              / HEADS_OUTPUT_INTERVAL\n"
+        )
 
 
 class SimulationReader:
@@ -377,7 +384,7 @@ class SimulationReader:
 
         config = SimulationConfig()
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             line_num = 0
 
             for line in f:
@@ -397,9 +404,7 @@ class SimulationReader:
 
         return config
 
-    def _parse_config_line(
-        self, config: SimulationConfig, value: str, desc: str
-    ) -> None:
+    def _parse_config_line(self, config: SimulationConfig, value: str, desc: str) -> None:
         """Parse a single configuration line.
 
         Handles both the pyiwfm writer format (``START_DATE``,
@@ -493,9 +498,7 @@ class SimulationReader:
         elif "OUTPUT" in desc and "INTERVAL" in desc:
             config.output_interval = int(value)
 
-    def _parse_combined_timestep(
-        self, config: SimulationConfig, value: str
-    ) -> None:
+    def _parse_combined_timestep(self, config: SimulationConfig, value: str) -> None:
         """Parse a combined time-step string like ``1MON`` or ``2HOUR``."""
         m = _re.match(r"(\d+)\s*(\w+)", value.strip())
         if m:
@@ -511,6 +514,7 @@ class SimulationReader:
         Hour ``24`` is treated as midnight of the next day.
         """
         from pyiwfm.io.timeseries_ascii import parse_iwfm_timestamp
+
         return parse_iwfm_timestamp(value)
 
 
@@ -528,9 +532,7 @@ class IWFMSimulationReader:
     def __init__(self) -> None:
         self._line_num = 0
 
-    def read(
-        self, filepath: Path | str, base_dir: Path | None = None
-    ) -> SimulationConfig:
+    def read(self, filepath: Path | str, base_dir: Path | None = None) -> SimulationConfig:
         """Read IWFM simulation main file in positional format.
 
         Args:
@@ -547,7 +549,7 @@ class IWFMSimulationReader:
         config = SimulationConfig()
         self._line_num = 0
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             # Section 1: Title lines (3 non-comment lines)
             for _ in range(3):
                 title = _next_data_or_empty(f)
@@ -558,9 +560,7 @@ class IWFMSimulationReader:
             # 1: Binary preprocessor file (required)
             bin_pp = _next_data_or_empty(f)
             if bin_pp:
-                config.binary_preprocessor_file = _resolve_path_f(
-                    base_dir, bin_pp
-                )
+                config.binary_preprocessor_file = _resolve_path_f(base_dir, bin_pp)
 
             # 2: Groundwater main file (required)
             gw = _next_data_or_empty(f)
@@ -590,30 +590,22 @@ class IWFMSimulationReader:
             # 7: Unsaturated zone main file (optional)
             uz = _next_data_or_empty(f)
             if uz:
-                config.unsaturated_zone_file = _resolve_path_f(
-                    base_dir, uz
-                )
+                config.unsaturated_zone_file = _resolve_path_f(base_dir, uz)
 
             # 8: Irrigation fractions file (optional)
             irig = _next_data_or_empty(f)
             if irig:
-                config.irrigation_fractions_file = _resolve_path_f(
-                    base_dir, irig
-                )
+                config.irrigation_fractions_file = _resolve_path_f(base_dir, irig)
 
             # 9: Supply adjustment specification file (optional)
             supp = _next_data_or_empty(f)
             if supp:
-                config.supply_adjust_file = _resolve_path_f(
-                    base_dir, supp
-                )
+                config.supply_adjust_file = _resolve_path_f(base_dir, supp)
 
             # 10: Precipitation data file (optional)
             precip = _next_data_or_empty(f)
             if precip:
-                config.precipitation_file = _resolve_path_f(
-                    base_dir, precip
-                )
+                config.precipitation_file = _resolve_path_f(base_dir, precip)
 
             # 11: ET data file (optional)
             et = _next_data_or_empty(f)
@@ -717,27 +709,17 @@ class IWFMSimulationReader:
                     if self._looks_like_integer(koptdv_or_stopcsp):
                         # No STOPCVL: stopcvl_or_stopcsp is STOPCSP,
                         # koptdv_or_stopcsp is KOPTDV
-                        config.convergence_supply = float(
-                            stopcvl_or_stopcsp
-                        )
-                        config.supply_adjust_option = int(
-                            float(koptdv_or_stopcsp)
-                        )
+                        config.convergence_supply = float(stopcvl_or_stopcsp)
+                        config.supply_adjust_option = int(float(koptdv_or_stopcsp))
                     else:
                         # Has STOPCVL: stopcvl_or_stopcsp is STOPCVL,
                         # koptdv_or_stopcsp is STOPCSP
-                        config.convergence_volume = float(
-                            stopcvl_or_stopcsp
-                        )
-                        config.convergence_supply = float(
-                            koptdv_or_stopcsp
-                        )
+                        config.convergence_volume = float(stopcvl_or_stopcsp)
+                        config.convergence_supply = float(koptdv_or_stopcsp)
                         # Read KOPTDV
                         kopt_str = _next_data_or_empty(f)
                         if kopt_str:
-                            config.supply_adjust_option = int(
-                                float(kopt_str)
-                            )
+                            config.supply_adjust_option = int(float(kopt_str))
                 else:
                     # Only one more value: it's STOPCSP, no STOPCVL
                     try:
@@ -782,15 +764,14 @@ def _parse_iwfm_datetime(value: str) -> datetime:
     Hour ``24`` is treated as midnight of the next day.
     """
     from pyiwfm.io.timeseries_ascii import parse_iwfm_timestamp
+
     return parse_iwfm_timestamp(value)
 
 
 # Convenience functions
 
 
-def read_iwfm_simulation(
-    filepath: Path | str, base_dir: Path | None = None
-) -> SimulationConfig:
+def read_iwfm_simulation(filepath: Path | str, base_dir: Path | None = None) -> SimulationConfig:
     """Read IWFM simulation main file in positional format.
 
     This reads files in the native IWFM Fortran format where values appear

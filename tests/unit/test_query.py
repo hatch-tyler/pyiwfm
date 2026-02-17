@@ -9,18 +9,16 @@ Tests:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
-from pyiwfm.core.query import TimeSeries, ModelQueryAPI
+from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
+from pyiwfm.core.query import ModelQueryAPI, TimeSeries
 from pyiwfm.core.zones import Zone, ZoneDefinition
-from pyiwfm.core.mesh import AppGrid, Node, Element, Subregion
-
 
 # =============================================================================
 # Test TimeSeries Dataclass
@@ -66,7 +64,8 @@ class TestTimeSeries:
     def test_n_timesteps_property(self) -> None:
         """Test n_timesteps property."""
         times = [datetime(2020, i, 1) for i in range(1, 13)]
-        values = np.random.random(12)
+        rng = np.random.default_rng(42)
+        values = rng.random(12)
 
         ts = TimeSeries(
             times=times,
@@ -311,9 +310,7 @@ class TestModelQueryAPIZones:
         model.mesh = simple_grid
 
         api = ModelQueryAPI(model)
-        custom_zones = ZoneDefinition(
-            zones={1: Zone(id=1, name="Custom", elements=[1, 2])}
-        )
+        custom_zones = ZoneDefinition(zones={1: Zone(id=1, name="Custom", elements=[1, 2])})
         api.register_zones("my_zones", custom_zones)
 
         result = api.get_zone_definition("my_zones")
@@ -414,11 +411,13 @@ class TestModelQueryAPIGetTimeseries:
         # Mock results with time series
         model.results = MagicMock()
         model.results.times = [datetime(2020, i, 1) for i in range(1, 4)]
-        model.results.head = np.array([
-            [[10.0], [11.0], [12.0], [13.0]],  # Time 0
-            [[11.0], [12.0], [13.0], [14.0]],  # Time 1
-            [[12.0], [13.0], [14.0], [15.0]],  # Time 2
-        ])
+        model.results.head = np.array(
+            [
+                [[10.0], [11.0], [12.0], [13.0]],  # Time 0
+                [[11.0], [12.0], [13.0], [14.0]],  # Time 1
+                [[12.0], [13.0], [14.0], [15.0]],  # Time 2
+            ]
+        )
 
         return model
 
@@ -676,24 +675,30 @@ class TestModelQueryAPIGetElementValues:
 
         # Create stratigraphy with 2 layers
         model.stratigraphy = MagicMock()
-        model.stratigraphy.thicknesses = np.array([
-            [10.0, 20.0],  # Node 1
-            [12.0, 22.0],  # Node 2
-            [11.0, 21.0],  # Node 3
-            [13.0, 23.0],  # Node 4
-        ])
-        model.stratigraphy.top_elev = np.array([
-            [100.0, 90.0],
-            [100.0, 88.0],
-            [100.0, 89.0],
-            [100.0, 87.0],
-        ])
-        model.stratigraphy.bottom_elev = np.array([
-            [90.0, 70.0],
-            [88.0, 66.0],
-            [89.0, 68.0],
-            [87.0, 64.0],
-        ])
+        model.stratigraphy.thicknesses = np.array(
+            [
+                [10.0, 20.0],  # Node 1
+                [12.0, 22.0],  # Node 2
+                [11.0, 21.0],  # Node 3
+                [13.0, 23.0],  # Node 4
+            ]
+        )
+        model.stratigraphy.top_elev = np.array(
+            [
+                [100.0, 90.0],
+                [100.0, 88.0],
+                [100.0, 89.0],
+                [100.0, 87.0],
+            ]
+        )
+        model.stratigraphy.bottom_elev = np.array(
+            [
+                [90.0, 70.0],
+                [88.0, 66.0],
+                [89.0, 68.0],
+                [87.0, 64.0],
+            ]
+        )
 
         model.groundwater = None
         model.results = None
@@ -809,7 +814,7 @@ class TestModelQueryAPIPropertyInfo:
         """Test PROPERTY_INFO entries have expected structure."""
         info = ModelQueryAPI.PROPERTY_INFO
 
-        for prop_name, prop_info in info.items():
+        for _prop_name, prop_info in info.items():
             assert "name" in prop_info
             assert "units" in prop_info
             assert "source" in prop_info
@@ -899,11 +904,13 @@ class TestModelQueryAPIGetTimeseriesWithData:
 
         model.results = MagicMock()
         model.results.times = [datetime(2020, i, 1) for i in range(1, 4)]
-        model.results.head = np.array([
-            [[10.0], [11.0], [12.0], [13.0]],
-            [[11.0], [12.0], [13.0], [14.0]],
-            [[12.0], [13.0], [14.0], [15.0]],
-        ])
+        model.results.head = np.array(
+            [
+                [[10.0], [11.0], [12.0], [13.0]],
+                [[11.0], [12.0], [13.0], [14.0]],
+                [[12.0], [13.0], [14.0], [15.0]],
+            ]
+        )
 
         return model
 
@@ -963,7 +970,11 @@ class TestModelQueryAPIExportTimeseriesCsv:
         """Test export when no results available."""
         model = MagicMock()
         model.name = "Test"
-        nodes = {1: Node(id=1, x=0.0, y=0.0), 2: Node(id=2, x=100.0, y=0.0), 3: Node(id=3, x=50.0, y=100.0)}
+        nodes = {
+            1: Node(id=1, x=0.0, y=0.0),
+            2: Node(id=2, x=100.0, y=0.0),
+            3: Node(id=3, x=50.0, y=100.0),
+        }
         elements = {1: Element(id=1, vertices=(1, 2, 3), subregion=1, area=5000.0)}
         model.mesh = AppGrid(nodes=nodes, elements=elements)
         model.results = None
@@ -1033,7 +1044,11 @@ class TestModelQueryAPIGetElementValuesGW:
     def test_get_element_values_no_gw(self) -> None:
         """Test getting GW values when no groundwater component."""
         model = MagicMock()
-        nodes = {1: Node(id=1, x=0.0, y=0.0), 2: Node(id=2, x=100.0, y=0.0), 3: Node(id=3, x=50.0, y=100.0)}
+        nodes = {
+            1: Node(id=1, x=0.0, y=0.0),
+            2: Node(id=2, x=100.0, y=0.0),
+            3: Node(id=3, x=50.0, y=100.0),
+        }
         elements = {1: Element(id=1, vertices=(1, 2, 3), subregion=1, area=5000.0)}
         model.mesh = AppGrid(nodes=nodes, elements=elements)
         model.stratigraphy = None
@@ -1062,9 +1077,11 @@ class TestModelQueryAPIGetElementValuesGW:
         model.groundwater = None
 
         model.results = MagicMock()
-        model.results.head = np.array([
-            [[100.0, 90.0], [102.0, 91.0], [101.0, 89.0], [103.0, 92.0]],
-        ])
+        model.results.head = np.array(
+            [
+                [[100.0, 90.0], [102.0, 91.0], [101.0, 89.0], [103.0, 92.0]],
+            ]
+        )
 
         api = ModelQueryAPI(model)
         values = api._get_element_values("head", layer=1, time_index=0)
@@ -1088,9 +1105,11 @@ class TestModelQueryAPIGetElementValuesGW:
         model.groundwater = None
 
         model.results = MagicMock()
-        model.results.head = np.array([
-            [100.0, 102.0, 101.0],
-        ])
+        model.results.head = np.array(
+            [
+                [100.0, 102.0, 101.0],
+            ]
+        )
 
         api = ModelQueryAPI(model)
         values = api._get_element_values("head", time_index=0)
@@ -1100,7 +1119,11 @@ class TestModelQueryAPIGetElementValuesGW:
     def test_get_element_values_head_no_results(self) -> None:
         """Test getting head values when no head results."""
         model = MagicMock()
-        nodes = {1: Node(id=1, x=0.0, y=0.0), 2: Node(id=2, x=100.0, y=0.0), 3: Node(id=3, x=50.0, y=100.0)}
+        nodes = {
+            1: Node(id=1, x=0.0, y=0.0),
+            2: Node(id=2, x=100.0, y=0.0),
+            3: Node(id=3, x=50.0, y=100.0),
+        }
         elements = {1: Element(id=1, vertices=(1, 2, 3), subregion=1, area=5000.0)}
         model.mesh = AppGrid(nodes=nodes, elements=elements)
         model.stratigraphy = None
@@ -1135,15 +1158,30 @@ class TestModelQueryAPIExportMultipleVars:
         model.mesh = AppGrid(nodes=nodes, elements=elements, subregions=subregions)
 
         model.stratigraphy = MagicMock()
-        model.stratigraphy.thicknesses = np.array([
-            [50.0, 30.0], [50.0, 30.0], [50.0, 30.0], [50.0, 30.0],
-        ])
-        model.stratigraphy.top_elev = np.array([
-            [100.0, 50.0], [100.0, 50.0], [100.0, 50.0], [100.0, 50.0],
-        ])
-        model.stratigraphy.bottom_elev = np.array([
-            [50.0, 20.0], [50.0, 20.0], [50.0, 20.0], [50.0, 20.0],
-        ])
+        model.stratigraphy.thicknesses = np.array(
+            [
+                [50.0, 30.0],
+                [50.0, 30.0],
+                [50.0, 30.0],
+                [50.0, 30.0],
+            ]
+        )
+        model.stratigraphy.top_elev = np.array(
+            [
+                [100.0, 50.0],
+                [100.0, 50.0],
+                [100.0, 50.0],
+                [100.0, 50.0],
+            ]
+        )
+        model.stratigraphy.bottom_elev = np.array(
+            [
+                [50.0, 20.0],
+                [50.0, 20.0],
+                [50.0, 20.0],
+                [50.0, 20.0],
+            ]
+        )
 
         model.groundwater = None
         model.results = None

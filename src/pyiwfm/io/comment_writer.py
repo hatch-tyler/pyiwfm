@@ -11,12 +11,10 @@ Classes:
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TextIO
 
 from pyiwfm.io.comment_metadata import (
     CommentMetadata,
-    PreserveMode,
     SectionComments,
 )
 
@@ -279,9 +277,7 @@ class CommentWriter:
             key: Key for comment lookup.
             fallback_comment: Comment to use if none preserved.
         """
-        line = self.format_data_with_comment(
-            data, section_name, key, fallback_comment
-        )
+        line = self.format_data_with_comment(data, section_name, key, fallback_comment)
         file.write(line + "\n")
 
     def _get_section(self, section_name: str) -> SectionComments | None:

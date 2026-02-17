@@ -47,7 +47,7 @@ class IWFMHydrographReader:
             return
 
         try:
-            with open(self._filepath, "r") as f:
+            with open(self._filepath) as f:
                 lines = f.readlines()
         except Exception as e:
             logger.error("Failed to read hydrograph file %s: %s", self._filepath, e)
@@ -126,7 +126,9 @@ class IWFMHydrographReader:
 
             logger.info(
                 "Hydrograph file loaded: %d timesteps, %d columns from %s",
-                len(times), n_cols, self._filepath.name,
+                len(times),
+                n_cols,
+                self._filepath.name,
             )
 
     @staticmethod
@@ -146,6 +148,7 @@ class IWFMHydrographReader:
                 date_part = cleaned.split()[0]
                 dt = datetime.strptime(date_part, "%m/%d/%Y")
                 from datetime import timedelta
+
                 dt += timedelta(days=1)
                 return dt.strftime("%Y-%m-%dT00:00:00")
 

@@ -10,7 +10,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from pyiwfm.visualization.webapi.config import model_state
+from pyiwfm.visualization.webapi.config import model_state, require_model
 from pyiwfm.visualization.webapi.properties import PROPERTY_INFO
 
 router = APIRouter(prefix="/api/properties", tags=["properties"])
@@ -42,10 +42,7 @@ class PropertyData(BaseModel):
 @router.get("", response_model=list[PropertyListItem])
 def list_properties() -> list[PropertyListItem]:
     """List available properties for visualization."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = require_model()
     available = ["layer"]
 
     if model.stratigraphy is not None:
@@ -80,11 +77,11 @@ def list_properties() -> list[PropertyListItem]:
         result.append(
             PropertyListItem(
                 id=prop_id,
-                name=info["name"],
-                units=info["units"],
-                description=info["description"],
-                cmap=info["cmap"],
-                log_scale=info["log_scale"],
+                name=str(info["name"]),
+                units=str(info["units"]),
+                description=str(info["description"]),
+                cmap=str(info["cmap"]),
+                log_scale=bool(info["log_scale"]),
             )
         )
 
@@ -100,13 +97,9 @@ def get_property(
     if not model_state.is_loaded:
         raise HTTPException(status_code=404, detail="No model loaded")
 
-    model = model_state.model
-
     values = _compute_property_values(property_id, layer)
     if values is None:
-        raise HTTPException(
-            status_code=404, detail=f"Property '{property_id}' not available"
-        )
+        raise HTTPException(status_code=404, detail=f"Property '{property_id}' not available")
 
     valid = values[~np.isnan(values)]
     if len(valid) == 0:
@@ -118,8 +111,8 @@ def get_property(
 
     return PropertyData(
         property_id=property_id,
-        name=info["name"],
-        units=info.get("units", ""),
+        name=str(info["name"]),
+        units=str(info.get("units", "")),
         values=values.tolist(),
         min=float(np.min(valid)),
         max=float(np.max(valid)),
@@ -153,21 +146,19 @@ def _node_to_element_values(
                         node_vals.append(float(node_data[idx, lay]))
                     elif not is_2d:
                         node_vals.append(float(node_data[idx]))
-            values[offset + i] = (
-                sum(node_vals) / len(node_vals) if node_vals else 0.0
-            )
+            values[offset + i] = sum(node_vals) / len(node_vals) if node_vals else 0.0
     return values
 
 
-def _compute_property_values(
-    property_id: str, layer: int = 0
-) -> np.ndarray | None:
+def _compute_property_values(property_id: str, layer: int = 0) -> np.ndarray | None:
     """Compute property values for the mesh cells."""
     model = model_state.model
     if model is None:
         return None
 
     grid = model.grid
+    if grid is None:
+        return None
     strat = model.stratigraphy
 
     n_elements = grid.n_elements
@@ -242,12 +233,8 @@ def _compute_property_values(
         if param_data is None:
             return None
 
-        effective_layers = (
-            min(n_layers, param_data.shape[1]) if param_data.ndim == 2 else n_layers
-        )
-        partial = _node_to_element_values(
-            param_data, grid, n_elements, effective_layers
-        )
+        effective_layers = min(n_layers, param_data.shape[1]) if param_data.ndim == 2 else n_layers
+        partial = _node_to_element_values(param_data, grid, n_elements, effective_layers)
         if effective_layers < n_layers:
             values = np.zeros(n_cells, dtype=np.float64)
             values[: n_elements * effective_layers] = partial

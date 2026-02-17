@@ -15,6 +15,8 @@ from numpy.typing import NDArray
 
 if TYPE_CHECKING:
     import pyvista as pv
+    import vtk
+
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.stratigraphy import Stratigraphy
 
@@ -34,8 +36,8 @@ class VTKExporter:
 
     def __init__(
         self,
-        grid: "AppGrid",
-        stratigraphy: "Stratigraphy | None" = None,
+        grid: AppGrid,
+        stratigraphy: Stratigraphy | None = None,
     ) -> None:
         """
         Initialize the VTK exporter.
@@ -48,14 +50,13 @@ class VTKExporter:
             import vtk  # noqa: F401
         except ImportError as e:
             raise ImportError(
-                "VTK is required for VTK export. "
-                "Install with: pip install vtk"
+                "VTK is required for VTK export. Install with: pip install vtk"
             ) from e
 
         self.grid = grid
         self.stratigraphy = stratigraphy
 
-    def create_2d_mesh(self) -> "vtk.vtkUnstructuredGrid":
+    def create_2d_mesh(self) -> vtk.vtkUnstructuredGrid:
         """
         Create a 2D VTK UnstructuredGrid from the mesh.
 
@@ -91,7 +92,7 @@ class VTKExporter:
 
         return vtk_grid
 
-    def create_3d_mesh(self) -> "vtk.vtkUnstructuredGrid":
+    def create_3d_mesh(self) -> vtk.vtkUnstructuredGrid:
         """
         Create a 3D VTK UnstructuredGrid from mesh and stratigraphy.
 
@@ -200,7 +201,7 @@ class VTKExporter:
 
     def add_node_scalar(
         self,
-        vtk_grid: "vtk.vtkUnstructuredGrid",
+        vtk_grid: vtk.vtkUnstructuredGrid,
         name: str,
         values: NDArray[np.float64],
     ) -> None:
@@ -225,7 +226,7 @@ class VTKExporter:
 
     def add_cell_scalar(
         self,
-        vtk_grid: "vtk.vtkUnstructuredGrid",
+        vtk_grid: vtk.vtkUnstructuredGrid,
         name: str,
         values: NDArray[np.float64],
     ) -> None:
@@ -334,7 +335,7 @@ class VTKExporter:
         self,
         node_scalars: dict[str, NDArray[np.float64]] | None = None,
         cell_scalars: dict[str, NDArray[np.float64]] | None = None,
-    ) -> "pv.UnstructuredGrid":
+    ) -> pv.UnstructuredGrid:
         """
         Create a PyVista UnstructuredGrid from mesh and stratigraphy.
 
@@ -380,11 +381,10 @@ class VTKExporter:
         >>> pv_mesh.plot(scalars="Kh", cmap="viridis")
         """
         try:
-            import pyvista as pv
+            import pyvista as pv  # noqa: F401
         except ImportError as e:
             raise ImportError(
-                "PyVista is required for this method. "
-                "Install with: pip install pyvista"
+                "PyVista is required for this method. Install with: pip install pyvista"
             ) from e
 
         if self.stratigraphy is None:
@@ -396,7 +396,7 @@ class VTKExporter:
         self,
         node_scalars: dict[str, NDArray[np.float64]] | None = None,
         cell_scalars: dict[str, NDArray[np.float64]] | None = None,
-    ) -> "pv.UnstructuredGrid":
+    ) -> pv.UnstructuredGrid:
         """Create a 2D PyVista mesh."""
         import pyvista as pv
 
@@ -411,23 +411,23 @@ class VTKExporter:
             points[i] = [node.x, node.y, 0.0]
 
         # Build cells
-        cells = []
-        cell_types = []
+        cells_list: list[int] = []
+        cell_types_list: list[int] = []
 
         for elem in self.grid.iter_elements():
             vertex_indices = [node_id_to_idx[vid] for vid in elem.vertices]
-            cells.append(len(vertex_indices))
-            cells.extend(vertex_indices)
+            cells_list.append(len(vertex_indices))
+            cells_list.extend(vertex_indices)
 
             if elem.is_triangle:
-                cell_types.append(pv.CellType.TRIANGLE)
+                cell_types_list.append(pv.CellType.TRIANGLE)
             else:
-                cell_types.append(pv.CellType.QUAD)
+                cell_types_list.append(pv.CellType.QUAD)
 
-        cells = np.array(cells)
-        cell_types = np.array(cell_types)
+        cells_arr = np.array(cells_list)
+        cell_types_arr = np.array(cell_types_list)
 
-        mesh = pv.UnstructuredGrid(cells, cell_types, points)
+        mesh = pv.UnstructuredGrid(cells_arr, cell_types_arr, points)
 
         # Add element IDs
         elem_ids = [elem.id for elem in self.grid.iter_elements()]
@@ -448,9 +448,11 @@ class VTKExporter:
         self,
         node_scalars: dict[str, NDArray[np.float64]] | None = None,
         cell_scalars: dict[str, NDArray[np.float64]] | None = None,
-    ) -> "pv.UnstructuredGrid":
+    ) -> pv.UnstructuredGrid:
         """Create a 3D PyVista mesh with stratigraphy."""
         import pyvista as pv
+
+        assert self.stratigraphy is not None  # Caller guarantees this
 
         # Build node index mapping
         sorted_node_ids = sorted(self.grid.nodes.keys())
@@ -474,9 +476,7 @@ class VTKExporter:
 
                 if surf_idx == 0:
                     # Top surface (ground surface)
-                    points[point_idx, 2] = float(
-                        self.stratigraphy.top_elev[node_idx, 0]
-                    )
+                    points[point_idx, 2] = float(self.stratigraphy.top_elev[node_idx, 0])
                 else:
                     # Bottom of layer surf_idx-1
                     points[point_idx, 2] = float(
@@ -484,8 +484,8 @@ class VTKExporter:
                     )
 
         # Build cells for each element in each layer
-        cells = []
-        cell_types = []
+        cells_list: list[int] = []
+        cell_types_list: list[int] = []
         layer_data = []
         element_ids = []
 
@@ -498,46 +498,54 @@ class VTKExporter:
 
                 if elem.is_triangle:
                     # Wedge (triangular prism)
-                    cell_types.append(pv.CellType.WEDGE)
-                    cells.append(6)
+                    cell_types_list.append(pv.CellType.WEDGE)
+                    cells_list.append(6)
                     # Bottom (layer+1 surface)
-                    cells.extend([
-                        bot_surf_offset + node_indices[0],
-                        bot_surf_offset + node_indices[1],
-                        bot_surf_offset + node_indices[2],
-                    ])
+                    cells_list.extend(
+                        [
+                            bot_surf_offset + node_indices[0],
+                            bot_surf_offset + node_indices[1],
+                            bot_surf_offset + node_indices[2],
+                        ]
+                    )
                     # Top (layer surface)
-                    cells.extend([
-                        top_surf_offset + node_indices[0],
-                        top_surf_offset + node_indices[1],
-                        top_surf_offset + node_indices[2],
-                    ])
+                    cells_list.extend(
+                        [
+                            top_surf_offset + node_indices[0],
+                            top_surf_offset + node_indices[1],
+                            top_surf_offset + node_indices[2],
+                        ]
+                    )
                 else:
                     # Hexahedron
-                    cell_types.append(pv.CellType.HEXAHEDRON)
-                    cells.append(8)
+                    cell_types_list.append(pv.CellType.HEXAHEDRON)
+                    cells_list.append(8)
                     # Bottom quad
-                    cells.extend([
-                        bot_surf_offset + node_indices[0],
-                        bot_surf_offset + node_indices[1],
-                        bot_surf_offset + node_indices[2],
-                        bot_surf_offset + node_indices[3],
-                    ])
+                    cells_list.extend(
+                        [
+                            bot_surf_offset + node_indices[0],
+                            bot_surf_offset + node_indices[1],
+                            bot_surf_offset + node_indices[2],
+                            bot_surf_offset + node_indices[3],
+                        ]
+                    )
                     # Top quad
-                    cells.extend([
-                        top_surf_offset + node_indices[0],
-                        top_surf_offset + node_indices[1],
-                        top_surf_offset + node_indices[2],
-                        top_surf_offset + node_indices[3],
-                    ])
+                    cells_list.extend(
+                        [
+                            top_surf_offset + node_indices[0],
+                            top_surf_offset + node_indices[1],
+                            top_surf_offset + node_indices[2],
+                            top_surf_offset + node_indices[3],
+                        ]
+                    )
 
                 layer_data.append(layer + 1)  # 1-indexed
                 element_ids.append(elem.id)
 
-        cells = np.array(cells)
-        cell_types = np.array(cell_types)
+        cells_arr = np.array(cells_list)
+        cell_types_arr = np.array(cell_types_list)
 
-        mesh = pv.UnstructuredGrid(cells, cell_types, points)
+        mesh = pv.UnstructuredGrid(cells_arr, cell_types_arr, points)
 
         # Add standard cell data
         mesh.cell_data["layer"] = np.array(layer_data)

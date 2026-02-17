@@ -9,23 +9,22 @@ Tests cover:
 - Edge cases and error handling
 """
 
-import pytest
 import numpy as np
+import pytest
 from numpy.testing import assert_allclose
 
-from pyiwfm.core.mesh import AppGrid, Node, Element
 from pyiwfm.core.interpolation import (
-    point_in_element,
+    FEInterpolator,
+    InterpolationResult,
+    ParametricGrid,
+    _xpoint,
+    fe_interpolate,
+    fe_interpolate_at_element,
     find_containing_element,
     interpolation_coefficients,
-    fe_interpolate_at_element,
-    fe_interpolate,
-    FEInterpolator,
-    ParametricGrid,
-    InterpolationResult,
-    _xpoint,
+    point_in_element,
 )
-
+from pyiwfm.core.mesh import AppGrid, Element, Node
 
 # =============================================================================
 # Fixtures
@@ -94,7 +93,7 @@ def mixed_mesh():
     elements = {
         1: Element(id=1, vertices=(1, 2, 5, 6)),  # Quad
         2: Element(id=2, vertices=(2, 3, 4, 5)),  # Quad
-        3: Element(id=3, vertices=(6, 5, 7)),     # Triangle (CCW order)
+        3: Element(id=3, vertices=(6, 5, 7)),  # Triangle (CCW order)
     }
     return AppGrid(nodes=nodes, elements=elements)
 
@@ -257,7 +256,7 @@ class TestInterpolationCoefficients:
         coeffs = interpolation_coefficients(3, xp, yp, x, y)
 
         assert len(coeffs) == 3
-        assert_allclose(coeffs, [1/3, 1/3, 1/3], rtol=0.01)
+        assert_allclose(coeffs, [1 / 3, 1 / 3, 1 / 3], rtol=0.01)
         assert_allclose(sum(coeffs), 1.0, rtol=1e-10)
 
     def test_triangle_at_vertex(self):
@@ -532,11 +531,13 @@ class TestFEInterpolator:
         interp = FEInterpolator(triangle_grid)
         values = {1: 0.0, 2: 100.0, 3: 50.0}
 
-        points = np.array([
-            [50.0, 33.0],   # Inside
-            [0.0, 0.0],     # At vertex 1
-            [200.0, 200.0], # Outside
-        ])
+        points = np.array(
+            [
+                [50.0, 33.0],  # Inside
+                [0.0, 0.0],  # At vertex 1
+                [200.0, 200.0],  # Outside
+            ]
+        )
 
         results = interp.interpolate_points(points, values)
 
@@ -777,9 +778,9 @@ class TestIntegration:
 
         # Observation well locations
         wells = [
-            (50.0, 50.0),    # In quad 1
-            (150.0, 50.0),   # In quad 2
-            (50.0, 120.0),   # In triangle 3
+            (50.0, 50.0),  # In quad 1
+            (150.0, 50.0),  # In quad 2
+            (50.0, 120.0),  # In triangle 3
         ]
 
         for xp, yp in wells:
@@ -823,10 +824,7 @@ class TestIntegration:
             return x + 2 * y
 
         # Set nodal values
-        values = {
-            nid: linear_func(node.x, node.y)
-            for nid, node in mixed_mesh.nodes.items()
-        }
+        values = {nid: linear_func(node.x, node.y) for nid, node in mixed_mesh.nodes.items()}
 
         # Test at various points - should exactly reproduce linear function
         test_points = [

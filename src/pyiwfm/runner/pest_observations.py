@@ -13,6 +13,7 @@ The observation types cover:
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -220,7 +221,8 @@ class ObservationLocation:
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
-            k: v for k, v in {
+            k: v
+            for k, v in {
                 "x": self.x,
                 "y": self.y,
                 "z": self.z,
@@ -229,7 +231,8 @@ class ObservationLocation:
                 "layer": self.layer,
                 "reach_id": self.reach_id,
                 "lake_id": self.lake_id,
-            }.items() if v is not None
+            }.items()
+            if v is not None
         }
 
 
@@ -299,9 +302,9 @@ class IWFMObservation:
             Value after applying transform.
         """
         if self.transform == "log":
-            return np.log10(self.value)
+            return float(np.log10(self.value))
         elif self.transform == "sqrt":
-            return np.sqrt(self.value)
+            return float(np.sqrt(self.value))
         return self.value
 
     def calculate_weight(
@@ -342,7 +345,7 @@ class IWFMObservation:
             reference_date = kwargs.get("reference_date")
             if self.datetime is not None and reference_date is not None:
                 days = (reference_date - self.datetime).days
-                return decay_factor ** max(0, days / 365.0)
+                return float(decay_factor ** max(0, days / 365.0))
             return 1.0
 
         elif strategy == WeightStrategy.MAGNITUDE_BASED:
@@ -361,7 +364,9 @@ class IWFMObservation:
         str
             Formatted line for PEST control file.
         """
-        return f"{self.name:20s} {self.transformed_value:15.7e} {self.weight:10.4e} {self.group:20s}"
+        return (
+            f"{self.name:20s} {self.transformed_value:15.7e} {self.weight:10.4e} {self.group:20s}"
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary.
@@ -469,7 +474,7 @@ class IWFMObservationGroup:
         float
             Estimated contribution (sum of squared weighted values).
         """
-        return float(np.sum(self.weights ** 2))
+        return float(np.sum(self.weights**2))
 
     def add_observation(
         self,
@@ -611,7 +616,7 @@ class IWFMObservationGroup:
         """Return number of observations."""
         return len(self.observations)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[IWFMObservation]:
         """Iterate over observations."""
         return iter(self.observations)
 
@@ -673,25 +678,25 @@ class DerivedObservation:
             raise ValueError(f"Missing observations for evaluation: {missing}")
 
         # Create safe evaluation environment
-        safe_dict = {
-            name: obs_values[name] for name in self.source_observations
-        }
+        safe_dict: dict[str, Any] = {name: obs_values[name] for name in self.source_observations}
         # Add math functions
-        safe_dict.update({
-            "abs": abs,
-            "min": min,
-            "max": max,
-            "sum": sum,
-            "sqrt": np.sqrt,
-            "log": np.log,
-            "log10": np.log10,
-            "exp": np.exp,
-        })
+        safe_dict.update(
+            {
+                "abs": abs,
+                "min": min,
+                "max": max,
+                "sum": sum,
+                "sqrt": np.sqrt,
+                "log": np.log,
+                "log10": np.log10,
+                "exp": np.exp,
+            }
+        )
 
         try:
             return float(eval(self.expression, {"__builtins__": {}}, safe_dict))
         except Exception as e:
-            raise ValueError(f"Error evaluating expression '{self.expression}': {e}")
+            raise ValueError(f"Error evaluating expression '{self.expression}': {e}") from e
 
     def to_prior_equation(self) -> str:
         """Format as PEST prior information equation.

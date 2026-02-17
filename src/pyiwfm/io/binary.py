@@ -14,10 +14,9 @@ from typing import BinaryIO
 import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.core.mesh import Node, Element, AppGrid, Subregion
-from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.base import BinaryReader, BinaryWriter
+from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
+from pyiwfm.core.stratigraphy import Stratigraphy
 
 
 class FortranBinaryReader:
@@ -39,11 +38,16 @@ class FortranBinaryReader:
         self.endian = endian
         self._file: BinaryIO | None = None
 
-    def __enter__(self) -> "FortranBinaryReader":
+    def __enter__(self) -> FortranBinaryReader:
         self._file = open(self.filepath, "rb")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
         if self._file:
             self._file.close()
 
@@ -76,16 +80,15 @@ class FortranBinaryReader:
         trailing_length = struct.unpack(f"{self.endian}i", trailing_marker)[0]
 
         if trailing_length != record_length:
-            raise FileFormatError(
-                f"Record marker mismatch: {record_length} != {trailing_length}"
-            )
+            raise FileFormatError(f"Record marker mismatch: {record_length} != {trailing_length}")
 
         return data
 
     def read_int(self) -> int:
         """Read a single integer record."""
         data = self.read_record()
-        return struct.unpack(f"{self.endian}i", data)[0]
+        result: int = struct.unpack(f"{self.endian}i", data)[0]
+        return result
 
     def read_int_array(self) -> NDArray[np.int32]:
         """Read an integer array record."""
@@ -96,7 +99,8 @@ class FortranBinaryReader:
     def read_float(self) -> float:
         """Read a single float record (real*4)."""
         data = self.read_record()
-        return struct.unpack(f"{self.endian}f", data)[0]
+        result: float = struct.unpack(f"{self.endian}f", data)[0]
+        return result
 
     def read_float_array(self) -> NDArray[np.float32]:
         """Read a float array record (real*4)."""
@@ -107,7 +111,8 @@ class FortranBinaryReader:
     def read_double(self) -> float:
         """Read a single double record (real*8)."""
         data = self.read_record()
-        return struct.unpack(f"{self.endian}d", data)[0]
+        result: float = struct.unpack(f"{self.endian}d", data)[0]
+        return result
 
     def read_double_array(self) -> NDArray[np.float64]:
         """Read a double array record (real*8)."""
@@ -186,26 +191,30 @@ class FortranBinaryReader:
         results = []
 
         for dtype, count in dtype_spec:
-            if dtype.startswith('S'):
+            if dtype.startswith("S"):
                 # String type
                 str_len = int(dtype[1:])
                 total_len = str_len * count
-                str_data = data[offset:offset + total_len]
+                str_data = data[offset : offset + total_len]
                 if count == 1:
-                    results.append(str_data.decode('ascii', errors='replace').strip())
+                    results.append(str_data.decode("ascii", errors="replace").strip())
                 else:
                     strings = []
                     for i in range(count):
-                        s = str_data[i * str_len:(i + 1) * str_len].decode('ascii', errors='replace').strip()
+                        s = (
+                            str_data[i * str_len : (i + 1) * str_len]
+                            .decode("ascii", errors="replace")
+                            .strip()
+                        )
                         strings.append(s)
-                    results.append(strings)
+                    results.append(strings)  # type: ignore[arg-type]
                 offset += total_len
             else:
                 # Numeric type
                 np_dtype = f"{self.endian}{dtype}"
                 item_size = np.dtype(np_dtype).itemsize
                 total_size = item_size * count
-                arr_data = data[offset:offset + total_size]
+                arr_data = data[offset : offset + total_size]
                 arr = np.frombuffer(arr_data, dtype=np_dtype, count=count)
                 if count == 1:
                     results.append(arr[0].item())
@@ -229,7 +238,7 @@ class FortranBinaryReader:
             The string value
         """
         data = self.read_record()
-        return data[:length].decode('ascii', errors='replace').strip()
+        return data[:length].decode("ascii", errors="replace").strip()
 
     def peek_record_size(self) -> int:
         """
@@ -246,7 +255,7 @@ class FortranBinaryReader:
         if len(marker_data) < 4:
             raise EOFError("End of file reached")
 
-        record_length = struct.unpack(f"{self.endian}i", marker_data)[0]
+        record_length: int = struct.unpack(f"{self.endian}i", marker_data)[0]
         self._file.seek(pos)  # Restore position
         return record_length
 
@@ -287,12 +296,17 @@ class FortranBinaryWriter:
         self.endian = endian
         self._file: BinaryIO | None = None
 
-    def __enter__(self) -> "FortranBinaryWriter":
+    def __enter__(self) -> FortranBinaryWriter:
         self.filepath.parent.mkdir(parents=True, exist_ok=True)
         self._file = open(self.filepath, "wb")
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
         if self._file:
             self._file.close()
 
@@ -379,8 +393,7 @@ def read_binary_mesh(filepath: Path | str, endian: str = "<") -> AppGrid:
 
         if len(x) != n_nodes or len(y) != n_nodes:
             raise FileFormatError(
-                f"Coordinate array size mismatch: expected {n_nodes}, "
-                f"got x={len(x)}, y={len(y)}"
+                f"Coordinate array size mismatch: expected {n_nodes}, got x={len(x)}, y={len(y)}"
             )
 
         vertex_flat = f.read_int_array()
@@ -400,15 +413,14 @@ def read_binary_mesh(filepath: Path | str, endian: str = "<") -> AppGrid:
             elem_id = i + 1  # 1-based
             v = vertex[i]
             # Convert from 0-based indices to 1-based node IDs
+            verts: tuple[int, ...]
             if v[3] == 0:
                 # Triangle (0 indicates no 4th vertex)
                 verts = (int(v[0]) + 1, int(v[1]) + 1, int(v[2]) + 1)
             else:
                 verts = (int(v[0]) + 1, int(v[1]) + 1, int(v[2]) + 1, int(v[3]) + 1)
 
-            elements[elem_id] = Element(
-                id=elem_id, vertices=verts, subregion=int(subregions[i])
-            )
+            elements[elem_id] = Element(id=elem_id, vertices=verts, subregion=int(subregions[i]))
 
     # Build subregion metadata from unique subregion IDs found on elements
     sub_ids = sorted({int(subregions[i]) for i in range(n_elements) if int(subregions[i]) > 0})
@@ -492,9 +504,7 @@ def read_binary_stratigraphy(filepath: Path | str, endian: str = "<") -> Stratig
     )
 
 
-def write_binary_stratigraphy(
-    filepath: Path | str, strat: Stratigraphy, endian: str = "<"
-) -> None:
+def write_binary_stratigraphy(filepath: Path | str, strat: Stratigraphy, endian: str = "<") -> None:
     """
     Write stratigraphy data to a binary file.
 

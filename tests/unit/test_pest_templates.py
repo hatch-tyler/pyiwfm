@@ -1,22 +1,20 @@
 """Unit tests for PEST++ template file generation."""
 
-from datetime import datetime
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 import pytest
 
-from pyiwfm.runner.pest import TemplateFile
+from pyiwfm.runner.pest_manager import IWFMParameterManager
 from pyiwfm.runner.pest_params import (
     IWFMParameterType,
     Parameter,
 )
 from pyiwfm.runner.pest_templates import (
+    IWFMFileSection,
     IWFMTemplateManager,
     TemplateMarker,
-    IWFMFileSection,
 )
-from pyiwfm.runner.pest_manager import IWFMParameterManager
 
 
 class TestTemplateMarker:
@@ -85,7 +83,7 @@ class TestIWFMTemplateManagerInit:
         """Test that output directory is created."""
         with tempfile.TemporaryDirectory() as tmpdir:
             output_dir = Path(tmpdir) / "templates" / "nested"
-            tm = IWFMTemplateManager(output_dir=output_dir)
+            IWFMTemplateManager(output_dir=output_dir)
             assert output_dir.exists()
 
 
@@ -130,9 +128,7 @@ C Zone  Horizontal_K  Specific_Storage  Specific_Yield
             ),
         ]
 
-    def test_generate_aquifer_template_by_zone(
-        self, sample_aquifer_file, sample_parameters
-    ):
+    def test_generate_aquifer_template_by_zone(self, sample_aquifer_file, sample_parameters):
         """Test generating zone-based aquifer template."""
         with tempfile.TemporaryDirectory() as tmpdir:
             pm = IWFMParameterManager()
@@ -211,9 +207,7 @@ C Reach  Streambed_K  Thickness
             ),
         ]
 
-    def test_generate_stream_template(
-        self, sample_stream_file, sample_stream_parameters
-    ):
+    def test_generate_stream_template(self, sample_stream_file, sample_stream_parameters):
         """Test generating stream template."""
         with tempfile.TemporaryDirectory() as tmpdir:
             pm = IWFMParameterManager()
@@ -544,9 +538,7 @@ class TestReplaceValuesInLine:
         with tempfile.TemporaryDirectory() as tmpdir:
             tm = IWFMTemplateManager(output_dir=tmpdir)
             markers = []
-            result = tm._replace_values_in_line(
-                "* comment 1.5e-04", {"p1": 1.5e-04}, markers, 1
-            )
+            result = tm._replace_values_in_line("* comment 1.5e-04", {"p1": 1.5e-04}, markers, 1)
             assert result == "* comment 1.5e-04"
             assert len(markers) == 0
 
@@ -555,9 +547,7 @@ class TestReplaceValuesInLine:
         with tempfile.TemporaryDirectory() as tmpdir:
             tm = IWFMTemplateManager(output_dir=tmpdir)
             markers = []
-            result = tm._replace_values_in_line(
-                "# comment 1.5e-04", {"p1": 1.5e-04}, markers, 1
-            )
+            result = tm._replace_values_in_line("# comment 1.5e-04", {"p1": 1.5e-04}, markers, 1)
             assert result == "# comment 1.5e-04"
             assert len(markers) == 0
 
@@ -566,9 +556,7 @@ class TestReplaceValuesInLine:
         with tempfile.TemporaryDirectory() as tmpdir:
             tm = IWFMTemplateManager(output_dir=tmpdir)
             markers = []
-            result = tm._replace_values_in_line(
-                "! comment 1.5e-04", {"p1": 1.5e-04}, markers, 1
-            )
+            result = tm._replace_values_in_line("! comment 1.5e-04", {"p1": 1.5e-04}, markers, 1)
             assert result == "! comment 1.5e-04"
             assert len(markers) == 0
 
@@ -578,9 +566,7 @@ class TestReplaceValuesInLine:
             tm = IWFMTemplateManager(output_dir=tmpdir)
             markers = []
             line = "  1  1.500000e-04  2.000000e-06"
-            result = tm._replace_values_in_line(
-                line, {"hk_z1": 1.5e-04}, markers, 5
-            )
+            result = tm._replace_values_in_line(line, {"hk_z1": 1.5e-04}, markers, 5)
             assert "#" in result
             assert "hk_z1" in result
             assert len(markers) == 1
@@ -594,9 +580,7 @@ class TestReplaceValuesInLine:
             markers = []
             # Use a value that will match one of the format patterns
             line = "  zone1  0.150000"
-            result = tm._replace_values_in_line(
-                line, {"sy_z1": 0.15}, markers, 10
-            )
+            result = tm._replace_values_in_line(line, {"sy_z1": 0.15}, markers, 10)
             # The method tries several formats. 0.15 formats as "1.500000e-01"
             # in scientific notation first. If none match, the value stays.
             # Check that the method runs without error.
@@ -608,9 +592,7 @@ class TestReplaceValuesInLine:
             tm = IWFMTemplateManager(output_dir=tmpdir)
             markers = []
             line = "  1  9.999999e+99"
-            result = tm._replace_values_in_line(
-                line, {"p1": 1.0e-04}, markers, 1
-            )
+            result = tm._replace_values_in_line(line, {"p1": 1.0e-04}, markers, 1)
             assert result == line
             assert len(markers) == 0
 
@@ -652,9 +634,7 @@ class TestReplaceValuesInLine:
             tm = IWFMTemplateManager(output_dir=tmpdir)
             markers = []
             line = "  data  1.500000e-04  end"
-            tm._replace_values_in_line(
-                line, {"p1": 1.5e-04}, markers, 7
-            )
+            tm._replace_values_in_line(line, {"p1": 1.5e-04}, markers, 7)
             assert len(markers) == 1
             assert markers[0].original_value == "1.500000e-04"
             assert markers[0].column_start >= 0
@@ -666,9 +646,7 @@ class TestReplaceValuesInLine:
             tm = IWFMTemplateManager(output_dir=tmpdir, delimiter="~")
             markers = []
             line = "  1.500000e-04"
-            result = tm._replace_values_in_line(
-                line, {"p1": 1.5e-04}, markers, 1
-            )
+            result = tm._replace_values_in_line(line, {"p1": 1.5e-04}, markers, 1)
             assert "~" in result
             assert "#" not in result
 
@@ -1937,9 +1915,7 @@ class TestGenerateAllTemplates:
             templates = tm.generate_all_templates()
             assert len(templates) >= 1
             # At least one pilot point template
-            pp_templates = [
-                t for t in templates if "pp_" in str(t.template_path)
-            ]
+            pp_templates = [t for t in templates if "pp_" in str(t.template_path)]
             assert len(pp_templates) >= 1
 
     def test_generate_all_with_multipliers(self):
@@ -2037,9 +2013,7 @@ class TestGenerateAllTemplates:
             )
             tm = IWFMTemplateManager(parameter_manager=pm, output_dir=tmpdir)
 
-            templates = tm.generate_all_templates(
-                input_files={"pump": "Pumping.dat"}
-            )
+            templates = tm.generate_all_templates(input_files={"pump": "Pumping.dat"})
 
             assert isinstance(templates, list)
 

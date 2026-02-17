@@ -9,24 +9,20 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
-from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.core.model import IWFMModel
+from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.io.config import ModelWriteConfig, OutputFormat
 from pyiwfm.io.model_writer import (
     CompleteModelWriter,
     ModelWriteResult,
     TimeSeriesCopier,
-    write_model,
-    _iso_to_iwfm_date,
-    TS_KEY_MAPPING,
-    TS_DSS_PARAMS,
     _compute_dss_interval,
+    _iso_to_iwfm_date,
+    write_model,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -143,17 +139,13 @@ class TestModelWriteConfig:
         # All files should be directly in tmp_path
         for key in ModelWriteConfig.DEFAULT_PATHS:
             path = config.get_path(key)
-            assert path.parent == tmp_path, (
-                f"File {key} not in root dir: {path}"
-            )
+            assert path.parent == tmp_path, f"File {key} not in root dir: {path}"
 
     def test_nested_classmethod(self, tmp_path: Path) -> None:
         """nested() classmethod produces standard layout."""
         config = ModelWriteConfig.nested(output_dir=tmp_path)
         # Should use defaults
-        assert config.get_path("gw_main") == (
-            tmp_path / "Simulation" / "GW" / "GW_MAIN.dat"
-        )
+        assert config.get_path("gw_main") == (tmp_path / "Simulation" / "GW" / "GW_MAIN.dat")
 
     def test_post_init_converts_to_path(self) -> None:
         """__post_init__ converts string output_dir to Path."""
@@ -259,9 +251,7 @@ class TestTimeSeriesCopier:
         assert files == {}
         assert warnings == []
 
-    def test_creates_destination_directories(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_creates_destination_directories(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Copier creates destination directories as needed."""
         source_file = tmp_path / "source" / "et.dat"
         source_file.parent.mkdir()
@@ -277,9 +267,7 @@ class TestTimeSeriesCopier:
         assert "et" in files
         assert files["et"].exists()
 
-    def test_multiple_ts_files(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_multiple_ts_files(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Multiple TS files are all copied."""
         source_dir = tmp_path / "source"
         source_dir.mkdir()
@@ -329,9 +317,7 @@ class TestCompleteModelWriter:
         assert "simulation_main" in result.files
         assert result.files["simulation_main"].exists()
 
-    def test_write_all_result_type(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_write_all_result_type(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """write_all returns ModelWriteResult."""
         config = ModelWriteConfig(output_dir=tmp_path)
         writer = CompleteModelWriter(simple_model, config)
@@ -339,13 +325,11 @@ class TestCompleteModelWriter:
         result = writer.write_all()
         assert isinstance(result, ModelWriteResult)
 
-    def test_write_nested_layout(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_write_nested_layout(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Default nested layout creates expected subdirectories."""
         config = ModelWriteConfig(output_dir=tmp_path)
         writer = CompleteModelWriter(simple_model, config)
-        result = writer.write_all()
+        writer.write_all()
 
         # Check that preprocessor dir was created
         pp_dir = tmp_path / "Preprocessor"
@@ -355,9 +339,7 @@ class TestCompleteModelWriter:
         sim_dir = tmp_path / "Simulation"
         assert sim_dir.exists()
 
-    def test_write_flat_layout(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_write_flat_layout(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Flat layout puts all files in one directory."""
         config = ModelWriteConfig.flat(output_dir=tmp_path)
         writer = CompleteModelWriter(simple_model, config)
@@ -365,13 +347,9 @@ class TestCompleteModelWriter:
 
         # All output files should be in tmp_path directly
         for key, path in result.files.items():
-            assert path.parent == tmp_path, (
-                f"File {key} not in root dir: {path}"
-            )
+            assert path.parent == tmp_path, f"File {key} not in root dir: {path}"
 
-    def test_write_custom_paths(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_write_custom_paths(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Custom file paths are respected."""
         config = ModelWriteConfig(output_dir=tmp_path)
         config.set_file("simulation_main", "custom/sim.in")
@@ -401,9 +379,7 @@ class TestCompleteModelWriter:
         gw_ref = os.path.join("GW", "GW_MAIN.dat")
         assert gw_ref in content or gw_ref.replace("\\", "/") in content
 
-    def test_output_dir_created_if_missing(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_output_dir_created_if_missing(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Output directory is created if it doesn't exist."""
         out = tmp_path / "brand_new" / "model"
         config = ModelWriteConfig(output_dir=out)
@@ -413,9 +389,7 @@ class TestCompleteModelWriter:
         assert out.exists()
         assert result.success or len(result.errors) > 0
 
-    def test_errors_collected_not_raised(
-        self, tmp_path: Path
-    ) -> None:
+    def test_errors_collected_not_raised(self, tmp_path: Path) -> None:
         """Errors in component writing are collected, not raised."""
         # Model with no mesh - preprocessor will fail
         model = IWFMModel(name="Empty")
@@ -426,9 +400,7 @@ class TestCompleteModelWriter:
         # Should not raise, but may have errors
         assert isinstance(result, ModelWriteResult)
 
-    def test_copy_source_ts_false_skips_copy(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_copy_source_ts_false_skips_copy(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Setting copy_source_ts=False skips TS file copying."""
         source = tmp_path / "source" / "precip.dat"
         source.parent.mkdir()
@@ -454,16 +426,12 @@ class TestCompleteModelWriter:
 class TestWriteModel:
     """Tests for write_model convenience function."""
 
-    def test_basic_smoke_test(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_basic_smoke_test(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """write_model runs without error."""
         result = write_model(simple_model, tmp_path)
         assert isinstance(result, ModelWriteResult)
 
-    def test_with_file_paths(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_with_file_paths(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """write_model accepts file_paths argument."""
         result = write_model(
             simple_model,
@@ -472,16 +440,12 @@ class TestWriteModel:
         )
         assert isinstance(result, ModelWriteResult)
 
-    def test_ts_format_text(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_ts_format_text(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """write_model with ts_format='text' runs."""
         result = write_model(simple_model, tmp_path, ts_format="text")
         assert isinstance(result, ModelWriteResult)
 
-    def test_ts_format_dss(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_ts_format_dss(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """write_model with ts_format='dss' runs."""
         result = write_model(simple_model, tmp_path, ts_format="dss")
         assert isinstance(result, ModelWriteResult)
@@ -504,9 +468,7 @@ class TestSaveCompleteModel:
         files = save_complete_model(simple_model, tmp_path)
         assert isinstance(files, dict)
 
-    def test_returns_dict_of_paths(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_returns_dict_of_paths(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """save_complete_model returns dict[str, Path]."""
         from pyiwfm.io.preprocessor import save_complete_model
 
@@ -515,9 +477,7 @@ class TestSaveCompleteModel:
             assert isinstance(key, str)
             assert isinstance(path, Path)
 
-    def test_accepts_file_paths(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_accepts_file_paths(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """save_complete_model accepts file_paths parameter."""
         from pyiwfm.io.preprocessor import save_complete_model
 
@@ -537,16 +497,12 @@ class TestSaveCompleteModel:
 class TestToSimulation:
     """Tests for IWFMModel.to_simulation with new params."""
 
-    def test_to_simulation_basic(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_to_simulation_basic(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """to_simulation runs without extra args."""
         files = simple_model.to_simulation(tmp_path)
         assert isinstance(files, dict)
 
-    def test_to_simulation_with_file_paths(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_to_simulation_with_file_paths(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """to_simulation passes file_paths through."""
         files = simple_model.to_simulation(
             tmp_path,
@@ -554,9 +510,7 @@ class TestToSimulation:
         )
         assert isinstance(files, dict)
 
-    def test_to_simulation_with_ts_format(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_to_simulation_with_ts_format(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """to_simulation passes ts_format through."""
         files = simple_model.to_simulation(tmp_path, ts_format="text")
         assert isinstance(files, dict)
@@ -728,9 +682,7 @@ def _make_text_ts_file(filepath: Path, n_cols: int = 3, n_times: int = 3) -> Non
 class TestDSSStubWriting:
     """Tests for text-to-DSS conversion producing stub .dat files."""
 
-    def test_text_to_dss_creates_stub_file(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_text_to_dss_creates_stub_file(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Text->DSS conversion creates a stub .dat file with DSSFL."""
         source = tmp_path / "source" / "precip.dat"
         source.parent.mkdir()
@@ -754,9 +706,7 @@ class TestDSSStubWriting:
         assert "DSSFL" in content
         assert "climate_data.dss" in content
 
-    def test_stub_contains_dss_pathnames(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_stub_contains_dss_pathnames(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Stub file contains DSS pathnames for each column."""
         n_cols = 5
         source = tmp_path / "source" / "precip.dat"
@@ -798,9 +748,7 @@ class TestDSSStubWriting:
         content = files["et"].read_text()
         assert "/ET/" in content
 
-    def test_stub_factor_is_one(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_stub_factor_is_one(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Stub file has FACTOR=1.0 since DSS data is already scaled."""
         source = tmp_path / "source" / "precip.dat"
         source.parent.mkdir()
@@ -820,9 +768,7 @@ class TestDSSStubWriting:
         # Should contain 1.000000 as the factor
         assert "1.000000" in content
 
-    def test_dss_file_created(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_dss_file_created(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """DSS binary file is created alongside stub."""
         source = tmp_path / "source" / "precip.dat"
         source.parent.mkdir()
@@ -841,9 +787,7 @@ class TestDSSStubWriting:
         assert dss_path.exists()
         assert dss_path.stat().st_size > 0
 
-    def test_dss_a_part_customization(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_dss_a_part_customization(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Custom dss_a_part appears in DSS pathnames."""
         source = tmp_path / "source" / "precip.dat"
         source.parent.mkdir()
@@ -863,9 +807,7 @@ class TestDSSStubWriting:
         content = dest.read_text()
         assert "/MYPROJECT/" in content
 
-    def test_dss_f_part_customization(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_dss_f_part_customization(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Custom dss_f_part appears in DSS pathnames."""
         source = tmp_path / "source" / "precip.dat"
         source.parent.mkdir()
@@ -885,9 +827,7 @@ class TestDSSStubWriting:
         content = dest.read_text()
         assert "/V2-SCENARIO/" in content
 
-    def test_stub_has_correct_tag_names(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_stub_has_correct_tag_names(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Stub file uses correct IWFM tag names for precip (NRAIN/FACTRN)."""
         source = tmp_path / "source" / "precip.dat"
         source.parent.mkdir()
@@ -907,9 +847,7 @@ class TestDSSStubWriting:
         assert "NRAIN" in content
         assert "FACTRN" in content
 
-    def test_stub_no_inline_data(
-        self, tmp_path: Path, simple_model: IWFMModel
-    ) -> None:
+    def test_stub_no_inline_data(self, tmp_path: Path, simple_model: IWFMModel) -> None:
         """Stub file does NOT contain inline time series data."""
         source = tmp_path / "source" / "precip.dat"
         source.parent.mkdir()

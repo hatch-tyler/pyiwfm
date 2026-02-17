@@ -6,27 +6,24 @@ parameter generation and management for PEST++ calibration.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
-
-import numpy as np
-from numpy.typing import NDArray
+from typing import Any
 
 import pandas as pd
+from numpy.typing import NDArray
 
 from pyiwfm.runner.pest_params import (
     IWFMParameterType,
-    ParameterTransform,
-    ParameterGroup,
-    Parameter,
-    ParameterizationStrategy,
-    ZoneParameterization,
     MultiplierParameterization,
+    Parameter,
+    ParameterGroup,
+    ParameterizationStrategy,
+    ParameterTransform,
     PilotPointParameterization,
-    DirectParameterization,
-    StreamParameterization,
     RootZoneParameterization,
+    StreamParameterization,
+    ZoneParameterization,
 )
 
 
@@ -556,11 +553,10 @@ class IWFMParameterManager:
 
         if len(ratios) != len(children):
             raise ValueError(
-                f"Number of ratios ({len(ratios)}) must match "
-                f"number of children ({len(children)})"
+                f"Number of ratios ({len(ratios)}) must match number of children ({len(children)})"
             )
 
-        for child, ratio in zip(children, ratios):
+        for child, ratio in zip(children, ratios, strict=False):
             if child not in self._parameters:
                 raise ValueError(f"Child parameter '{child}' not found")
 
@@ -667,31 +663,19 @@ class IWFMParameterManager:
         if isinstance(param_type, str):
             param_type = IWFMParameterType(param_type.lower())
 
-        return [
-            p for p in self._parameters.values()
-            if p.param_type == param_type
-        ]
+        return [p for p in self._parameters.values() if p.param_type == param_type]
 
     def get_parameters_by_group(self, group: str) -> list[Parameter]:
         """Get all parameters in a specific group."""
-        return [
-            p for p in self._parameters.values()
-            if p.group == group
-        ]
+        return [p for p in self._parameters.values() if p.group == group]
 
     def get_parameters_by_layer(self, layer: int) -> list[Parameter]:
         """Get all parameters for a specific layer."""
-        return [
-            p for p in self._parameters.values()
-            if p.layer == layer
-        ]
+        return [p for p in self._parameters.values() if p.layer == layer]
 
     def get_pilot_point_parameters(self) -> list[Parameter]:
         """Get all pilot point parameters."""
-        return [
-            p for p in self._parameters.values()
-            if p.location is not None
-        ]
+        return [p for p in self._parameters.values() if p.location is not None]
 
     def get_all_parameters(self) -> list[Parameter]:
         """Get all parameters as a list."""
@@ -700,23 +684,21 @@ class IWFMParameterManager:
     def get_adjustable_parameters(self) -> list[Parameter]:
         """Get all adjustable (non-fixed, non-tied) parameters."""
         return [
-            p for p in self._parameters.values()
+            p
+            for p in self._parameters.values()
             if p.transform not in {ParameterTransform.FIXED, ParameterTransform.TIED}
         ]
 
     def get_all_groups(self) -> list[ParameterGroup]:
         """Get all parameter groups that have parameters."""
         used_groups = {p.group for p in self._parameters.values()}
-        return [
-            g for g in self._parameter_groups.values()
-            if g.name in used_groups
-        ]
+        return [g for g in self._parameter_groups.values() if g.name in used_groups]
 
     # -------------------------------------------------------------------------
     # DataFrame export
     # -------------------------------------------------------------------------
 
-    def to_dataframe(self) -> "pd.DataFrame":
+    def to_dataframe(self) -> pd.DataFrame:
         """Export parameters to a pandas DataFrame.
 
         Returns
@@ -750,7 +732,7 @@ class IWFMParameterManager:
 
         return pd.DataFrame(data)
 
-    def from_dataframe(self, df: "pd.DataFrame") -> None:
+    def from_dataframe(self, df: pd.DataFrame) -> None:
         """Load parameter values from a DataFrame.
 
         Useful for loading calibrated parameter values.
@@ -801,7 +783,7 @@ class IWFMParameterManager:
         """
         filepath = Path(filepath)
 
-        with open(filepath, "r") as f:
+        with open(filepath) as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"):

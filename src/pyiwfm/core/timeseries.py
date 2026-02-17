@@ -7,10 +7,11 @@ data used throughout IWFM models.
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Iterator, Sequence
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -27,7 +28,7 @@ class TimeUnit(Enum):
     YEAR = "YEAR"
 
     @classmethod
-    def from_string(cls, s: str) -> "TimeUnit":
+    def from_string(cls, s: str) -> TimeUnit:
         """Parse a time unit from string.
 
         Accepts plain unit names (``DAY``, ``MON``) as well as IWFM-style
@@ -216,20 +217,22 @@ class TimeSeries:
     @property
     def start_time(self) -> np.datetime64:
         """Return start time."""
-        return self.times[0]
+        val: np.datetime64 = self.times[0]
+        return val
 
     @property
     def end_time(self) -> np.datetime64:
         """Return end time."""
-        return self.times[-1]
+        val: np.datetime64 = self.times[-1]
+        return val
 
     @classmethod
     def from_datetimes(
         cls,
         times: Sequence[datetime],
         values: NDArray[np.float64],
-        **kwargs,
-    ) -> "TimeSeries":
+        **kwargs: Any,
+    ) -> TimeSeries:
         """
         Create a TimeSeries from Python datetime objects.
 
@@ -241,7 +244,7 @@ class TimeSeries:
         np_times = np.array(times, dtype="datetime64[s]")
         return cls(times=np_times, values=values, **kwargs)
 
-    def to_dataframe(self):
+    def to_dataframe(self) -> Any:
         """
         Convert to a pandas DataFrame.
 
@@ -263,7 +266,7 @@ class TimeSeries:
                 columns=columns,
             )
 
-    def resample(self, freq: str) -> "TimeSeries":
+    def resample(self, freq: str) -> TimeSeries:
         """
         Resample the time series to a new frequency.
 
@@ -285,9 +288,7 @@ class TimeSeries:
             metadata=self.metadata.copy(),
         )
 
-    def slice_time(
-        self, start: datetime | None = None, end: datetime | None = None
-    ) -> "TimeSeries":
+    def slice_time(self, start: datetime | None = None, end: datetime | None = None) -> TimeSeries:
         """
         Slice the time series to a time range.
 

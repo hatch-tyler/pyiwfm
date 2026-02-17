@@ -8,8 +8,9 @@ parameters. It mirrors IWFM's Package_AppGW.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Iterator, Any
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -167,8 +168,10 @@ class BoundaryCondition:
     def __post_init__(self) -> None:
         """Validate boundary condition data."""
         valid_types = (
-            "specified_head", "specified_flow",
-            "general_head", "constrained_general_head",
+            "specified_head",
+            "specified_flow",
+            "general_head",
+            "constrained_general_head",
         )
         if self.bc_type not in valid_types:
             raise ValueError(f"bc_type must be one of {valid_types}")
@@ -178,9 +181,7 @@ class BoundaryCondition:
 
         if self.bc_type in ("general_head", "constrained_general_head"):
             if len(self.conductance) != len(self.nodes):
-                raise ValueError(
-                    f"{self.bc_type} BC requires conductance for each node"
-                )
+                raise ValueError(f"{self.bc_type} BC requires conductance for each node")
 
     def __repr__(self) -> str:
         return f"BoundaryCondition(id={self.id}, type={self.bc_type}, n_nodes={len(self.nodes)})"
@@ -537,9 +538,7 @@ class AppGW:
         # Check well element references (element=0 means not yet assigned)
         for well in self.wells.values():
             if well.element != 0 and (well.element > self.n_elements or well.element < 1):
-                raise ComponentError(
-                    f"Well {well.id} references invalid element {well.element}"
-                )
+                raise ComponentError(f"Well {well.id} references invalid element {well.element}")
 
         # Check tile drain element references
         for drain in self.tile_drains.values():
@@ -593,7 +592,7 @@ class AppGW:
         kv: NDArray[np.float64] | None = None,
         specific_storage: NDArray[np.float64] | None = None,
         specific_yield: NDArray[np.float64] | None = None,
-    ) -> "AppGW":
+    ) -> AppGW:
         """
         Create groundwater component from arrays.
 
@@ -629,7 +628,4 @@ class AppGW:
         return gw
 
     def __repr__(self) -> str:
-        return (
-            f"AppGW(n_nodes={self.n_nodes}, n_layers={self.n_layers}, "
-            f"n_wells={self.n_wells})"
-        )
+        return f"AppGW(n_nodes={self.n_nodes}, n_layers={self.n_layers}, n_wells={self.n_wells})"

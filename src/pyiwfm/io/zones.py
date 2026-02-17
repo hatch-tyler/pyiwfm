@@ -38,11 +38,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from pyiwfm.core.zones import Zone, ZoneDefinition
+
+if TYPE_CHECKING:
+    from pyiwfm.core.mesh import AppGrid
 
 
 def read_iwfm_zone_file(
@@ -81,12 +84,11 @@ def read_iwfm_zone_file(
     filepath = Path(filepath)
     element_areas = element_areas or {}
 
-    zones: dict[int, Zone] = {}
     zone_names: dict[int, str] = {}
     element_zone_pairs: list[tuple[int, int]] = []
     extent = "horizontal"
 
-    with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+    with open(filepath, encoding="utf-8", errors="replace") as f:
         lines = f.readlines()
 
     # Parse states
@@ -182,7 +184,7 @@ def write_iwfm_zone_file(
     with open(filepath, "w", encoding="utf-8") as f:
         # Header comments
         f.write("C " + "=" * 70 + "\n")
-        f.write(f"C Zone Definition File\n")
+        f.write("C Zone Definition File\n")
         if header_comment:
             f.write(f"C {header_comment}\n")
         if zone_def.name:
@@ -260,7 +262,7 @@ def read_geojson_zones(
     """
     filepath = Path(filepath)
 
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         geojson = json.load(f)
 
     zones: dict[int, Zone] = {}
@@ -318,7 +320,7 @@ def read_geojson_zones(
 def write_geojson_zones(
     zone_def: ZoneDefinition,
     filepath: Path | str,
-    grid: "AppGrid" | None = None,
+    grid: AppGrid | None = None,
     include_geometry: bool = True,
 ) -> None:
     """
@@ -355,7 +357,7 @@ def write_geojson_zones(
             "area": zone.area,
         }
 
-        geometry = None
+        geometry: dict[str, object] | None = None
 
         if include_geometry and grid:
             # Compute zone boundary as convex hull of element centroids
@@ -369,9 +371,12 @@ def write_geojson_zones(
                 # Simple convex hull approximation (bounding polygon)
                 try:
                     from scipy.spatial import ConvexHull
+
                     points = np.array(coords)
                     hull = ConvexHull(points)
-                    hull_coords = [[float(points[i, 0]), float(points[i, 1])] for i in hull.vertices]
+                    hull_coords = [
+                        [float(points[i, 0]), float(points[i, 1])] for i in hull.vertices
+                    ]
                     hull_coords.append(hull_coords[0])  # Close the polygon
                     geometry = {
                         "type": "Polygon",
@@ -384,13 +389,15 @@ def write_geojson_zones(
                     xmax, ymax = points.max(axis=0)
                     geometry = {
                         "type": "Polygon",
-                        "coordinates": [[
-                            [float(xmin), float(ymin)],
-                            [float(xmax), float(ymin)],
-                            [float(xmax), float(ymax)],
-                            [float(xmin), float(ymax)],
-                            [float(xmin), float(ymin)],
-                        ]],
+                        "coordinates": [
+                            [
+                                [float(xmin), float(ymin)],
+                                [float(xmax), float(ymin)],
+                                [float(xmax), float(ymax)],
+                                [float(xmin), float(ymax)],
+                                [float(xmin), float(ymin)],
+                            ]
+                        ],
                     }
             elif len(coords) > 0:
                 # Single point
@@ -442,7 +449,7 @@ def auto_detect_zone_file(filepath: Path | str) -> str:
 
     # Try to detect by content
     try:
-        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+        with open(filepath, encoding="utf-8", errors="replace") as f:
             first_line = f.readline().strip()
 
         if first_line.startswith("{"):
@@ -497,7 +504,7 @@ def read_zone_file(
 def write_zone_file(
     zone_def: ZoneDefinition,
     filepath: Path | str,
-    grid: "AppGrid" | None = None,
+    grid: AppGrid | None = None,
 ) -> None:
     """
     Write a zone file, choosing format based on extension.

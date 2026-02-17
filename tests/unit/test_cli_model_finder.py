@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from pyiwfm.cli._model_finder import (
     extract_model_name,
     find_binary_file,
@@ -13,7 +11,6 @@ from pyiwfm.cli._model_finder import (
     find_preprocessor_file,
     find_simulation_file,
 )
-
 
 # ---------------------------------------------------------------------------
 # find_preprocessor_file

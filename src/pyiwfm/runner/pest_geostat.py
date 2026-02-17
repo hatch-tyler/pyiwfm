@@ -14,10 +14,10 @@ model nodes using kriging.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -26,6 +26,7 @@ try:
     from scipy import linalg
     from scipy.optimize import curve_fit
     from scipy.spatial.distance import cdist
+
     HAS_SCIPY = True
 except ImportError:
     HAS_SCIPY = False
@@ -111,9 +112,9 @@ class Variogram:
         For spherical: a
         """
         if self.variogram_type == VariogramType.EXPONENTIAL:
-            return 3.0 * self.a
+            return float(3.0 * self.a)
         elif self.variogram_type == VariogramType.GAUSSIAN:
-            return np.sqrt(3.0) * self.a
+            return float(np.sqrt(3.0) * self.a)
         return self.a
 
     def evaluate(self, h: NDArray | float) -> NDArray | float:
@@ -182,7 +183,7 @@ class Variogram:
         gamma = np.where(
             h == 0,
             0.0,
-            self.nugget + self.sill * (1.0 - np.exp(-(h / self.a) ** 2)),
+            self.nugget + self.sill * (1.0 - np.exp(-((h / self.a) ** 2))),
         )
         return gamma
 
@@ -303,11 +304,11 @@ class Variogram:
             coords2 = np.column_stack([x2_t, y2_t])
 
         if HAS_SCIPY:
-            return cdist(coords1, coords2)
+            return np.asarray(cdist(coords1, coords2))
         else:
             # Manual distance computation
             diff = coords1[:, np.newaxis, :] - coords2[np.newaxis, :, :]
-            return np.sqrt(np.sum(diff**2, axis=2))
+            return np.asarray(np.sqrt(np.sum(diff**2, axis=2)))
 
     @classmethod
     def from_data(
@@ -318,7 +319,7 @@ class Variogram:
         variogram_type: str = "exponential",
         n_lags: int = 15,
         max_lag: float | None = None,
-    ) -> "Variogram":
+    ) -> Variogram:
         """Fit variogram to data using empirical variogram.
 
         Parameters
@@ -385,7 +386,7 @@ class Variogram:
         nugget_init = 0.0
 
         # Define model function
-        def model_func(h, nugget, sill, a):
+        def model_func(h: NDArray, nugget: float, sill: float, a: float) -> NDArray | float:
             v = cls(variogram_type, a=a, sill=sill, nugget=nugget)
             return v.evaluate(h)
 
@@ -414,8 +415,10 @@ class Variogram:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
+        vtype = self.variogram_type
+        vtype_str = vtype.value if isinstance(vtype, VariogramType) else vtype
         return {
-            "variogram_type": self.variogram_type.value,
+            "variogram_type": vtype_str,
             "a": self.a,
             "sill": self.sill,
             "nugget": self.nugget,
@@ -425,7 +428,7 @@ class Variogram:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "Variogram":
+    def from_dict(cls, d: dict[str, Any]) -> Variogram:
         """Create from dictionary."""
         return cls(
             variogram_type=d["variogram_type"],
@@ -439,8 +442,10 @@ class Variogram:
 
     def __repr__(self) -> str:
         """Return string representation."""
+        vtype = self.variogram_type
+        vtype_str = vtype.value if isinstance(vtype, VariogramType) else vtype
         return (
-            f"Variogram(type={self.variogram_type.value}, a={self.a:.2f}, "
+            f"Variogram(type={vtype_str}, a={self.a:.2f}, "
             f"sill={self.sill:.4f}, nugget={self.nugget:.4f})"
         )
 
@@ -499,7 +504,7 @@ class GeostatManager:
             Covariance matrix (n x n).
         """
         distances = variogram.compute_distance_matrix(x, y)
-        return variogram.covariance(distances)
+        return np.asarray(variogram.covariance(distances))
 
     def compute_variogram_matrix(
         self,
@@ -522,7 +527,7 @@ class GeostatManager:
             Variogram matrix (n x n).
         """
         distances = variogram.compute_distance_matrix(x, y)
-        return variogram.evaluate(distances)
+        return np.asarray(variogram.evaluate(distances))
 
     def krige(
         self,
@@ -573,10 +578,8 @@ class GeostatManager:
         C_pp = self.compute_covariance_matrix(pilot_x, pilot_y, variogram)
 
         # C_pt: pilot-target covariance
-        distances_pt = variogram.compute_distance_matrix(
-            pilot_x, pilot_y, target_x, target_y
-        )
-        C_pt = variogram.covariance(distances_pt)
+        distances_pt = variogram.compute_distance_matrix(pilot_x, pilot_y, target_x, target_y)
+        C_pt = np.asarray(variogram.covariance(distances_pt))
 
         if kriging_type == "ordinary":
             # Ordinary kriging: estimate mean from data
@@ -680,10 +683,8 @@ class GeostatManager:
 
         # Compute covariance matrices
         C_pp = self.compute_covariance_matrix(pilot_x, pilot_y, variogram)
-        distances_pt = variogram.compute_distance_matrix(
-            pilot_x, pilot_y, target_x, target_y
-        )
-        C_pt = variogram.covariance(distances_pt)
+        distances_pt = variogram.compute_distance_matrix(pilot_x, pilot_y, target_x, target_y)
+        C_pt = np.asarray(variogram.covariance(distances_pt))
 
         factors = np.zeros((n_target, n_pilot))
 
@@ -762,8 +763,7 @@ class GeostatManager:
         if not HAS_SCIPY:
             raise ImportError("scipy required for realization generation")
 
-        if seed is not None:
-            np.random.seed(seed)
+        rng = np.random.default_rng(seed)
 
         n_points = len(x)
 
@@ -783,7 +783,7 @@ class GeostatManager:
             L = eigvecs @ np.diag(np.sqrt(eigvals))
 
         # Generate unconditional realizations
-        z = np.random.randn(n_points, n_realizations)
+        z = rng.standard_normal((n_points, n_realizations))
         realizations = mean + (L @ z).T
 
         # Condition if data provided
@@ -793,28 +793,44 @@ class GeostatManager:
             # Krige conditioning data to realization points
             for i in range(n_realizations):
                 # Krige the conditioning data
-                kriged = self.krige(
-                    cond_x, cond_y, cond_values,
-                    x, y, variogram,
+                self.krige(
+                    cond_x,
+                    cond_y,
+                    cond_values,
+                    x,
+                    y,
+                    variogram,
                     kriging_type="simple",
                 )
 
                 # Krige the simulated values at conditioning locations
-                sim_at_cond = self.krige(
-                    x, y, realizations[i],
-                    cond_x, cond_y, variogram,
-                    kriging_type="simple",
+                sim_at_cond = np.asarray(
+                    self.krige(
+                        x,
+                        y,
+                        realizations[i],
+                        cond_x,
+                        cond_y,
+                        variogram,
+                        kriging_type="simple",
+                    )
                 )
 
                 # Condition: Y_s(x) = Y(x) + [Z_s(x_c) - Y(x_c)] kriged
-                correction = self.krige(
-                    cond_x, cond_y, cond_values - sim_at_cond,
-                    x, y, variogram,
-                    kriging_type="simple",
+                correction = np.asarray(
+                    self.krige(
+                        cond_x,
+                        cond_y,
+                        cond_values - sim_at_cond,
+                        x,
+                        y,
+                        variogram,
+                        kriging_type="simple",
+                    )
                 )
                 realizations[i] = realizations[i] + correction
 
-        return realizations
+        return np.asarray(realizations)
 
     def generate_prior_ensemble(
         self,
@@ -848,8 +864,7 @@ class GeostatManager:
         NDArray
             Ensemble array (n_realizations x n_parameters).
         """
-        if seed is not None:
-            np.random.seed(seed)
+        rng = np.random.default_rng(seed)
 
         n_params = len(parameters)
 
@@ -883,7 +898,7 @@ class GeostatManager:
                     x, y, variogram, n_realizations, mean=mean_val, seed=seed
                 )
                 # Transform back
-                realizations = 10 ** realizations
+                realizations = 10**realizations
             else:
                 mean_val = np.mean([p.initial_value for p in spatial_params])
                 realizations = self.generate_realizations(
@@ -892,17 +907,17 @@ class GeostatManager:
 
             # Clip to bounds
             for j, p in enumerate(spatial_params):
-                realizations[:, j] = np.clip(
-                    realizations[:, j], p.lower_bound, p.upper_bound
-                )
+                realizations[:, j] = np.clip(realizations[:, j], p.lower_bound, p.upper_bound)
                 ensemble[:, spatial_indices[j]] = realizations[:, j]
 
         # Generate non-spatial parameters
         if non_spatial_params:
             if method == "lhs":
-                lhs_samples = self._latin_hypercube(n_realizations, len(non_spatial_params))
+                lhs_samples = self._latin_hypercube(
+                    n_realizations, len(non_spatial_params), rng=rng
+                )
             else:
-                lhs_samples = np.random.rand(n_realizations, len(non_spatial_params))
+                lhs_samples = rng.random((n_realizations, len(non_spatial_params)))
 
             for j, p in enumerate(non_spatial_params):
                 if p.transform == "log":
@@ -916,7 +931,7 @@ class GeostatManager:
 
         return ensemble
 
-    def _latin_hypercube(self, n: int, d: int) -> NDArray:
+    def _latin_hypercube(self, n: int, d: int, rng: np.random.Generator | None = None) -> NDArray:
         """Generate Latin Hypercube samples.
 
         Parameters
@@ -925,18 +940,22 @@ class GeostatManager:
             Number of samples.
         d : int
             Number of dimensions.
+        rng : np.random.Generator | None
+            Random number generator. If None, creates a new one.
 
         Returns
         -------
         NDArray
             LHS samples (n x d), values in [0, 1].
         """
+        if rng is None:
+            rng = np.random.default_rng()
         samples = np.zeros((n, d))
         for j in range(d):
             # Create random permutation of strata
-            perm = np.random.permutation(n)
+            perm = rng.permutation(n)
             # Random position within each stratum
-            samples[:, j] = (perm + np.random.rand(n)) / n
+            samples[:, j] = (perm + rng.random(n)) / n
         return samples
 
     def write_kriging_factors(
@@ -988,7 +1007,7 @@ class GeostatManager:
         if format == "pest":
             # PEST pilot point factors format
             lines = []
-            lines.append(f"# Kriging factors file")
+            lines.append("# Kriging factors file")
             lines.append(f"# Variogram: {variogram}")
             lines.append(f"# {len(target_ids)} targets, {len(pilot_names)} pilot points")
             lines.append("#")
@@ -1039,16 +1058,19 @@ class GeostatManager:
         """
         filepath = Path(filepath)
 
+        vtype = variogram.variogram_type
+        vtype_str = vtype.value if isinstance(vtype, VariogramType) else vtype
+
         lines = []
         lines.append(f"# PEST++ structure file for {name}")
-        lines.append(f"# Variogram type: {variogram.variogram_type.value}")
+        lines.append(f"# Variogram type: {vtype_str}")
         lines.append("")
         lines.append(f"STRUCTURE {name}")
         lines.append(f"  NUGGET {variogram.nugget}")
-        lines.append(f"  TRANSFORM NONE")
+        lines.append("  TRANSFORM NONE")
         lines.append("")
         lines.append(f"VARIOGRAM {name}_vario")
-        lines.append(f"  VARTYPE {variogram.variogram_type.value.upper()}")
+        lines.append(f"  VARTYPE {vtype_str.upper()}")
         lines.append(f"  A {variogram.a}")
         lines.append(f"  SILL {variogram.sill}")
         if variogram.anisotropy_ratio != 1.0:

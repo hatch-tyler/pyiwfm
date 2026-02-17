@@ -8,12 +8,12 @@ Tests cover:
 - Conversion to AppGrid
 """
 
-import pytest
+from unittest.mock import MagicMock
+
 import numpy as np
-from unittest.mock import MagicMock, patch
+import pytest
 
-from pyiwfm.mesh_generation.generators import MeshResult, MeshGenerator
-
+from pyiwfm.mesh_generation.generators import MeshGenerator, MeshResult
 
 # =============================================================================
 # Fixtures
@@ -23,14 +23,19 @@ from pyiwfm.mesh_generation.generators import MeshResult, MeshGenerator
 @pytest.fixture
 def triangle_mesh():
     """Create a simple triangular mesh."""
-    nodes = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [0.5, 1.0],
-    ])
-    elements = np.array([
-        [0, 1, 2],
-    ], dtype=np.int32)
+    nodes = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.5, 1.0],
+        ]
+    )
+    elements = np.array(
+        [
+            [0, 1, 2],
+        ],
+        dtype=np.int32,
+    )
 
     return MeshResult(nodes=nodes, elements=elements)
 
@@ -38,15 +43,20 @@ def triangle_mesh():
 @pytest.fixture
 def quad_mesh():
     """Create a simple quad mesh."""
-    nodes = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 1.0],
-        [0.0, 1.0],
-    ])
-    elements = np.array([
-        [0, 1, 2, 3],
-    ], dtype=np.int32)
+    nodes = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+        ]
+    )
+    elements = np.array(
+        [
+            [0, 1, 2, 3],
+        ],
+        dtype=np.int32,
+    )
 
     return MeshResult(nodes=nodes, elements=elements)
 
@@ -54,21 +64,26 @@ def quad_mesh():
 @pytest.fixture
 def mixed_mesh():
     """Create a mesh with both triangles and quads."""
-    nodes = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [2.0, 0.0],
-        [2.0, 1.0],
-        [1.0, 1.0],
-        [0.0, 1.0],
-        [0.5, 2.0],
-    ])
+    nodes = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [2.0, 0.0],
+            [2.0, 1.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+            [0.5, 2.0],
+        ]
+    )
     # Use -1 to indicate triangle (only 3 vertices)
-    elements = np.array([
-        [0, 1, 4, 5],      # Quad
-        [1, 2, 3, 4],      # Quad
-        [4, 5, 6, -1],     # Triangle (4th vertex -1)
-    ], dtype=np.int32)
+    elements = np.array(
+        [
+            [0, 1, 4, 5],  # Quad
+            [1, 2, 3, 4],  # Quad
+            [4, 5, 6, -1],  # Triangle (4th vertex -1)
+        ],
+        dtype=np.int32,
+    )
 
     return MeshResult(nodes=nodes, elements=elements)
 
@@ -76,16 +91,21 @@ def mixed_mesh():
 @pytest.fixture
 def mesh_with_markers():
     """Create a mesh with node and element markers."""
-    nodes = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 1.0],
-        [0.0, 1.0],
-    ])
-    elements = np.array([
-        [0, 1, 2],
-        [0, 2, 3],
-    ], dtype=np.int32)
+    nodes = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+        ]
+    )
+    elements = np.array(
+        [
+            [0, 1, 2],
+            [0, 2, 3],
+        ],
+        dtype=np.int32,
+    )
     node_markers = np.array([1, 1, 0, 1], dtype=np.int32)  # Boundary markers
     element_markers = np.array([1, 2], dtype=np.int32)  # Region markers
 
@@ -100,18 +120,23 @@ def mesh_with_markers():
 @pytest.fixture
 def multi_triangle_mesh():
     """Create a mesh with multiple triangles."""
-    nodes = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [2.0, 0.0],
-        [1.0, 1.0],
-        [0.5, 0.5],
-    ])
-    elements = np.array([
-        [0, 1, 4],
-        [1, 2, 3],
-        [1, 3, 4],
-    ], dtype=np.int32)
+    nodes = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [2.0, 0.0],
+            [1.0, 1.0],
+            [0.5, 0.5],
+        ]
+    )
+    elements = np.array(
+        [
+            [0, 1, 4],
+            [1, 2, 3],
+            [1, 3, 4],
+        ],
+        dtype=np.int32,
+    )
 
     return MeshResult(nodes=nodes, elements=elements)
 
@@ -199,7 +224,7 @@ class TestMeshResultAreaCentroid:
         assert centroids.shape == (1, 2)
         # Centroid of (0,0), (1,0), (0.5,1) is (0.5, 1/3)
         assert centroids[0, 0] == pytest.approx(0.5, rel=1e-5)
-        assert centroids[0, 1] == pytest.approx(1.0/3.0, rel=1e-5)
+        assert centroids[0, 1] == pytest.approx(1.0 / 3.0, rel=1e-5)
 
     def test_get_element_centroids_quad(self, quad_mesh):
         """Test centroid calculation for quad."""
@@ -260,9 +285,9 @@ class TestMeshResultConversion:
         """Test that coordinate arrays are set."""
         grid = triangle_mesh.to_appgrid()
 
-        assert hasattr(grid, '_x')
-        assert hasattr(grid, '_y')
-        assert len(grid._x) == 3
+        assert hasattr(grid, "_x_cache")
+        assert hasattr(grid, "_y_cache")
+        assert len(grid._x_cache) == 3
 
     def test_repr(self, triangle_mesh):
         """Test string representation."""
@@ -318,8 +343,9 @@ class TestMeshResultEdgeCases:
         n_nodes = 100
         n_elements = 150
 
-        nodes = np.random.rand(n_nodes, 2)
-        elements = np.random.randint(0, n_nodes, size=(n_elements, 3), dtype=np.int32)
+        rng = np.random.default_rng(42)
+        nodes = rng.random((n_nodes, 2))
+        elements = rng.integers(0, n_nodes, size=(n_elements, 3), dtype=np.int32)
 
         mesh = MeshResult(nodes=nodes, elements=elements)
 
@@ -347,11 +373,13 @@ class ConcreteMeshGenerator(MeshGenerator):
     ):
         """Generate a simple mesh."""
         # Return a simple triangle mesh
-        nodes = np.array([
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [0.5, 1.0],
-        ])
+        nodes = np.array(
+            [
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [0.5, 1.0],
+            ]
+        )
         elements = np.array([[0, 1, 2]], dtype=np.int32)
         return MeshResult(nodes=nodes, elements=elements)
 

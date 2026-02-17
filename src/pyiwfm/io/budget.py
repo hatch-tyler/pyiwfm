@@ -24,34 +24,31 @@ import struct
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import BinaryIO, Literal
-
-import numpy as np
-from numpy.typing import NDArray
+from typing import Any, BinaryIO, Literal, cast
 
 import h5py
-
+import numpy as np
 import pandas as pd
-
+from numpy.typing import NDArray
 
 # Budget data type codes (from Budget_Parameters.f90)
 BUDGET_DATA_TYPES = {
-    1: "VR",           # Volumetric rate
-    2: "VLB",          # Volume at beginning
-    3: "VLE",          # Volume at end
-    4: "AR",           # Area
-    5: "LT",           # Length
-    6: "VR_PotCUAW",   # Potential CUAW
+    1: "VR",  # Volumetric rate
+    2: "VLB",  # Volume at beginning
+    3: "VLE",  # Volume at end
+    4: "AR",  # Area
+    5: "LT",  # Length
+    6: "VR_PotCUAW",  # Potential CUAW
     7: "VR_AgSupplyReq",  # Agricultural supply requirement
-    8: "VR_AgShort",   # Agricultural shortage
-    9: "VR_AgPump",    # Agricultural pumping
-    10: "VR_AgDiv",    # Agricultural diversions
+    8: "VR_AgShort",  # Agricultural shortage
+    9: "VR_AgPump",  # Agricultural pumping
+    10: "VR_AgDiv",  # Agricultural diversions
     11: "VR_AgOthIn",  # Agricultural other inflows
 }
 
 # DSS data type codes
 DSS_DATA_TYPES = {
-    1: "PER-CUM",   # Period cumulative
+    1: "PER-CUM",  # Period cumulative
     2: "PER-AVER",  # Period average
 }
 
@@ -265,7 +262,7 @@ class BudgetReader:
             return self._read_header_binary()
 
     @staticmethod
-    def _h5_get(group: object, key: str) -> object | None:
+    def _h5_get(group: h5py.File | h5py.Group, key: str) -> Any:
         """Read a value from an HDF5 group.
 
         Checks child datasets/groups first, then HDF5 group attributes.
@@ -300,9 +297,7 @@ class BudgetReader:
             # Read descriptor
             val = _get(attrs_group, "Descriptor")
             if val is not None:
-                header.descriptor = (
-                    val.decode() if isinstance(val, bytes) else str(val)
-                )
+                header.descriptor = val.decode() if isinstance(val, bytes) else str(val)
 
             # Read areas
             val = _get(attrs_group, "NAreas")
@@ -337,11 +332,7 @@ class BudgetReader:
             for key in ["TimeStep%Unit", "Unit"]:
                 val = _get(attrs_group, key)
                 if val is not None:
-                    ts.unit = (
-                        val.decode().strip()
-                        if isinstance(val, bytes)
-                        else str(val).strip()
-                    )
+                    ts.unit = val.decode().strip() if isinstance(val, bytes) else str(val).strip()
                     break
             for key in ["TimeStep%BeginTime", "BeginTime"]:
                 val = _get(attrs_group, key)
@@ -351,11 +342,7 @@ class BudgetReader:
             for key in ["TimeStep%BeginDateAndTime", "BeginDateAndTime"]:
                 val = _get(attrs_group, key)
                 if val is not None:
-                    date_str = (
-                        val.decode().strip()
-                        if isinstance(val, bytes)
-                        else str(val).strip()
-                    )
+                    date_str = val.decode().strip() if isinstance(val, bytes) else str(val).strip()
                     ts.start_datetime = parse_iwfm_datetime(date_str)
                     break
 
@@ -376,10 +363,7 @@ class BudgetReader:
             for key in ["cTitles", "ASCIIOutput%cTitles"]:
                 val = _get(attrs_group, key)
                 if val is not None:
-                    ascii_out.titles = [
-                        t.decode() if isinstance(t, bytes) else str(t)
-                        for t in val
-                    ]
+                    ascii_out.titles = [t.decode() if isinstance(t, bytes) else str(t) for t in val]
                     break
             header.ascii_output = ascii_out
 
@@ -393,8 +377,7 @@ class BudgetReader:
             val = _get(attrs_group, "cLocationNames")
             if val is not None:
                 header.location_names = [
-                    n.decode().strip() if isinstance(n, bytes) else str(n).strip()
-                    for n in val
+                    n.decode().strip() if isinstance(n, bytes) else str(n).strip() for n in val
                 ]
 
             # Infer n_locations from location names when attribute is missing
@@ -413,7 +396,7 @@ class BudgetReader:
 
             for i in range(n_loc_data):
                 loc_data = LocationData()
-                prefix = f"LocationData{i+1}%" if n_loc_data > 1 else ""
+                prefix = f"LocationData{i + 1}%" if n_loc_data > 1 else ""
 
                 # Number of columns
                 for key in [f"{prefix}NDataColumns", "NDataColumns"]:
@@ -427,8 +410,7 @@ class BudgetReader:
                     val = _get(attrs_group, key)
                     if val is not None:
                         loc_data.column_headers = [
-                            h.decode().strip() if isinstance(h, bytes)
-                            else str(h).strip()
+                            h.decode().strip() if isinstance(h, bytes) else str(h).strip()
                             for h in val
                         ]
                         break
@@ -496,9 +478,7 @@ class BudgetReader:
                 and header.location_data[0].n_columns > 0
             ):
                 n = header.location_data[0].n_columns
-                header.location_data[0].column_headers = [
-                    f"Column {j + 1}" for j in range(n)
-                ]
+                header.location_data[0].column_headers = [f"Column {j + 1}" for j in range(n)]
 
             # If only one location data, replicate for all locations
             if len(header.location_data) == 1 and header.n_locations > 1:
@@ -506,11 +486,7 @@ class BudgetReader:
 
             # Try to get timestep count from data if not in attributes
             if ts.n_timesteps == 0 and header.location_names:
-                expected_cols = (
-                    header.location_data[0].n_columns
-                    if header.location_data
-                    else 0
-                )
+                expected_cols = header.location_data[0].n_columns if header.location_data else 0
                 for name in header.location_names:
                     if name in f:
                         loc_obj = f[name]
@@ -595,14 +571,10 @@ class BudgetReader:
                     loc_data.column_headers.append(self._read_fortran_string(f, 100))
 
                 # Column types
-                loc_data.column_types = list(
-                    self._read_fortran_int_array(f, loc_data.n_columns)
-                )
+                loc_data.column_types = list(self._read_fortran_int_array(f, loc_data.n_columns))
 
                 # Column widths
-                loc_data.column_widths = list(
-                    self._read_fortran_int_array(f, loc_data.n_columns)
-                )
+                loc_data.column_widths = list(self._read_fortran_int_array(f, loc_data.n_columns))
 
                 # Multi-line column headers (skip for now)
                 for _ in range(ascii_out.n_column_header_lines):
@@ -640,21 +612,21 @@ class BudgetReader:
         f.read(4)  # record length
         val = struct.unpack("i", f.read(4))[0]
         f.read(4)  # trailing length
-        return val
+        return cast(int, val)
 
     def _read_fortran_real8(self, f: BinaryIO) -> float:
         """Read single Fortran REAL(8) from binary file."""
         f.read(4)  # record length
         val = struct.unpack("d", f.read(8))[0]
         f.read(4)  # trailing length
-        return val
+        return cast(float, val)
 
     def _read_fortran_logical(self, f: BinaryIO) -> bool:
         """Read single Fortran logical from binary file."""
         f.read(4)  # record length
         val = struct.unpack("i", f.read(4))[0]
         f.read(4)  # trailing length
-        return val != 0
+        return bool(val != 0)
 
     def _read_fortran_int_array(self, f: BinaryIO, n: int) -> NDArray[np.int32]:
         """Read Fortran integer array from binary file."""
@@ -735,10 +707,7 @@ class BudgetReader:
 
         # IWFM HDF5 files may include "Time" as first column header even though
         # it is not a data column.  Strip it when it causes a mismatch.
-        if (
-            len(headers) > loc_data.n_columns > 0
-            and headers[0].lower() == "time"
-        ):
+        if len(headers) > loc_data.n_columns > 0 and headers[0].lower() == "time":
             headers = headers[1:]
 
         return headers
@@ -825,16 +794,12 @@ class BudgetReader:
                 if use_months:
                     from dateutil.relativedelta import relativedelta
 
-                    times = np.array([
-                        (start + relativedelta(months=i)).timestamp()
-                        for i in range(n_timesteps)
-                    ])
+                    times = np.array(
+                        [(start + relativedelta(months=i)).timestamp() for i in range(n_timesteps)]
+                    )
                 else:
                     delta = timedelta(minutes=ts.delta_t_minutes)
-                    times = np.array([
-                        (start + i * delta).timestamp()
-                        for i in range(n_timesteps)
-                    ])
+                    times = np.array([(start + i * delta).timestamp() for i in range(n_timesteps)])
             else:
                 times = np.arange(n_timesteps) * ts.delta_t + ts.start_time
 
@@ -865,10 +830,7 @@ class BudgetReader:
             loc_offset = loc_data.storage_units * loc_idx
         else:
             total_storage = sum(ld.storage_units for ld in self.header.location_data)
-            loc_offset = sum(
-                self.header.location_data[i].storage_units
-                for i in range(loc_idx)
-            )
+            loc_offset = sum(self.header.location_data[i].storage_units for i in range(loc_idx))
 
         # Read data
         data = np.zeros((n_timesteps, n_cols), dtype=np.float64)
@@ -895,16 +857,12 @@ class BudgetReader:
             if use_months:
                 from dateutil.relativedelta import relativedelta
 
-                times = np.array([
-                    (start + relativedelta(months=i)).timestamp()
-                    for i in range(n_timesteps)
-                ])
+                times = np.array(
+                    [(start + relativedelta(months=i)).timestamp() for i in range(n_timesteps)]
+                )
             else:
                 delta = timedelta(minutes=ts.delta_t_minutes)
-                times = np.array([
-                    (start + i * delta).timestamp()
-                    for i in range(n_timesteps)
-                ])
+                times = np.array([(start + i * delta).timestamp() for i in range(n_timesteps)])
         else:
             times = np.arange(n_timesteps) * ts.delta_t + ts.start_time
 
@@ -918,7 +876,7 @@ class BudgetReader:
         self,
         location: str | int = 0,
         columns: list[int] | list[str] | None = None,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Read budget values as a pandas DataFrame.
 
@@ -965,6 +923,7 @@ class BudgetReader:
 
         # Create datetime index
         ts = self.header.timestep
+        index: pd.DatetimeIndex | pd.Index[Any]
         if ts.start_datetime:
             index = pd.to_datetime(times, unit="s")
         else:
@@ -978,7 +937,7 @@ class BudgetReader:
 
         return pd.DataFrame(values, index=index, columns=col_names)
 
-    def get_all_dataframes(self) -> dict[str, "pd.DataFrame"]:
+    def get_all_dataframes(self) -> dict[str, pd.DataFrame]:
         """
         Read budget data for all locations as DataFrames.
 
@@ -987,16 +946,13 @@ class BudgetReader:
         dict[str, pd.DataFrame]
             Dictionary mapping location name to DataFrame.
         """
-        return {
-            loc: self.get_dataframe(loc)
-            for loc in self.locations
-        }
+        return {loc: self.get_dataframe(loc) for loc in self.locations}
 
     def get_monthly_averages(
         self,
         location: str | int = 0,
         columns: list[int] | list[str] | None = None,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Calculate monthly averages for budget data.
 
@@ -1015,7 +971,8 @@ class BudgetReader:
         df = self.get_dataframe(location, columns)
 
         if isinstance(df.index, pd.DatetimeIndex):
-            return df.resample("MS").mean()
+            result: pd.DataFrame = df.resample("MS").mean()
+            return result
         else:
             # Assume monthly time steps and return as-is
             return df
@@ -1024,7 +981,7 @@ class BudgetReader:
         self,
         location: str | int = 0,
         columns: list[int] | list[str] | None = None,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Calculate annual totals for budget data.
 
@@ -1043,22 +1000,24 @@ class BudgetReader:
         df = self.get_dataframe(location, columns)
 
         if isinstance(df.index, pd.DatetimeIndex):
-            return df.resample("YS").sum()
+            annual_result: pd.DataFrame = df.resample("YS").sum()
+            return annual_result
         else:
             # Group by year (assume 12 time steps per year)
             n_years = len(df) // 12
             if n_years == 0:
-                return df.sum().to_frame().T
+                single_row: pd.DataFrame = df.sum().to_frame().T
+                return single_row
             annual = []
             for i in range(n_years):
-                annual.append(df.iloc[i*12:(i+1)*12].sum())
+                annual.append(df.iloc[i * 12 : (i + 1) * 12].sum())
             return pd.DataFrame(annual)
 
     def get_cumulative(
         self,
         location: str | int = 0,
         columns: list[int] | list[str] | None = None,
-    ) -> "pd.DataFrame":
+    ) -> pd.DataFrame:
         """
         Calculate cumulative sums for budget data.
 
@@ -1075,7 +1034,8 @@ class BudgetReader:
             DataFrame with cumulative values.
         """
         df = self.get_dataframe(location, columns)
-        return df.cumsum()
+        result: pd.DataFrame = df.cumsum()
+        return result
 
     def __repr__(self) -> str:
         return (

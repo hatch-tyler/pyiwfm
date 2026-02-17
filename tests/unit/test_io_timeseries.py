@@ -2,30 +2,28 @@
 
 from __future__ import annotations
 
-import sys
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
 from pyiwfm.io.timeseries import (
-    TimeSeriesFileType,
-    TimeUnit,
-    TimeSeriesMetadata,
-    UnifiedTimeSeriesConfig,
     AsciiTimeSeriesAdapter,
     BaseTimeSeriesReader,
     DssTimeSeriesAdapter,
     Hdf5TimeSeriesAdapter,
-    UnifiedTimeSeriesReader,
     RecyclingTimeSeriesReader,
+    TimeSeriesFileType,
+    TimeSeriesMetadata,
+    TimeUnit,
+    UnifiedTimeSeriesConfig,
+    UnifiedTimeSeriesReader,
     detect_timeseries_format,
-    read_timeseries_unified,
     get_timeseries_metadata,
+    read_timeseries_unified,
 )
-
 
 # ---------------------------------------------------------------------------
 # 2A. Dataclasses & Enums
@@ -167,9 +165,7 @@ class TestAsciiTimeSeriesAdapter:
         fake_times = [datetime(1990, 2, 1), datetime(1990, 3, 1)]
         fake_values = np.array([[100.0, 200.0, 300.0], [110.0, 210.0, 310.0]])
 
-        with patch(
-            "pyiwfm.io.timeseries_ascii.TimeSeriesReader"
-        ) as MockReader:
+        with patch("pyiwfm.io.timeseries_ascii.TimeSeriesReader") as MockReader:
             mock_instance = MockReader.return_value
             mock_instance.read.return_value = (fake_times, fake_values, mock_config)
 
@@ -191,9 +187,7 @@ class TestAsciiTimeSeriesAdapter:
         fake_times = [datetime(2000, 6, 15)]
         fake_values = np.array([[42.0]])
 
-        with patch(
-            "pyiwfm.io.timeseries_ascii.TimeSeriesReader"
-        ) as MockReader:
+        with patch("pyiwfm.io.timeseries_ascii.TimeSeriesReader") as MockReader:
             mock_instance = MockReader.return_value
             mock_instance.read.return_value = (fake_times, fake_values, mock_config)
 
@@ -209,9 +203,7 @@ class TestAsciiTimeSeriesAdapter:
         mock_config.column_ids = [1, 2]
         mock_config.factor = 1.0
 
-        with patch(
-            "pyiwfm.io.timeseries_ascii.TimeSeriesReader"
-        ) as MockReader:
+        with patch("pyiwfm.io.timeseries_ascii.TimeSeriesReader") as MockReader:
             mock_instance = MockReader.return_value
             mock_instance.read.return_value = ([], np.array([]), mock_config)
 
@@ -228,9 +220,7 @@ class TestAsciiTimeSeriesAdapter:
         mock_config.column_ids = [1]
         mock_config.factor = 2.0
 
-        with patch(
-            "pyiwfm.io.timeseries_ascii.TimeSeriesReader"
-        ) as MockReader:
+        with patch("pyiwfm.io.timeseries_ascii.TimeSeriesReader") as MockReader:
             mock_instance = MockReader.return_value
             mock_instance.read.return_value = (
                 [datetime(2020, 1, 1)],
@@ -326,9 +316,7 @@ class TestDssTimeSeriesAdapter:
 
     def test_read_delegates_to_dss_reader(self) -> None:
         mock_dss_mod = MagicMock()
-        fake_times = np.array(
-            ["2020-01-01", "2020-02-01"], dtype="datetime64[s]"
-        )
+        fake_times = np.array(["2020-01-01", "2020-02-01"], dtype="datetime64[s]")
         fake_values = np.array([[1.0, 2.0], [3.0, 4.0]])
         mock_dss_mod.DSSTimeSeriesReader.return_value.read.return_value = (
             fake_times,
@@ -405,9 +393,12 @@ class TestHdf5TimeSeriesAdapter:
         mock_file = MagicMock()
         mock_file.__enter__ = MagicMock(return_value=mock_file)
         mock_file.__exit__ = MagicMock(return_value=False)
-        mock_file.__contains__ = lambda s, key: key in (
-            "/timeseries/time",
-            "/timeseries/data",
+        mock_file.__contains__ = lambda s, key: (
+            key
+            in (
+                "/timeseries/time",
+                "/timeseries/data",
+            )
         )
 
         mock_time_ds = MagicMock()
@@ -616,9 +607,7 @@ class TestUnifiedTimeSeriesReader:
 
     def test_read_applies_time_filter_start_only(self) -> None:
         reader = UnifiedTimeSeriesReader()
-        times = np.array(
-            ["2020-01-01", "2020-06-01", "2020-12-01"], dtype="datetime64[s]"
-        )
+        times = np.array(["2020-01-01", "2020-06-01", "2020-12-01"], dtype="datetime64[s]")
         values = np.array([[1.0], [2.0], [3.0]])
         meta = TimeSeriesMetadata(n_timesteps=3)
 
@@ -639,9 +628,7 @@ class TestUnifiedTimeSeriesReader:
 
     def test_read_applies_time_filter_end_only(self) -> None:
         reader = UnifiedTimeSeriesReader()
-        times = np.array(
-            ["2020-01-01", "2020-06-01", "2020-12-01"], dtype="datetime64[s]"
-        )
+        times = np.array(["2020-01-01", "2020-06-01", "2020-12-01"], dtype="datetime64[s]")
         values = np.array([[1.0], [2.0], [3.0]])
         meta = TimeSeriesMetadata(n_timesteps=3)
 
@@ -661,9 +648,7 @@ class TestUnifiedTimeSeriesReader:
 
     def test_read_applies_time_filter_both(self) -> None:
         reader = UnifiedTimeSeriesReader()
-        times = np.array(
-            ["2020-01-01", "2020-06-01", "2020-12-01"], dtype="datetime64[s]"
-        )
+        times = np.array(["2020-01-01", "2020-06-01", "2020-12-01"], dtype="datetime64[s]")
         values = np.array([10.0, 20.0, 30.0])
         meta = TimeSeriesMetadata(n_timesteps=3)
 
@@ -702,17 +687,13 @@ class TestUnifiedTimeSeriesReader:
         reader = UnifiedTimeSeriesReader()
         fake_times = np.array(["2020-01-01", "2020-02-01"], dtype="datetime64[s]")
         fake_values = np.array([[1.0, 2.0], [3.0, 4.0]])
-        fake_meta = TimeSeriesMetadata(
-            n_columns=2, column_ids=[1, 2], n_timesteps=2
-        )
+        fake_meta = TimeSeriesMetadata(n_columns=2, column_ids=[1, 2], n_timesteps=2)
 
         mock_adapter = MagicMock(spec=BaseTimeSeriesReader)
         mock_adapter.read.return_value = (fake_times, fake_values, fake_meta)
         reader._adapters[TimeSeriesFileType.ASCII] = mock_adapter
 
-        collection = reader.read_to_collection(
-            "test.dat", variable="pumping"
-        )
+        collection = reader.read_to_collection("test.dat", variable="pumping")
 
         assert isinstance(collection, TimeSeriesCollection)
         assert collection.variable == "pumping"
@@ -727,9 +708,7 @@ class TestUnifiedTimeSeriesReader:
         reader = UnifiedTimeSeriesReader()
         fake_times = np.array(["2020-01-01", "2020-02-01"], dtype="datetime64[s]")
         fake_values = np.array([10.0, 20.0])  # 1D
-        fake_meta = TimeSeriesMetadata(
-            n_columns=1, column_ids=[1], n_timesteps=2
-        )
+        fake_meta = TimeSeriesMetadata(n_columns=1, column_ids=[1], n_timesteps=2)
 
         mock_adapter = MagicMock(spec=BaseTimeSeriesReader)
         mock_adapter.read.return_value = (fake_times, fake_values, fake_meta)
@@ -845,9 +824,7 @@ class TestRecyclingTimeSeriesReader:
         )
 
         recycler = RecyclingTimeSeriesReader(base_reader=mock_reader)
-        target_times = np.array(
-            ["2020-01-01", "2020-02-01", "2020-03-01"], dtype="datetime64[s]"
-        )
+        target_times = np.array(["2020-01-01", "2020-02-01", "2020-03-01"], dtype="datetime64[s]")
         result = recycler.read_with_recycling("source.dat", target_times)
 
         assert result.shape == (3, 2)
@@ -856,9 +833,7 @@ class TestRecyclingTimeSeriesReader:
     def test_read_with_recycling_maps_months(self) -> None:
         mock_reader = MagicMock(spec=UnifiedTimeSeriesReader)
         # Source: Jan, Feb, Mar 1990 with 2 columns
-        source_times = np.array(
-            ["1990-01-15", "1990-02-15", "1990-03-15"], dtype="datetime64[s]"
-        )
+        source_times = np.array(["1990-01-15", "1990-02-15", "1990-03-15"], dtype="datetime64[s]")
         source_values = np.array([[10.0, 100.0], [20.0, 200.0], [30.0, 300.0]])
         mock_reader.read_file.return_value = (
             source_times,
@@ -869,9 +844,7 @@ class TestRecyclingTimeSeriesReader:
         recycler = RecyclingTimeSeriesReader(base_reader=mock_reader)
 
         # Target: Jan, Feb 2020 -- should recycle from Jan, Feb 1990
-        target_times = np.array(
-            ["2020-01-20", "2020-02-20"], dtype="datetime64[s]"
-        )
+        target_times = np.array(["2020-01-20", "2020-02-20"], dtype="datetime64[s]")
         result = recycler.read_with_recycling("source.dat", target_times, recycling_interval=12)
 
         assert result.shape == (2, 2)
@@ -882,9 +855,7 @@ class TestRecyclingTimeSeriesReader:
 
     def test_read_with_recycling_handles_1d_values(self) -> None:
         mock_reader = MagicMock(spec=UnifiedTimeSeriesReader)
-        source_times = np.array(
-            ["1990-06-15"], dtype="datetime64[s]"
-        )
+        source_times = np.array(["1990-06-15"], dtype="datetime64[s]")
         # 1D values
         source_values = np.array([42.0])
         mock_reader.read_file.return_value = (
@@ -927,9 +898,7 @@ class TestConvenienceFunctions:
         assert detect_timeseries_format("model.bin") == TimeSeriesFileType.BINARY
 
     def test_read_timeseries_unified_delegates(self) -> None:
-        with patch.object(
-            UnifiedTimeSeriesReader, "read_file"
-        ) as mock_read_file:
+        with patch.object(UnifiedTimeSeriesReader, "read_file") as mock_read_file:
             fake_result = (
                 np.array(["2020-01-01"], dtype="datetime64[s]"),
                 np.array([[1.0]]),
@@ -937,30 +906,22 @@ class TestConvenienceFunctions:
             )
             mock_read_file.return_value = fake_result
 
-            result = read_timeseries_unified("test.dat")
+            read_timeseries_unified("test.dat")
 
-        mock_read_file.assert_called_once_with(
-            "test.dat", None
-        )
+        mock_read_file.assert_called_once_with("test.dat", None)
 
     def test_get_timeseries_metadata_delegates(self) -> None:
-        with patch.object(
-            UnifiedTimeSeriesReader, "read_metadata"
-        ) as mock_read_meta:
+        with patch.object(UnifiedTimeSeriesReader, "read_metadata") as mock_read_meta:
             expected = TimeSeriesMetadata(n_columns=7)
             mock_read_meta.return_value = expected
 
             result = get_timeseries_metadata("test.dat")
 
-        mock_read_meta.assert_called_once_with(
-            "test.dat", None
-        )
+        mock_read_meta.assert_called_once_with("test.dat", None)
         assert result.n_columns == 7
 
     def test_read_timeseries_unified_with_explicit_file_type(self) -> None:
-        with patch.object(
-            UnifiedTimeSeriesReader, "read_file"
-        ) as mock_read_file:
+        with patch.object(UnifiedTimeSeriesReader, "read_file") as mock_read_file:
             fake_result = (
                 np.array([], dtype="datetime64[s]"),
                 np.array([]),
@@ -968,24 +929,14 @@ class TestConvenienceFunctions:
             )
             mock_read_file.return_value = fake_result
 
-            read_timeseries_unified(
-                "test.dss", file_type=TimeSeriesFileType.DSS
-            )
+            read_timeseries_unified("test.dss", file_type=TimeSeriesFileType.DSS)
 
-        mock_read_file.assert_called_once_with(
-            "test.dss", TimeSeriesFileType.DSS
-        )
+        mock_read_file.assert_called_once_with("test.dss", TimeSeriesFileType.DSS)
 
     def test_get_timeseries_metadata_with_explicit_file_type(self) -> None:
-        with patch.object(
-            UnifiedTimeSeriesReader, "read_metadata"
-        ) as mock_read_meta:
+        with patch.object(UnifiedTimeSeriesReader, "read_metadata") as mock_read_meta:
             mock_read_meta.return_value = TimeSeriesMetadata()
 
-            get_timeseries_metadata(
-                "test.h5", file_type=TimeSeriesFileType.HDF5
-            )
+            get_timeseries_metadata("test.h5", file_type=TimeSeriesFileType.HDF5)
 
-        mock_read_meta.assert_called_once_with(
-            "test.h5", TimeSeriesFileType.HDF5
-        )
+        mock_read_meta.assert_called_once_with("test.h5", TimeSeriesFileType.HDF5)

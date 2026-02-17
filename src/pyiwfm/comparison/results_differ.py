@@ -558,8 +558,8 @@ class ResultsDiffer:
 
         # Search top-level datasets
         for key in hdf_file.keys():
-            if "head" in key.lower():
-                return key
+            if "head" in str(key).lower():
+                return str(key)
 
         return None
 
