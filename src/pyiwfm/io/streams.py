@@ -31,10 +31,10 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     parse_version as parse_stream_version,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
     version_ge as stream_version_ge,
 )
 from pyiwfm.io.timeseries_ascii import TimeSeriesWriter
@@ -474,7 +474,7 @@ class StreamReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_nodes = int(value)
                 except ValueError as e:
@@ -550,7 +550,7 @@ class StreamReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_diversions = int(value)
                 except ValueError as e:
@@ -713,47 +713,47 @@ class StreamMainFileReader:
             config.version = self._read_version(f)
 
             # INFLOWFL (inflow time series file)
-            inflow_path = self._next_data_or_empty(f)
+            inflow_path = _next_data_or_empty(f)
             if inflow_path:
-                config.inflow_file = self._resolve_path(base_dir, inflow_path)
+                config.inflow_file = _resolve_path_f(base_dir, inflow_path)
 
             # DIVSPECFL (diversion specification file)
-            divspec_path = self._next_data_or_empty(f)
+            divspec_path = _next_data_or_empty(f)
             if divspec_path:
-                config.diversion_spec_file = self._resolve_path(base_dir, divspec_path)
+                config.diversion_spec_file = _resolve_path_f(base_dir, divspec_path)
 
             # BYPSPECFL (bypass specification file)
-            bypspec_path = self._next_data_or_empty(f)
+            bypspec_path = _next_data_or_empty(f)
             if bypspec_path:
-                config.bypass_spec_file = self._resolve_path(base_dir, bypspec_path)
+                config.bypass_spec_file = _resolve_path_f(base_dir, bypspec_path)
 
             # DIVFL (diversion time series file)
-            div_path = self._next_data_or_empty(f)
+            div_path = _next_data_or_empty(f)
             if div_path:
-                config.diversion_file = self._resolve_path(base_dir, div_path)
+                config.diversion_file = _resolve_path_f(base_dir, div_path)
 
             # STRMRCHBUDFL (stream reach budget output file)
-            budget_path = self._next_data_or_empty(f)
+            budget_path = _next_data_or_empty(f)
             if budget_path:
-                config.budget_output_file = self._resolve_path(base_dir, budget_path)
+                config.budget_output_file = _resolve_path_f(base_dir, budget_path)
 
             # DIVDTLBUDFL (diversion detail budget output file)
-            divbud_path = self._next_data_or_empty(f)
+            divbud_path = _next_data_or_empty(f)
             if divbud_path:
-                config.diversion_budget_file = self._resolve_path(
+                config.diversion_budget_file = _resolve_path_f(
                     base_dir, divbud_path
                 )
 
             # v5.0: end-of-simulation flows file (before hydrographs)
             if stream_version_ge(config.version, (5, 0)):
-                final_flow_path = self._next_data_or_empty(f)
+                final_flow_path = _next_data_or_empty(f)
                 if final_flow_path:
-                    config.final_flow_file = self._resolve_path(
+                    config.final_flow_file = _resolve_path_f(
                         base_dir, final_flow_path
                     )
 
             # NOUTR (number of hydrograph output nodes)
-            noutr_str = self._next_data_or_empty(f)
+            noutr_str = _next_data_or_empty(f)
             if not noutr_str:
                 return config
 
@@ -768,7 +768,7 @@ class StreamMainFileReader:
                 return config
 
             # IHSQR (hydrograph output type: 0=flow, 1=stage, 2=both)
-            ihsqr = self._next_data_or_empty(f)
+            ihsqr = _next_data_or_empty(f)
             if ihsqr:
                 try:
                     config.hydrograph_output_type = int(ihsqr)
@@ -776,7 +776,7 @@ class StreamMainFileReader:
                     pass
 
             # FACTSQOU (flow output conversion factor)
-            factsqou = self._next_data_or_empty(f)
+            factsqou = _next_data_or_empty(f)
             if factsqou:
                 try:
                     config.hydrograph_flow_factor = float(factsqou)
@@ -784,22 +784,22 @@ class StreamMainFileReader:
                     pass
 
             # UNITSQOU (flow output units)
-            config.hydrograph_flow_unit = self._next_data_or_empty(f)
+            config.hydrograph_flow_unit = _next_data_or_empty(f)
 
             # If stage output is included (type 1=stage, 2=both)
             if config.hydrograph_output_type in (1, 2):
-                factltou = self._next_data_or_empty(f)
+                factltou = _next_data_or_empty(f)
                 if factltou:
                     try:
                         config.hydrograph_elev_factor = float(factltou)
                     except ValueError:
                         pass
-                config.hydrograph_elev_unit = self._next_data_or_empty(f)
+                config.hydrograph_elev_unit = _next_data_or_empty(f)
 
             # STRMHYDOUTFL (hydrograph output file)
-            hydout_path = self._next_data_or_empty(f)
+            hydout_path = _next_data_or_empty(f)
             if hydout_path:
-                config.hydrograph_output_file = self._resolve_path(
+                config.hydrograph_output_file = _resolve_path_f(
                     base_dir, hydout_path
                 )
 
@@ -845,12 +845,12 @@ class StreamMainFileReader:
         if config.node_budget_count <= 0:
             return
         # Budget output file
-        bud_path = self._next_data_or_empty(f)
+        bud_path = _next_data_or_empty(f)
         if bud_path:
-            config.node_budget_output_file = self._resolve_path(base_dir, bud_path)
+            config.node_budget_output_file = _resolve_path_f(base_dir, bud_path)
         # Per-node IDs
         for _ in range(config.node_budget_count):
-            node_str = self._next_data_or_empty(f)
+            node_str = _next_data_or_empty(f)
             if node_str:
                 try:
                     config.node_budget_ids.append(int(node_str))
@@ -878,10 +878,10 @@ class StreamMainFileReader:
             return
 
         # TUNITSK
-        config.conductivity_time_unit = self._next_data_or_empty(f)
+        config.conductivity_time_unit = _next_data_or_empty(f)
 
         # FACTL
-        factl_str = self._next_data_or_empty(f)
+        factl_str = _next_data_or_empty(f)
         if factl_str:
             try:
                 config.length_factor = float(factl_str)
@@ -904,7 +904,7 @@ class StreamMainFileReader:
         # Auto-detect actual column count from first data row
         detected_ncols = None
         while True:
-            line_val = self._next_data_or_empty(f)
+            line_val = _next_data_or_empty(f)
             if not line_val:
                 break
             parts = line_val.split()
@@ -967,7 +967,7 @@ class StreamMainFileReader:
             return
 
         # FACTLT (length conversion factor for cross-section)
-        factlt_str = self._next_data_or_empty(f)
+        factlt_str = _next_data_or_empty(f)
         if factlt_str:
             try:
                 config.cross_section_length_factor = float(factlt_str)
@@ -976,7 +976,7 @@ class StreamMainFileReader:
 
         # Per-node cross-section rows (6 columns: IR BottomElev B0 s n MaxDepth)
         while True:
-            line_val = self._next_data_or_empty(f)
+            line_val = _next_data_or_empty(f)
             if not line_val:
                 break
             parts = line_val.split()
@@ -1011,10 +1011,10 @@ class StreamMainFileReader:
             return
 
         # Time unit (for flow IC)
-        config.ic_time_unit = self._next_data_or_empty(f)
+        config.ic_time_unit = _next_data_or_empty(f)
 
         # FACTH (conversion factor)
-        facth_str = self._next_data_or_empty(f)
+        facth_str = _next_data_or_empty(f)
         if facth_str:
             try:
                 config.ic_factor = float(facth_str)
@@ -1023,7 +1023,7 @@ class StreamMainFileReader:
 
         # Per-node IC rows (2 columns: IR value)
         while True:
-            line_val = self._next_data_or_empty(f)
+            line_val = _next_data_or_empty(f)
             if not line_val:
                 break
             parts = line_val.split()
@@ -1047,11 +1047,11 @@ class StreamMainFileReader:
         # STARFL (stream surface area file)
         area_path = self._maybe_read_pushback(f)
         if area_path:
-            config.evap_area_file = self._resolve_path(base_dir, area_path)
+            config.evap_area_file = _resolve_path_f(base_dir, area_path)
 
         # Per-node evap specs (3 columns: IR ICETST ICARST)
         while True:
-            line_val = self._next_data_or_empty(f)
+            line_val = _next_data_or_empty(f)
             if not line_val:
                 break
             parts = line_val.split()
@@ -1072,7 +1072,7 @@ class StreamMainFileReader:
             val = self._pushback_line
             self._pushback_line = None
             return val
-        return self._next_data_or_empty(f)
+        return _next_data_or_empty(f)
 
     def _read_version(self, f: TextIO) -> str:
         """Read the version header from the file."""
@@ -1087,13 +1087,6 @@ class StreamMainFileReader:
                 continue
             break
         return ""
-
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string for blank lines."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
 
     def _read_hydrograph_specs(
         self, f: TextIO, n_hydrographs: int
@@ -1138,10 +1131,6 @@ class StreamMainFileReader:
 
         return specs
 
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
 
 # =============================================================================
@@ -1277,7 +1266,7 @@ class StreamSpecReader:
             self._line_num += 1
             if _is_comment_line(line):
                 continue
-            value, _ = _parse_value_line(line)
+            value, _ = _strip_comment(line)
             if value:
                 return value
         raise FileFormatError("Unexpected end of file", line_number=self._line_num)

@@ -22,9 +22,9 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -216,17 +216,17 @@ class SmallWatershedMainReader:
             config.version = self._read_version(f)
 
             # Budget output file
-            budget_path = self._next_data_or_empty(f)
+            budget_path = _next_data_or_empty(f)
             if budget_path:
-                config.budget_output_file = self._resolve_path(base_dir, budget_path)
+                config.budget_output_file = _resolve_path_f(base_dir, budget_path)
 
             # Final results output file
-            final_path = self._next_data_or_empty(f)
+            final_path = _next_data_or_empty(f)
             if final_path:
-                config.final_results_file = self._resolve_path(base_dir, final_path)
+                config.final_results_file = _resolve_path_f(base_dir, final_path)
 
             # Number of small watersheds
-            n_ws_str = self._next_data_or_empty(f)
+            n_ws_str = _next_data_or_empty(f)
             if n_ws_str:
                 config.n_watersheds = int(n_ws_str)
 
@@ -252,17 +252,17 @@ class SmallWatershedMainReader:
     ) -> None:
         """Read geospatial data for all watersheds."""
         # Area factor
-        area_str = self._next_data_or_empty(f)
+        area_str = _next_data_or_empty(f)
         if area_str:
             config.area_factor = float(area_str)
 
         # Flow rate factor
-        flow_str = self._next_data_or_empty(f)
+        flow_str = _next_data_or_empty(f)
         if flow_str:
             config.flow_factor = float(flow_str)
 
         # Time unit
-        config.flow_time_unit = self._next_data_or_empty(f)
+        config.flow_time_unit = _next_data_or_empty(f)
 
         # Read per-watershed geospatial specs
         for _ in range(config.n_watersheds):
@@ -304,32 +304,32 @@ class SmallWatershedMainReader:
     ) -> None:
         """Read root zone parameters for all watersheds."""
         # Solver tolerance
-        tol_str = self._next_data_or_empty(f)
+        tol_str = _next_data_or_empty(f)
         if tol_str:
             config.rz_solver_tolerance = float(tol_str)
 
         # Max iterations
-        iter_str = self._next_data_or_empty(f)
+        iter_str = _next_data_or_empty(f)
         if iter_str:
             config.rz_max_iterations = int(iter_str)
 
         # Length factor
-        len_str = self._next_data_or_empty(f)
+        len_str = _next_data_or_empty(f)
         if len_str:
             config.rz_length_factor = float(len_str)
 
         # CN factor
-        cn_str = self._next_data_or_empty(f)
+        cn_str = _next_data_or_empty(f)
         if cn_str:
             config.rz_cn_factor = float(cn_str)
 
         # K factor
-        k_str = self._next_data_or_empty(f)
+        k_str = _next_data_or_empty(f)
         if k_str:
             config.rz_k_factor = float(k_str)
 
         # K time unit
-        config.rz_k_time_unit = self._next_data_or_empty(f)
+        config.rz_k_time_unit = _next_data_or_empty(f)
 
         # Per-watershed root zone parameters
         is_v41 = config.version == "4.1"
@@ -364,17 +364,17 @@ class SmallWatershedMainReader:
     ) -> None:
         """Read aquifer parameters for all watersheds."""
         # GW factor
-        gw_str = self._next_data_or_empty(f)
+        gw_str = _next_data_or_empty(f)
         if gw_str:
             config.aq_gw_factor = float(gw_str)
 
         # Time factor
-        time_str = self._next_data_or_empty(f)
+        time_str = _next_data_or_empty(f)
         if time_str:
             config.aq_time_factor = float(time_str)
 
         # Time unit
-        config.aq_time_unit = self._next_data_or_empty(f)
+        config.aq_time_unit = _next_data_or_empty(f)
 
         # Per-watershed aquifer parameters
         for _ in range(config.n_watersheds):
@@ -403,7 +403,7 @@ class SmallWatershedMainReader:
         default IC values.
         """
         # IC conversion factor
-        ic_str = self._next_data_or_empty(f)
+        ic_str = _next_data_or_empty(f)
         if not ic_str:
             return
         config.ic_factor = float(ic_str)
@@ -440,13 +440,6 @@ class SmallWatershedMainReader:
             break
         return ""
 
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
-
     def _next_data_line(self, f: TextIO) -> str:
         """Return the next non-comment data line."""
         for line in f:
@@ -455,11 +448,6 @@ class SmallWatershedMainReader:
                 continue
             return line.strip()
         raise FileFormatError("Unexpected end of file", line_number=self._line_num)
-
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
 
 def read_small_watershed_main(

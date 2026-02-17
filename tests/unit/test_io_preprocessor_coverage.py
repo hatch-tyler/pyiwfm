@@ -505,7 +505,7 @@ class TestStandaloneWriterFunctions:
 
 from pyiwfm.io.preprocessor import (
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
     _resolve_path,
     read_preprocessor_main,
     read_subregions_file,
@@ -536,21 +536,21 @@ class TestHelperFunctions:
         assert _is_comment_line("10  / VALUE") is False
         assert _is_comment_line("  10  / VALUE") is False  # leading whitespace = data
 
-    def test_parse_value_line_slash(self) -> None:
+    def test_strip_comment_slash(self) -> None:
         """Value line with slash separator."""
-        value, desc = _parse_value_line("nodes.dat  / NODES_FILE")
+        value, desc = _strip_comment("nodes.dat  / NODES_FILE")
         assert value == "nodes.dat"
         assert desc == "NODES_FILE"
 
-    def test_parse_value_line_hash_not_recognized(self) -> None:
+    def test_strip_comment_hash_not_recognized(self) -> None:
         """Hash is not recognized as an inline comment delimiter."""
-        value, desc = _parse_value_line("nodes.dat  # NODES_FILE")
+        value, desc = _strip_comment("nodes.dat  # NODES_FILE")
         assert value == "nodes.dat  # NODES_FILE"
         assert desc == ""
 
-    def test_parse_value_line_no_separator(self) -> None:
+    def test_strip_comment_no_separator(self) -> None:
         """Value line with no separator."""
-        value, desc = _parse_value_line("some_value")
+        value, desc = _strip_comment("some_value")
         assert value == "some_value"
         assert desc == ""
 

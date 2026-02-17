@@ -22,9 +22,9 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -233,24 +233,24 @@ class PumpingReader:
             config.version = self._read_version(f)
 
             # Well specification file
-            well_path = self._next_data_or_empty(f)
+            well_path = _next_data_or_empty(f)
             if well_path:
-                config.well_file = self._resolve_path(base_dir, well_path)
+                config.well_file = _resolve_path_f(base_dir, well_path)
 
             # Element pumping specification file
-            elem_path = self._next_data_or_empty(f)
+            elem_path = _next_data_or_empty(f)
             if elem_path:
-                config.elem_pump_file = self._resolve_path(base_dir, elem_path)
+                config.elem_pump_file = _resolve_path_f(base_dir, elem_path)
 
             # Time series pumping data file
-            ts_path = self._next_data_or_empty(f)
+            ts_path = _next_data_or_empty(f)
             if ts_path:
-                config.ts_data_file = self._resolve_path(base_dir, ts_path)
+                config.ts_data_file = _resolve_path_f(base_dir, ts_path)
 
             # Output file (backward compatible)
-            out_path = self._next_data_or_empty(f)
+            out_path = _next_data_or_empty(f)
             if out_path:
-                config.output_file = self._resolve_path(base_dir, out_path)
+                config.output_file = _resolve_path_f(base_dir, out_path)
 
         # Read well specification file
         if config.well_file and config.well_file.exists():
@@ -267,16 +267,16 @@ class PumpingReader:
         self._line_num = 0
         with open(filepath, "r") as f:
             # NWell
-            n_wells = int(self._next_data_or_empty(f))
+            n_wells = int(_next_data_or_empty(f))
             if n_wells <= 0:
                 return
 
             # FactXY
-            config.factor_xy = float(self._next_data_or_empty(f))
+            config.factor_xy = float(_next_data_or_empty(f))
             # FactR
-            config.factor_radius = float(self._next_data_or_empty(f))
+            config.factor_radius = float(_next_data_or_empty(f))
             # FactLT
-            config.factor_length = float(self._next_data_or_empty(f))
+            config.factor_length = float(_next_data_or_empty(f))
 
             # Read structural data for each well: ID, X, Y, Radius, PerfTop, PerfBottom [/ Name]
             for _ in range(n_wells):
@@ -331,7 +331,7 @@ class PumpingReader:
         self._line_num = 0
         with open(filepath, "r") as f:
             # NSink
-            n_sinks = int(self._next_data_or_empty(f))
+            n_sinks = int(_next_data_or_empty(f))
             if n_sinks <= 0:
                 return
 
@@ -381,7 +381,7 @@ class PumpingReader:
         """Read element groups for pumping destinations."""
         groups: list[ElementGroup] = []
 
-        n_groups_str = self._next_data_or_empty(f)
+        n_groups_str = _next_data_or_empty(f)
         if not n_groups_str:
             return groups
 
@@ -423,13 +423,6 @@ class PumpingReader:
             break
         return ""
 
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
-
     def _next_data_line(self, f: TextIO) -> str:
         """Return the next non-comment data line."""
         for line in f:
@@ -438,11 +431,6 @@ class PumpingReader:
                 continue
             return line.strip()
         raise FileFormatError("Unexpected end of file", line_number=self._line_num)
-
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
 
 def read_gw_pumping(

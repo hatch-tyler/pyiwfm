@@ -13,7 +13,7 @@ import numpy as np
 from pyiwfm.io.preprocessor import (
     COMMENT_CHARS,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
     _resolve_path,
     _make_relative_path,
     PreProcessorConfig,
@@ -72,42 +72,42 @@ class TestIsCommentLine:
 
 
 class TestParseValueLine:
-    """Test _parse_value_line function."""
+    """Test _strip_comment function."""
 
     def test_parse_with_slash_separator(self):
         """Test parsing line with '/' separator (traditional IWFM)."""
-        value, desc = _parse_value_line("nodes.dat  / NODES_FILE")
+        value, desc = _strip_comment("nodes.dat  / NODES_FILE")
         assert value == "nodes.dat"
         assert desc == "NODES_FILE"
 
     def test_parse_with_hash_not_recognized(self):
         """Hash is not recognized as an inline comment delimiter."""
-        value, desc = _parse_value_line("elements.dat # ELEMENTS_FILE")
+        value, desc = _strip_comment("elements.dat # ELEMENTS_FILE")
         assert value == "elements.dat # ELEMENTS_FILE"
         assert desc == ""
 
     def test_parse_without_separator(self):
         """Test parsing line without any separator."""
-        value, desc = _parse_value_line("nodes.dat")
+        value, desc = _strip_comment("nodes.dat")
         assert value == "nodes.dat"
         assert desc == ""
 
     def test_parse_preserves_slash_in_path(self):
         """Slash inside a path (no preceding whitespace) is preserved."""
-        value, desc = _parse_value_line("data/nodes.dat / NODES_FILE")
+        value, desc = _strip_comment("data/nodes.dat / NODES_FILE")
         # The delimiter is the ' / ' with whitespace, not the '/' in the path
         assert value == "data/nodes.dat"
         assert desc == "NODES_FILE"
 
     def test_parse_empty_description(self):
         """Test parsing with empty description after separator."""
-        value, desc = _parse_value_line("value /")
+        value, desc = _strip_comment("value /")
         assert value == "value"
         assert desc == ""
 
     def test_parse_multiple_slashes(self):
         """Slash preceded by whitespace is the delimiter, not path slashes."""
-        value, desc = _parse_value_line("a/b/c / DESCRIPTION")
+        value, desc = _strip_comment("a/b/c / DESCRIPTION")
         assert value == "a/b/c"
         assert desc == "DESCRIPTION"
 
@@ -294,7 +294,7 @@ TestModel                      / MODEL_NAME
 
     def test_read_with_units(self, tmp_path):
         """Test reading file with unit specifications."""
-        # The _parse_value_line implementation uses / as separator, so
+        # The _strip_comment implementation uses / as separator, so
         # unit values are parsed. The description needs "UNIT" keyword.
         pp_file = tmp_path / "preprocessor.in"
         pp_file.write_text("""C  PreProcessor

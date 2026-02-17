@@ -333,7 +333,7 @@ class TestMeshRoundtrip:
 # Additional coverage tests
 # =============================================================================
 
-from pyiwfm.io.ascii import _is_comment_line, _parse_value_line, COMMENT_CHARS
+from pyiwfm.io.ascii import _is_comment_line, _strip_comment, COMMENT_CHARS
 
 
 class TestIsCommentLine:
@@ -372,41 +372,41 @@ class TestIsCommentLine:
 
 
 class TestParseValueLine:
-    """Tests for _parse_value_line helper."""
+    """Tests for _strip_comment helper."""
 
     def test_slash_delimiter(self) -> None:
         """Traditional IWFM format with / delimiter."""
-        value, desc = _parse_value_line("42 / NNODES")
+        value, desc = _strip_comment("42 / NNODES")
         assert value == "42"
         assert desc == "NNODES"
 
     def test_hash_delimiter_not_recognized(self) -> None:
         """Hash is not recognized as an inline comment delimiter."""
-        value, desc = _parse_value_line("42 # NNODES")
+        value, desc = _strip_comment("42 # NNODES")
         assert value == "42 # NNODES"
         assert desc == ""
 
     def test_no_delimiter(self) -> None:
         """Bare value with no delimiter."""
-        value, desc = _parse_value_line("42")
+        value, desc = _strip_comment("42")
         assert value == "42"
         assert desc == ""
 
     def test_slash_with_hash_in_description(self) -> None:
         """Only / is recognized as delimiter; # in description is preserved."""
-        value, desc = _parse_value_line("42 / NNODES # extra")
+        value, desc = _strip_comment("42 / NNODES # extra")
         assert value == "42"
         assert desc == "NNODES # extra"
 
     def test_whitespace_stripping(self) -> None:
         """Leading and trailing whitespace is stripped."""
-        value, desc = _parse_value_line("  42  /  description  ")
+        value, desc = _strip_comment("  42  /  description  ")
         assert value == "42"
         assert desc == "description"
 
     def test_bare_whitespace_value(self) -> None:
         """A bare value with trailing spaces."""
-        value, desc = _parse_value_line("  1.0  ")
+        value, desc = _strip_comment("  1.0  ")
         assert value == "1.0"
         assert desc == ""
 

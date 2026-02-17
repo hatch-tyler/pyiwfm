@@ -16,7 +16,7 @@ from pyiwfm.io.gw_subsidence import (
     SubsidenceNodeParams,
     SubsidenceReader,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
     read_gw_subsidence,
 )
 from pyiwfm.core.exceptions import FileFormatError
@@ -88,7 +88,7 @@ class TestSubsidenceConfig:
 
 
 class TestHelpers:
-    """Tests for _is_comment_line and _parse_value_line."""
+    """Tests for _is_comment_line and _strip_comment."""
 
     @pytest.mark.parametrize(
         "line,expected",
@@ -105,21 +105,21 @@ class TestHelpers:
     def test_is_comment_line(self, line: str, expected: bool) -> None:
         assert _is_comment_line(line) is expected
 
-    def test_parse_value_line_with_slash(self) -> None:
+    def test_strip_comment_with_slash(self) -> None:
         """Value followed by ' / description' is split correctly."""
-        value, desc = _parse_value_line("100.0 / Output factor")
+        value, desc = _strip_comment("100.0 / Output factor")
         assert value == "100.0"
         assert desc == "Output factor"
 
-    def test_parse_value_line_hash_not_delimiter(self) -> None:
+    def test_strip_comment_hash_not_delimiter(self) -> None:
         """'#' is NOT a comment delimiter in IWFM — only '/' is."""
-        value, desc = _parse_value_line("4.0 # version")
+        value, desc = _strip_comment("4.0 # version")
         assert value == "4.0 # version"
         assert desc == ""
 
-    def test_parse_value_line_no_description(self) -> None:
+    def test_strip_comment_no_description(self) -> None:
         """Line with no delimiter returns empty description."""
-        value, desc = _parse_value_line("42")
+        value, desc = _strip_comment("42")
         assert value == "42"
         assert desc == ""
 

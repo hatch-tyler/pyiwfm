@@ -24,9 +24,9 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -165,30 +165,30 @@ class SubsidenceReader:
             config.version = self._read_version(f)
 
             # IC file
-            ic_path = self._next_data_or_empty(f)
+            ic_path = _next_data_or_empty(f)
             if ic_path:
-                config.ic_file = self._resolve_path(base_dir, ic_path)
+                config.ic_file = _resolve_path_f(base_dir, ic_path)
 
             # Tecplot output file
-            tec_path = self._next_data_or_empty(f)
+            tec_path = _next_data_or_empty(f)
             if tec_path:
-                config.tecplot_file = self._resolve_path(base_dir, tec_path)
+                config.tecplot_file = _resolve_path_f(base_dir, tec_path)
 
             # Final subsidence output file
-            final_path = self._next_data_or_empty(f)
+            final_path = _next_data_or_empty(f)
             if final_path:
-                config.final_subs_file = self._resolve_path(base_dir, final_path)
+                config.final_subs_file = _resolve_path_f(base_dir, final_path)
 
             # Output conversion factor
-            factor_str = self._next_data_or_empty(f)
+            factor_str = _next_data_or_empty(f)
             if factor_str:
                 config.output_factor = float(factor_str)
 
             # Output unit
-            config.output_unit = self._next_data_or_empty(f)
+            config.output_unit = _next_data_or_empty(f)
 
             # Hydrograph output section: NOUTS, then if NOUTS>0: FACTXY, SUBHYDOUTFL, rows
-            nouts_str = self._next_data_or_empty(f)
+            nouts_str = _next_data_or_empty(f)
             if nouts_str:
                 try:
                     config.n_hydrograph_outputs = int(nouts_str)
@@ -197,7 +197,7 @@ class SubsidenceReader:
 
             if config.n_hydrograph_outputs > 0:
                 # FACTXY (coordinate conversion factor)
-                factxy_str = self._next_data_or_empty(f)
+                factxy_str = _next_data_or_empty(f)
                 if factxy_str:
                     try:
                         config.hydrograph_coord_factor = float(factxy_str)
@@ -205,9 +205,9 @@ class SubsidenceReader:
                         pass
 
                 # SUBHYDOUTFL (output file path)
-                hydout_path = self._next_data_or_empty(f)
+                hydout_path = _next_data_or_empty(f)
                 if hydout_path:
-                    config.hydrograph_output_file = self._resolve_path(
+                    config.hydrograph_output_file = _resolve_path_f(
                         base_dir, hydout_path
                     )
 
@@ -236,23 +236,23 @@ class SubsidenceReader:
             # v5.0 has interbed DZ before NGroup
             is_v50 = config.version.startswith("5")
             if is_v50:
-                dz_str = self._next_data_or_empty(f)
+                dz_str = _next_data_or_empty(f)
                 if dz_str:
                     config.interbed_dz = float(dz_str)
 
             # Number of parametric grids
-            ngroup_str = self._next_data_or_empty(f)
+            ngroup_str = _next_data_or_empty(f)
             if ngroup_str:
                 config.n_parametric_grids = int(ngroup_str)
 
             # Conversion factors (6 for v4.0, 7 for v5.0)
             n_factors = 7 if is_v50 else 6
-            factors_str = self._next_data_or_empty(f)
+            factors_str = _next_data_or_empty(f)
             if factors_str:
                 config.conversion_factors = [float(x) for x in factors_str.split()]
                 # If not enough on one line, read more
                 while len(config.conversion_factors) < n_factors:
-                    more = self._next_data_or_empty(f)
+                    more = _next_data_or_empty(f)
                     if more:
                         config.conversion_factors.extend(float(x) for x in more.split())
 
@@ -343,7 +343,7 @@ class SubsidenceReader:
 
         with open(filepath, "r") as f:
             # Conversion factor
-            factor_str = self._next_data_or_empty(f)
+            factor_str = _next_data_or_empty(f)
             config.ic_factor = float(factor_str) if factor_str else 1.0
 
             # Per node: ID + InterbedThick(NLayers) + PreCompactHead(NLayers)
@@ -379,13 +379,6 @@ class SubsidenceReader:
             break
         return ""
 
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
-
     def _next_data_line(self, f: TextIO) -> str:
         """Return the next non-comment data line."""
         for line in f:
@@ -394,11 +387,6 @@ class SubsidenceReader:
                 continue
             return line.strip()
         raise FileFormatError("Unexpected end of file", line_number=self._line_num)
-
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
 
 def read_gw_subsidence(

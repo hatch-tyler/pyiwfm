@@ -29,9 +29,9 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -142,7 +142,7 @@ class UnsatZoneMainReader:
             config.version = self._read_version(f)
 
             # Number of unsaturated zone layers
-            n_layers_str = self._next_data_or_empty(f)
+            n_layers_str = _next_data_or_empty(f)
             if n_layers_str:
                 config.n_layers = int(n_layers_str)
 
@@ -150,38 +150,38 @@ class UnsatZoneMainReader:
                 return config
 
             # Solver tolerance
-            tol_str = self._next_data_or_empty(f)
+            tol_str = _next_data_or_empty(f)
             if tol_str:
                 config.solver_tolerance = float(tol_str)
 
             # Max iterations
-            iter_str = self._next_data_or_empty(f)
+            iter_str = _next_data_or_empty(f)
             if iter_str:
                 config.max_iterations = int(iter_str)
 
             # Budget output file (HDF5)
-            budget_path = self._next_data_or_empty(f)
+            budget_path = _next_data_or_empty(f)
             if budget_path:
-                config.budget_file = self._resolve_path(base_dir, budget_path)
+                config.budget_file = _resolve_path_f(base_dir, budget_path)
 
             # Zone budget output file (HDF5)
-            zbudget_path = self._next_data_or_empty(f)
+            zbudget_path = _next_data_or_empty(f)
             if zbudget_path:
-                config.zbudget_file = self._resolve_path(base_dir, zbudget_path)
+                config.zbudget_file = _resolve_path_f(base_dir, zbudget_path)
 
             # Final results output file
-            final_path = self._next_data_or_empty(f)
+            final_path = _next_data_or_empty(f)
             if final_path:
-                config.final_results_file = self._resolve_path(base_dir, final_path)
+                config.final_results_file = _resolve_path_f(base_dir, final_path)
 
             # Number of parametric grids (NGROUP)
-            ngroup_str = self._next_data_or_empty(f)
+            ngroup_str = _next_data_or_empty(f)
             if ngroup_str:
                 config.n_parametric_grids = int(ngroup_str)
 
             # ── Parameter section (ReadUnsatZoneParameters) ────────
             # Conversion factors: FX, FThickness, FHydCond (3 values)
-            factors_str = self._next_data_or_empty(f)
+            factors_str = _next_data_or_empty(f)
             if factors_str:
                 fparts = factors_str.split()
                 if len(fparts) >= 1:
@@ -192,7 +192,7 @@ class UnsatZoneMainReader:
                     config.hyd_cond_factor = float(fparts[2])
 
             # Time unit for hydraulic conductivity
-            time_unit_str = self._next_data_or_empty(f)
+            time_unit_str = _next_data_or_empty(f)
             if time_unit_str:
                 config.time_unit = time_unit_str
 
@@ -239,7 +239,7 @@ class UnsatZoneMainReader:
         self._pushback_line: str | None = None
 
         while True:
-            line_val = self._next_data_or_empty(f)
+            line_val = _next_data_or_empty(f)
             if not line_val:
                 break
             parts = line_val.split()
@@ -284,7 +284,7 @@ class UnsatZoneMainReader:
         self._pushback_line = None
 
         if first_line is None:
-            first_line = self._next_data_or_empty(f)
+            first_line = _next_data_or_empty(f)
         if not first_line:
             return ic
 
@@ -309,7 +309,7 @@ class UnsatZoneMainReader:
 
         # Read remaining elements
         while True:
-            line_val = self._next_data_or_empty(f)
+            line_val = _next_data_or_empty(f)
             if not line_val:
                 break
             parts = line_val.split()
@@ -339,17 +339,6 @@ class UnsatZoneMainReader:
             break
         return ""
 
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
-
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
 
 def read_unsaturated_zone_main(

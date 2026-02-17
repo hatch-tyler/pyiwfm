@@ -387,17 +387,19 @@ class TestGetBudgetUnitsMetadata:
     """Tests for _get_budget_units_metadata()."""
 
     def test_gw_category_with_metadata(self):
-        """GW budget uses gw-specific metadata keys."""
+        """GW budget derives volume unit from length_unit (FT→FT3)."""
         model = _make_mock_model(metadata={
-            "gw_volume_output_unit": "TAF",
-            "gw_length_output_unit": "FT",
+            "gw_volume_output_unit": "TAF",  # ignored — HDF stores sim units
+            "gw_length_output_unit": "FT",   # ignored
+            "length_unit": "FT",
             "area_unit": "SQ_MI",
         })
         model_state._model = model
         reader = _make_mock_reader(column_types=[1, 4, 5])
 
         result = _get_budget_units_metadata("gw", reader)
-        assert result["source_volume_unit"] == "TAF"
+        # source_volume is derived from length_unit, not from gw_volume_output_unit
+        assert result["source_volume_unit"] == "FT3"
         assert result["source_length_unit"] == "FT"
         assert result["source_area_unit"] == "SQ_MI"
         assert result["has_volume_columns"] is True
@@ -405,9 +407,9 @@ class TestGetBudgetUnitsMetadata:
         assert result["has_length_columns"] is True
 
     def test_non_gw_category_uses_generic_metadata(self):
-        """Non-GW budgets use generic metadata keys."""
+        """Non-GW budgets derive volume unit from length_unit (M→M3)."""
         model = _make_mock_model(metadata={
-            "volume_unit": "CCF",
+            "volume_unit": "CCF",  # ignored — HDF stores sim units
             "area_unit": "HA",
             "length_unit": "M",
         })
@@ -415,14 +417,15 @@ class TestGetBudgetUnitsMetadata:
         reader = _make_mock_reader(column_types=[1, 1, 1])
 
         result = _get_budget_units_metadata("stream", reader)
-        assert result["source_volume_unit"] == "CCF"
+        # source_volume derived from length_unit "M" → "M3"
+        assert result["source_volume_unit"] == "M3"
         assert result["source_area_unit"] == "HA"
         assert result["source_length_unit"] == "M"
 
-    def test_gw_fallback_to_generic_metadata(self):
-        """GW budget falls back to generic keys when gw-specific missing."""
+    def test_gw_volume_derived_from_length_unit(self):
+        """GW budget derives volume from length_unit, ignoring volume_unit."""
         model = _make_mock_model(metadata={
-            "volume_unit": "TAF",
+            "volume_unit": "TAF",  # ignored
             "length_unit": "FT",
             "area_unit": "ACRES",
         })
@@ -430,11 +433,11 @@ class TestGetBudgetUnitsMetadata:
         reader = _make_mock_reader(column_types=[1])
 
         result = _get_budget_units_metadata("gw", reader)
-        assert result["source_volume_unit"] == "TAF"
+        assert result["source_volume_unit"] == "FT3"
         assert result["source_length_unit"] == "FT"
 
-    def test_title_fallback_when_defaults(self):
-        """When metadata has default 'AF'/'ACRES'/'FEET', fall through to title parsing."""
+    def test_title_lines_ignored_for_source_units(self):
+        """Title parsing no longer affects source units (HDF stores sim units)."""
         model = _make_mock_model(metadata={})
         model_state._model = model
 
@@ -448,19 +451,21 @@ class TestGetBudgetUnitsMetadata:
         reader.header.ascii_output = ascii_output
 
         result = _get_budget_units_metadata("gw", reader)
-        assert result["source_volume_unit"] == "TAF"
-        assert result["source_area_unit"] == "HECTARES"
-        assert result["source_length_unit"] == "METERS"
+        # Title units are output units, not source units — they are ignored.
+        # Default length_unit is "FT" → source_volume is "FT3"
+        assert result["source_volume_unit"] == "FT3"
+        assert result["source_area_unit"] == "SQ.FT."
+        assert result["source_length_unit"] == "FT"
 
     def test_no_model_metadata(self):
-        """When model is None, metadata defaults to empty dict."""
+        """When model is None, metadata defaults to empty dict → FT defaults."""
         model_state._model = None
         reader = _make_mock_reader(column_types=[1])
         result = _get_budget_units_metadata("gw", reader)
-        # Defaults should still be "AF", "ACRES", "FEET"
-        assert result["source_volume_unit"] == "AF"
-        assert result["source_area_unit"] == "ACRES"
-        assert result["source_length_unit"] == "FEET"
+        # Default length_unit is "FT" → source_volume "FT3"
+        assert result["source_volume_unit"] == "FT3"
+        assert result["source_area_unit"] == "SQ.FT."
+        assert result["source_length_unit"] == "FT"
 
     def test_column_type_scanning_volume_only(self):
         """Scanning column types: only volume codes present."""
@@ -537,16 +542,16 @@ class TestGetBudgetUnitsMetadata:
         result = _get_budget_units_metadata("gw", reader)
         assert result["timestep_unit"] == "1MON"
 
-    def test_empty_source_volume_falls_back_to_af(self):
-        """When source_volume is empty string, falls back to 'AF'."""
+    def test_empty_length_unit_defaults_to_ft3(self):
+        """When length_unit is missing, defaults to FT → FT3."""
         model = _make_mock_model(metadata={"volume_unit": ""})
         model_state._model = model
         reader = _make_mock_reader(column_types=[1])
-        # No title units either
         reader.header.ascii_output = None
 
         result = _get_budget_units_metadata("stream", reader)
-        assert result["source_volume_unit"] == "AF"
+        # volume_unit is ignored; length_unit defaults to "FT" → "FT3"
+        assert result["source_volume_unit"] == "FT3"
 
 
 # ===========================================================================

@@ -31,9 +31,9 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 from pyiwfm.io.timeseries_ascii import TimeSeriesWriter, format_iwfm_timestamp
 
@@ -559,7 +559,7 @@ class GroundwaterReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_wells = int(value)
                 except ValueError as e:
@@ -634,7 +634,7 @@ class GroundwaterReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_nodes = int(value)
                 except ValueError as e:
@@ -649,7 +649,7 @@ class GroundwaterReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_layers = int(value)
                 except ValueError as e:
@@ -711,7 +711,7 @@ class GroundwaterReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_subsidence = int(value)
                 except ValueError as e:
@@ -887,32 +887,32 @@ class GWMainFileReader:
 
             # Read file paths sequentially:
             # BCFL (boundary conditions file)
-            bc_path = self._next_data_or_empty(f)
+            bc_path = _next_data_or_empty(f)
             if bc_path:
-                config.bc_file = self._resolve_path(base_dir, bc_path)
+                config.bc_file = _resolve_path_f(base_dir, bc_path)
 
             # TDFL (tile drains file)
-            td_path = self._next_data_or_empty(f)
+            td_path = _next_data_or_empty(f)
             if td_path:
-                config.tile_drain_file = self._resolve_path(base_dir, td_path)
+                config.tile_drain_file = _resolve_path_f(base_dir, td_path)
 
             # PUMPFL (pumping file)
-            pump_path = self._next_data_or_empty(f)
+            pump_path = _next_data_or_empty(f)
             if pump_path:
-                config.pumping_file = self._resolve_path(base_dir, pump_path)
+                config.pumping_file = _resolve_path_f(base_dir, pump_path)
 
             # SUBSFL (subsidence file)
-            subs_path = self._next_data_or_empty(f)
+            subs_path = _next_data_or_empty(f)
             if subs_path:
-                config.subsidence_file = self._resolve_path(base_dir, subs_path)
+                config.subsidence_file = _resolve_path_f(base_dir, subs_path)
 
             # OVRWRTFL (optional overwrite file, may be empty)
-            ovr_path = self._next_data_or_empty(f)
+            ovr_path = _next_data_or_empty(f)
             if ovr_path:
-                config.overwrite_file = self._resolve_path(base_dir, ovr_path)
+                config.overwrite_file = _resolve_path_f(base_dir, ovr_path)
 
             # FACTLTOU (head output conversion factor)
-            factltou = self._next_data_or_empty(f)
+            factltou = _next_data_or_empty(f)
             if factltou:
                 try:
                     config.head_output_factor = float(factltou)
@@ -920,12 +920,12 @@ class GWMainFileReader:
                     pass
 
             # UNITLTOU (head output unit)
-            unitltou = self._next_data_or_empty(f)
+            unitltou = _next_data_or_empty(f)
             if unitltou:
                 config.head_output_unit = unitltou
 
             # FACTVLOU (volume output conversion factor)
-            factvlou = self._next_data_or_empty(f)
+            factvlou = _next_data_or_empty(f)
             if factvlou:
                 try:
                     config.volume_output_factor = float(factvlou)
@@ -933,12 +933,12 @@ class GWMainFileReader:
                     pass
 
             # UNITVLOU (volume output unit)
-            unitvlou = self._next_data_or_empty(f)
+            unitvlou = _next_data_or_empty(f)
             if unitvlou:
                 config.volume_output_unit = unitvlou
 
             # FACTVROU (velocity output factor)
-            factvrou = self._next_data_or_empty(f)
+            factvrou = _next_data_or_empty(f)
             if factvrou:
                 try:
                     config.velocity_output_factor = float(factvrou)
@@ -946,58 +946,58 @@ class GWMainFileReader:
                     pass
 
             # UNITVROU (velocity output unit)
-            unitvrou = self._next_data_or_empty(f)
+            unitvrou = _next_data_or_empty(f)
             if unitvrou:
                 config.velocity_output_unit = unitvrou
 
             # VELOUTFL (velocity output file - optional)
-            vel_path = self._next_data_or_empty(f)
+            vel_path = _next_data_or_empty(f)
             if vel_path:
-                config.velocity_output_file = self._resolve_path(base_dir, vel_path)
+                config.velocity_output_file = _resolve_path_f(base_dir, vel_path)
 
             # VFLOWOUTFL (vertical flow output file - optional)
-            vflow_path = self._next_data_or_empty(f)
+            vflow_path = _next_data_or_empty(f)
             if vflow_path:
-                config.vertical_flow_output_file = self._resolve_path(
+                config.vertical_flow_output_file = _resolve_path_f(
                     base_dir, vflow_path
                 )
 
             # GWALLOUTFL (GW head all output file - optional)
-            headall_path = self._next_data_or_empty(f)
+            headall_path = _next_data_or_empty(f)
             if headall_path:
-                config.head_all_output_file = self._resolve_path(
+                config.head_all_output_file = _resolve_path_f(
                     base_dir, headall_path
                 )
 
             # HTPOUTFL (TecPlot head output file - optional)
-            htec_path = self._next_data_or_empty(f)
+            htec_path = _next_data_or_empty(f)
             if htec_path:
-                config.head_tecplot_file = self._resolve_path(base_dir, htec_path)
+                config.head_tecplot_file = _resolve_path_f(base_dir, htec_path)
 
             # VTPOUTFL (TecPlot velocity output file - optional)
-            vtec_path = self._next_data_or_empty(f)
+            vtec_path = _next_data_or_empty(f)
             if vtec_path:
-                config.velocity_tecplot_file = self._resolve_path(
+                config.velocity_tecplot_file = _resolve_path_f(
                     base_dir, vtec_path
                 )
 
             # GWBUDFL (GW budget output file - optional)
-            bud_path = self._next_data_or_empty(f)
+            bud_path = _next_data_or_empty(f)
             if bud_path:
-                config.budget_output_file = self._resolve_path(base_dir, bud_path)
+                config.budget_output_file = _resolve_path_f(base_dir, bud_path)
 
             # ZBUDFL (Zone budget output file - optional)
-            zbud_path = self._next_data_or_empty(f)
+            zbud_path = _next_data_or_empty(f)
             if zbud_path:
-                config.zbudget_output_file = self._resolve_path(base_dir, zbud_path)
+                config.zbudget_output_file = _resolve_path_f(base_dir, zbud_path)
 
             # FNGWFL (final condition output file - optional)
-            final_path = self._next_data_or_empty(f)
+            final_path = _next_data_or_empty(f)
             if final_path:
-                config.final_heads_file = self._resolve_path(base_dir, final_path)
+                config.final_heads_file = _resolve_path_f(base_dir, final_path)
 
             # KDEB (debug flag)
-            kdeb = self._next_data_or_empty(f)
+            kdeb = _next_data_or_empty(f)
             if kdeb:
                 try:
                     config.debug_flag = int(kdeb)
@@ -1005,7 +1005,7 @@ class GWMainFileReader:
                     pass
 
             # NOUTH (number of hydrograph output locations)
-            nouth_str = self._next_data_or_empty(f)
+            nouth_str = _next_data_or_empty(f)
             n_hydrographs = 0
             if nouth_str:
                 try:
@@ -1018,7 +1018,7 @@ class GWMainFileReader:
                     )
 
             # FACTXY (coordinate conversion factor — read regardless of NOUTH)
-            factxy = self._next_data_or_empty(f)
+            factxy = _next_data_or_empty(f)
             if factxy:
                 try:
                     config.coord_factor = float(factxy)
@@ -1026,9 +1026,9 @@ class GWMainFileReader:
                     pass
 
             # GWHYDOUTFL (hydrograph output file — read regardless of NOUTH)
-            hydout_path = self._next_data_or_empty(f)
+            hydout_path = _next_data_or_empty(f)
             if hydout_path:
-                config.hydrograph_output_file = self._resolve_path(
+                config.hydrograph_output_file = _resolve_path_f(
                     base_dir, hydout_path
                 )
 
@@ -1040,7 +1040,7 @@ class GWMainFileReader:
 
             # ── Element Face Flow Output ─────────────────────────────
             # NOUTF (number of element face flow hydrographs)
-            noutf_str = self._next_data_or_empty(f)
+            noutf_str = _next_data_or_empty(f)
             if noutf_str:
                 try:
                     config.n_face_flow_outputs = int(noutf_str)
@@ -1048,9 +1048,9 @@ class GWMainFileReader:
                     pass
 
             # FCHYDOUTFL (face flow output file - optional)
-            fc_path = self._next_data_or_empty(f)
+            fc_path = _next_data_or_empty(f)
             if fc_path:
-                config.face_flow_output_file = self._resolve_path(
+                config.face_flow_output_file = _resolve_path_f(
                     base_dir, fc_path
                 )
 
@@ -1110,13 +1110,6 @@ class GWMainFileReader:
             # If we hit data before version, there's no version header
             break
         return ""
-
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string for blank lines."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
 
     def _read_hydrograph_data(
         self, f: TextIO, n_hydrographs: int, coord_factor: float
@@ -1186,11 +1179,6 @@ class GWMainFileReader:
                 continue
 
         return locations
-
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
     def _skip_data_lines(self, f: TextIO, count: int) -> None:
         """Skip *count* non-comment data lines."""
@@ -1262,7 +1250,7 @@ class GWMainFileReader:
         parametric grid mode is used (data stored on *config* instead).
         """
         # NGROUP
-        ngroup_str = self._next_data_or_empty(f)
+        ngroup_str = _next_data_or_empty(f)
         if not ngroup_str:
             return None
         try:
@@ -1271,7 +1259,7 @@ class GWMainFileReader:
             return None
 
         # Conversion factors: FX  FKH  FS  FN  FV  FL
-        factors_str = self._next_data_or_empty(f)
+        factors_str = _next_data_or_empty(f)
         if not factors_str:
             return None
         fparts = factors_str.split()
@@ -1288,9 +1276,9 @@ class GWMainFileReader:
             return None
 
         # Time units: TUNITKH, TUNITV, TUNITL (read and discard)
-        self._next_data_or_empty(f)  # TUNITKH
-        self._next_data_or_empty(f)  # TUNITV
-        self._next_data_or_empty(f)  # TUNITL
+        _next_data_or_empty(f)  # TUNITKH
+        _next_data_or_empty(f)  # TUNITV
+        _next_data_or_empty(f)  # TUNITL
 
         if ngroup > 0:
             factors = (_fx, fkh, fs, fn, fv, fl)
@@ -1326,7 +1314,7 @@ class GWMainFileReader:
                 # Haven't started reading data yet — skip comment.
                 continue
 
-            value, _ = _parse_value_line(line)
+            value, _ = _strip_comment(line)
             parts = value.split()
             if not parts:
                 continue
@@ -1442,7 +1430,7 @@ class GWMainFileReader:
 
         for _ in range(ngroup):
             # NDP  NEP
-            ndp_nep_str = self._next_data_or_empty(f)
+            ndp_nep_str = _next_data_or_empty(f)
             if not ndp_nep_str:
                 break
             parts = ndp_nep_str.split()
@@ -1461,7 +1449,7 @@ class GWMainFileReader:
                 self._line_num += 1
                 if _is_comment_line(line):
                     continue
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 eparts = value.split()
                 if len(eparts) < 4:
                     break
@@ -1491,7 +1479,7 @@ class GWMainFileReader:
                 self._line_num += 1
                 if _is_comment_line(line):
                     continue
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 nparts = value.split()
                 if len(nparts) < 4:
                     break
@@ -1554,7 +1542,7 @@ class GWMainFileReader:
         mesh element-to-node connectivity is available.
         """
         # NEBK
-        nebk_str = self._next_data_or_empty(f)
+        nebk_str = _next_data_or_empty(f)
         if not nebk_str:
             return []
         try:
@@ -1566,14 +1554,14 @@ class GWMainFileReader:
             return []
 
         # FACT (conversion factor)
-        fact_str = self._next_data_or_empty(f)
+        fact_str = _next_data_or_empty(f)
         try:
             fact = float(fact_str)
         except ValueError:
             fact = 1.0
 
         # TUNITH (time unit — read and store but no conversion applied)
-        self._next_data_or_empty(f)
+        _next_data_or_empty(f)
 
         # Read NEBK anomaly data lines
         entries: list[KhAnomalyEntry] = []
@@ -1582,7 +1570,7 @@ class GWMainFileReader:
             self._line_num += 1
             if _is_comment_line(line):
                 continue
-            value, _ = _parse_value_line(line)
+            value, _ = _strip_comment(line)
             parts = value.split()
             if len(parts) < 3:
                 break
@@ -1610,7 +1598,7 @@ class GWMainFileReader:
         Returns an (n_nodes, n_layers) array, or None.
         """
         # FACTHP
-        facthp_str = self._next_data_or_empty(f)
+        facthp_str = _next_data_or_empty(f)
         if not facthp_str:
             return None
         try:
@@ -1623,7 +1611,7 @@ class GWMainFileReader:
             self._line_num += 1
             if _is_comment_line(line):
                 continue
-            value, _ = _parse_value_line(line)
+            value, _ = _strip_comment(line)
             parts = value.split()
             if len(parts) < 2:
                 break

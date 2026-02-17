@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, TextIO
 
+from pyiwfm.io.iwfm_writer import ensure_parent_dir
+
 if TYPE_CHECKING:
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.stratigraphy import Stratigraphy
@@ -82,7 +84,7 @@ class BaseWriter(ABC):
 
     def _ensure_parent_exists(self) -> None:
         """Ensure the parent directory exists."""
-        self.filepath.parent.mkdir(parents=True, exist_ok=True)
+        ensure_parent_dir(self.filepath)
 
     @abstractmethod
     def write(self, data: Any) -> None:

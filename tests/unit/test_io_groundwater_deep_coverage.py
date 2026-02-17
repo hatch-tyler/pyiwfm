@@ -457,14 +457,11 @@ class TestResolvePathAbsolute:
     """Cover _resolve_path when the filepath is already absolute."""
 
     def test_absolute_path_returned_unchanged(self) -> None:
-        """An absolute file path is returned unchanged by _resolve_path."""
-        import io
+        """An absolute file path is returned unchanged by resolve_path."""
+        from pyiwfm.io.iwfm_reader import resolve_path
 
-        reader = GWMainFileReader()
-        # Directly test the private method to avoid IWFM comment-char
-        # issues with Windows paths starting with 'C' (treated as comment).
         abs_path = Path("/some/absolute/path/bc.dat")
-        result = reader._resolve_path(Path("/base"), str(abs_path))
+        result = resolve_path(Path("/base"), str(abs_path))
         assert result == abs_path
 
 

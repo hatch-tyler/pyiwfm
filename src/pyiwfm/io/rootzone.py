@@ -24,10 +24,10 @@ from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
     next_data_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     parse_version,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
     version_ge,
 )
 
@@ -395,7 +395,7 @@ class RootZoneReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_crops = int(value)
                 except ValueError as e:
@@ -460,7 +460,7 @@ class RootZoneReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_elem = int(value)
                 except ValueError as e:
@@ -626,7 +626,7 @@ class RootZoneMainFileReader:
             is_v412_plus = version_ge(config.version, (4, 12))
 
             # RZCONV (convergence tolerance)
-            rzconv = self._next_data_or_empty(f)
+            rzconv = _next_data_or_empty(f)
             if rzconv:
                 try:
                     config.convergence_tolerance = float(rzconv)
@@ -634,7 +634,7 @@ class RootZoneMainFileReader:
                     pass
 
             # RZITERMX (maximum iterations)
-            rzitermx = self._next_data_or_empty(f)
+            rzitermx = _next_data_or_empty(f)
             if rzitermx:
                 try:
                     config.max_iterations = int(rzitermx)
@@ -642,7 +642,7 @@ class RootZoneMainFileReader:
                     pass
 
             # FACTCN (length conversion factor)
-            factcn = self._next_data_or_empty(f)
+            factcn = _next_data_or_empty(f)
             if factcn:
                 try:
                     config.length_conversion = float(factcn)
@@ -651,7 +651,7 @@ class RootZoneMainFileReader:
 
             # iFlagETFromGW (v4.11+ only: 0=off, 1=on)
             if is_v411_plus:
-                gwuptk = self._next_data_or_empty(f)
+                gwuptk = _next_data_or_empty(f)
                 if gwuptk:
                     try:
                         config.gw_uptake_enabled = int(gwuptk) > 0
@@ -659,87 +659,87 @@ class RootZoneMainFileReader:
                         pass
 
             # AGNPFL (non-ponded agricultural crop file)
-            agnp_path = self._next_data_or_empty(f)
+            agnp_path = _next_data_or_empty(f)
             if agnp_path:
-                config.nonponded_crop_file = self._resolve_path(base_dir, agnp_path)
+                config.nonponded_crop_file = _resolve_path_f(base_dir, agnp_path)
 
             # PFL (ponded agricultural crop file)
-            p_path = self._next_data_or_empty(f)
+            p_path = _next_data_or_empty(f)
             if p_path:
-                config.ponded_crop_file = self._resolve_path(base_dir, p_path)
+                config.ponded_crop_file = _resolve_path_f(base_dir, p_path)
 
             # URBFL (urban land use file)
-            urb_path = self._next_data_or_empty(f)
+            urb_path = _next_data_or_empty(f)
             if urb_path:
-                config.urban_file = self._resolve_path(base_dir, urb_path)
+                config.urban_file = _resolve_path_f(base_dir, urb_path)
 
             # NVRVFL (native/riparian vegetation file)
-            nvrv_path = self._next_data_or_empty(f)
+            nvrv_path = _next_data_or_empty(f)
             if nvrv_path:
-                config.native_veg_file = self._resolve_path(base_dir, nvrv_path)
+                config.native_veg_file = _resolve_path_f(base_dir, nvrv_path)
 
             # Return flow fractions file
-            ret_path = self._next_data_or_empty(f)
+            ret_path = _next_data_or_empty(f)
             if ret_path:
-                config.return_flow_file = self._resolve_path(base_dir, ret_path)
+                config.return_flow_file = _resolve_path_f(base_dir, ret_path)
 
             # Reuse file
-            reuse_path = self._next_data_or_empty(f)
+            reuse_path = _next_data_or_empty(f)
             if reuse_path:
-                config.reuse_file = self._resolve_path(base_dir, reuse_path)
+                config.reuse_file = _resolve_path_f(base_dir, reuse_path)
 
             # Irrigation period file
-            irig_path = self._next_data_or_empty(f)
+            irig_path = _next_data_or_empty(f)
             if irig_path:
-                config.irrigation_period_file = self._resolve_path(base_dir, irig_path)
+                config.irrigation_period_file = _resolve_path_f(base_dir, irig_path)
 
             # Generic moisture file (optional, may be blank)
-            gm_path = self._next_data_or_empty(f)
+            gm_path = _next_data_or_empty(f)
             if gm_path:
-                config.generic_moisture_file = self._resolve_path(base_dir, gm_path)
+                config.generic_moisture_file = _resolve_path_f(base_dir, gm_path)
 
             # Ag water demand file (optional, may be blank)
-            agwd_path = self._next_data_or_empty(f)
+            agwd_path = _next_data_or_empty(f)
             if agwd_path:
-                config.ag_water_demand_file = self._resolve_path(base_dir, agwd_path)
+                config.ag_water_demand_file = _resolve_path_f(base_dir, agwd_path)
 
             # LWU budget output file
-            lwu_path = self._next_data_or_empty(f)
+            lwu_path = _next_data_or_empty(f)
             if lwu_path:
-                config.lwu_budget_file = self._resolve_path(base_dir, lwu_path)
+                config.lwu_budget_file = _resolve_path_f(base_dir, lwu_path)
 
             # RZ budget output file
-            rz_path = self._next_data_or_empty(f)
+            rz_path = _next_data_or_empty(f)
             if rz_path:
-                config.rz_budget_file = self._resolve_path(base_dir, rz_path)
+                config.rz_budget_file = _resolve_path_f(base_dir, rz_path)
 
             # v4.11+: Zone budget files
             if is_v411_plus:
-                lwu_zb_path = self._next_data_or_empty(f)
+                lwu_zb_path = _next_data_or_empty(f)
                 if lwu_zb_path:
-                    config.lwu_zone_budget_file = self._resolve_path(base_dir, lwu_zb_path)
+                    config.lwu_zone_budget_file = _resolve_path_f(base_dir, lwu_zb_path)
 
-                rz_zb_path = self._next_data_or_empty(f)
+                rz_zb_path = _next_data_or_empty(f)
                 if rz_zb_path:
-                    config.rz_zone_budget_file = self._resolve_path(base_dir, rz_zb_path)
+                    config.rz_zone_budget_file = _resolve_path_f(base_dir, rz_zb_path)
 
             # LU area scaling output (v4.12+ only; not in v4.11)
             if is_v412_plus:
-                lu_scale_path = self._next_data_or_empty(f)
+                lu_scale_path = _next_data_or_empty(f)
                 if lu_scale_path:
-                    config.lu_area_scale_file = self._resolve_path(base_dir, lu_scale_path)
+                    config.lu_area_scale_file = _resolve_path_f(base_dir, lu_scale_path)
 
             # Final moisture output file (v4.0–v4.11 only;
             # removed in v4.12, replaced by surface flow destinations)
             if not is_v412_plus:
-                final_path = self._next_data_or_empty(f)
+                final_path = _next_data_or_empty(f)
                 if final_path:
-                    config.final_moisture_file = self._resolve_path(base_dir, final_path)
+                    config.final_moisture_file = _resolve_path_f(base_dir, final_path)
 
             # ── Soil parameter section ────────────────────────────
 
             # FACTK (K conversion factor)
-            factk = self._next_data_or_empty(f)
+            factk = _next_data_or_empty(f)
             if factk:
                 try:
                     config.k_factor = float(factk)
@@ -748,7 +748,7 @@ class RootZoneMainFileReader:
 
             # FACTEXDTH (capillary rise factor, v4.1+ only)
             if is_v401_plus:
-                factexdth = self._next_data_or_empty(f)
+                factexdth = _next_data_or_empty(f)
                 if factexdth:
                     try:
                         config.k_exdth_factor = float(factexdth)
@@ -756,15 +756,15 @@ class RootZoneMainFileReader:
                         pass
 
             # TUNITK (time unit for K)
-            tunitk = self._next_data_or_empty(f)
+            tunitk = _next_data_or_empty(f)
             if tunitk:
                 config.k_time_unit = tunitk
 
             # v4.12+: Surface flow destinations file
             if is_v412_plus:
-                dest_path = self._next_data_or_empty(f)
+                dest_path = _next_data_or_empty(f)
                 if dest_path:
-                    config.surface_flow_dest_file = self._resolve_path(
+                    config.surface_flow_dest_file = _resolve_path_f(
                         base_dir, dest_path
                     )
 
@@ -803,18 +803,6 @@ class RootZoneMainFileReader:
                 continue
             break
         return ""
-
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string for blank lines."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
-
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
     def _read_element_soil_params(
         self,

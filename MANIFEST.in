@@ -1,0 +1,5 @@
+recursive-exclude frontend node_modules
+recursive-exclude frontend dist
+recursive-exclude frontend .vite
+recursive-exclude * __pycache__
+recursive-exclude * *.py[cod]

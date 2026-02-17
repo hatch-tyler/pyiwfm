@@ -2,7 +2,7 @@
 
 Tests:
 - _is_comment_line function
-- _parse_value_line function
+- _strip_comment function
 - GWFileConfig dataclass
 - GroundwaterWriter class
 - GroundwaterReader class
@@ -26,7 +26,7 @@ from pyiwfm.io.groundwater import (
     read_wells,
     read_initial_heads,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
 )
 from pyiwfm.components.groundwater import (
     AppGW,
@@ -75,17 +75,17 @@ class TestIsCommentLine:
 
 
 class TestParseValueLine:
-    """Tests for _parse_value_line function."""
+    """Tests for _strip_comment function."""
 
     def test_with_description(self) -> None:
         """Test parsing line with description."""
-        value, desc = _parse_value_line("10  / NWELLS")
+        value, desc = _strip_comment("10  / NWELLS")
         assert value == "10"
         assert desc == "NWELLS"
 
     def test_without_description(self) -> None:
         """Test parsing line without description."""
-        value, desc = _parse_value_line("10")
+        value, desc = _strip_comment("10")
         assert value == "10"
         assert desc == ""
 

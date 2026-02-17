@@ -14,19 +14,11 @@ from typing import TextIO
 import numpy as np
 
 from pyiwfm.io.groundwater import GWMainFileConfig
-
-
-def _write_comment(f: TextIO, text: str) -> None:
-    """Write a comment line."""
-    f.write(f"C  {text}\n")
-
-
-def _write_value(f: TextIO, value: object, description: str = "") -> None:
-    """Write a value line with optional description."""
-    if description:
-        f.write(f"     {value!s:<30s}  / {description}\n")
-    else:
-        f.write(f"     {value}\n")
+from pyiwfm.io.iwfm_writer import (
+    ensure_parent_dir as _ensure_parent_dir,
+    write_comment as _write_comment,
+    write_value as _write_value,
+)
 
 
 def _write_path(f: TextIO, path: Path | None, description: str = "") -> None:
@@ -48,7 +40,7 @@ def write_gw_main_file(config: GWMainFileConfig, filepath: Path | str) -> Path:
         Path to written file
     """
     filepath = Path(filepath)
-    filepath.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_parent_dir(filepath)
 
     with open(filepath, "w") as f:
         _write_comment(f, "IWFM Groundwater Component Main File")

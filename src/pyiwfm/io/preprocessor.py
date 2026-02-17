@@ -28,7 +28,7 @@ from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
     resolve_path as _resolve_path,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -105,7 +105,7 @@ def read_preprocessor_main(filepath: Path | str) -> PreProcessorConfig:
             if _is_comment_line(line):
                 continue
 
-            value, desc = _parse_value_line(line)
+            value, desc = _strip_comment(line)
             if value:
                 data_lines.append((value, desc.upper()))
 
@@ -186,7 +186,7 @@ def read_subregions_file(filepath: Path | str) -> dict[int, Subregion]:
             if _is_comment_line(line):
                 continue
 
-            value, _ = _parse_value_line(line)
+            value, _ = _strip_comment(line)
             try:
                 n_subregions = int(value)
             except ValueError as e:

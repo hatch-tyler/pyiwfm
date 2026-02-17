@@ -20,7 +20,7 @@ from pyiwfm.io.unsaturated_zone import (
     UnsatZoneElementData,
     read_unsaturated_zone_main,
     _is_comment_line as uz_is_comment,
-    _parse_value_line as uz_parse_value,
+    _strip_comment as uz_parse_value,
 )
 from pyiwfm.io.small_watershed import (
     SmallWatershedMainReader,
@@ -250,14 +250,16 @@ class TestUnsatZoneMainReader:
         assert config.n_layers == 0
 
     def test_resolve_relative_path(self, tmp_path: Path) -> None:
-        reader = UnsatZoneMainReader()
-        result = reader._resolve_path(tmp_path, "subdir/file.dat")
+        from pyiwfm.io.iwfm_reader import resolve_path
+
+        result = resolve_path(tmp_path, "subdir/file.dat")
         assert result == tmp_path / "subdir" / "file.dat"
 
     def test_resolve_absolute_path(self, tmp_path: Path) -> None:
-        reader = UnsatZoneMainReader()
+        from pyiwfm.io.iwfm_reader import resolve_path
+
         abs_path = str(tmp_path / "file.dat")
-        result = reader._resolve_path(Path("/other"), abs_path)
+        result = resolve_path(Path("/other"), abs_path)
         assert result == Path(abs_path)
 
 

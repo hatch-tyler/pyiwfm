@@ -11,8 +11,8 @@ sys.path.insert(0, os.path.abspath("../src"))
 
 # -- Project information -----------------------------------------------------
 project = "pyiwfm"
-copyright = "2024, California Department of Water Resources"
-author = "DWR"
+copyright = "2024, hatch-tyler"
+author = "hatch-tyler"
 release = "0.1.0"
 version = "0.1.0"
 
@@ -116,7 +116,7 @@ html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 
 html_theme_options = {
-    "github_url": "https://github.com/CA-DWR/pyiwfm",
+    "github_url": "https://github.com/hatch-tyler/pyiwfm",
     "show_toc_level": 2,
     "navigation_depth": 4,
     "show_nav_level": 2,
@@ -139,9 +139,9 @@ html_theme_options = {
 }
 
 html_context = {
-    "github_user": "CA-DWR",
+    "github_user": "hatch-tyler",
     "github_repo": "pyiwfm",
-    "github_version": "main",
+    "github_version": "master",
     "doc_path": "docs",
 }
 

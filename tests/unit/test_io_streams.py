@@ -23,7 +23,7 @@ from pyiwfm.io.streams import (
     read_stream_nodes,
     read_diversions,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
 )
 from pyiwfm.components.stream import (
     AppStream,
@@ -67,15 +67,15 @@ class TestHelperFunctions:
         assert _is_comment_line("1  2  3  4") is False
         assert _is_comment_line("100                / NSTRNODES") is False
 
-    def test_parse_value_line_with_description(self) -> None:
+    def test_strip_comment_with_description(self) -> None:
         """Test parsing line with description."""
-        value, desc = _parse_value_line("100                / NSTRNODES")
+        value, desc = _strip_comment("100                / NSTRNODES")
         assert value == "100"
         assert desc == "NSTRNODES"
 
-    def test_parse_value_line_no_description(self) -> None:
+    def test_strip_comment_no_description(self) -> None:
         """Test parsing line without description."""
-        value, desc = _parse_value_line("100")
+        value, desc = _strip_comment("100")
         assert value == "100"
         assert desc == ""
 

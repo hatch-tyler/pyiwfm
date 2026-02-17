@@ -22,7 +22,7 @@ from pyiwfm.io.lakes import (
     read_lake_definitions,
     read_lake_elements,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
 )
 from pyiwfm.components.lake import (
     AppLake,

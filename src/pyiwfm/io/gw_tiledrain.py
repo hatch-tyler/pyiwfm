@@ -18,8 +18,8 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
-    strip_inline_comment as _parse_value_line,
+    next_data_or_empty as _next_data_or_empty,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -200,7 +200,7 @@ class TileDrainReader:
             # Not a version line — this is the first data line (no version header)
             # We need to "push back" this line. Since we can't unseek easily,
             # parse it as NDrain directly.
-            value, _ = _parse_value_line(line)
+            value, _ = _strip_comment(line)
             # Store on instance for the caller to use
             self._pushed_back = value
             return ""
@@ -214,7 +214,7 @@ class TileDrainReader:
             self._pushed_back = None
             return val
         lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
+        val = _next_data_or_empty(f, lc)
         self._line_num = lc[0]
         return val
 

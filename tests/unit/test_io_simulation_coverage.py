@@ -23,7 +23,7 @@ from pyiwfm.io.simulation import (
     write_simulation,
     read_simulation,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
     _format_iwfm_datetime,
 )
 from pyiwfm.core.timeseries import TimeUnit

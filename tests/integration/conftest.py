@@ -13,10 +13,12 @@ import pytest
 
 # ---------------------------------------------------------------------------
 # Default paths (fallbacks when env vars not set)
+# These use Path.home() to avoid hardcoding Windows user paths.
+# Set IWFM_SAMPLE_MODEL_DIR / C2VSIMFG_DIR env vars for custom locations.
 # ---------------------------------------------------------------------------
 
-_DEFAULT_SAMPLE_MODEL = r"C:\Users\hatch\OneDrive\Desktop\iwfm-2025.0.1747\samplemodel"
-_DEFAULT_C2VSIMFG = r"C:\Users\hatch\OneDrive\Desktop\c2vsimfg"
+_DEFAULT_SAMPLE_MODEL = str(Path.home() / "Desktop" / "iwfm-2025.0.1747" / "samplemodel")
+_DEFAULT_C2VSIMFG = str(Path.home() / "Desktop" / "c2vsimfg")
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 Tests:
 - _is_comment_line function
-- _parse_value_line function
+- _strip_comment function
 - RootZoneFileConfig dataclass
 - RootZoneWriter class
 - RootZoneReader class
@@ -25,7 +25,7 @@ from pyiwfm.io.rootzone import (
     read_crop_types,
     read_soil_params,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
 )
 from pyiwfm.components.rootzone import (
     RootZone,
@@ -73,23 +73,23 @@ class TestIsCommentLine:
 
 
 class TestParseValueLine:
-    """Tests for _parse_value_line function."""
+    """Tests for _strip_comment function."""
 
     def test_with_description(self) -> None:
         """Test parsing line with description."""
-        value, desc = _parse_value_line("10  / NCROPS")
+        value, desc = _strip_comment("10  / NCROPS")
         assert value == "10"
         assert desc == "NCROPS"
 
     def test_without_description(self) -> None:
         """Test parsing line without description."""
-        value, desc = _parse_value_line("10")
+        value, desc = _strip_comment("10")
         assert value == "10"
         assert desc == ""
 
     def test_with_whitespace(self) -> None:
         """Test parsing line with extra whitespace."""
-        value, desc = _parse_value_line("  100   /   Description   ")
+        value, desc = _strip_comment("  100   /   Description   ")
         assert value == "100"
         assert desc == "Description"
 

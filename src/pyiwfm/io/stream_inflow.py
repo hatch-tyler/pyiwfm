@@ -24,8 +24,8 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
-    strip_inline_comment as _parse_value_line,
+    next_data_or_empty as _next_data_or_empty,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -87,15 +87,15 @@ class InflowReader:
 
         with open(filepath, "r") as f:
             # Conversion factor
-            factor_str = self._next_data_or_empty(f)
+            factor_str = _next_data_or_empty(f)
             if factor_str:
                 config.conversion_factor = float(factor_str)
 
             # Time unit
-            config.time_unit = self._next_data_or_empty(f)
+            config.time_unit = _next_data_or_empty(f)
 
             # Number of inflow series
-            ninflow_str = self._next_data_or_empty(f)
+            ninflow_str = _next_data_or_empty(f)
             if not ninflow_str:
                 return config
             config.n_inflows = int(ninflow_str)
@@ -121,13 +121,6 @@ class InflowReader:
                 config.inflow_specs.append(spec)
 
         return config
-
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
 
     def _next_data_line(self, f: TextIO) -> str:
         """Return the next non-comment data line."""

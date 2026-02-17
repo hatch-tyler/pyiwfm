@@ -10,20 +10,13 @@ Writes the 3-tier pumping file system from a PumpingConfig:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TextIO
 
 from pyiwfm.io.gw_pumping import PumpingConfig
-
-
-def _write_comment(f: TextIO, text: str) -> None:
-    f.write(f"C  {text}\n")
-
-
-def _write_value(f: TextIO, value: object, description: str = "") -> None:
-    if description:
-        f.write(f"     {value!s:<30s}  / {description}\n")
-    else:
-        f.write(f"     {value}\n")
+from pyiwfm.io.iwfm_writer import (
+    ensure_parent_dir as _ensure_parent_dir,
+    write_comment as _write_comment,
+    write_value as _write_value,
+)
 
 
 def write_pumping_main(config: PumpingConfig, filepath: Path | str) -> Path:
@@ -37,7 +30,7 @@ def write_pumping_main(config: PumpingConfig, filepath: Path | str) -> Path:
         Path to written file
     """
     filepath = Path(filepath)
-    filepath.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_parent_dir(filepath)
 
     with open(filepath, "w") as f:
         _write_comment(f, "IWFM Pumping Main File")
@@ -65,7 +58,7 @@ def write_well_spec_file(
         Path to written file
     """
     filepath = Path(filepath)
-    filepath.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_parent_dir(filepath)
 
     with open(filepath, "w") as f:
         _write_comment(f, "IWFM Well Specification File")
@@ -125,7 +118,7 @@ def write_elem_pump_file(
         Path to written file
     """
     filepath = Path(filepath)
-    filepath.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_parent_dir(filepath)
 
     with open(filepath, "w") as f:
         _write_comment(f, "IWFM Element Pumping Specification File")

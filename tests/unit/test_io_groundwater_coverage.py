@@ -1,6 +1,6 @@
 """Coverage tests for io/groundwater.py module.
 
-Tests _is_comment_line, _parse_value_line, KhAnomalyEntry,
+Tests _is_comment_line, _strip_comment, KhAnomalyEntry,
 ParametricGridData, GWFileConfig path methods,
 GroundwaterReader.read_wells, GroundwaterReader.read_initial_heads,
 and GWMainFileReader for version header, file paths, aquifer
@@ -22,7 +22,7 @@ from pyiwfm.io.groundwater import (
     KhAnomalyEntry,
     ParametricGridData,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
 )
 from pyiwfm.core.exceptions import FileFormatError
 
@@ -62,27 +62,27 @@ class TestIsCommentLine:
 
 
 class TestParseValueLine:
-    """Tests for _parse_value_line helper."""
+    """Tests for _strip_comment helper."""
 
     def test_slash_delimiter(self) -> None:
-        value, desc = _parse_value_line("100  / NWELLS")
+        value, desc = _strip_comment("100  / NWELLS")
         assert value == "100"
         assert desc == "NWELLS"
 
     def test_hash_not_delimiter(self) -> None:
         """'#' is NOT a comment delimiter in IWFM — only '/' is."""
-        value, desc = _parse_value_line("4.0 # version")
+        value, desc = _strip_comment("4.0 # version")
         assert value == "4.0 # version"
         assert desc == ""
 
     def test_no_description(self) -> None:
-        value, desc = _parse_value_line("42")
+        value, desc = _strip_comment("42")
         assert value == "42"
         assert desc == ""
 
     def test_path_with_slashes_not_split(self) -> None:
         """Date-style slashes (09/30/1990) should not be split."""
-        value, desc = _parse_value_line("09/30/1990")
+        value, desc = _strip_comment("09/30/1990")
         assert value == "09/30/1990"
         assert desc == ""
 

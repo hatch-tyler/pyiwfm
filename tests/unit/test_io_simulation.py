@@ -25,7 +25,7 @@ from pyiwfm.io.simulation import (
     write_simulation,
     read_simulation,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
     _format_iwfm_datetime,
 )
 from pyiwfm.core.timeseries import TimeUnit
@@ -63,21 +63,21 @@ class TestHelperFunctions:
         assert _is_comment_line("1  2  3  4") is False
         assert _is_comment_line("model_name / MODEL_NAME") is False
 
-    def test_parse_value_line_with_description(self) -> None:
+    def test_strip_comment_with_description(self) -> None:
         """Test parsing line with description."""
-        value, desc = _parse_value_line("test_model                / MODEL_NAME")
+        value, desc = _strip_comment("test_model                / MODEL_NAME")
         assert value == "test_model"
         assert desc == "MODEL_NAME"
 
-    def test_parse_value_line_no_description(self) -> None:
+    def test_strip_comment_no_description(self) -> None:
         """Test parsing line without description."""
-        value, desc = _parse_value_line("test_model")
+        value, desc = _strip_comment("test_model")
         assert value == "test_model"
         assert desc == ""
 
-    def test_parse_value_line_multiple_slashes(self) -> None:
+    def test_strip_comment_multiple_slashes(self) -> None:
         """Slash preceded by whitespace is the delimiter, not path slashes."""
-        value, desc = _parse_value_line("path/to/file.dat / FILE_PATH")
+        value, desc = _strip_comment("path/to/file.dat / FILE_PATH")
         # The whitespace-preceded '/' is the delimiter
         assert value == "path/to/file.dat"
         assert desc == "FILE_PATH"

@@ -16,7 +16,7 @@ from pyiwfm.io.groundwater import (
     GWFileConfig,
     GroundwaterReader,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
 )
 from pyiwfm.core.exceptions import FileFormatError
 
@@ -51,15 +51,15 @@ class TestHelperFunctions:
         """Test data line is not a comment."""
         assert _is_comment_line("1  2  3  4") is False
 
-    def test_parse_value_line_with_description(self) -> None:
+    def test_strip_comment_with_description(self) -> None:
         """Test parsing line with description."""
-        value, desc = _parse_value_line("10                / NWELLS")
+        value, desc = _strip_comment("10                / NWELLS")
         assert value == "10"
         assert desc == "NWELLS"
 
-    def test_parse_value_line_no_description(self) -> None:
+    def test_strip_comment_no_description(self) -> None:
         """Test parsing line without description."""
-        value, desc = _parse_value_line("10")
+        value, desc = _strip_comment("10")
         assert value == "10"
         assert desc == ""
 

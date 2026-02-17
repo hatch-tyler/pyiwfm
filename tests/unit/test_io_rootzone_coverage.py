@@ -22,7 +22,7 @@ from pyiwfm.io.rootzone import (
     read_crop_types,
     read_soil_params,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
 )
 from pyiwfm.components.rootzone import (
     RootZone,

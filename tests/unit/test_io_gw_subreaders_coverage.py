@@ -21,7 +21,7 @@ from pyiwfm.io.gw_pumping import (
     ElementGroup,
     read_gw_pumping,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
     DIST_USER_FRAC,
     DIST_TOTAL_AREA,
     DIST_AG_URB_AREA,
@@ -80,17 +80,17 @@ class TestPumpingHelpers:
     def test_is_comment_line_data(self) -> None:
         assert _is_comment_line("    10    / NCOLADJ") is False
 
-    def test_parse_value_line_hash_not_delimiter(self) -> None:
+    def test_strip_comment_hash_not_delimiter(self) -> None:
         """'#' is NOT a comment delimiter in IWFM — only '/' is."""
-        val, desc = _parse_value_line("    10    # comment")
+        val, desc = _strip_comment("    10    # comment")
         assert val == "10    # comment"
 
-    def test_parse_value_line_with_slash(self) -> None:
-        val, desc = _parse_value_line("    10    / comment")
+    def test_strip_comment_with_slash(self) -> None:
+        val, desc = _strip_comment("    10    / comment")
         assert val == "10"
 
-    def test_parse_value_line_plain(self) -> None:
-        val, desc = _parse_value_line("   42")
+    def test_strip_comment_plain(self) -> None:
+        val, desc = _strip_comment("   42")
         assert val == "42"
         assert desc == ""
 
@@ -311,15 +311,17 @@ class TestPumpingReaderExtended:
 
     def test_resolve_absolute_path(self, tmp_path: Path) -> None:
         """Absolute paths should not be resolved relative to base_dir."""
-        reader = PumpingReader()
+        from pyiwfm.io.iwfm_reader import resolve_path
+
         abs_path = str(tmp_path / "file.dat")
-        result = reader._resolve_path(Path("/other"), abs_path)
+        result = resolve_path(Path("/other"), abs_path)
         assert result == Path(abs_path)
 
     def test_resolve_relative_path(self, tmp_path: Path) -> None:
         """Relative paths should be resolved relative to base_dir."""
-        reader = PumpingReader()
-        result = reader._resolve_path(tmp_path, "subdir/file.dat")
+        from pyiwfm.io.iwfm_reader import resolve_path
+
+        result = resolve_path(tmp_path, "subdir/file.dat")
         assert result == tmp_path / "subdir" / "file.dat"
 
     def test_read_well_file_zero_wells(self, tmp_path: Path) -> None:

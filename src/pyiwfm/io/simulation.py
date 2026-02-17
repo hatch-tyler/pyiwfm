@@ -22,9 +22,9 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -385,7 +385,7 @@ class SimulationReader:
                 if _is_comment_line(line):
                     continue
 
-                value, desc = _parse_value_line(line)
+                value, desc = _strip_comment(line)
                 desc_upper = desc.upper()
 
                 try:
@@ -550,104 +550,104 @@ class IWFMSimulationReader:
         with open(filepath, "r") as f:
             # Section 1: Title lines (3 non-comment lines)
             for _ in range(3):
-                title = self._next_data_or_empty(f)
+                title = _next_data_or_empty(f)
                 if title:
                     config.title_lines.append(title)
 
             # Section 2: File names (11 or 12 lines)
             # 1: Binary preprocessor file (required)
-            bin_pp = self._next_data_or_empty(f)
+            bin_pp = _next_data_or_empty(f)
             if bin_pp:
-                config.binary_preprocessor_file = self._resolve_path(
+                config.binary_preprocessor_file = _resolve_path_f(
                     base_dir, bin_pp
                 )
 
             # 2: Groundwater main file (required)
-            gw = self._next_data_or_empty(f)
+            gw = _next_data_or_empty(f)
             if gw:
-                config.groundwater_file = self._resolve_path(base_dir, gw)
+                config.groundwater_file = _resolve_path_f(base_dir, gw)
 
             # 3: Stream main file (optional)
-            strm = self._next_data_or_empty(f)
+            strm = _next_data_or_empty(f)
             if strm:
-                config.streams_file = self._resolve_path(base_dir, strm)
+                config.streams_file = _resolve_path_f(base_dir, strm)
 
             # 4: Lake main file (optional)
-            lake = self._next_data_or_empty(f)
+            lake = _next_data_or_empty(f)
             if lake:
-                config.lakes_file = self._resolve_path(base_dir, lake)
+                config.lakes_file = _resolve_path_f(base_dir, lake)
 
             # 5: Root zone main file (optional)
-            rz = self._next_data_or_empty(f)
+            rz = _next_data_or_empty(f)
             if rz:
-                config.rootzone_file = self._resolve_path(base_dir, rz)
+                config.rootzone_file = _resolve_path_f(base_dir, rz)
 
             # 6: Small watershed main file (optional)
-            sw = self._next_data_or_empty(f)
+            sw = _next_data_or_empty(f)
             if sw:
-                config.small_watershed_file = self._resolve_path(base_dir, sw)
+                config.small_watershed_file = _resolve_path_f(base_dir, sw)
 
             # 7: Unsaturated zone main file (optional)
-            uz = self._next_data_or_empty(f)
+            uz = _next_data_or_empty(f)
             if uz:
-                config.unsaturated_zone_file = self._resolve_path(
+                config.unsaturated_zone_file = _resolve_path_f(
                     base_dir, uz
                 )
 
             # 8: Irrigation fractions file (optional)
-            irig = self._next_data_or_empty(f)
+            irig = _next_data_or_empty(f)
             if irig:
-                config.irrigation_fractions_file = self._resolve_path(
+                config.irrigation_fractions_file = _resolve_path_f(
                     base_dir, irig
                 )
 
             # 9: Supply adjustment specification file (optional)
-            supp = self._next_data_or_empty(f)
+            supp = _next_data_or_empty(f)
             if supp:
-                config.supply_adjust_file = self._resolve_path(
+                config.supply_adjust_file = _resolve_path_f(
                     base_dir, supp
                 )
 
             # 10: Precipitation data file (optional)
-            precip = self._next_data_or_empty(f)
+            precip = _next_data_or_empty(f)
             if precip:
-                config.precipitation_file = self._resolve_path(
+                config.precipitation_file = _resolve_path_f(
                     base_dir, precip
                 )
 
             # 11: ET data file (optional)
-            et = self._next_data_or_empty(f)
+            et = _next_data_or_empty(f)
             if et:
-                config.et_file = self._resolve_path(base_dir, et)
+                config.et_file = _resolve_path_f(base_dir, et)
 
             # 12: Crop coefficient file (optional, backward compatibility)
             # Peek at the next data value to see if it looks like a file path
             # or a date. If it's a date (MM/DD/YYYY), it's BDT and there's
             # no 12th file entry.
-            kc_or_bdt = self._next_data_or_empty(f)
+            kc_or_bdt = _next_data_or_empty(f)
             if kc_or_bdt and self._looks_like_datetime(kc_or_bdt):
                 # This is actually BDT (no KC file entry)
                 config.start_date = _parse_iwfm_datetime(kc_or_bdt)
                 bdt_already_read = True
             elif kc_or_bdt:
-                config.kc_file = self._resolve_path(base_dir, kc_or_bdt)
+                config.kc_file = _resolve_path_f(base_dir, kc_or_bdt)
                 bdt_already_read = False
             else:
                 bdt_already_read = False
 
             # Section 3: Simulation period
             if not bdt_already_read:
-                bdt_str = self._next_data_or_empty(f)
+                bdt_str = _next_data_or_empty(f)
                 if bdt_str:
                     config.start_date = _parse_iwfm_datetime(bdt_str)
 
             # Restart flag
-            restart_str = self._next_data_or_empty(f)
+            restart_str = _next_data_or_empty(f)
             if restart_str:
                 config.restart_flag = int(restart_str)
 
             # Time unit (combined format like "1MON")
-            unitt_str = self._next_data_or_empty(f)
+            unitt_str = _next_data_or_empty(f)
             if unitt_str:
                 m = _re.match(r"(\d+)\s*(\w+)", unitt_str.strip())
                 if m:
@@ -657,49 +657,49 @@ class IWFMSimulationReader:
                     config.time_step_unit = TimeUnit.from_string(unitt_str)
 
             # End date
-            edt_str = self._next_data_or_empty(f)
+            edt_str = _next_data_or_empty(f)
             if edt_str:
                 config.end_date = _parse_iwfm_datetime(edt_str)
 
             # Section 4: Processing and output options
             # Restart output flag (ISTRT)
-            istrt_str = self._next_data_or_empty(f)
+            istrt_str = _next_data_or_empty(f)
             if istrt_str:
                 config.restart_output_flag = int(istrt_str)
 
             # Debug flag (KDEB)
-            kdeb_str = self._next_data_or_empty(f)
+            kdeb_str = _next_data_or_empty(f)
             if kdeb_str:
                 config.debug_flag = int(kdeb_str)
 
             # Cache size
-            cache_str = self._next_data_or_empty(f)
+            cache_str = _next_data_or_empty(f)
             if cache_str:
                 config.cache_size = int(cache_str)
 
             # Section 5: Solution scheme control
             # Matrix solver (MSOLVE)
-            msolve_str = self._next_data_or_empty(f)
+            msolve_str = _next_data_or_empty(f)
             if msolve_str:
                 config.matrix_solver = int(msolve_str)
 
             # Relaxation factor (RELAX)
-            relax_str = self._next_data_or_empty(f)
+            relax_str = _next_data_or_empty(f)
             if relax_str:
                 config.relaxation = float(relax_str)
 
             # Max iterations (MXITER)
-            mxiter_str = self._next_data_or_empty(f)
+            mxiter_str = _next_data_or_empty(f)
             if mxiter_str:
                 config.max_iterations = int(mxiter_str)
 
             # Max supply iterations (MXITERSP)
-            mxitersp_str = self._next_data_or_empty(f)
+            mxitersp_str = _next_data_or_empty(f)
             if mxitersp_str:
                 config.max_supply_iterations = int(mxitersp_str)
 
             # Flow convergence tolerance (STOPC)
-            stopc_str = self._next_data_or_empty(f)
+            stopc_str = _next_data_or_empty(f)
             if stopc_str:
                 config.convergence_tolerance = float(stopc_str)
 
@@ -710,9 +710,9 @@ class IWFMSimulationReader:
             #
             # Heuristic: KOPTDV is an integer (no decimal point in string).
             # Tolerances always have a decimal point or scientific notation.
-            stopcvl_or_stopcsp = self._next_data_or_empty(f)
+            stopcvl_or_stopcsp = _next_data_or_empty(f)
             if stopcvl_or_stopcsp:
-                koptdv_or_stopcsp = self._next_data_or_empty(f)
+                koptdv_or_stopcsp = _next_data_or_empty(f)
                 if koptdv_or_stopcsp:
                     if self._looks_like_integer(koptdv_or_stopcsp):
                         # No STOPCVL: stopcvl_or_stopcsp is STOPCSP,
@@ -733,7 +733,7 @@ class IWFMSimulationReader:
                             koptdv_or_stopcsp
                         )
                         # Read KOPTDV
-                        kopt_str = self._next_data_or_empty(f)
+                        kopt_str = _next_data_or_empty(f)
                         if kopt_str:
                             config.supply_adjust_option = int(
                                 float(kopt_str)
@@ -750,18 +750,6 @@ class IWFMSimulationReader:
             config.model_name = config.title_lines[0].strip()
 
         return config
-
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string at EOF."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
-
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
     @staticmethod
     def _looks_like_datetime(value: str) -> bool:

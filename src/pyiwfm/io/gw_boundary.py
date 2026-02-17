@@ -22,9 +22,9 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -234,28 +234,28 @@ class GWBoundaryReader:
 
         with open(filepath, "r") as f:
             # Read 5 file paths
-            sp_flow_path = self._next_data_or_empty(f)
+            sp_flow_path = _next_data_or_empty(f)
             if sp_flow_path:
-                config.sp_flow_file = self._resolve_path(base_dir, sp_flow_path)
+                config.sp_flow_file = _resolve_path_f(base_dir, sp_flow_path)
 
-            sp_head_path = self._next_data_or_empty(f)
+            sp_head_path = _next_data_or_empty(f)
             if sp_head_path:
-                config.sp_head_file = self._resolve_path(base_dir, sp_head_path)
+                config.sp_head_file = _resolve_path_f(base_dir, sp_head_path)
 
-            gh_path = self._next_data_or_empty(f)
+            gh_path = _next_data_or_empty(f)
             if gh_path:
-                config.gh_file = self._resolve_path(base_dir, gh_path)
+                config.gh_file = _resolve_path_f(base_dir, gh_path)
 
-            cgh_path = self._next_data_or_empty(f)
+            cgh_path = _next_data_or_empty(f)
             if cgh_path:
-                config.cgh_file = self._resolve_path(base_dir, cgh_path)
+                config.cgh_file = _resolve_path_f(base_dir, cgh_path)
 
-            ts_path = self._next_data_or_empty(f)
+            ts_path = _next_data_or_empty(f)
             if ts_path:
-                config.ts_data_file = self._resolve_path(base_dir, ts_path)
+                config.ts_data_file = _resolve_path_f(base_dir, ts_path)
 
             # NOUTB section (boundary node flow output)
-            noutb_str = self._next_data_or_empty(f)
+            noutb_str = _next_data_or_empty(f)
             if noutb_str:
                 try:
                     config.n_bc_output_nodes = int(noutb_str)
@@ -264,9 +264,9 @@ class GWBoundaryReader:
 
             if config.n_bc_output_nodes > 0:
                 # Output file path
-                bhydout_path = self._next_data_or_empty(f)
+                bhydout_path = _next_data_or_empty(f)
                 if bhydout_path:
-                    config.bc_output_file = self._resolve_path(base_dir, bhydout_path)
+                    config.bc_output_file = _resolve_path_f(base_dir, bhydout_path)
                 # Read NOUTB node IDs
                 for _ in range(config.n_bc_output_nodes):
                     line = self._next_data_line(f)
@@ -297,17 +297,17 @@ class GWBoundaryReader:
         self._line_num = 0
         with open(filepath, "r") as f:
             # NQB
-            nqb_str = self._next_data_or_empty(f)
+            nqb_str = _next_data_or_empty(f)
             nqb = int(nqb_str) if nqb_str else 0
             if nqb <= 0:
                 return
 
             # FACT
-            fact_str = self._next_data_or_empty(f)
+            fact_str = _next_data_or_empty(f)
             config.sp_flow_factor = float(fact_str) if fact_str else 1.0
 
             # TimeUnit
-            config.sp_flow_time_unit = self._next_data_or_empty(f)
+            config.sp_flow_time_unit = _next_data_or_empty(f)
 
             # Read NQB rows: NodeID, Layer, TSColumn, BaseFlow
             for _ in range(nqb):
@@ -328,13 +328,13 @@ class GWBoundaryReader:
         self._line_num = 0
         with open(filepath, "r") as f:
             # NHB
-            nhb_str = self._next_data_or_empty(f)
+            nhb_str = _next_data_or_empty(f)
             nhb = int(nhb_str) if nhb_str else 0
             if nhb <= 0:
                 return
 
             # FACT
-            fact_str = self._next_data_or_empty(f)
+            fact_str = _next_data_or_empty(f)
             config.sp_head_factor = float(fact_str) if fact_str else 1.0
 
             # Read NHB rows: NodeID, Layer, TSColumn, HeadValue
@@ -356,21 +356,21 @@ class GWBoundaryReader:
         self._line_num = 0
         with open(filepath, "r") as f:
             # NGB
-            ngb_str = self._next_data_or_empty(f)
+            ngb_str = _next_data_or_empty(f)
             ngb = int(ngb_str) if ngb_str else 0
             if ngb <= 0:
                 return
 
             # FACTH
-            facth_str = self._next_data_or_empty(f)
+            facth_str = _next_data_or_empty(f)
             config.gh_head_factor = float(facth_str) if facth_str else 1.0
 
             # FACTC
-            factc_str = self._next_data_or_empty(f)
+            factc_str = _next_data_or_empty(f)
             config.gh_conductance_factor = float(factc_str) if factc_str else 1.0
 
             # TimeUnit
-            config.gh_time_unit = self._next_data_or_empty(f)
+            config.gh_time_unit = _next_data_or_empty(f)
 
             # Read NGB rows: NodeID, Layer, TSColumn, ExternalHead, Conductance
             for _ in range(ngb):
@@ -392,28 +392,28 @@ class GWBoundaryReader:
         self._line_num = 0
         with open(filepath, "r") as f:
             # NCGB
-            ncgb_str = self._next_data_or_empty(f)
+            ncgb_str = _next_data_or_empty(f)
             ncgb = int(ncgb_str) if ncgb_str else 0
             if ncgb <= 0:
                 return
 
             # FACTH
-            facth_str = self._next_data_or_empty(f)
+            facth_str = _next_data_or_empty(f)
             config.cgh_head_factor = float(facth_str) if facth_str else 1.0
 
             # FACTVL (max flow factor)
-            factvl_str = self._next_data_or_empty(f)
+            factvl_str = _next_data_or_empty(f)
             config.cgh_max_flow_factor = float(factvl_str) if factvl_str else 1.0
 
             # TimeUnit (for head)
-            config.cgh_head_time_unit = self._next_data_or_empty(f)
+            config.cgh_head_time_unit = _next_data_or_empty(f)
 
             # FACTC (conductance factor)
-            factc_str = self._next_data_or_empty(f)
+            factc_str = _next_data_or_empty(f)
             config.cgh_conductance_factor = float(factc_str) if factc_str else 1.0
 
             # TimeUnit (for conductance)
-            config.cgh_conductance_time_unit = self._next_data_or_empty(f)
+            config.cgh_conductance_time_unit = _next_data_or_empty(f)
 
             # Read NCGB rows: NodeID, Layer, TSCol, ExtHead, Conductance,
             #                  ConstrainingHead, MaxFlowTSCol, MaxFlow
@@ -434,13 +434,6 @@ class GWBoundaryReader:
                     max_flow=float(parts[7]) * config.cgh_max_flow_factor,
                 ))
 
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
-
     def _next_data_line(self, f: TextIO) -> str:
         """Return the next non-comment data line."""
         for line in f:
@@ -449,11 +442,6 @@ class GWBoundaryReader:
                 continue
             return line.strip()
         raise FileFormatError("Unexpected end of file", line_number=self._line_num)
-
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
 
 def read_gw_boundary(

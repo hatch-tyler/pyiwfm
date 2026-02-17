@@ -119,6 +119,44 @@ def next_data_or_empty(
     return ""
 
 
+def parse_int(value: str, context: str = "", line_number: int | None = None) -> int:
+    """Parse a string as an integer with descriptive error on failure.
+
+    Parameters
+    ----------
+    value : str
+        The string to parse.
+    context : str
+        Description of what was being parsed (for error messages).
+    line_number : int, optional
+        Line number in the source file (for error messages).
+    """
+    try:
+        return int(value)
+    except (ValueError, TypeError) as exc:
+        msg = f"Expected integer for {context}, got {value!r}" if context else f"Expected integer, got {value!r}"
+        raise FileFormatError(msg, line_number=line_number) from exc
+
+
+def parse_float(value: str, context: str = "", line_number: int | None = None) -> float:
+    """Parse a string as a float with descriptive error on failure.
+
+    Parameters
+    ----------
+    value : str
+        The string to parse.
+    context : str
+        Description of what was being parsed (for error messages).
+    line_number : int, optional
+        Line number in the source file (for error messages).
+    """
+    try:
+        return float(value)
+    except (ValueError, TypeError) as exc:
+        msg = f"Expected number for {context}, got {value!r}" if context else f"Expected number, got {value!r}"
+        raise FileFormatError(msg, line_number=line_number) from exc
+
+
 def resolve_path(base_dir: Path, filepath: str) -> Path:
     """Resolve a file path relative to *base_dir*.
 

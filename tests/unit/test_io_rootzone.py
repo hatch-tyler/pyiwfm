@@ -14,7 +14,7 @@ import pytest
 from pyiwfm.io.rootzone import (
     RootZoneFileConfig,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
 )
 
 
@@ -48,15 +48,15 @@ class TestHelperFunctions:
         """Test data line is not a comment."""
         assert _is_comment_line("1  2  3  4") is False
 
-    def test_parse_value_line_with_description(self) -> None:
+    def test_strip_comment_with_description(self) -> None:
         """Test parsing line with description."""
-        value, desc = _parse_value_line("5                / NCROPS")
+        value, desc = _strip_comment("5                / NCROPS")
         assert value == "5"
         assert desc == "NCROPS"
 
-    def test_parse_value_line_no_description(self) -> None:
+    def test_strip_comment_no_description(self) -> None:
         """Test parsing line without description."""
-        value, desc = _parse_value_line("5")
+        value, desc = _strip_comment("5")
         assert value == "5"
         assert desc == ""
 

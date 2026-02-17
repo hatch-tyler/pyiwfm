@@ -22,7 +22,7 @@ from pyiwfm.io.lakes import (
     read_lake_definitions,
     read_lake_elements,
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
 )
 from pyiwfm.components.lake import (
     AppLake,
@@ -60,15 +60,15 @@ class TestHelperFunctions:
         """Test data line is not a comment."""
         assert _is_comment_line("1  2  3  4") is False
 
-    def test_parse_value_line_with_description(self) -> None:
+    def test_strip_comment_with_description(self) -> None:
         """Test parsing line with description."""
-        value, desc = _parse_value_line("5                / NLAKES")
+        value, desc = _strip_comment("5                / NLAKES")
         assert value == "5"
         assert desc == "NLAKES"
 
-    def test_parse_value_line_no_description(self) -> None:
+    def test_strip_comment_no_description(self) -> None:
         """Test parsing line without description."""
-        value, desc = _parse_value_line("5")
+        value, desc = _strip_comment("5")
         assert value == "5"
         assert desc == ""
 

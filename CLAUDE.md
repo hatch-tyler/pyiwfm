@@ -12,6 +12,7 @@ pyiwfm is a Python package for working with IWFM (Integrated Water Flow Model) m
 ```bash
 pip install -e .              # Basic install
 pip install -e ".[dev]"       # Development (pytest, mypy, ruff)
+pip install -e ".[gis]"       # GIS support (geopandas, shapely)
 pip install -e ".[webapi]"    # Web viewer (FastAPI + vtk.js + deck.gl)
 pip install -e ".[all]"       # All optional dependencies
 ```
@@ -23,6 +24,8 @@ pytest tests/ --cov=pyiwfm             # With coverage
 pytest tests/unit/test_mesh.py -v      # Single test file
 pytest tests/ -m slow                  # Run slow-marked tests
 pytest tests/ -m integration           # Run integration tests
+pytest tests/ -m roundtrip             # Run roundtrip read→write→read tests
+pytest tests/ -m property              # Run property-based (Hypothesis) tests
 ```
 
 ### Code Quality
@@ -31,6 +34,11 @@ ruff format src/ tests/                # Format code
 ruff check src/ tests/ --fix           # Lint with auto-fix
 mypy src/pyiwfm/                       # Type checking
 pre-commit run --all-files             # Run all pre-commit hooks
+```
+
+### Documentation
+```bash
+sphinx-build docs docs/_build          # Build Sphinx docs (requires .[docs] extra)
 ```
 
 ### CLI
@@ -119,6 +127,13 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - Builds to `src/pyiwfm/visualization/webapi/static/` via Vite
 - Path alias: `@` → `frontend/src/` (configured in `vite.config.ts`)
 - Dev proxy: `/api` → `http://localhost:8080` (backend must be running separately)
+
+### Test Fixtures
+`tests/conftest.py` provides shared fixtures and helpers:
+- `make_simple_grid()` — creates a 2x2 quad AppGrid (9 nodes, 4 elements) for unit tests
+- `make_simple_stratigraphy()` — creates uniform-layer Stratigraphy for unit tests
+- `fixtures_path` / `small_model_path` — paths to test fixture data in `tests/fixtures/`
+- Integration tests (roundtrip, preprocessor/simulation runs) live in `tests/integration/`
 
 ### PEST++ Integration
 `runner/pest*.py` modules provide parameter estimation workflow:

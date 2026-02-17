@@ -263,7 +263,7 @@ class TestSaveModelToPreProcessor:
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.preprocessor import (
     _is_comment_line,
-    _parse_value_line,
+    _strip_comment,
     _resolve_path,
     _make_relative_path,
     _write_subregions_file,
@@ -310,35 +310,35 @@ class TestIsCommentLine:
 
 
 class TestParseValueLine:
-    """Tests for the _parse_value_line helper function."""
+    """Tests for the _strip_comment helper function."""
 
     def test_slash_delimiter(self) -> None:
         """Parse value line with '/' delimiter."""
-        value, desc = _parse_value_line("nodes.dat                / NODES_FILE")
+        value, desc = _strip_comment("nodes.dat                / NODES_FILE")
         assert value == "nodes.dat"
         assert desc == "NODES_FILE"
 
     def test_hash_delimiter_not_recognized(self) -> None:
         """Hash is not recognized as an inline comment delimiter."""
-        value, desc = _parse_value_line("nodes.dat                # NODES_FILE")
+        value, desc = _strip_comment("nodes.dat                # NODES_FILE")
         assert value == "nodes.dat                # NODES_FILE"
         assert desc == ""
 
     def test_no_delimiter(self) -> None:
         """Parse value line with no delimiter."""
-        value, desc = _parse_value_line("some_value")
+        value, desc = _strip_comment("some_value")
         assert value == "some_value"
         assert desc == ""
 
     def test_slash_with_hash_in_description(self) -> None:
         """Only / is recognized as delimiter; # in description is preserved."""
-        value, desc = _parse_value_line("value / desc # extra")
+        value, desc = _strip_comment("value / desc # extra")
         assert value == "value"
         assert desc == "desc # extra"
 
     def test_empty_value(self) -> None:
         """Parse a line that is all whitespace."""
-        value, desc = _parse_value_line("   ")
+        value, desc = _strip_comment("   ")
         assert value == ""
         assert desc == ""
 

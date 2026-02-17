@@ -19,6 +19,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.io.config import OutputFormat, TimeSeriesOutputConfig
+from pyiwfm.io.iwfm_writer import ensure_parent_dir
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
@@ -89,7 +90,7 @@ class TemplateWriter(ABC):
 
     def _ensure_dir(self, path: Path) -> None:
         """Ensure parent directory exists."""
-        path.parent.mkdir(parents=True, exist_ok=True)
+        ensure_parent_dir(path)
 
     @property
     def comment_writer(self) -> "CommentWriter":

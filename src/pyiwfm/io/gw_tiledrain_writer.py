@@ -8,20 +8,13 @@ including version header, tile drains section, and sub-irrigation section.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TextIO
 
 from pyiwfm.io.gw_tiledrain import TileDrainConfig
-
-
-def _write_comment(f: TextIO, text: str) -> None:
-    f.write(f"C  {text}\n")
-
-
-def _write_value(f: TextIO, value: object, description: str = "") -> None:
-    if description:
-        f.write(f"     {value!s:<30s}  / {description}\n")
-    else:
-        f.write(f"     {value}\n")
+from pyiwfm.io.iwfm_writer import (
+    ensure_parent_dir as _ensure_parent_dir,
+    write_comment as _write_comment,
+    write_value as _write_value,
+)
 
 
 def write_tile_drain_file(config: TileDrainConfig, filepath: Path | str) -> Path:
@@ -35,7 +28,7 @@ def write_tile_drain_file(config: TileDrainConfig, filepath: Path | str) -> Path
         Path to written file
     """
     filepath = Path(filepath)
-    filepath.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_parent_dir(filepath)
 
     with open(filepath, "w") as f:
         _write_comment(f, "IWFM Tile Drain / Sub-Irrigation File")

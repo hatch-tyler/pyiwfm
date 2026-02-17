@@ -19,7 +19,7 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ def read_nodes(filepath: Path | str) -> dict[int, Node]:
                 continue
 
             # First non-comment line should be NNODES
-            value_str, desc = _parse_value_line(line)
+            value_str, desc = _strip_comment(line)
             try:
                 n_nodes = int(value_str)
             except ValueError as e:
@@ -76,7 +76,7 @@ def read_nodes(filepath: Path | str) -> dict[int, Node]:
             if _is_comment_line(line):
                 continue
 
-            value_str, desc = _parse_value_line(line)
+            value_str, desc = _strip_comment(line)
             # Check if this is a conversion factor line (single float, not 3 values)
             parts = value_str.split()
             if len(parts) == 1:
@@ -106,7 +106,7 @@ def read_nodes(filepath: Path | str) -> dict[int, Node]:
             if _is_comment_line(line):
                 continue
 
-            value_str, _ = _parse_value_line(line)
+            value_str, _ = _strip_comment(line)
             parts = value_str.split()
             if len(parts) < 3:
                 raise FileFormatError(
@@ -171,7 +171,7 @@ def read_elements(
             if _is_comment_line(line):
                 continue
 
-            value_str, _ = _parse_value_line(line)
+            value_str, _ = _strip_comment(line)
             try:
                 n_elem = int(value_str)
             except ValueError as e:
@@ -186,7 +186,7 @@ def read_elements(
             if _is_comment_line(line):
                 continue
 
-            value_str, _ = _parse_value_line(line)
+            value_str, _ = _strip_comment(line)
             try:
                 n_subregion = int(value_str)
             except ValueError as e:
@@ -208,7 +208,7 @@ def read_elements(
             if _is_comment_line(line):
                 continue
 
-            value_str, desc = _parse_value_line(line)
+            value_str, desc = _strip_comment(line)
             parts = value_str.split()
 
             # If we've already read all subregion names, this must be
@@ -281,7 +281,7 @@ def read_elements(
             if _is_comment_line(line):
                 continue
 
-            value_str, _ = _parse_value_line(line)
+            value_str, _ = _strip_comment(line)
             parts = value_str.split()
             if len(parts) < 6:
                 raise FileFormatError(
@@ -360,7 +360,7 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
             if _is_comment_line(line):
                 continue
 
-            value_str, _ = _parse_value_line(line)
+            value_str, _ = _strip_comment(line)
             try:
                 n_layers = int(value_str)
             except ValueError as e:
@@ -375,7 +375,7 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
             if _is_comment_line(line):
                 continue
 
-            value_str, _ = _parse_value_line(line)
+            value_str, _ = _strip_comment(line)
             try:
                 fact = float(value_str)
             except ValueError as e:
@@ -399,7 +399,7 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
             if _is_comment_line(line):
                 continue
 
-            value_str, _ = _parse_value_line(line)
+            value_str, _ = _strip_comment(line)
             parts = value_str.split()
             if len(parts) < expected_cols:
                 raise FileFormatError(

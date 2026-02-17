@@ -22,7 +22,7 @@ from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     LineBuffer as _LineBuffer,
     is_comment_line as _is_comment_line,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -360,7 +360,7 @@ class NonPondedCropReader:
                     break
                 continue
 
-            value, _ = _parse_value_line(raw)
+            value, _ = _strip_comment(raw)
             parts = value.split()
 
             if len(parts) < min_cols:

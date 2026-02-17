@@ -27,9 +27,9 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    next_data_or_empty as _next_data_or_empty_f,
+    next_data_or_empty as _next_data_or_empty,
     resolve_path as _resolve_path_f,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -303,7 +303,7 @@ class LakeReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_lakes = int(value)
                 except ValueError as e:
@@ -368,7 +368,7 @@ class LakeReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_elements = int(value)
                 except ValueError as e:
@@ -437,7 +437,7 @@ class LakeReader:
                 if _is_comment_line(line):
                     continue
 
-                value, _ = _parse_value_line(line)
+                value, _ = _strip_comment(line)
                 try:
                     n_curves = int(value)
                 except ValueError as e:
@@ -635,30 +635,30 @@ class LakeMainFileReader:
             is_v50 = config.version.startswith("5")
 
             # Max lake elevation file path
-            max_elev_path = self._next_data_or_empty(f)
+            max_elev_path = _next_data_or_empty(f)
             if max_elev_path:
-                config.max_elev_file = self._resolve_path(base_dir, max_elev_path)
+                config.max_elev_file = _resolve_path_f(base_dir, max_elev_path)
 
             # Budget output file path
-            budget_path = self._next_data_or_empty(f)
+            budget_path = _next_data_or_empty(f)
             if budget_path:
-                config.budget_output_file = self._resolve_path(base_dir, budget_path)
+                config.budget_output_file = _resolve_path_f(base_dir, budget_path)
 
             # Final elevation output file path (optional)
-            final_path = self._next_data_or_empty(f)
+            final_path = _next_data_or_empty(f)
             if final_path:
-                config.final_elev_file = self._resolve_path(base_dir, final_path)
+                config.final_elev_file = _resolve_path_f(base_dir, final_path)
 
             # Conductance factor K
-            factk_str = self._next_data_or_empty(f)
+            factk_str = _next_data_or_empty(f)
             if factk_str:
                 config.conductance_factor = float(factk_str)
 
             # Conductance time unit
-            config.conductance_time_unit = self._next_data_or_empty(f)
+            config.conductance_time_unit = _next_data_or_empty(f)
 
             # Depth factor L
-            factl_str = self._next_data_or_empty(f)
+            factl_str = _next_data_or_empty(f)
             if factl_str:
                 config.depth_factor = float(factl_str)
 
@@ -667,7 +667,7 @@ class LakeMainFileReader:
             # as a lake parameter line. Each line has:
             # CLAKE_ID  CLAKE  DLAKE  MaxElev_Col  ET_Col  Precip_Col  [Name]
             while True:
-                data = self._next_data_or_empty(f)
+                data = _next_data_or_empty(f)
                 if not data:
                     break
 
@@ -700,12 +700,12 @@ class LakeMainFileReader:
             # v5.0: Read outflow rating tables
             if is_v50 and config.lake_params:
                 # Outflow rate factor (already read elev_factor above)
-                factq_str = self._next_data_or_empty(f)
+                factq_str = _next_data_or_empty(f)
                 if factq_str:
                     config.outflow_factor = float(factq_str)
 
                 # Outflow time unit
-                config.outflow_time_unit = self._next_data_or_empty(f)
+                config.outflow_time_unit = _next_data_or_empty(f)
 
                 # Read outflow rating table for each lake
                 for _ in range(len(config.lake_params)):
@@ -730,7 +730,7 @@ class LakeMainFileReader:
             Elev_2  Outflow_2
             ...
         """
-        header = self._next_data_or_empty(f)
+        header = _next_data_or_empty(f)
         if not header:
             return None
 
@@ -749,7 +749,7 @@ class LakeMainFileReader:
 
         # Remaining points
         for _ in range(n_points - 1):
-            line = self._next_data_or_empty(f)
+            line = _next_data_or_empty(f)
             if not line:
                 break
             lp = line.split()
@@ -775,17 +775,6 @@ class LakeMainFileReader:
             break
         return ""
 
-    def _next_data_or_empty(self, f: TextIO) -> str:
-        """Return next data value, or empty string for blank lines."""
-        lc = [self._line_num]
-        val = _next_data_or_empty_f(f, lc)
-        self._line_num = lc[0]
-        return val
-
-    @staticmethod
-    def _resolve_path(base_dir: Path, filepath: str) -> Path:
-        """Resolve a file path relative to base directory."""
-        return _resolve_path_f(base_dir, filepath)
 
 
 # Convenience functions

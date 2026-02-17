@@ -21,7 +21,7 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     is_comment_line as _is_comment_line,
-    strip_inline_comment as _parse_value_line,
+    strip_inline_comment as _strip_comment,
 )
 
 
@@ -111,7 +111,7 @@ def _strip_inline_comment(line: str) -> str:
 
     Returns the value portion of the line with whitespace stripped.
     """
-    value, _ = _parse_value_line(line)
+    value, _ = _strip_comment(line)
     return value
 
 

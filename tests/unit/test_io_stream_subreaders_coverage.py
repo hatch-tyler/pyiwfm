@@ -19,7 +19,7 @@ from pyiwfm.io.stream_inflow import (
     InflowSpec,
     read_stream_inflow,
     _is_comment_line as inflow_is_comment,
-    _parse_value_line as inflow_parse_value,
+    _strip_comment as inflow_parse_value,
 )
 from pyiwfm.io.stream_diversion import (
     DiversionSpecReader,

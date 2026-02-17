@@ -456,10 +456,11 @@ class TestStreamMainFileReaderEdgeCases:
         assert cfg.hydrograph_elev_factor == pytest.approx(1.0)
 
     def test_resolve_absolute_path(self, tmp_path: Path) -> None:
-        """Absolute path is returned as-is (line 1194)."""
-        reader = StreamMainFileReader()
+        """Absolute path is returned as-is."""
+        from pyiwfm.io.iwfm_reader import resolve_path
+
         abs_path = Path("C:/absolute/path/file.dat")
-        result = reader._resolve_path(tmp_path, str(abs_path))
+        result = resolve_path(tmp_path, str(abs_path))
         assert result == abs_path
 
     def test_version_with_empty_file(self, tmp_path: Path) -> None:

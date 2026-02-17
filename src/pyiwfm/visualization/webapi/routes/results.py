@@ -536,7 +536,7 @@ def get_hydrographs_multi(
                         "units": "ft",
                     })
 
-        if not results and reader is None:
+        if not results and (reader is None or reader.n_timesteps == 0):
             raise HTTPException(
                 status_code=404, detail="No GW hydrograph data available"
             )
