@@ -89,16 +89,25 @@ Once loaded, access all model components through attributes:
        status = "Loaded" if loaded else "Not present"
        print(f"  {name}: {status}")
 
-Visualize the mesh immediately after loading:
+Visualize the mesh immediately after loading. Here we use a sample mesh to
+demonstrate what the plot looks like:
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh
    from pyiwfm.visualization.plotting import plot_mesh
 
-   fig, ax = plot_mesh(model.mesh, show_edges=True, edge_color='gray',
+   # In practice: plot_mesh(model.mesh, ...)
+   mesh = create_sample_mesh(nx=15, ny=12, n_subregions=4)
+
+   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='gray',
                        fill_color='lightblue', alpha=0.3)
-   ax.set_title(f'Model Mesh ({model.n_nodes} nodes, {model.n_elements} elements)')
-   fig.savefig("loaded_mesh.png", dpi=150)
+   ax.set_title(f'Loaded Model Mesh ({mesh.n_nodes} nodes, {mesh.n_elements} elements)')
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
 
 Loading with Error Handling
 ---------------------------
@@ -175,18 +184,34 @@ Or load just the preprocessor portion (mesh + stratigraphy + stream/lake geometr
    print(f"Loaded mesh and stratigraphy only")
    print(f"Nodes: {model.n_nodes}, Layers: {model.n_layers}")
 
-Visualize the loaded mesh with stream overlay:
+Visualize the loaded mesh with a stream network overlay:
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
-   from pyiwfm.visualization.plotting import plot_mesh, plot_streams
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_stream_network
+   from pyiwfm.visualization.plotting import plot_mesh
 
-   fig, ax = plot_mesh(model.mesh, show_edges=True, edge_color='lightgray', alpha=0.2)
-   if model.streams:
-       plot_streams(model.streams, ax=ax, show_nodes=True,
-                    line_color='blue', line_width=2)
+   # In practice: plot_mesh(model.mesh, ...) + plot_streams(model.streams, ...)
+   mesh = create_sample_mesh(nx=15, ny=12, n_subregions=4)
+   stream_nodes, reaches = create_sample_stream_network(mesh)
+
+   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='lightgray', alpha=0.2)
+
+   # Overlay stream reaches
+   for from_idx, to_idx in reaches:
+       x1, y1 = stream_nodes[from_idx]
+       x2, y2 = stream_nodes[to_idx]
+       ax.plot([x1, x2], [y1, y2], 'b-', linewidth=2, zorder=3)
+   sx, sy = zip(*stream_nodes)
+   ax.scatter(sx, sy, c='blue', s=40, zorder=4, label='Stream Nodes')
+
    ax.set_title('Loaded Model with Streams')
-   fig.savefig("mesh_with_streams.png", dpi=150)
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   ax.legend()
+   plt.show()
 
 Reading Simulation Results
 --------------------------
@@ -215,42 +240,43 @@ After running an IWFM simulation, load results for visualization:
 
 Visualize head distribution at a single timestep:
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
    from pyiwfm.visualization.plotting import plot_scalar_field
-   import numpy as np
 
-   # Get head values at the last timestep
-   head_values = heads[-1, :]  # shape: (n_nodes,)
+   # In practice: plot_scalar_field(model.mesh, heads[-1, :], ...)
+   mesh = create_sample_mesh(nx=15, ny=12, n_subregions=4)
+   head = create_sample_scalar_field(mesh, field_type='head')
 
-   fig, ax = plot_scalar_field(model.mesh, head_values,
-                               field_type='node', cmap='viridis',
+   fig, ax = plot_scalar_field(mesh, head, field_type='node', cmap='viridis',
                                show_mesh=True, edge_color='white')
    ax.set_title('Groundwater Head (Final Timestep)')
-   fig.savefig("head_distribution.png", dpi=150)
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
 
 Plot head time series at selected nodes:
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_timeseries
    from pyiwfm.visualization.plotting import plot_timeseries
-   from pyiwfm.core.timeseries import TimeSeries
 
-   # Create time series for selected nodes
-   node_ids = [100, 500, 1000]
-   series_list = []
-   for nid in node_ids:
-       ts = TimeSeries(
-           times=times,
-           values=heads[:, nid - 1],  # 0-indexed array, 1-indexed node IDs
-           name=f"Node {nid}",
-           units="ft",
-       )
-       series_list.append(ts)
+   # In practice: create TimeSeries from heads[:, node_id] arrays
+   series_list = [
+       create_sample_timeseries(name="Node 100", n_years=10, trend=-0.3, noise_level=0.05),
+       create_sample_timeseries(name="Node 500", n_years=10, trend=-0.6, noise_level=0.08),
+       create_sample_timeseries(name="Node 1000", n_years=10, trend=-0.4, noise_level=0.06),
+   ]
 
    fig, ax = plot_timeseries(series_list, title='Head at Selected Nodes',
                               ylabel='Head (ft)')
-   fig.savefig("head_timeseries.png", dpi=150)
+   plt.show()
 
 Comment-Preserving Load
 -----------------------
@@ -284,38 +310,84 @@ from the original files are retained in the output.
 Visualizing the Loaded Model
 -----------------------------
 
-Quick visualization gallery using pyiwfm helpers:
+Quick visualization gallery using pyiwfm helpers. These examples use
+sample data to show what each plot looks like:
 
-.. code-block:: python
+**Mesh with element IDs:**
 
-   from pyiwfm.visualization.plotting import (
-       plot_mesh, plot_scalar_field, plot_streams,
-       plot_budget_bar, plot_budget_stacked,
-   )
+.. plot::
+   :include-source:
 
-   # 1. Mesh with element IDs
-   fig, ax = plot_mesh(model.mesh, show_element_ids=True)
-   ax.set_title('Element IDs')
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh
+   from pyiwfm.visualization.plotting import plot_mesh
 
-   # 2. Layer thickness
+   mesh = create_sample_mesh(nx=6, ny=6, n_subregions=2)
+   fig, ax = plot_mesh(mesh, show_element_ids=True, fill_color='lightyellow', alpha=0.5)
+   ax.set_title('Mesh with Element IDs')
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
+
+**Layer thickness as scalar field:**
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
    import numpy as np
-   thickness = model.stratigraphy.top_elev[:, 0] - model.stratigraphy.bottom_elev[:, 0]
-   fig, ax = plot_scalar_field(model.mesh, thickness,
-                               field_type='node', cmap='YlOrRd')
-   ax.set_title('Layer 1 Thickness')
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_stratigraphy
+   from pyiwfm.visualization.plotting import plot_scalar_field
 
-   # 3. Streams colored by reach
-   if model.streams:
-       fig, ax = plot_mesh(model.mesh, edge_color='lightgray', alpha=0.2)
-       plot_streams(model.streams, ax=ax, line_width=2)
-       ax.set_title('Stream Network')
+   mesh = create_sample_mesh(nx=15, ny=12, n_subregions=4)
+   strat = create_sample_stratigraphy(mesh, n_layers=3, surface_base=100.0,
+                                       layer_thickness=50.0)
 
-   # 4. Budget bar chart (from loaded budget data)
+   thickness = strat.top_elev[:, 0] - strat.bottom_elev[:, 0]
+   fig, ax = plot_scalar_field(mesh, thickness, field_type='node', cmap='YlOrRd')
+   ax.set_title('Layer 1 Thickness (ft)')
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
+
+**Budget bar chart:**
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.visualization.plotting import plot_budget_bar
+
    budget_components = {
        'Recharge': 15000, 'Pumping': -18500,
        'Stream Seepage': 8500, 'Baseflow': -7200,
+       'Subsurface Inflow': 5200, 'GW ET': -3100,
    }
-   fig, ax = plot_budget_bar(budget_components, title='GW Budget Summary')
+   fig, ax = plot_budget_bar(budget_components, title='GW Budget Summary',
+                              units='AF/year')
+   plt.show()
+
+**Budget stacked over time:**
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   import numpy as np
+   from pyiwfm.visualization.plotting import plot_budget_stacked
+
+   np.random.seed(42)
+   n_years = 10
+   times = np.arange('2010-01-01', '2020-01-01', dtype='datetime64[Y]')
+   components = {
+       'Recharge': 15000 + np.random.normal(0, 1000, n_years),
+       'Stream Seepage': 8500 + np.random.normal(0, 500, n_years),
+       'Pumping': -(18500 + np.arange(n_years) * 200 + np.random.normal(0, 500, n_years)),
+       'Baseflow': -(7200 + np.random.normal(0, 400, n_years)),
+   }
+   fig, ax = plot_budget_stacked(times, components,
+                                  title='GW Budget Over Time', units='AF/year')
+   plt.show()
 
 For interactive visualization, launch the web viewer from the command line:
 

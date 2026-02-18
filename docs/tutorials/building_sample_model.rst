@@ -89,17 +89,24 @@ Build the 21 x 21 node grid (441 nodes) and 400 quadrilateral elements:
    print(f"Grid: {grid.n_nodes} nodes, {grid.n_elements} elements")
    print(f"Subregions: {sorted(grid.subregions)}")
 
-Visualize the mesh:
+Here is what the mesh looks like with subregions colored:
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
-   from pyiwfm.visualization.plotting import plot_mesh, plot_elements
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh
+   from pyiwfm.visualization.plotting import plot_mesh
 
-   fig, ax = plot_elements(grid, color_by='subregion', cmap='Set2', alpha=0.6)
-   ax.set_title(f'Sample Model Mesh ({grid.n_nodes} nodes, {grid.n_elements} elements)')
+   # Create a 21x21 mesh with 2 subregions (similar to sample model)
+   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
+
+   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='gray',
+                       fill_color='lightblue', alpha=0.3)
+   ax.set_title(f'Sample Model Mesh ({mesh.n_nodes} nodes, {mesh.n_elements} elements)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   fig.savefig("mesh.png", dpi=150)
+   plt.show()
 
 Section 2: Define Stratigraphy
 -------------------------------
@@ -144,21 +151,46 @@ Create a 2-layer stratigraphy with sloping ground surface:
    print(f"Stratigraphy: {stratigraphy.n_layers} layers")
    print(f"Ground surface range: {gs_elev.min():.0f} - {gs_elev.max():.0f} ft")
 
-Visualize ground surface and layer thickness:
+Visualize ground surface elevation:
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
    from pyiwfm.visualization.plotting import plot_scalar_field
 
-   fig, ax = plot_scalar_field(grid, gs_elev, cmap='terrain',
+   # In practice: plot_scalar_field(grid, gs_elev, ...)
+   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
+   gs_elev = create_sample_scalar_field(mesh, field_type='head')
+
+   fig, ax = plot_scalar_field(mesh, gs_elev, field_type='node', cmap='terrain',
                                show_mesh=True, edge_color='white')
    ax.set_title('Ground Surface Elevation (ft)')
-   fig.savefig("ground_surface.png", dpi=150)
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
 
-   thickness = top_elev[:, 0] - bottom_elev[:, 0]
-   fig, ax = plot_scalar_field(grid, thickness, cmap='YlOrRd')
+Visualize layer thickness:
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_stratigraphy
+   from pyiwfm.visualization.plotting import plot_scalar_field
+
+   # In practice: plot_scalar_field(grid, top_elev[:, 0] - bottom_elev[:, 0], ...)
+   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
+   strat = create_sample_stratigraphy(mesh, n_layers=2, surface_base=400.0,
+                                       layer_thickness=120.0)
+
+   thickness = strat.top_elev[:, 0] - strat.bottom_elev[:, 0]
+   fig, ax = plot_scalar_field(mesh, thickness, field_type='node', cmap='YlOrRd')
    ax.set_title('Layer 1 Thickness (ft)')
-   fig.savefig("layer1_thickness.png", dpi=150)
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
 
 Section 3: Groundwater Component
 ---------------------------------
@@ -211,12 +243,23 @@ heads, and boundary conditions:
 
 Visualize initial head distribution:
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
-   fig, ax = plot_scalar_field(grid, initial_heads[:, 0],
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
+   from pyiwfm.visualization.plotting import plot_scalar_field
+
+   # In practice: plot_scalar_field(grid, initial_heads[:, 0], ...)
+   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
+   initial_heads = create_sample_scalar_field(mesh, field_type='head')
+
+   fig, ax = plot_scalar_field(mesh, initial_heads, field_type='node',
                                cmap='viridis', show_mesh=True, edge_color='white')
    ax.set_title('Initial Head - Layer 1 (ft)')
-   fig.savefig("initial_heads.png", dpi=150)
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
 
 Section 4: Stream Component
 ----------------------------
@@ -261,14 +304,32 @@ Create the stream network with 3 reaches flowing south to north:
 
 Visualize the stream network overlaid on the mesh:
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
-   fig, ax = plot_mesh(grid, show_edges=True, edge_color='lightgray', alpha=0.2)
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_stream_network
+   from pyiwfm.visualization.plotting import plot_mesh
 
-   from pyiwfm.visualization.plotting import plot_streams
-   plot_streams(stream, ax=ax, show_nodes=True, line_color='blue', line_width=2)
+   # In practice: plot_streams(stream, ax=ax, ...)
+   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
+   stream_nodes, reaches = create_sample_stream_network(mesh)
+
+   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='lightgray', alpha=0.2)
+
+   # Overlay stream reaches
+   for from_idx, to_idx in reaches:
+       x1, y1 = stream_nodes[from_idx]
+       x2, y2 = stream_nodes[to_idx]
+       ax.plot([x1, x2], [y1, y2], 'b-', linewidth=2, zorder=3)
+   sx, sy = zip(*stream_nodes)
+   ax.scatter(sx, sy, c='blue', s=20, zorder=4, label='Stream Nodes')
+
    ax.set_title('Stream Network (3 Reaches)')
-   fig.savefig("streams.png", dpi=150)
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   ax.legend()
+   plt.show()
 
 Section 5: Lake Component
 --------------------------
@@ -303,24 +364,40 @@ Define a lake occupying a cluster of elements in the northeast:
    print(f"Lakes: {len(lake_component.lakes)} lake(s), "
          f"{len(lake_component.lake_elements)} elements")
 
-Visualize lake elements:
+Visualize lake elements highlighted on the mesh:
 
-.. code-block:: python
+.. plot::
+   :include-source:
 
-   from pyiwfm.visualization.plotting import plot_elements
+   import matplotlib.pyplot as plt
+   import numpy as np
+   from pyiwfm.sample_models import create_sample_mesh
+   from pyiwfm.visualization.plotting import plot_mesh
 
-   fig, ax = plot_mesh(grid, show_edges=True, edge_color='lightgray', alpha=0.2)
+   # Create mesh and identify lake elements (NE corner)
+   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
 
-   # Highlight lake elements
+   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='lightgray', alpha=0.2)
+
+   # Highlight a 3x3 block of lake elements in the northeast
+   nx_elem = 20
+   lake_elem_ids = []
+   for j in range(17, 20):
+       for i in range(17, 20):
+           lake_elem_ids.append(j * nx_elem + i + 1)
+
+   from matplotlib.patches import Polygon as MplPolygon
    for eid in lake_elem_ids:
-       elem = elements[eid]
-       verts = [(nodes[v].x, nodes[v].y) for v in elem.vertices]
-       from matplotlib.patches import Polygon as MplPolygon
-       ax.add_patch(MplPolygon(verts, facecolor='cyan', edgecolor='blue',
-                               alpha=0.7, linewidth=1))
+       if eid in mesh.elements:
+           elem = mesh.elements[eid]
+           verts = [(mesh.nodes[v].x, mesh.nodes[v].y) for v in elem.vertices]
+           ax.add_patch(MplPolygon(verts, facecolor='cyan', edgecolor='blue',
+                                   alpha=0.7, linewidth=1))
 
-   ax.set_title('Lake Elements')
-   fig.savefig("lake_elements.png", dpi=150)
+   ax.set_title('Lake Elements (NE Corner)')
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
 
 Section 6: Root Zone Component
 -------------------------------
@@ -448,73 +525,97 @@ Execute the IWFM simulation:
 Section 10: Visualize Results
 ------------------------------
 
-Load and visualize the simulation results:
+Load and visualize the simulation results. The examples below use
+sample data to demonstrate what each plot looks like:
 
-.. code-block:: python
+**Groundwater heads at final timestep:**
 
-   from pyiwfm.visualization.plotting import (
-       plot_scalar_field, plot_timeseries, plot_budget_bar,
-       plot_budget_stacked, plot_budget_pie,
-   )
-   from pyiwfm.core.timeseries import TimeSeries
+.. plot::
+   :include-source:
 
-   # --- Groundwater heads at final timestep ---
-   # (Assuming head results are available in HDF5 or output files)
-   # final_heads = load_head_results(output_dir / "Results" / "GW_Heads.hdf")
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
+   from pyiwfm.visualization.plotting import plot_scalar_field
 
-   # For demonstration with synthetic final heads:
-   final_heads = initial_heads[:, 0] - 5.0 * np.random.uniform(0, 1, n_nodes)
-   head_change = final_heads - initial_heads[:, 0]
+   # In practice: plot_scalar_field(grid, final_heads, ...)
+   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
+   final_heads = create_sample_scalar_field(mesh, field_type='head')
 
-   fig, ax = plot_scalar_field(grid, final_heads, cmap='viridis',
-                               show_mesh=True, edge_color='white')
+   fig, ax = plot_scalar_field(mesh, final_heads, field_type='node',
+                               cmap='viridis', show_mesh=True, edge_color='white')
    ax.set_title('Final Groundwater Head (ft)')
-   fig.savefig("final_heads.png", dpi=150)
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
 
-   fig, ax = plot_scalar_field(grid, head_change, cmap='RdBu',
-                               show_mesh=False)
+**Head change (final minus initial):**
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
+   from pyiwfm.visualization.plotting import plot_scalar_field
+
+   # In practice: plot_scalar_field(grid, final_heads - initial_heads, ...)
+   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
+   head_change = create_sample_scalar_field(mesh, field_type='drawdown')
+
+   fig, ax = plot_scalar_field(mesh, -head_change, field_type='node', cmap='RdBu')
    ax.set_title('Head Change: Final - Initial (ft)')
-   fig.savefig("head_change.png", dpi=150)
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
 
-   # --- Head time series at selected nodes ---
-   selected_nodes = [111, 221, 331]  # Center of grid at different rows
-   times = np.arange('1990-10-01', '2000-10-01', dtype='datetime64[M]')
-   n_times = len(times)
+**Head time series at selected nodes:**
 
-   series_list = []
-   for nid in selected_nodes:
-       synthetic_head = (
-           initial_heads[nid - 1, 0]
-           - 0.5 * np.arange(n_times) / n_times * 10
-           + 2 * np.sin(2 * np.pi * np.arange(n_times) / 12)
-           + np.random.normal(0, 0.5, n_times)
-       )
-       ts = TimeSeries(times=times, values=synthetic_head,
-                       name=f"Node {nid}", units="ft")
-       series_list.append(ts)
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_timeseries
+   from pyiwfm.visualization.plotting import plot_timeseries
+
+   # In practice: create TimeSeries from heads[:, node_id] arrays
+   series_list = [
+       create_sample_timeseries(name="Node 111", n_years=10, trend=-0.3, noise_level=0.05),
+       create_sample_timeseries(name="Node 221", n_years=10, trend=-0.6, noise_level=0.08),
+       create_sample_timeseries(name="Node 331", n_years=10, trend=-0.4, noise_level=0.06),
+   ]
 
    fig, ax = plot_timeseries(series_list, title='Head at Selected Nodes',
                               ylabel='Head (ft)')
-   fig.savefig("head_timeseries.png", dpi=150)
+   plt.show()
 
-   # --- Budget visualizations ---
+**Groundwater budget summary:**
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.visualization.plotting import plot_budget_bar
+
    budget_components = {
-       'Recharge': 5200,
-       'Stream Seepage': 3100,
-       'Subsurface Inflow': 1800,
-       'Pumping': -7500,
-       'Stream Baseflow': -2100,
-       'GW ET': -900,
+       'Recharge': 5200, 'Stream Seepage': 3100,
+       'Subsurface Inflow': 1800, 'Pumping': -7500,
+       'Stream Baseflow': -2100, 'GW ET': -900,
    }
-
    fig, ax = plot_budget_bar(budget_components, title='GW Budget Summary',
                               units='AF/year')
-   fig.savefig("budget_bar.png", dpi=150)
+   plt.show()
 
-   # Budget over time
+**Budget over time:**
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   import numpy as np
+   from pyiwfm.visualization.plotting import plot_budget_stacked
+
+   np.random.seed(42)
    n_years = 10
    budget_times = np.arange('1991-01-01', '2001-01-01', dtype='datetime64[Y]')
-   np.random.seed(42)
    time_budgets = {
        'Recharge': 5200 + np.random.normal(0, 500, n_years),
        'Stream Seepage': 3100 + np.random.normal(0, 300, n_years),
@@ -524,22 +625,26 @@ Load and visualize the simulation results:
 
    fig, ax = plot_budget_stacked(budget_times, time_budgets,
                                   title='GW Budget Over Time', units='AF/year')
-   fig.savefig("budget_stacked.png", dpi=150)
+   plt.show()
 
-   # Root zone water balance pie chart
+**Root zone water balance:**
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.visualization.plotting import plot_budget_pie
+
    rz_components = {
        'Precipitation': 12000,
        'Applied Water': 8500,
-       'ET': -15000,
-       'Deep Percolation': -4000,
-       'Runoff': -1500,
+       'ET': 15000,
+       'Deep Percolation': 4000,
+       'Runoff': 1500,
    }
-   fig, ax = plot_budget_pie({k: abs(v) for k, v in rz_components.items()},
-                              title='Root Zone Water Balance',
+   fig, ax = plot_budget_pie(rz_components, title='Root Zone Water Balance',
                               budget_type='both')
-   fig.savefig("rz_pie.png", dpi=150)
-
-   print("All result plots saved!")
+   plt.show()
 
 Interactive Viewing
 -------------------
