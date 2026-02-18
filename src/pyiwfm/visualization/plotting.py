@@ -28,6 +28,13 @@ Budget Plotting Functions
 - :func:`plot_water_balance`: Water balance summary chart
 - :func:`plot_zbudget`: Zone budget visualization
 
+Additional Plotting Functions
+-----------------------------
+- :func:`plot_streams_colored`: Color stream reaches by scalar values
+- :func:`plot_timeseries_statistics`: Ensemble mean with min/max or std-dev bands
+- :func:`plot_dual_axis`: Dual y-axis comparison of two time series
+- :func:`plot_streamflow_hydrograph`: Streamflow hydrograph with baseflow separation
+
 Example
 -------
 Plot a time series of groundwater heads:
@@ -1769,6 +1776,356 @@ class BudgetPlotter:
             self.bar_chart()
         if self._fig is not None:
             self._fig.savefig(output_path, dpi=dpi, bbox_inches="tight", **kwargs)
+
+
+# =============================================================================
+# Additional Plotting Functions
+# =============================================================================
+
+
+def plot_streams_colored(
+    grid: AppGrid,
+    streams: AppStream,
+    values: NDArray[np.float64],
+    ax: Axes | None = None,
+    cmap: str = "Blues",
+    vmin: float | None = None,
+    vmax: float | None = None,
+    line_width: float = 2.0,
+    show_colorbar: bool = True,
+    colorbar_label: str = "",
+    show_mesh: bool = True,
+    mesh_alpha: float = 0.15,
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
+    """
+    Color stream reaches by a scalar value (e.g., flow rate, gaining/losing).
+
+    Parameters
+    ----------
+    grid : AppGrid
+        Model mesh (plotted as background when *show_mesh* is True).
+    streams : AppStream
+        Stream network.
+    values : ndarray
+        One value per reach, used for coloring.
+    ax : Axes, optional
+        Existing axes to plot on.
+    cmap : str, default "Blues"
+        Matplotlib colormap name.
+    vmin, vmax : float, optional
+        Limits for the color scale.
+    line_width : float, default 2.0
+        Width of stream lines.
+    show_colorbar : bool, default True
+        Whether to add a colorbar.
+    colorbar_label : str, default ""
+        Label for the colorbar.
+    show_mesh : bool, default True
+        Whether to draw the mesh as background.
+    mesh_alpha : float, default 0.15
+        Alpha for mesh background.
+    figsize : tuple, default (10, 8)
+        Figure size in inches.
+
+    Returns
+    -------
+    tuple
+        (Figure, Axes) matplotlib objects.
+    """
+
+    from matplotlib.collections import LineCollection
+    from matplotlib.colors import Normalize
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()  # type: ignore[assignment]
+
+    # Draw mesh background
+    if show_mesh:
+        plot_mesh(grid, ax=ax, alpha=mesh_alpha, edge_color="lightgray", edge_width=0.3)
+
+    # Build reach segments
+    segments: list[list[tuple[float, float]]] = []
+    reach_values: list[float] = []
+    for idx, reach in enumerate(streams.iter_reaches()):
+        coords: list[tuple[float, float]] = []
+        for nid in reach.nodes:
+            if nid in streams.nodes:
+                node = streams.nodes[nid]
+                coords.append((node.x, node.y))
+        if len(coords) >= 2 and idx < len(values):
+            segments.append(coords)
+            reach_values.append(float(values[idx]))
+
+    norm = Normalize(
+        vmin=vmin if vmin is not None else min(reach_values),
+        vmax=vmax if vmax is not None else max(reach_values),
+    )
+    lc = LineCollection(segments, cmap=cmap, norm=norm, linewidths=line_width, zorder=5)
+    lc.set_array(np.array(reach_values))
+    ax.add_collection(lc)
+
+    if show_colorbar:
+        cb = fig.colorbar(lc, ax=ax)  # type: ignore[arg-type]
+        cb.set_label(colorbar_label)
+
+    ax.autoscale_view()
+    ax.set_aspect("equal")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+
+    return fig, ax
+
+
+def plot_timeseries_statistics(
+    collection: TimeSeriesCollection,
+    ax: Axes | None = None,
+    band: Literal["minmax", "std"] = "minmax",
+    mean_color: str = "steelblue",
+    band_alpha: float = 0.25,
+    show_individual: bool = False,
+    individual_alpha: float = 0.15,
+    title: str | None = None,
+    ylabel: str | None = None,
+    figsize: tuple[float, float] = (12, 6),
+) -> tuple[Figure, Axes]:
+    """
+    Plot ensemble mean with min/max or standard-deviation bands.
+
+    Parameters
+    ----------
+    collection : TimeSeriesCollection
+        Collection of time series data.
+    ax : Axes, optional
+        Existing axes to plot on.
+    band : {"minmax", "std"}, default "minmax"
+        Band type: min/max envelope or +/- 1 standard deviation.
+    mean_color : str, default "steelblue"
+        Color for the mean line.
+    band_alpha : float, default 0.25
+        Transparency for the shaded band.
+    show_individual : bool, default False
+        If True, draw each individual series behind the statistics.
+    individual_alpha : float, default 0.15
+        Alpha for individual series lines.
+    title : str, optional
+        Plot title.
+    ylabel : str, optional
+        Y-axis label.
+    figsize : tuple, default (12, 6)
+        Figure size in inches.
+
+    Returns
+    -------
+    tuple
+        (Figure, Axes) matplotlib objects.
+    """
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()  # type: ignore[assignment]
+
+    # Stack all series values (assume same time axis)
+    series_list = list(collection.series.values())
+    if not series_list:
+        return fig, ax
+
+    times = series_list[0].times
+    all_values = np.column_stack([s.values for s in series_list])
+
+    mean_vals = np.nanmean(all_values, axis=1)
+
+    if show_individual:
+        for s in series_list:
+            ax.plot(s.times, s.values, color="gray", alpha=individual_alpha, linewidth=0.5)
+
+    ax.plot(times, mean_vals, color=mean_color, linewidth=2, label="Mean", zorder=5)
+
+    if band == "minmax":
+        lo = np.nanmin(all_values, axis=1)
+        hi = np.nanmax(all_values, axis=1)
+        ax.fill_between(times, lo, hi, alpha=band_alpha, color=mean_color, label="Min/Max")
+    else:
+        std_vals = np.nanstd(all_values, axis=1)
+        ax.fill_between(
+            times,
+            mean_vals - std_vals,
+            mean_vals + std_vals,
+            alpha=band_alpha,
+            color=mean_color,
+            label="\u00b11 Std Dev",
+        )
+
+    if title:
+        ax.set_title(title)
+    if ylabel:
+        ax.set_ylabel(ylabel)
+    ax.set_xlabel("Date")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+
+    return fig, ax
+
+
+def plot_dual_axis(
+    ts1: TimeSeries,
+    ts2: TimeSeries,
+    ax: Axes | None = None,
+    color1: str = "steelblue",
+    color2: str = "coral",
+    style1: str = "-",
+    style2: str = "-",
+    label1: str | None = None,
+    label2: str | None = None,
+    ylabel1: str | None = None,
+    ylabel2: str | None = None,
+    title: str | None = None,
+    figsize: tuple[float, float] = (12, 6),
+) -> tuple[Figure, tuple[Axes, Axes]]:
+    """
+    Dual y-axis comparison of two time series.
+
+    Parameters
+    ----------
+    ts1, ts2 : TimeSeries
+        The two time series to plot.
+    ax : Axes, optional
+        Primary axes. If None, a new figure is created.
+    color1, color2 : str
+        Colors for the two series.
+    style1, style2 : str
+        Line styles (e.g., "-", "--", "o-").
+    label1, label2 : str, optional
+        Legend labels. Falls back to ``ts.name``.
+    ylabel1, ylabel2 : str, optional
+        Y-axis labels. Falls back to ``ts.units``.
+    title : str, optional
+        Plot title.
+    figsize : tuple, default (12, 6)
+        Figure size in inches.
+
+    Returns
+    -------
+    tuple
+        (Figure, (Axes_left, Axes_right)).
+    """
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()  # type: ignore[assignment]
+
+    lbl1 = label1 or getattr(ts1, "name", "Series 1")
+    lbl2 = label2 or getattr(ts2, "name", "Series 2")
+
+    ax.plot(ts1.times, ts1.values, style1, color=color1, label=lbl1)
+    ax.set_ylabel(ylabel1 or str(getattr(ts1, "units", "")), color=color1)
+    ax.tick_params(axis="y", labelcolor=color1)
+
+    ax2 = ax.twinx()
+    ax2.plot(ts2.times, ts2.values, style2, color=color2, label=lbl2)
+    ax2.set_ylabel(ylabel2 or str(getattr(ts2, "units", "")), color=color2)
+    ax2.tick_params(axis="y", labelcolor=color2)
+
+    if title:
+        ax.set_title(title)
+    ax.set_xlabel("Date")
+    ax.grid(True, alpha=0.3)
+
+    # Combined legend
+    lines1, labels1 = ax.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax.legend(lines1 + lines2, labels1 + labels2, loc="best")
+
+    fig.autofmt_xdate()
+    fig.tight_layout()
+
+    return fig, (ax, ax2)
+
+
+def plot_streamflow_hydrograph(
+    times: NDArray[np.datetime64],
+    flows: NDArray[np.float64],
+    baseflow: NDArray[np.float64] | None = None,
+    ax: Axes | None = None,
+    flow_color: str = "steelblue",
+    baseflow_color: str = "darkorange",
+    fill_alpha: float = 0.3,
+    log_scale: bool = False,
+    title: str = "Streamflow Hydrograph",
+    ylabel: str = "Flow",
+    units: str = "cfs",
+    figsize: tuple[float, float] = (14, 6),
+) -> tuple[Figure, Axes]:
+    """
+    Plot streamflow hydrograph with optional baseflow separation.
+
+    Parameters
+    ----------
+    times : ndarray
+        Datetime array for x-axis.
+    flows : ndarray
+        Total streamflow values.
+    baseflow : ndarray, optional
+        Baseflow component. If provided, the area between total flow
+        and baseflow is shaded to highlight the quickflow component.
+    ax : Axes, optional
+        Existing axes to plot on.
+    flow_color : str, default "steelblue"
+        Color for the total flow line.
+    baseflow_color : str, default "darkorange"
+        Color for the baseflow line.
+    fill_alpha : float, default 0.3
+        Alpha for the shaded quickflow area.
+    log_scale : bool, default False
+        If True, use log scale for the y-axis.
+    title : str, default "Streamflow Hydrograph"
+        Plot title.
+    ylabel : str, default "Flow"
+        Y-axis label prefix.
+    units : str, default "cfs"
+        Flow units appended to ylabel.
+    figsize : tuple, default (14, 6)
+        Figure size in inches.
+
+    Returns
+    -------
+    tuple
+        (Figure, Axes) matplotlib objects.
+    """
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()  # type: ignore[assignment]
+
+    ax.plot(times, flows, color=flow_color, linewidth=1.5, label="Total Flow")
+    ax.fill_between(times, 0, flows, alpha=fill_alpha * 0.5, color=flow_color)
+
+    if baseflow is not None:
+        ax.plot(times, baseflow, color=baseflow_color, linewidth=1.5, label="Baseflow")
+        ax.fill_between(
+            times, baseflow, flows, alpha=fill_alpha, color=flow_color, label="Quickflow"
+        )
+        ax.fill_between(times, 0, baseflow, alpha=fill_alpha, color=baseflow_color)
+
+    if log_scale:
+        ax.set_yscale("log")
+
+    ax.set_title(title)
+    ax.set_xlabel("Date")
+    ax.set_ylabel(f"{ylabel} ({units})")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.autofmt_xdate()
+    fig.tight_layout()
+
+    return fig, ax
 
 
 # =============================================================================

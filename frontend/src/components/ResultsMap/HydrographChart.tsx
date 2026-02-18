@@ -21,8 +21,8 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import CloseIcon from '@mui/icons-material/Close';
 import Plot from 'react-plotly.js';
-import type { HydrographData, ObservationData, GWAllLayersData } from '../../api/client';
-import { fetchGWHydrographAllLayers } from '../../api/client';
+import type { HydrographData, ObservationData, GWAllLayersData, SubsidenceAllLayersData } from '../../api/client';
+import { fetchGWHydrographAllLayers, fetchSubsidenceAllLayers } from '../../api/client';
 
 type StreamViewMode = 'flow' | 'stage' | 'both';
 
@@ -46,22 +46,25 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
   // Stream view mode: flow | stage | both
   const [streamView, setStreamView] = useState<StreamViewMode>('flow');
 
-  // GW all-layers state
-  const [allLayersData, setAllLayersData] = useState<GWAllLayersData | null>(null);
+  // All-layers state (shared by GW and subsidence)
+  const [allLayersData, setAllLayersData] = useState<GWAllLayersData | SubsidenceAllLayersData | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<number>(data.layer ?? 1);
   const [showAllLayers, setShowAllLayers] = useState(false);
   const [loadingLayers, setLoadingLayers] = useState(false);
 
-  // Fetch all-layers data when a GW hydrograph is opened
+  const supportsAllLayers = isGW || isSubsidence;
+
+  // Fetch all-layers data when a GW or subsidence hydrograph is opened
   useEffect(() => {
-    if (!isGW) {
+    if (!supportsAllLayers) {
       setAllLayersData(null);
       return;
     }
     // Clear stale data immediately when switching locations
     setAllLayersData(null);
     setLoadingLayers(true);
-    fetchGWHydrographAllLayers(data.location_id)
+    const fetchFn = isGW ? fetchGWHydrographAllLayers : fetchSubsidenceAllLayers;
+    fetchFn(data.location_id)
       .then((resp) => {
         setAllLayersData(resp);
         setSelectedLayer(data.layer ?? 1);
@@ -70,7 +73,7 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
         setAllLayersData(null);
       })
       .finally(() => setLoadingLayers(false));
-  }, [isGW, data.location_id, data.layer]);
+  }, [supportsAllLayers, isGW, data.location_id, data.layer]);
 
   // Build traces
   const traces: Plotly.Data[] = [];
@@ -98,7 +101,7 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
         yaxis: streamView === 'both' ? 'y2' : 'y',
       });
     }
-  } else if (isGW && allLayersData) {
+  } else if (supportsAllLayers && allLayersData) {
     if (showAllLayers) {
       // Plot ALL layer traces simultaneously
       for (const layerEntry of allLayersData.layers) {
@@ -182,8 +185,8 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
 
   // Title text
   const typeLabel = isSubsidence ? 'SUBSIDENCE' : data.type.toUpperCase();
-  const displayLayer = isGW && allLayersData && !showAllLayers ? selectedLayer : data.layer;
-  const layerSuffix = isGW && showAllLayers ? ' (All Layers)' : displayLayer ? ` (Layer ${displayLayer})` : '';
+  const displayLayer = supportsAllLayers && allLayersData && !showAllLayers ? selectedLayer : data.layer;
+  const layerSuffix = supportsAllLayers && showAllLayers ? ' (All Layers)' : displayLayer ? ` (Layer ${displayLayer})` : '';
   const titleText = `${data.name} — ${typeLabel} Hydrograph${layerSuffix}`;
 
   return (
@@ -203,8 +206,8 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
           {loadingLayers && ' (loading layers...)'}
         </Typography>
 
-        {/* GW: Show all layers toggle + layer selector */}
-        {isGW && allLayersData && allLayersData.n_layers > 1 && (
+        {/* GW/Subsidence: Show all layers toggle + layer selector */}
+        {supportsAllLayers && allLayersData && allLayersData.n_layers > 1 && (
           <>
             <FormControlLabel
               control={

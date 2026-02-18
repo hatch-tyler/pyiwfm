@@ -265,7 +265,6 @@ Compare time series data:
 .. code-block:: python
 
     from pyiwfm.comparison.metrics import TimeSeriesComparison
-    import numpy as np
 
     # Create example time series
     times = np.arange(365)  # Daily data for one year

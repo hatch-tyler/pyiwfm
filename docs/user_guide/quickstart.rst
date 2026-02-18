@@ -223,7 +223,7 @@ Compare two models and generate a report:
 
 .. code-block:: python
 
-    from pyiwfm.comparison import ModelDiffer, MeshDiff, ComparisonReport
+    from pyiwfm.comparison import ModelDiffer, ComparisonReport
     from pyiwfm.comparison.metrics import ComparisonMetrics
 
     # Compare two meshes
@@ -243,7 +243,7 @@ Compare two models and generate a report:
     print(f"Rating: {metrics.rating()}")
 
     # Generate a report
-    from pyiwfm.comparison import ModelDiff, ComparisonReport
+    from pyiwfm.comparison import ModelDiff
 
     model_diff = ModelDiff(mesh_diff=mesh_diff)
     report = ComparisonReport(

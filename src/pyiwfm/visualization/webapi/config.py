@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
     from pyiwfm.io.budget import BudgetReader
     from pyiwfm.visualization.webapi.area_loader import AreaDataManager
+    from pyiwfm.visualization.webapi.cache_loader import SqliteCacheLoader
     from pyiwfm.visualization.webapi.head_loader import LazyHeadDataLoader
     from pyiwfm.visualization.webapi.hydrograph_reader import IWFMHydrographReader
 
@@ -73,6 +74,11 @@ class ModelState:
         self._area_manager: AreaDataManager | None = None
         self._observations: dict[str, dict] = {}  # id -> observation data
 
+        # SQLite cache
+        self._cache_loader: SqliteCacheLoader | None = None
+        self._no_cache: bool = False  # Set True to disable cache
+        self._rebuild_cache: bool = False  # Set True to force rebuild
+
     @property
     def model(self) -> IWFMModel | None:
         """Get the loaded model."""
@@ -87,6 +93,8 @@ class ModelState:
         self,
         model: IWFMModel,
         crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs",
+        no_cache: bool = False,
+        rebuild_cache: bool = False,
     ) -> None:
         """Set the model and reset caches."""
         self._model = model
@@ -113,12 +121,25 @@ class ModelState:
         self._node_id_to_idx = None
         self._sorted_elem_ids = None
 
+        # SQLite cache
+        if self._cache_loader is not None:
+            self._cache_loader.close()
+        self._cache_loader = None
+        self._no_cache = no_cache
+        self._rebuild_cache = rebuild_cache
+
         # Determine results directory from model metadata
         sim_file = model.metadata.get("simulation_file")
         if sim_file:
             self._results_dir = Path(sim_file).parent
         else:
             self._results_dir = None
+
+        # Eagerly build the cache at model-load time (before requests).
+        # This avoids the cache build running inside a request handler
+        # where FastAPI's thread pool can cancel long-running operations.
+        if not no_cache:
+            self._build_cache_eager()
 
     def get_mesh_3d(self) -> bytes:
         """Get the 3D mesh as VTU bytes, computing if needed."""
@@ -887,6 +908,7 @@ class ModelState:
         if self._model.groundwater:
             for idx, loc in enumerate(self._model.groundwater.hydrograph_locations):
                 lng, lat = self.reproject_coords(loc.x, loc.y)
+                nid = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
                 result["gw"].append(
                     {
                         "id": idx + 1,  # 1-based hydrograph ID
@@ -894,6 +916,7 @@ class ModelState:
                         "lat": lat,
                         "name": loc.name or f"GW Hydrograph {idx + 1}",
                         "layer": loc.layer,
+                        "node_id": nid,
                     }
                 )
 
@@ -950,6 +973,9 @@ class ModelState:
                         lng, lat = self.reproject_coords(x, y)
                     except Exception:
                         continue
+                    sub_node_id = getattr(spec, "node_id", 0) or getattr(
+                        spec, "gw_node", 0
+                    )
                     result["subsidence"].append(
                         {
                             "id": spec.id,
@@ -957,6 +983,7 @@ class ModelState:
                             "lat": lat,
                             "name": spec.name or f"Subsidence Obs {spec.id}",
                             "layer": spec.layer,
+                            "node_id": sub_node_id,
                         }
                     )
 
@@ -1172,6 +1199,124 @@ class ModelState:
             zmin, zmax = 0.0, 0.0
 
         return (xmin, xmax, ymin, ymax, zmin, zmax)
+
+    # ------------------------------------------------------------------
+    # SQLite cache
+    # ------------------------------------------------------------------
+
+    def _build_cache_eager(self) -> None:
+        """Build the SQLite cache eagerly at model-load time.
+
+        Called from set_model() so the cache is ready before the server
+        starts handling requests.  Long-running builds (10+ minutes for
+        large models) must happen here, NOT inside a request handler.
+        """
+        if self._model is None:
+            return
+
+        cache_path = self._get_cache_path()
+        if cache_path is None:
+            return
+
+        try:
+            from pyiwfm.visualization.webapi.cache_builder import (
+                SqliteCacheBuilder,
+                is_cache_stale,
+            )
+
+            if self._rebuild_cache or is_cache_stale(cache_path, self._model):
+                logger.info("Building SQLite cache (this may take several minutes)...")
+                builder = SqliteCacheBuilder(cache_path)
+                builder.build(
+                    model=self._model,
+                    head_loader=self.get_head_loader(),
+                    budget_readers=self._budget_readers or None,
+                    area_manager=self._area_manager,
+                    gw_hydrograph_reader=self.get_gw_hydrograph_reader(),
+                    stream_hydrograph_reader=self.get_stream_hydrograph_reader(),
+                    subsidence_reader=self.get_subsidence_reader(),
+                )
+                self._rebuild_cache = False
+                logger.info("SQLite cache build complete.")
+
+            from pyiwfm.visualization.webapi.cache_loader import (
+                SqliteCacheLoader,
+            )
+
+            self._cache_loader = SqliteCacheLoader(cache_path)
+            logger.info("SQLite cache loaded: %s", cache_path)
+            stats = self._cache_loader.get_stats()
+            logger.info("Cache stats: %s", stats)
+
+        except Exception:
+            logger.exception("Failed to build SQLite cache")
+
+    def get_cache_loader(self) -> SqliteCacheLoader | None:
+        """Get the SQLite cache loader.
+
+        Returns the pre-built cache (from set_model), or tries to open
+        an existing cache file on disk.  Does NOT trigger a build — that
+        happens eagerly in set_model() / _build_cache_eager().
+        """
+        if self._no_cache:
+            return None
+        if self._cache_loader is not None:
+            return self._cache_loader
+
+        # Try to open an existing cache file on disk.
+        cache_path = self._get_cache_path()
+        if cache_path is None or not cache_path.exists():
+            return None
+
+        try:
+            from pyiwfm.visualization.webapi.cache_loader import (
+                SqliteCacheLoader,
+            )
+
+            self._cache_loader = SqliteCacheLoader(cache_path)
+            logger.info("SQLite cache loaded: %s", cache_path)
+            stats = self._cache_loader.get_stats()
+            logger.info("Cache stats: %s", stats)
+            return self._cache_loader
+
+        except Exception as e:
+            logger.warning("SQLite cache unavailable: %s", e)
+            return None
+
+    def _get_cache_path(self) -> Path | None:
+        """Determine the cache file path from model source."""
+        if self._results_dir is not None:
+            return self._results_dir / "model_cache.db"
+        # Fall back to model source directory
+        src = self._model.metadata.get("source_dir", "") if self._model else ""
+        if src:
+            return Path(src) / "model_cache.db"
+        return None
+
+    def get_cached_head_by_element(
+        self, frame_idx: int, layer: int
+    ) -> tuple[list[float | None], float, float] | None:
+        """Try to get element-averaged heads from cache."""
+        loader = self.get_cache_loader()
+        if loader is None:
+            return None
+        result = loader.get_head_by_element(frame_idx, layer)
+        if result is None:
+            return None
+        arr, min_val, max_val = result
+        import numpy as np
+
+        values: list[float | None] = [
+            None if np.isnan(v) else round(float(v), 3) for v in arr
+        ]
+        return values, min_val, max_val
+
+    def get_cached_head_range(self, layer: int) -> dict | None:
+        """Try to get head range from cache."""
+        loader = self.get_cache_loader()
+        if loader is None:
+            return None
+        return loader.get_head_range(layer)
 
 
 # Global model state instance

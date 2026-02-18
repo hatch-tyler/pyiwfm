@@ -830,7 +830,8 @@ class TestGwHydrographAllLayers:
         model_state._model = model
         resp = client.get("/api/results/gw-hydrograph-all-layers?location_id=1")
         assert resp.status_code == 404
-        assert "No node ID" in resp.json()["detail"]
+        detail = resp.json()["detail"]
+        assert "No node ID" in detail or "No hydrograph data" in detail
 
     def test_no_head_loader(self, client: TestClient) -> None:
         model_state._model = _make_mock_model(with_groundwater=True, n_gw_locs=2)

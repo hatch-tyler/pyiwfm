@@ -35,15 +35,19 @@ try:
         plot_budget_pie,
         plot_budget_stacked,
         plot_budget_timeseries,
+        plot_dual_axis,
         plot_elements,
         plot_mesh,
         plot_nodes,
         plot_scalar_field,
+        plot_streamflow_hydrograph,
         plot_streams,
+        plot_streams_colored,
         # Time series plotting
         plot_timeseries,
         plot_timeseries_collection,
         plot_timeseries_comparison,
+        plot_timeseries_statistics,
         plot_water_balance,
         plot_zbudget,
     )
@@ -55,11 +59,15 @@ except ImportError:
     plot_elements = None  # type: ignore
     plot_scalar_field = None  # type: ignore
     plot_streams = None  # type: ignore
+    plot_streams_colored = None  # type: ignore
     plot_boundary = None  # type: ignore
     # Time series plotting
     plot_timeseries = None  # type: ignore
     plot_timeseries_comparison = None  # type: ignore
     plot_timeseries_collection = None  # type: ignore
+    plot_timeseries_statistics = None  # type: ignore
+    plot_dual_axis = None  # type: ignore
+    plot_streamflow_hydrograph = None  # type: ignore
     # Budget plotting
     BudgetPlotter = None  # type: ignore
     plot_budget_bar = None  # type: ignore
@@ -80,11 +88,15 @@ __all__ = [
     "plot_elements",
     "plot_scalar_field",
     "plot_streams",
+    "plot_streams_colored",
     "plot_boundary",
     # Time series plotting
     "plot_timeseries",
     "plot_timeseries_comparison",
     "plot_timeseries_collection",
+    "plot_timeseries_statistics",
+    "plot_dual_axis",
+    "plot_streamflow_hydrograph",
     # Budget plotting
     "BudgetPlotter",
     "plot_budget_bar",

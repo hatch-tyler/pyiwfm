@@ -116,7 +116,9 @@ class TestLaunchViewer:
                 launch_viewer(model=mock_model, crs="EPSG:4326", open_browser=False)
                 # set_model is called twice: once in launch_viewer, once in create_app
                 # The first call should include crs
-                mock_state.set_model.assert_any_call(mock_model, crs="EPSG:4326")
+                mock_state.set_model.assert_any_call(
+                    mock_model, crs="EPSG:4326", no_cache=False, rebuild_cache=False,
+                )
 
     def test_opens_browser_when_requested(self) -> None:
         mock_uvicorn = MagicMock()

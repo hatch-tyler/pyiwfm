@@ -935,6 +935,9 @@ def get_reach_profile(
             cumulative_dist += math.sqrt(dx * dx + dy * dy)
         prev_x, prev_y = x, y
 
+        # Rating table availability
+        has_rating = getattr(sn, "rating", None) is not None
+
         nodes.append(
             {
                 "stream_node_id": sn.id,
@@ -947,6 +950,7 @@ def get_reach_profile(
                 "mannings_n": round(mannings_n, 4),
                 "conductivity": round(conductivity, 4),
                 "bed_thickness": round(bed_thickness, 2),
+                "has_rating": has_rating,
             }
         )
 
@@ -956,4 +960,41 @@ def get_reach_profile(
         "n_nodes": len(nodes),
         "total_length": round(cumulative_dist, 1),
         "nodes": nodes,
+    }
+
+
+@router.get("/node-rating")
+def get_node_rating(
+    node_id: int = Query(..., description="Stream node ID"),
+) -> dict[str, Any]:
+    """Get the stage-discharge rating table for a stream node.
+
+    Returns stage and flow arrays that define the rating curve,
+    plus the bed (bottom) elevation.
+    """
+    model = require_model()
+    if not model.has_streams or model.streams is None:
+        raise HTTPException(status_code=404, detail="No stream data in model")
+
+    stream = model.streams
+    sn = stream.nodes.get(node_id) if hasattr(stream, "nodes") else None
+    if sn is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Stream node {node_id} not found",
+        )
+
+    rating = getattr(sn, "rating", None)
+    if rating is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Stream node {node_id} has no rating table",
+        )
+
+    return {
+        "stream_node_id": node_id,
+        "bottom_elev": round(float(getattr(sn, "bottom_elev", 0.0)), 2),
+        "stages": [round(float(s), 4) for s in rating.stages],
+        "flows": [round(float(f), 4) for f in rating.flows],
+        "n_points": len(rating.stages),
     }

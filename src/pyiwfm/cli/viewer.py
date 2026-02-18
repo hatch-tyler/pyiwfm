@@ -77,6 +77,16 @@ def add_viewer_parser(subparsers: argparse._SubParsersAction) -> None:
         default="+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs",
         help="Source coordinate reference system (default: UTM Zone 10N, NAD83, US survey feet)",
     )
+    p.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable SQLite cache layer for results data",
+    )
+    p.add_argument(
+        "--rebuild-cache",
+        action="store_true",
+        help="Force rebuild of SQLite cache on startup",
+    )
 
     p.set_defaults(func=run_viewer)
 
@@ -160,6 +170,8 @@ def run_viewer(args: argparse.Namespace) -> int:
             open_browser=open_browser,
             debug=args.debug,
             crs=args.crs,
+            no_cache=getattr(args, "no_cache", False),
+            rebuild_cache=getattr(args, "rebuild_cache", False),
         )
 
     except ImportError as exc:

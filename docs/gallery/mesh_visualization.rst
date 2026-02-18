@@ -50,7 +50,25 @@ pyiwfm also supports triangular meshes, common in variable-resolution models:
 Subregion Visualization
 -----------------------
 
-Meshes can be colored by subregion to show model zones:
+Use :func:`~pyiwfm.visualization.plotting.plot_elements` with ``color_by='subregion'``:
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh
+   from pyiwfm.visualization.plotting import plot_elements
+
+   mesh = create_sample_mesh(nx=12, ny=12, n_subregions=6)
+
+   fig, ax = plot_elements(mesh, color_by='subregion', cmap='tab10',
+                            alpha=0.7, edge_color='black', edge_width=0.3)
+   ax.set_title('Model Subregions')
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
+
+Raw matplotlib alternative for custom coloring:
 
 .. plot::
    :include-source:
@@ -65,7 +83,6 @@ Meshes can be colored by subregion to show model zones:
 
    fig, ax = plt.subplots(figsize=(10, 8))
 
-   # Get elements colored by subregion
    patches = []
    colors = []
    for elem in mesh.elements.values():
@@ -80,7 +97,7 @@ Meshes can be colored by subregion to show model zones:
    ax.autoscale()
    ax.set_aspect('equal')
    plt.colorbar(p, ax=ax, label='Subregion ID')
-   ax.set_title('Model Subregions')
+   ax.set_title('Model Subregions (raw matplotlib)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
    plt.show()
@@ -88,7 +105,27 @@ Meshes can be colored by subregion to show model zones:
 Node Classification
 -------------------
 
-Distinguishing boundary vs interior nodes:
+Use :func:`~pyiwfm.visualization.plotting.plot_nodes` to distinguish boundary
+and interior nodes:
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh
+   from pyiwfm.visualization.plotting import plot_nodes
+
+   mesh = create_sample_mesh(nx=8, ny=8, n_subregions=4)
+
+   fig, ax = plot_nodes(mesh, highlight_boundary=True,
+                         color='blue', boundary_color='red',
+                         marker_size=40)
+   ax.set_title('Node Classification')
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
+
+Raw matplotlib alternative with mesh overlay:
 
 .. plot::
    :include-source:
@@ -102,11 +139,9 @@ Distinguishing boundary vs interior nodes:
    fig, ax = plot_mesh(mesh, show_edges=True, edge_color='lightgray',
                        fill_color='white', alpha=0.3)
 
-   # Separate boundary and interior nodes
    boundary_nodes = [(n.x, n.y) for n in mesh.nodes.values() if n.is_boundary]
    interior_nodes = [(n.x, n.y) for n in mesh.nodes.values() if not n.is_boundary]
 
-   # Plot nodes by type
    if interior_nodes:
        ix, iy = zip(*interior_nodes)
        ax.scatter(ix, iy, c='blue', s=50, label='Interior Nodes', zorder=5)
@@ -115,7 +150,7 @@ Distinguishing boundary vs interior nodes:
        ax.scatter(bx, by, c='red', s=70, marker='s', label='Boundary Nodes', zorder=5)
 
    ax.legend()
-   ax.set_title('Node Classification')
+   ax.set_title('Node Classification (raw matplotlib)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
    plt.show()
@@ -123,7 +158,26 @@ Distinguishing boundary vs interior nodes:
 Mesh Statistics
 ---------------
 
-Display mesh quality metrics alongside visualization:
+Use :func:`~pyiwfm.visualization.plotting.plot_elements` with ``color_by='area'``
+to visualize element sizes:
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh
+   from pyiwfm.visualization.plotting import plot_elements
+
+   mesh = create_sample_mesh(nx=10, ny=10, n_subregions=4)
+
+   fig, ax = plot_elements(mesh, color_by='area', cmap='YlOrRd',
+                            alpha=0.8, edge_color='black', edge_width=0.3)
+   ax.set_title('Element Areas')
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
+
+Two-panel view with statistics summary:
 
 .. plot::
    :include-source:
@@ -138,7 +192,6 @@ Display mesh quality metrics alongside visualization:
 
    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-   # Element areas
    elem_areas = []
    patches = []
    for elem in mesh.elements.values():
@@ -146,7 +199,6 @@ Display mesh quality metrics alongside visualization:
        patches.append(Polygon(verts))
        elem_areas.append(elem.area)
 
-   # Plot 1: Elements colored by area
    ax1 = axes[0]
    p1 = PatchCollection(patches, alpha=0.8, edgecolor='black', linewidth=0.3)
    p1.set_array(np.array(elem_areas))
@@ -159,7 +211,6 @@ Display mesh quality metrics alongside visualization:
    ax1.set_xlabel('X (feet)')
    ax1.set_ylabel('Y (feet)')
 
-   # Plot 2: Statistics summary
    ax2 = axes[1]
    ax2.axis('off')
 

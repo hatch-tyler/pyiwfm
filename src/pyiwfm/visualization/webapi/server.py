@@ -116,6 +116,8 @@ def launch_viewer(
     open_browser: bool = True,
     debug: bool = False,
     crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs",
+    no_cache: bool = False,
+    rebuild_cache: bool = False,
 ) -> None:
     """
     Launch the web viewer server.
@@ -136,6 +138,10 @@ def launch_viewer(
         Enable debug mode
     crs : str
         Source coordinate reference system (default: UTM Zone 10N, NAD83, US survey feet)
+    no_cache : bool
+        Disable SQLite cache layer
+    rebuild_cache : bool
+        Force rebuild of SQLite cache
     """
     try:
         import uvicorn
@@ -152,7 +158,9 @@ def launch_viewer(
         debug=debug,
     )
 
-    model_state.set_model(model, crs=crs)
+    model_state.set_model(
+        model, crs=crs, no_cache=no_cache, rebuild_cache=rebuild_cache,
+    )
     app = create_app(model=model, settings=settings)
 
     url = f"http://{host}:{port}"

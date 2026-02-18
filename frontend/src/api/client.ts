@@ -304,6 +304,7 @@ export interface HydrographLocation {
   name: string;
   layer?: number;
   reach_id?: number;
+  node_id?: number;
 }
 
 export interface HydrographLocations {
@@ -403,6 +404,24 @@ export async function fetchGWHydrographAllLayers(locationId: number): Promise<GW
   const response = await fetch(`${API_BASE}/results/gw-hydrograph-all-layers?location_id=${locationId}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch all-layers hydrograph: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// All-layers subsidence hydrograph (mirrors GW all-layers)
+export interface SubsidenceAllLayersData {
+  location_id: number;
+  node_id: number;
+  name: string;
+  n_layers: number;
+  times: string[];
+  layers: GWAllLayersLayer[];
+}
+
+export async function fetchSubsidenceAllLayers(locationId: number): Promise<SubsidenceAllLayersData> {
+  const response = await fetch(`${API_BASE}/results/subsidence-all-layers?location_id=${locationId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch subsidence all-layers: ${response.statusText}`);
   }
   return response.json();
 }
@@ -1219,6 +1238,7 @@ export interface ReachProfileNode {
   mannings_n: number;
   conductivity: number;
   bed_thickness: number;
+  has_rating: boolean;
 }
 
 export interface ReachProfileData {
@@ -1233,6 +1253,23 @@ export async function fetchReachProfile(reachId: number): Promise<ReachProfileDa
   const response = await fetch(`${API_BASE}/streams/reach-profile?reach_id=${reachId}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch reach profile: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// Stream node rating table (stage-discharge curve)
+export interface StreamNodeRatingData {
+  stream_node_id: number;
+  bottom_elev: number;
+  stages: number[];
+  flows: number[];
+  n_points: number;
+}
+
+export async function fetchStreamNodeRating(nodeId: number): Promise<StreamNodeRatingData> {
+  const response = await fetch(`${API_BASE}/streams/node-rating?node_id=${nodeId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch stream node rating: ${response.statusText}`);
   }
   return response.json();
 }

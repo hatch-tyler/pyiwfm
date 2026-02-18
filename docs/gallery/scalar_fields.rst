@@ -124,7 +124,28 @@ Add contour lines to scalar field visualizations:
 Element-Centered Data
 ---------------------
 
-Visualize data defined at element centers (e.g., land use, soil type):
+Use :func:`~pyiwfm.visualization.plotting.plot_scalar_field` with
+``field_type='cell'`` for element-centered data like land use or soil type:
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_mesh, create_sample_element_field
+   from pyiwfm.visualization.plotting import plot_scalar_field
+
+   mesh = create_sample_mesh(nx=10, ny=10, n_subregions=4)
+   land_use = create_sample_element_field(mesh, field_type='land_use')
+
+   fig, ax = plot_scalar_field(mesh, land_use, field_type='cell',
+                               cmap='tab10', show_mesh=True,
+                               edge_color='black', edge_width=0.3)
+   ax.set_title('Land Use Distribution')
+   ax.set_xlabel('X (feet)')
+   ax.set_ylabel('Y (feet)')
+   plt.show()
+
+Raw matplotlib alternative with custom category labels:
 
 .. plot::
    :include-source:
@@ -140,13 +161,11 @@ Visualize data defined at element centers (e.g., land use, soil type):
 
    fig, ax = plt.subplots(figsize=(10, 8))
 
-   # Create polygons
    patches = []
    for elem in mesh.elements.values():
        verts = [(mesh.nodes[v].x, mesh.nodes[v].y) for v in elem.vertices]
        patches.append(Polygon(verts))
 
-   # Create collection with land use colors
    p = PatchCollection(patches, alpha=0.8, edgecolor='black', linewidth=0.3)
    p.set_array(land_use)
    p.set_cmap('tab10')
@@ -155,12 +174,11 @@ Visualize data defined at element centers (e.g., land use, soil type):
    ax.autoscale()
    ax.set_aspect('equal')
 
-   # Custom colorbar for land use categories
    cbar = plt.colorbar(p, ax=ax, ticks=[1, 2, 3, 4, 5])
    cbar.set_label('Land Use Type')
    cbar.ax.set_yticklabels(['Urban', 'Agriculture', 'Native', 'Water', 'Other'])
 
-   ax.set_title('Land Use Distribution')
+   ax.set_title('Land Use Distribution (raw matplotlib)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
    plt.show()

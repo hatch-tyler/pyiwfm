@@ -1341,7 +1341,8 @@ class IWFMModel:
                                 spec_reader = StreamSpecReader()
                                 _nr, _nrt, reach_specs = spec_reader.read(pp_config.streams_file)
                                 for rs in reach_specs:
-                                    # Enrich existing nodes with reach_id and gw_node
+                                    # Enrich existing nodes with reach_id, gw_node,
+                                    # bottom elevation, and rating tables
                                     for sn_id in rs.node_ids:
                                         if sn_id in stream.nodes:
                                             sn = stream.nodes[sn_id]
@@ -1350,6 +1351,25 @@ class IWFMModel:
                                             gw_nid = rs.node_to_gw_node.get(sn_id)
                                             if gw_nid and gw_nid > 0 and sn.gw_node is None:
                                                 sn.gw_node = gw_nid
+                                            # Transfer bottom elevation
+                                            if (
+                                                sn_id in rs.node_bottom_elevations
+                                                and sn.bottom_elev == 0.0
+                                            ):
+                                                sn.bottom_elev = rs.node_bottom_elevations[sn_id]
+                                            # Transfer rating table
+                                            if (
+                                                sn_id in rs.node_rating_tables
+                                                and sn.rating is None
+                                            ):
+                                                import numpy as np
+                                                from pyiwfm.components.stream import StreamRating
+
+                                                stages, flows = rs.node_rating_tables[sn_id]
+                                                sn.rating = StreamRating(
+                                                    stages=np.array(stages, dtype=np.float64),
+                                                    flows=np.array(flows, dtype=np.float64),
+                                                )
                                     stream.add_reach(
                                         StrmReach(
                                             id=rs.id,

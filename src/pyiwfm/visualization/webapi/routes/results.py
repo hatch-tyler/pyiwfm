@@ -4,12 +4,34 @@ Results data API routes: heads, hydrographs, locations.
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Query
 
 from pyiwfm.visualization.webapi.config import model_state
 from pyiwfm.visualization.webapi.utils import sanitize_values as _sanitize_values
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/results", tags=["results"])
+
+
+def _gw_hydrograph_n_layers(reader: object) -> int:
+    """Determine the number of layers per location in a GW hydrograph reader.
+
+    IWFM writes ``n_locations × n_layers`` columns, with layers cycling
+    as [1,2,3,4, 1,2,3,4, ...].  We detect the cycle length from the
+    ``layers`` metadata array.  Falls back to 1 if metadata is absent.
+    """
+    layers = getattr(reader, "layers", None)
+    if not isinstance(layers, list) or len(layers) < 2:
+        return 1
+    # Count how many columns before the layer pattern repeats
+    first = layers[0]
+    for i in range(1, len(layers)):
+        if layers[i] == first:
+            return i
+    return len(layers)  # single location, all columns are layers
 
 
 @router.get("/info")
@@ -140,7 +162,21 @@ def get_head_range(
     """Get the global head value range across all timesteps for a layer.
 
     Returns 2nd–98th percentile range for stable color scale rendering.
+    Uses SQLite cache when available for instant response.
     """
+    # Try cache first
+    cached = model_state.get_cached_head_range(layer)
+    if cached is not None:
+        loader = model_state.get_head_loader()
+        n_frames = loader.n_frames if loader else 0
+        return {
+            "layer": layer,
+            "min": cached["percentile_02"],
+            "max": cached["percentile_98"],
+            "n_timesteps": n_frames,
+            "n_frames_scanned": n_frames,
+        }
+
     loader = model_state.get_head_loader()
     if loader is None:
         raise HTTPException(status_code=404, detail="No head data available")
@@ -183,17 +219,82 @@ def get_hydrograph(
         # Get name and layer from hydrograph locations
         name = f"GW Hydrograph {location_id}"
         layer = 1
-        column_index = location_id - 1
+        location_index = location_id - 1  # 0-based location index
+
+        # Determine n_locations for range validation
+        n_locations = 0
+        if model and model.groundwater:
+            locs = model.groundwater.hydrograph_locations
+            n_locations = len(locs)
+            if 0 <= location_index < n_locations:
+                loc = locs[location_index]
+                name = loc.name or name
+                layer = loc.layer
+
+        # Early range check: use n_locations from model, or infer from reader
+        reader = model_state.get_gw_hydrograph_reader()
+        if n_locations == 0 and reader is not None and reader.n_timesteps > 0:
+            n_layers_out = _gw_hydrograph_n_layers(reader)
+            n_locations = reader.n_columns // max(n_layers_out, 1)
+
+        if n_locations > 0 and (location_index < 0 or location_index >= n_locations):
+            raise HTTPException(
+                status_code=404,
+                detail=f"GW hydrograph {location_id} out of range [1, {n_locations}]",
+            )
+
+        # Try SQLite cache first (fastest path).
+        n_layers_out = _gw_hydrograph_n_layers(reader) if reader is not None else 4
+        cache = model_state.get_cache_loader()
+        if cache is not None:
+            base_col = location_index * n_layers_out
+            layer_idx = layer - 1
+            if layer_idx < 0 or layer_idx >= n_layers_out:
+                layer_idx = 0
+            result = cache.get_hydrograph("gw", base_col + layer_idx)
+            if result is not None:
+                times_list, values_arr = result
+                return {
+                    "location_id": location_id,
+                    "name": name,
+                    "type": "gw",
+                    "layer": layer,
+                    "times": times_list,
+                    "values": _sanitize_values(values_arr.tolist()),
+                    "units": "ft",
+                }
+
+        # Prefer GW hydrograph output file (IWFM-computed values at
+        # actual observation coordinates, with all layers).
+        # Column layout: n_locations × n_layers consecutive columns,
+        # grouped as [loc0_lay1, loc0_lay2, ..., loc0_layN, loc1_lay1, ...].
+        if reader is not None and reader.n_timesteps > 0:
+            base_col = location_index * n_layers_out
+            # Use the specified layer (default to layer 1)
+            layer_idx = layer - 1
+            if layer_idx < 0 or layer_idx >= n_layers_out:
+                layer_idx = 0
+            col = base_col + layer_idx
+            if 0 <= col < reader.n_columns:
+                times_raw, values_raw = reader.get_time_series(col)
+                return {
+                    "location_id": location_id,
+                    "name": name,
+                    "type": "gw",
+                    "layer": layer,
+                    "times": times_raw,
+                    "values": _sanitize_values(values_raw),
+                    "units": "ft",
+                }
+
+        # Fall back to HEAD HDF5 data (node-based extraction)
         node_id = 0
         if model and model.groundwater:
             locs = model.groundwater.hydrograph_locations
-            if 0 <= column_index < len(locs):
-                loc = locs[column_index]
-                name = loc.name or name
-                layer = loc.layer
+            if 0 <= location_index < len(locs):
+                loc = locs[location_index]
                 node_id = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
 
-        # Prefer HEAD HDF5 data (has all layers at all nodes)
         loader = model_state.get_head_loader()
         if loader is not None and loader.n_frames > 0 and node_id > 0:
             node_id_to_idx = model_state.get_node_id_to_idx()
@@ -218,28 +319,7 @@ def get_hydrograph(
                         "units": "ft",
                     }
 
-        # Fall back to hydrograph reader
-        reader = model_state.get_gw_hydrograph_reader()
-        if reader is None or reader.n_timesteps == 0:
-            raise HTTPException(status_code=404, detail="No GW hydrograph data available")
-
-        if column_index < 0 or column_index >= reader.n_columns:
-            raise HTTPException(
-                status_code=404,
-                detail=f"GW hydrograph {location_id} out of range [1, {reader.n_columns}]",
-            )
-
-        times_raw, values_raw = reader.get_time_series(column_index)
-
-        return {
-            "location_id": location_id,
-            "name": name,
-            "type": "gw",
-            "layer": layer,
-            "times": times_raw,
-            "values": _sanitize_values(values_raw),
-            "units": "ft",
-        }
+        raise HTTPException(status_code=404, detail="No GW hydrograph data available")
 
     elif type == "stream":
         reader = model_state.get_stream_hydrograph_reader()
@@ -362,10 +442,11 @@ def get_hydrograph(
 def get_gw_hydrograph_all_layers(
     location_id: int = Query(description="1-based GW hydrograph location ID"),
 ) -> dict:
-    """Get head time series at a GW hydrograph node for ALL layers.
+    """Get head time series at a GW hydrograph location for ALL layers.
 
-    Uses the head HDF5 data to extract per-layer head at the node
-    associated with the given hydrograph location.
+    Prefers the IWFM GW hydrograph output file (which stores IWFM-computed
+    values at the actual observation coordinates for all layers).  Falls
+    back to head HDF5 node extraction when no hydrograph file is available.
     """
     if not model_state.is_loaded:
         raise HTTPException(status_code=404, detail="No model loaded")
@@ -375,29 +456,86 @@ def get_gw_hydrograph_all_layers(
         raise HTTPException(status_code=404, detail="No groundwater component")
 
     locs = model.groundwater.hydrograph_locations
-    column_index = location_id - 1
-    if column_index < 0 or column_index >= len(locs):
+    location_index = location_id - 1
+    if location_index < 0 or location_index >= len(locs):
         raise HTTPException(
             status_code=404,
             detail=f"GW hydrograph {location_id} out of range [1, {len(locs)}]",
         )
 
-    loc = locs[column_index]
+    loc = locs[location_index]
     name = loc.name or f"GW Hydrograph {location_id}"
 
-    # Get the GW node ID for this hydrograph location
+    # ------------------------------------------------------------------
+    # Path 0 (fastest): SQLite cache — pre-extracted from hydrograph file
+    # ------------------------------------------------------------------
+    cache = model_state.get_cache_loader()
+    reader = model_state.get_gw_hydrograph_reader()
+    n_layers_out = _gw_hydrograph_n_layers(reader) if reader is not None else 4
+
+    if cache is not None:
+        base_col = location_index * n_layers_out
+        cached = cache.get_gw_hydrograph_by_columns(base_col, n_layers_out)
+        if cached:
+            # cached is list of (layer, times, values) tuples
+            node_id = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
+            return {
+                "location_id": location_id,
+                "node_id": node_id,
+                "name": name,
+                "n_layers": len(cached),
+                "times": cached[0][1],  # times from first layer
+                "layers": [
+                    {"layer": layer, "values": _sanitize_values(vals.tolist())}
+                    for layer, _times, vals in cached
+                ],
+            }
+
+    # ------------------------------------------------------------------
+    # Path 1 (preferred): GW hydrograph output file
+    # Column layout: [loc0_lay1, loc0_lay2, ..., loc0_layN, loc1_lay1, ...]
+    # ------------------------------------------------------------------
+    if reader is not None and reader.n_timesteps > 0:
+        base_col = location_index * n_layers_out
+
+        if base_col + n_layers_out <= reader.n_columns:
+            # Read all layer columns for this location
+            times_raw: list[str] = []
+            layers_data: list[dict] = []
+            for layer_idx in range(n_layers_out):
+                col = base_col + layer_idx
+                times_raw, values_raw = reader.get_time_series(col)
+                layers_data.append(
+                    {
+                        "layer": layer_idx + 1,
+                        "values": _sanitize_values(values_raw),
+                    }
+                )
+
+            node_id = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
+            return {
+                "location_id": location_id,
+                "node_id": node_id,
+                "name": name,
+                "n_layers": n_layers_out,
+                "times": times_raw,
+                "layers": layers_data,
+            }
+
+    # ------------------------------------------------------------------
+    # Path 2 (fallback): head HDF5 data at nearest grid node
+    # ------------------------------------------------------------------
     node_id = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
     if node_id == 0:
         raise HTTPException(
             status_code=404,
-            detail=f"No node ID for hydrograph location {location_id}",
+            detail=f"No hydrograph data or node ID for location {location_id}",
         )
 
     loader = model_state.get_head_loader()
     if loader is None or loader.n_frames == 0:
         raise HTTPException(status_code=404, detail="No head data available")
 
-    # Use cached node_id -> index mapping
     node_id_to_idx = model_state.get_node_id_to_idx()
     node_idx = node_id_to_idx.get(node_id)
     if node_idx is None:
@@ -409,11 +547,7 @@ def get_gw_hydrograph_all_layers(
     n_layers = loader.get_frame(0).shape[1]
     times_iso = [t.isoformat() for t in loader.times]
 
-    # Pre-allocate per-layer value lists
     layer_values: list[list[float | None]] = [[] for _ in range(n_layers)]
-
-    # Iterate timesteps (outer) then layers (inner) so each HDF5 frame
-    # is loaded exactly once — O(n_frames) frame loads vs O(n_frames * n_layers).
     for ts in range(loader.n_frames):
         frame = loader.get_frame(ts)
         for layer_idx in range(n_layers):
@@ -423,9 +557,9 @@ def get_gw_hydrograph_all_layers(
             else:
                 layer_values[layer_idx].append(round(v, 3))
 
-    layers_data: list[dict] = []
+    layers_data_fb: list[dict] = []
     for layer_idx in range(n_layers):
-        layers_data.append(
+        layers_data_fb.append(
             {
                 "layer": layer_idx + 1,
                 "values": _sanitize_values(layer_values[layer_idx]),
@@ -438,6 +572,111 @@ def get_gw_hydrograph_all_layers(
         "name": name,
         "n_layers": n_layers,
         "times": times_iso,
+        "layers": layers_data_fb,
+    }
+
+
+@router.get("/subsidence-all-layers")
+def get_subsidence_all_layers(
+    location_id: int = Query(description="Subsidence hydrograph location ID"),
+) -> dict:
+    """Get subsidence time series at a location for ALL layers.
+
+    Groups subsidence specs by physical location (matching node_id) and
+    returns one timeseries per layer.
+    """
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    model = model_state.model
+    if model is None or model.groundwater is None:
+        raise HTTPException(status_code=404, detail="No groundwater component")
+
+    subs_config = getattr(model.groundwater, "subsidence_config", None)
+    specs = getattr(subs_config, "hydrograph_specs", []) if subs_config else []
+    if not specs:
+        raise HTTPException(status_code=404, detail="No subsidence hydrograph specs")
+
+    reader = model_state.get_subsidence_reader()
+    if reader is None or reader.n_timesteps == 0:
+        raise HTTPException(status_code=404, detail="No subsidence hydrograph data")
+
+    # Find the target spec
+    target_spec = None
+    target_col_idx: int | None = None
+    for i, spec in enumerate(specs):
+        if spec.id == location_id:
+            target_spec = spec
+            target_col_idx = i
+            break
+
+    if target_spec is None:
+        # Fallback: treat location_id as 1-based index
+        candidate = location_id - 1
+        if 0 <= candidate < len(specs):
+            target_spec = specs[candidate]
+            target_col_idx = candidate
+
+    if target_spec is None or target_col_idx is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Subsidence location {location_id} not found",
+        )
+
+    # Find all specs at the same physical location (same node_id or matching x,y)
+    target_node_id = getattr(target_spec, "node_id", 0) or getattr(
+        target_spec, "gw_node", 0
+    )
+    target_x = getattr(target_spec, "x", 0.0)
+    target_y = getattr(target_spec, "y", 0.0)
+
+    name = target_spec.name or f"Subsidence Obs {location_id}"
+
+    matched_specs: list[tuple[int, int, object]] = []  # (col_idx, layer, spec)
+    for i, spec in enumerate(specs):
+        sn_id = getattr(spec, "node_id", 0) or getattr(spec, "gw_node", 0)
+        sx = getattr(spec, "x", 0.0)
+        sy = getattr(spec, "y", 0.0)
+
+        same_loc = False
+        if target_node_id > 0 and sn_id == target_node_id:
+            same_loc = True
+        elif target_x != 0.0 and abs(sx - target_x) < 1.0 and abs(sy - target_y) < 1.0:
+            same_loc = True
+
+        if same_loc and i < reader.n_columns:
+            matched_specs.append((i, spec.layer, spec))
+
+    if not matched_specs:
+        # At minimum, include the target spec itself
+        if target_col_idx < reader.n_columns:
+            matched_specs.append(
+                (target_col_idx, target_spec.layer, target_spec)
+            )
+
+    # Sort by layer
+    matched_specs.sort(key=lambda t: t[1])
+
+    # Extract time series for each matched layer
+    layers_data: list[dict] = []
+    times_raw: list[str] = []
+    for col_idx, layer_num, _spec in matched_specs:
+        times, values = reader.get_time_series(col_idx)
+        if not times_raw:
+            times_raw = times
+        layers_data.append(
+            {
+                "layer": layer_num,
+                "values": _sanitize_values(values),
+            }
+        )
+
+    return {
+        "location_id": location_id,
+        "node_id": target_node_id,
+        "name": name,
+        "n_layers": len(layers_data),
+        "times": times_raw,
         "layers": layers_data,
     }
 
@@ -657,7 +896,26 @@ def get_heads_by_element(
     Returns a lightweight array of head values indexed by element position
     (matching the order of features in the mesh GeoJSON).  Each value is the
     average of the head at the element's vertex nodes.
+
+    Uses SQLite cache when available for ~5-10x faster response.
     """
+    # Try cache first
+    cached = model_state.get_cached_head_by_element(timestep, layer)
+    if cached is not None:
+        values, min_val, max_val = cached
+        loader = model_state.get_head_loader()
+        dt = None
+        if loader and timestep < len(loader.times):
+            dt = loader.times[timestep]
+        return {
+            "timestep_index": timestep,
+            "datetime": dt.isoformat() if dt else None,
+            "layer": layer,
+            "values": values,
+            "min": round(min_val, 3),
+            "max": round(max_val, 3),
+        }
+
     loader = model_state.get_head_loader()
     if loader is None:
         raise HTTPException(status_code=404, detail="No head data available")

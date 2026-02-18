@@ -489,3 +489,21 @@ def get_model_summary() -> ModelSummary:
         unsaturated_zone=unsaturated_zone,
         available_results=available,
     )
+
+
+@router.get("/cache-status")
+def get_cache_status() -> dict:
+    """Get SQLite cache status and diagnostics."""
+    loader = model_state.get_cache_loader()
+    if loader is None:
+        return {
+            "available": False,
+            "path": None,
+            "stats": {},
+        }
+
+    return {
+        "available": True,
+        "path": str(loader.cache_path),
+        "stats": loader.get_stats(),
+    }

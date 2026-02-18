@@ -3,7 +3,9 @@ Time Series Visualization
 
 This page demonstrates how to visualize temporal data from
 IWFM models, including groundwater levels, streamflow, and
-comparison between observed and simulated values.
+comparison between observed and simulated values. Each example
+shows the pyiwfm helper function first, then optionally the raw
+matplotlib equivalent for customization.
 
 Basic Time Series Plot
 ----------------------
@@ -51,56 +53,68 @@ Compare time series from multiple locations:
 Time Series Statistics
 ----------------------
 
-Display time series with statistical summaries:
+Use :func:`~pyiwfm.visualization.plotting.plot_timeseries_statistics` for ensemble
+statistics with min/max or standard deviation bands:
 
 .. plot::
    :include-source:
 
    import matplotlib.pyplot as plt
-   import numpy as np
    from pyiwfm.sample_models import create_sample_timeseries_collection
+   from pyiwfm.visualization.plotting import plot_timeseries_statistics
 
    collection = create_sample_timeseries_collection(n_locations=8, n_years=10)
 
-   fig, ax = plt.subplots(figsize=(14, 6))
+   fig, ax = plot_timeseries_statistics(collection, band='minmax',
+                                         show_individual=True,
+                                         title='Ensemble Statistics',
+                                         ylabel='Groundwater Head (ft)')
+   plt.show()
 
-   # Get time series data
-   series_list = list(collection.series.values())
-   times = [t.item() for t in series_list[0].times]  # Convert to Python datetime
-   n_times = len(times)
+Standard deviation band variant:
 
-   values_matrix = np.zeros((len(series_list), n_times))
-   for i, ts in enumerate(series_list):
-       values_matrix[i, :] = ts.values
+.. plot::
+   :include-source:
 
-   # Calculate statistics
-   mean_vals = np.mean(values_matrix, axis=0)
-   std_vals = np.std(values_matrix, axis=0)
-   min_vals = np.min(values_matrix, axis=0)
-   max_vals = np.max(values_matrix, axis=0)
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_timeseries_collection
+   from pyiwfm.visualization.plotting import plot_timeseries_statistics
 
-   # Plot individual series (light)
-   for ts in series_list:
-       ax.plot(times, ts.values, 'lightblue', alpha=0.5, linewidth=0.8)
+   collection = create_sample_timeseries_collection(n_locations=8, n_years=10)
 
-   # Plot envelope
-   ax.fill_between(times, min_vals, max_vals, alpha=0.2, color='blue', label='Range')
-   ax.fill_between(times, mean_vals - std_vals, mean_vals + std_vals,
-                   alpha=0.3, color='blue', label='+/- 1 Std Dev')
-
-   # Plot mean
-   ax.plot(times, mean_vals, 'navy', linewidth=2, label='Mean')
-
-   ax.set_ylabel('Groundwater Head (ft)')
-   ax.set_title('Ensemble Statistics')
-   ax.legend(loc='upper right')
-   ax.grid(True, alpha=0.3)
+   fig, ax = plot_timeseries_statistics(collection, band='std',
+                                         mean_color='darkgreen',
+                                         title='Ensemble with Std Dev Bands',
+                                         ylabel='Groundwater Head (ft)')
    plt.show()
 
 Observed vs Simulated Comparison
 --------------------------------
 
-Compare model results against observations:
+Use :func:`~pyiwfm.visualization.plotting.plot_timeseries_comparison` for
+calibration plots:
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_timeseries
+   from pyiwfm.visualization.plotting import plot_timeseries_comparison
+
+   simulated = create_sample_timeseries(
+       name="Simulated", n_years=5, seasonal=True, trend=-0.4, noise_level=0.02
+   )
+   observed = create_sample_timeseries(
+       name="Observed", n_years=5, seasonal=True, trend=-0.6, noise_level=0.15
+   )
+
+   fig, ax = plot_timeseries_comparison(observed, simulated,
+                                         title='Model Calibration',
+                                         show_residuals=True,
+                                         show_metrics=True)
+   plt.show()
+
+Raw matplotlib alternative for more control:
 
 .. plot::
    :include-source:
@@ -109,31 +123,18 @@ Compare model results against observations:
    import numpy as np
    from pyiwfm.sample_models import create_sample_timeseries
 
-   # Create simulated time series
    simulated = create_sample_timeseries(
-       name="Simulated",
-       n_years=5,
-       seasonal=True,
-       trend=-0.4,
-       noise_level=0.02
+       name="Simulated", n_years=5, seasonal=True, trend=-0.4, noise_level=0.02
    )
-
-   # Create observed with different characteristics
    observed = create_sample_timeseries(
-       name="Observed",
-       n_years=5,
-       seasonal=True,
-       trend=-0.6,
-       noise_level=0.15
+       name="Observed", n_years=5, seasonal=True, trend=-0.6, noise_level=0.15
    )
 
    fig, axes = plt.subplots(2, 1, figsize=(14, 8), gridspec_kw={'height_ratios': [3, 1]})
 
-   # Convert times to Python datetime for plotting
    times_obs = [t.item() for t in observed.times]
    times_sim = [t.item() for t in simulated.times]
 
-   # Main comparison plot
    ax1 = axes[0]
    ax1.plot(times_obs, observed.values, 'ko', markersize=3, alpha=0.6, label='Observed')
    ax1.plot(times_sim, simulated.values, 'b-', linewidth=1.5, label='Simulated')
@@ -142,7 +143,6 @@ Compare model results against observations:
    ax1.legend()
    ax1.grid(True, alpha=0.3)
 
-   # Residual plot
    ax2 = axes[1]
    residuals = observed.values - simulated.values
    ax2.bar(times_obs, residuals, width=5, alpha=0.7, color='gray')
@@ -160,26 +160,22 @@ Compare model results against observations:
 Streamflow Hydrograph
 ---------------------
 
-Display streamflow with characteristics common to surface water:
+Use :func:`~pyiwfm.visualization.plotting.plot_streamflow_hydrograph` for
+streamflow with optional baseflow separation:
 
 .. plot::
    :include-source:
 
    import matplotlib.pyplot as plt
    import numpy as np
-   from datetime import datetime, timedelta
+   from pyiwfm.visualization.plotting import plot_streamflow_hydrograph
 
-   # Generate synthetic streamflow
    np.random.seed(42)
-   start = datetime(2020, 1, 1)
    n_days = 365 * 3
-   times = [start + timedelta(days=i) for i in range(n_days)]
-
-   # Base flow + seasonal + storm events
+   times = np.arange('2020-01-01', '2022-12-31', dtype='datetime64[D]')[:n_days]
    t = np.arange(n_days)
-   baseflow = 100 + 50 * np.sin(2 * np.pi * t / 365)
 
-   # Add storm events
+   baseflow = 100 + 50 * np.sin(2 * np.pi * t / 365)
    storms = np.zeros(n_days)
    storm_days = np.random.choice(n_days, 30, replace=False)
    for sd in storm_days:
@@ -188,79 +184,63 @@ Display streamflow with characteristics common to surface water:
        end_idx = min(sd + 30, n_days)
        storms[sd:end_idx] += peak * decay[:end_idx - sd]
 
-   flow = baseflow + storms + np.random.normal(0, 10, n_days)
-   flow = np.maximum(flow, 0)
+   total_flow = np.maximum(baseflow + storms + np.random.normal(0, 10, n_days), 0)
 
-   fig, ax = plt.subplots(figsize=(14, 6))
-
-   # Plot with fill
-   ax.fill_between(times, 0, flow, alpha=0.5, color='steelblue')
-   ax.plot(times, flow, 'b-', linewidth=0.5)
-
-   ax.set_xlabel('Date')
-   ax.set_ylabel('Streamflow (cfs)')
-   ax.set_title('Streamflow Hydrograph')
-   ax.grid(True, alpha=0.3)
-   ax.set_ylim(bottom=0)
-
-   # Add annotation for peak
-   peak_idx = np.argmax(flow)
-   ax.annotate(f'Peak: {flow[peak_idx]:.0f} cfs',
-               xy=(times[peak_idx], flow[peak_idx]),
-               xytext=(times[peak_idx], flow[peak_idx] + 100),
-               arrowprops=dict(arrowstyle='->', color='red'),
-               fontsize=10)
-
+   fig, ax = plot_streamflow_hydrograph(times, total_flow, baseflow=baseflow,
+                                         title='Stream Hydrograph with Baseflow Separation',
+                                         units='cfs')
    plt.show()
 
 Dual Axis Comparison
 --------------------
 
-Compare related variables with different scales:
+Use :func:`~pyiwfm.visualization.plotting.plot_dual_axis` to compare related
+variables with different scales on two y-axes:
 
 .. plot::
    :include-source:
 
    import matplotlib.pyplot as plt
    import numpy as np
-   from datetime import datetime, timedelta
+   from pyiwfm.sample_models import create_sample_timeseries
+   from pyiwfm.visualization.plotting import plot_dual_axis
 
-   # Generate synthetic data
-   np.random.seed(42)
-   start = datetime(2020, 1, 1)
-   n_months = 36
-   times = [start + timedelta(days=30*i) for i in range(n_months)]
+   pumping = create_sample_timeseries(
+       name="Pumping", n_years=3, seasonal=True, trend=0.2, noise_level=0.05
+   )
+   head = create_sample_timeseries(
+       name="GW Level", n_years=3, seasonal=True, trend=-0.8, noise_level=0.03
+   )
 
-   # Groundwater level and pumping
-   t = np.arange(n_months)
-   pumping = 1000 + 300 * np.sin(2 * np.pi * t / 12) + np.random.normal(0, 50, n_months)
-   pumping = np.maximum(pumping, 0)
+   fig, (ax1, ax2) = plot_dual_axis(
+       pumping, head,
+       color1='tab:red', color2='tab:blue',
+       ylabel1='Pumping (AF/month)', ylabel2='Groundwater Level (ft)',
+       title='Pumping and Groundwater Level Response'
+   )
+   plt.show()
 
-   # Head responds to pumping with lag
-   head = 50 - 0.5 * t
-   for i in range(1, n_months):
-       head[i] -= 0.005 * pumping[i-1]
-   head += np.random.normal(0, 1, n_months)
+Time Series Collection with Custom Styling
+-------------------------------------------
 
-   fig, ax1 = plt.subplots(figsize=(14, 6))
+Use :func:`~pyiwfm.visualization.plotting.plot_timeseries_collection` with
+extra styling options:
 
-   # Pumping on primary axis
-   color1 = 'tab:red'
-   ax1.set_xlabel('Date')
-   ax1.set_ylabel('Pumping (AF/month)', color=color1)
-   bars = ax1.bar(times, pumping, width=25, alpha=0.7, color=color1, label='Pumping')
-   ax1.tick_params(axis='y', labelcolor=color1)
+.. plot::
+   :include-source:
 
-   # Head on secondary axis
-   ax2 = ax1.twinx()
-   color2 = 'tab:blue'
-   ax2.set_ylabel('Groundwater Level (ft)', color=color2)
-   line, = ax2.plot(times, head, color=color2, linewidth=2, marker='o', markersize=4)
-   ax2.tick_params(axis='y', labelcolor=color2)
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import create_sample_timeseries_collection
+   from pyiwfm.visualization.plotting import plot_timeseries_collection
 
-   # Combined legend
-   ax1.legend([bars, line], ['Pumping', 'GW Level'], loc='upper right')
+   collection = create_sample_timeseries_collection(n_locations=4, n_years=5)
 
-   plt.title('Pumping and Groundwater Level Response')
-   fig.tight_layout()
+   fig, ax = plot_timeseries_collection(
+       collection,
+       title='Well Hydrographs (Custom Styling)',
+       colors=['#e41a1c', '#377eb8', '#4daf4a', '#984ea3'],
+       linestyles=['-', '--', '-.', ':'],
+       ylabel='Head (ft)',
+       grid=True,
+   )
    plt.show()

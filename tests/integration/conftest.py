@@ -17,8 +17,10 @@ import pytest
 # Set IWFM_SAMPLE_MODEL_DIR / C2VSIMFG_DIR env vars for custom locations.
 # ---------------------------------------------------------------------------
 
-_DEFAULT_SAMPLE_MODEL = str(Path.home() / "Desktop" / "iwfm-2025.0.1747" / "samplemodel")
-_DEFAULT_C2VSIMFG = str(Path.home() / "Desktop" / "c2vsimfg")
+_DEFAULT_SAMPLE_MODEL = str(
+    Path.home() / "OneDrive" / "Desktop" / "iwfm-2025.0.1747" / "samplemodel"
+)
+_DEFAULT_C2VSIMFG = str(Path.home() / "OneDrive" / "Desktop" / "c2vsimfg")
 
 
 # ---------------------------------------------------------------------------
