@@ -70,6 +70,25 @@ napoleon_attr_annotations = True
 autosummary_generate = True
 autosummary_imported_members = True
 
+# Mock optional dependencies that may not be installed in docs environment
+autodoc_mock_imports = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "pyvista",
+    "vtk",
+    "pyproj",
+    "starlette",
+    "multipart",
+    "python_multipart",
+    "scipy",
+    "geopandas",
+    "shapely",
+    "pyogrio",
+    "triangle",
+    "gmsh",
+]
+
 # Autodoc settings
 autodoc_default_options = {
     "members": True,
