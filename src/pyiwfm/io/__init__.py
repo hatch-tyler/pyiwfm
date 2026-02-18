@@ -929,3 +929,20 @@ __all__ = [
     "ZoneInfo",
     "ZBUDGET_DATA_TYPES",
 ]
+
+
+def __getattr__(name: str) -> object:
+    """Lazy import of io submodules for mock.patch compatibility (PEP 562).
+
+    On Python 3.10, submodule attributes may not be set on the package
+    during __init__.py execution.  This fallback ensures that
+    ``pyiwfm.io.<submodule>`` is accessible for ``unittest.mock.patch``.
+    """
+    import importlib
+
+    try:
+        module = importlib.import_module(f"pyiwfm.io.{name}")
+    except ImportError:
+        raise AttributeError(f"module 'pyiwfm.io' has no attribute {name!r}") from None
+    globals()[name] = module
+    return module
