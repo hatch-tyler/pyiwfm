@@ -29,6 +29,15 @@ import {
 } from '../../api/client';
 import type { ElementLandUseTimeseries, LandUseTimesteps } from '../../api/client';
 
+/** Top-N threshold for pie chart aggregation */
+const PIE_TOP_N = 8;
+
+/** Qualitative color palette for pie chart slices */
+const PIE_PALETTE = [
+  '#2563eb', '#16a34a', '#ea580c', '#9333ea',
+  '#0891b2', '#e11d48', '#ca8a04', '#4f46e5',
+];
+
 /** Stacked area chart showing land-use area over time for one element. */
 function LandUseTimeseriesChart({ elementId }: { elementId: number }) {
   const [tsData, setTsData] = useState<ElementLandUseTimeseries | null>(null);
@@ -92,21 +101,25 @@ function LandUseTimeseriesChart({ elementId }: { elementId: number }) {
   if (traces.length === 0) return null;
 
   return (
-    <Box sx={{ mt: 1 }}>
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+    <Box sx={{ mt: 1.5 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}>
         Land Use Area Over Time
       </Typography>
       <Plot
         data={traces}
         layout={{
-          width: 340,
-          height: 200,
+          autosize: true,
+          height: 220,
           margin: { t: 10, b: 40, l: 50, r: 10 },
           showlegend: true,
-          legend: { orientation: 'h', y: -0.3, font: { size: 9 } },
+          legend: { orientation: 'h', y: -0.3, font: { size: 10 } },
           xaxis: { type: 'date' },
           yaxis: { title: { text: 'Area (acres)', font: { size: 10 } } },
+          paper_bgcolor: 'transparent',
+          plot_bgcolor: 'transparent',
         }}
+        useResizeHandler
+        style={{ width: '100%' }}
         config={{ displayModeBar: false }}
       />
     </Box>
@@ -188,37 +201,58 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
     ? formatDate(luDates[luTimestep])
     : '';
 
+  /** Common table sx for all data tables */
+  const tableSx = {
+    '& td, & th': { px: 1, py: 0.5, fontSize: 12 },
+    '& thead th': {
+      fontSize: 11,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      bgcolor: 'grey.50',
+      borderBottomWidth: 2,
+    },
+    '& tbody tr:nth-of-type(even)': { bgcolor: 'rgba(0,0,0,0.02)' },
+    '& tbody tr:hover': { bgcolor: 'rgba(0,0,0,0.04)' },
+  };
+
+  /** Common accordion summary sx */
+  const accordionSummarySx = {
+    minHeight: 48,
+    '& .MuiAccordionSummary-content': { my: 1 },
+    '&:hover': { bgcolor: 'grey.50' },
+  };
+
   return (
     <Drawer
       anchor="right"
       open={true}
       onClose={onClose}
       variant="persistent"
-      sx={{ '& .MuiDrawer-paper': { width: 420, pt: 1 } }}
+      sx={{ '& .MuiDrawer-paper': { width: 480 } }}
     >
       {/* Header */}
       <Box sx={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        px: 2, py: 1, bgcolor: 'primary.main', color: 'primary.contrastText',
+        px: 2.5, py: 1.5, bgcolor: 'primary.main', color: 'primary.contrastText',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Chip
-            label={`Element ${elemId}`}
-            size="small"
-            sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'inherit', fontWeight: 700 }}
-          />
-        </Box>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+          Element {elemId}
+        </Typography>
         <IconButton size="small" onClick={onClose} sx={{ color: 'inherit' }}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
 
       {/* Subregion + stats strip */}
-      <Box sx={{ px: 2, py: 1.5, bgcolor: 'grey.50', borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="body2" color="text.secondary">
-          {subregion.name} (SR {subregion.id})
+      <Box sx={{ px: 2.5, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {subregion.name}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+        <Typography variant="caption" color="text.secondary">
+          Subregion {subregion.id}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
           <Chip label={`Area: ${area.toLocaleString()} acres`} size="small" variant="outlined" />
           <Chip label={`${vertices.length} vertices`} size="small" variant="outlined" />
           {wells.length > 0 && (
@@ -231,26 +265,23 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
       <Box sx={{ overflowY: 'auto', flex: 1 }}>
         {/* Layer Properties (default expanded) */}
         <Accordion defaultExpanded disableGutters elevation={0}
-          sx={{ '&:before': { display: 'none' } }}
+          sx={{ '&:before': { display: 'none' }, borderBottom: 1, borderColor: 'divider' }}
         >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}
-            sx={{ bgcolor: 'grey.100', minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}
-          >
-            <Typography variant="subtitle2">Layer Properties</Typography>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, letterSpacing: '0.02em' }}>
+              Layer Properties
+            </Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ p: 0 }}>
-            <Table size="small" sx={{
-              '& td, & th': { px: 1, py: 0.25, fontSize: 11 },
-              '& tbody tr:nth-of-type(even)': { bgcolor: 'grey.50' },
-            }}>
+            <Table size="small" sx={tableSx}>
               <TableHead>
-                <TableRow sx={{ bgcolor: 'grey.200' }}>
-                  <TableCell sx={{ fontWeight: 700 }}>Lyr</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Top (ft)</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Bot (ft)</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Thk (ft)</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Kh</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Sy</TableCell>
+                <TableRow>
+                  <TableCell>Lyr</TableCell>
+                  <TableCell align="right">Top (ft)</TableCell>
+                  <TableCell align="right">Bot (ft)</TableCell>
+                  <TableCell align="right">Thk (ft)</TableCell>
+                  <TableCell align="right">Kh</TableCell>
+                  <TableCell align="right">Sy</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -271,21 +302,26 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
 
         {/* Land Use (always shown; displays data or diagnostic message) */}
         <Accordion defaultExpanded={!!landUse} disableGutters elevation={0}
-          sx={{ '&:before': { display: 'none' } }}
+          sx={{ '&:before': { display: 'none' }, borderBottom: 1, borderColor: 'divider' }}
         >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}
-            sx={{ bgcolor: 'grey.100', minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}
-          >
-            <Typography variant="subtitle2">Land Use</Typography>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, letterSpacing: '0.02em' }}>
+              Land Use
+            </Typography>
           </AccordionSummary>
-          <AccordionDetails sx={{ p: 1 }}>
+          <AccordionDetails sx={{ px: 2.5, py: 1 }}>
             {/* Timestep selector */}
             {luDates.length > 1 && (
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Timestep: {selectedDateLabel}
-                  {luLoading && ' (loading...)'}
-                </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    Timestep: {selectedDateLabel}
+                    {luLoading && <CircularProgress size={12} />}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {(luTimestep >= 0 ? luTimestep : luDates.length - 1) + 1} / {luDates.length}
+                  </Typography>
+                </Box>
                 <Slider
                   value={luTimestep >= 0 ? luTimestep : luDates.length - 1}
                   min={0}
@@ -295,9 +331,6 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
                   size="small"
                   sx={{ mt: 0.5 }}
                 />
-                <Typography variant="caption" color="text.secondary">
-                  {(luTimestep >= 0 ? luTimestep : luDates.length - 1) + 1} / {luDates.length}
-                </Typography>
               </Box>
             )}
 
@@ -308,79 +341,104 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
                   const cats = landUse.categories?.filter((c) => c.area > 0) ?? [];
                   const areaUnits = landUse.units ?? 'acres';
                   if (cats.length > 0) {
-                    // Color map by category type
-                    const catColors: Record<string, string[]> = {
-                      nonponded: ['#2e7d32','#388e3c','#43a047','#4caf50','#66bb6a','#81c784','#a5d6a7','#c8e6c9','#1b5e20','#33691e','#558b2f','#689f38','#7cb342','#8bc34a','#9ccc65','#aed581','#c5e1a5','#dcedc8','#f1f8e9','#e8f5e9'],
-                      ponded: ['#0d47a1','#1565c0','#1976d2','#1e88e5','#42a5f5'],
-                      urban: ['#757575'],
-                      native: ['#5d4037','#8d6e63'],
-                    };
-                    const labels: string[] = [];
-                    const values: number[] = [];
-                    const colors: string[] = [];
-                    for (const c of cats) {
-                      labels.push(c.name || c.category);
-                      values.push(c.area);
-                      const palette = catColors[c.category] ?? ['#bdbdbd'];
-                      const idx = cats.filter((x) => x.category === c.category).indexOf(c);
-                      colors.push(palette[idx % palette.length]);
+                    // Sort by area descending for "Top N + Other" aggregation
+                    const sorted = [...cats].sort((a, b) => b.area - a.area);
+
+                    const pieLabels: string[] = [];
+                    const pieValues: number[] = [];
+                    const pieColors: string[] = [];
+
+                    if (sorted.length <= PIE_TOP_N) {
+                      for (let i = 0; i < sorted.length; i++) {
+                        pieLabels.push(sorted[i].name || sorted[i].category);
+                        pieValues.push(sorted[i].area);
+                        pieColors.push(PIE_PALETTE[i % PIE_PALETTE.length]);
+                      }
+                    } else {
+                      for (let i = 0; i < PIE_TOP_N; i++) {
+                        pieLabels.push(sorted[i].name || sorted[i].category);
+                        pieValues.push(sorted[i].area);
+                        pieColors.push(PIE_PALETTE[i]);
+                      }
+                      const restCount = sorted.length - PIE_TOP_N;
+                      const restArea = sorted.slice(PIE_TOP_N).reduce((s, c) => s + c.area, 0);
+                      pieLabels.push(`Other (${restCount})`);
+                      pieValues.push(restArea);
+                      pieColors.push('#9e9e9e');
                     }
+
+                    // Color lookup for table rows (all categories, sorted order)
+                    const getTableColor = (idx: number) =>
+                      idx < PIE_TOP_N ? PIE_PALETTE[idx % PIE_PALETTE.length] : '#9e9e9e';
+
                     return (
                       <>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>
+                          {selectedDateLabel ? `Land Use — ${selectedDateLabel}` : 'Land Use Breakdown'}
+                        </Typography>
                         <Plot
                           data={[{
                             type: 'pie',
-                            labels,
-                            values,
-                            marker: { colors },
-                            textinfo: 'label+percent',
-                            textposition: 'auto',
+                            labels: pieLabels,
+                            values: pieValues,
+                            marker: {
+                              colors: pieColors,
+                              line: { color: '#ffffff', width: 2 },
+                            },
+                            textinfo: 'percent',
+                            textposition: 'inside',
                             hovertemplate: '%{label}<br>%{value:.1f} ' + areaUnits + '<br>%{percent}<extra></extra>',
-                            hole: 0.3,
-                          }]}
+                            hole: 0.45,
+                            sort: false,
+                            direction: 'clockwise',
+                            rotation: 90,
+                            domain: { x: [0.0, 0.55] },
+                          } as Plotly.Data]}
                           layout={{
-                            width: 400,
-                            height: 360,
-                            margin: { t: 30, b: 60, l: 30, r: 30 },
-                            title: selectedDateLabel
-                              ? { text: `Land Use — ${selectedDateLabel}`, font: { size: 12 } }
-                              : undefined,
+                            autosize: true,
+                            height: 280,
+                            margin: { t: 10, b: 10, l: 0, r: 0 },
                             showlegend: true,
                             legend: {
-                              orientation: 'h',
-                              y: -0.15,
-                              x: 0.5,
-                              xanchor: 'center',
-                              font: { size: 9 },
+                              x: 0.6,
+                              y: 0.5,
+                              yanchor: 'middle',
+                              font: { size: 11 },
                             },
+                            annotations: [{
+                              text: `<b>${landUse.total_area.toLocaleString()}</b><br>${areaUnits}`,
+                              showarrow: false,
+                              font: { size: 12, color: '#666' },
+                              x: 0.275,
+                              y: 0.5,
+                              xanchor: 'center',
+                              yanchor: 'middle',
+                            }],
+                            paper_bgcolor: 'transparent',
+                            plot_bgcolor: 'transparent',
                           }}
+                          useResizeHandler
+                          style={{ width: '100%' }}
                           config={{ displayModeBar: false }}
                         />
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                          Total area: {landUse.total_area.toLocaleString()} {areaUnits}
-                        </Typography>
-                        <Table size="small" sx={{
-                          mt: 1,
-                          '& td, & th': { px: 1, py: 0.25, fontSize: 11 },
-                          '& tbody tr:nth-of-type(even)': { bgcolor: 'grey.50' },
-                        }}>
+                        <Table size="small" sx={{ mt: 1, ...tableSx }}>
                           <TableHead>
-                            <TableRow sx={{ bgcolor: 'grey.200' }}>
-                              <TableCell sx={{ fontWeight: 700 }}>Category</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 700 }}>Area ({areaUnits})</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 700 }}>%</TableCell>
+                            <TableRow>
+                              <TableCell>Category</TableCell>
+                              <TableCell align="right">Area ({areaUnits})</TableCell>
+                              <TableCell align="right">%</TableCell>
                             </TableRow>
                           </TableHead>
                           <TableBody>
-                            {cats.map((c, i) => (
+                            {sorted.map((c, i) => (
                               <TableRow key={i}>
                                 <TableCell>
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                     <Box sx={{
                                       width: 10, height: 10, borderRadius: '50%',
-                                      bgcolor: colors[i], flexShrink: 0,
+                                      bgcolor: getTableColor(i), flexShrink: 0,
                                     }} />
-                                    {c.name}
+                                    {c.name || c.category}
                                   </Box>
                                 </TableCell>
                                 <TableCell align="right">{c.area.toFixed(1)}</TableCell>
@@ -399,6 +457,9 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
                   // Fallback: aggregated fractions only
                   return (
                     <>
+                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, display: 'block', mb: 0.5 }}>
+                        {selectedDateLabel ? `Land Use — ${selectedDateLabel}` : 'Land Use Breakdown'}
+                      </Typography>
                       <Plot
                         data={[{
                           type: 'pie',
@@ -408,33 +469,43 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
                             landUse.fractions.urban,
                             landUse.fractions.native_riparian,
                           ],
-                          marker: { colors: ['#4caf50', '#9e9e9e', '#8d6e63'] },
-                          textinfo: 'label+percent',
-                          textposition: 'auto',
+                          marker: {
+                            colors: ['#4caf50', '#9e9e9e', '#8d6e63'],
+                            line: { color: '#ffffff', width: 2 },
+                          },
+                          textinfo: 'percent',
+                          textposition: 'inside',
                           hoverinfo: 'label+percent+name',
-                          hole: 0.3,
-                        }]}
+                          hole: 0.45,
+                        } as Plotly.Data]}
                         layout={{
-                          width: 400,
-                          height: 320,
-                          margin: { t: 30, b: 60, l: 30, r: 30 },
-                          title: selectedDateLabel
-                            ? { text: `Land Use — ${selectedDateLabel}`, font: { size: 12 } }
-                            : undefined,
+                          autosize: true,
+                          height: 280,
+                          margin: { t: 10, b: 10, l: 30, r: 30 },
                           showlegend: true,
                           legend: {
                             orientation: 'h',
-                            y: -0.15,
+                            y: -0.1,
                             x: 0.5,
                             xanchor: 'center',
-                            font: { size: 10 },
+                            font: { size: 11 },
                           },
+                          annotations: [{
+                            text: `<b>${landUse.total_area.toLocaleString()}</b><br>${areaUnits}`,
+                            showarrow: false,
+                            font: { size: 12, color: '#666' },
+                            x: 0.5,
+                            y: 0.5,
+                            xanchor: 'center',
+                            yanchor: 'middle',
+                          }],
+                          paper_bgcolor: 'transparent',
+                          plot_bgcolor: 'transparent',
                         }}
+                        useResizeHandler
+                        style={{ width: '100%' }}
                         config={{ displayModeBar: false }}
                       />
-                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                        Total area: {landUse.total_area.toLocaleString()} {areaUnits}
-                      </Typography>
                     </>
                   );
                 })()}
@@ -452,17 +523,17 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
         {/* Wells (expanded if any, collapsed if none) */}
         {wells.length > 0 && (
           <Accordion defaultExpanded disableGutters elevation={0}
-            sx={{ '&:before': { display: 'none' } }}
+            sx={{ '&:before': { display: 'none' }, borderBottom: 1, borderColor: 'divider' }}
           >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}
-              sx={{ bgcolor: 'grey.100', minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}
-            >
-              <Typography variant="subtitle2">Wells ({wells.length})</Typography>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, letterSpacing: '0.02em' }}>
+                Wells ({wells.length})
+              </Typography>
             </AccordionSummary>
-            <AccordionDetails sx={{ p: 1 }}>
+            <AccordionDetails sx={{ px: 2.5, py: 1 }}>
               {wells.map((w) => (
                 <Box key={w.id} sx={{
-                  mb: 1, p: 1, borderRadius: 1, bgcolor: 'grey.50',
+                  mb: 1.5, p: 1.5, borderRadius: 1.5, bgcolor: 'grey.50',
                   border: 1, borderColor: 'divider',
                 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -489,23 +560,20 @@ export function ElementDetailPanel({ detail, onClose }: ElementDetailPanelProps)
 
         {/* Vertices (collapsed by default) */}
         <Accordion disableGutters elevation={0}
-          sx={{ '&:before': { display: 'none' } }}
+          sx={{ '&:before': { display: 'none' }, borderBottom: 1, borderColor: 'divider' }}
         >
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}
-            sx={{ bgcolor: 'grey.100', minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}
-          >
-            <Typography variant="subtitle2">Vertices ({vertices.length})</Typography>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, letterSpacing: '0.02em' }}>
+              Vertices ({vertices.length})
+            </Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ p: 0 }}>
-            <Table size="small" sx={{
-              '& td, & th': { px: 1, py: 0.25, fontSize: 11 },
-              '& tbody tr:nth-of-type(even)': { bgcolor: 'grey.50' },
-            }}>
+            <Table size="small" sx={tableSx}>
               <TableHead>
-                <TableRow sx={{ bgcolor: 'grey.200' }}>
-                  <TableCell sx={{ fontWeight: 700 }}>Node</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Lng</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Lat</TableCell>
+                <TableRow>
+                  <TableCell>Node</TableCell>
+                  <TableCell align="right">Lng</TableCell>
+                  <TableCell align="right">Lat</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
