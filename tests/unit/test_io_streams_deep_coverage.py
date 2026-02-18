@@ -453,7 +453,7 @@ class TestStreamMainFileReaderEdgeCases:
         """Absolute path is returned as-is."""
         from pyiwfm.io.iwfm_reader import resolve_path
 
-        abs_path = Path("C:/absolute/path/file.dat")
+        abs_path = tmp_path / "absolute" / "path" / "file.dat"
         result = resolve_path(tmp_path, str(abs_path))
         assert result == abs_path
 

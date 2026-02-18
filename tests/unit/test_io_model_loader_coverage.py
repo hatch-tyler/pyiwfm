@@ -81,7 +81,7 @@ class TestCompleteModelLoader:
         loader = CompleteModelLoader(sim)
         assert loader.preprocessor_file is None
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_load_simulation_read_fails(self, mock_read, tmp_path: Path) -> None:
         mock_read.side_effect = RuntimeError("parse error")
         sim = tmp_path / "Sim.in"
@@ -91,7 +91,7 @@ class TestCompleteModelLoader:
         assert "simulation" in result.errors
 
     @patch("pyiwfm.core.model.IWFMModel")
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_load_no_preprocessor_found(self, mock_read, mock_model, tmp_path: Path) -> None:
         mock_config = MagicMock()
         mock_config.preprocessor_file = None
@@ -104,7 +104,7 @@ class TestCompleteModelLoader:
         assert "preprocessor" in result.errors
 
     @patch("pyiwfm.core.model.IWFMModel")
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_load_success(self, mock_read, mock_model_cls, tmp_path: Path) -> None:
         mock_config = MagicMock()
         mock_config.preprocessor_file = "PP.in"
@@ -123,7 +123,7 @@ class TestCompleteModelLoader:
         assert result.success
 
     @patch("pyiwfm.core.model.IWFMModel")
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_load_model_raises_on_failure(self, mock_read, mock_model, tmp_path: Path) -> None:
         mock_read.side_effect = RuntimeError("fail")
         sim = tmp_path / "Sim.in"
@@ -132,7 +132,7 @@ class TestCompleteModelLoader:
             loader.load_model()
 
     @patch("pyiwfm.core.model.IWFMModel")
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_load_collects_component_errors(
         self, mock_read, mock_model_cls, tmp_path: Path
     ) -> None:
@@ -165,7 +165,7 @@ class TestCompleteModelLoader:
         abs_path = tmp_path / "other" / "file.in"
         assert loader._resolve_path(abs_path) == abs_path
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_positional")
+    @patch.object(CompleteModelLoader, "_read_positional")
     def test_read_config_forces_positional(self, mock_pos, tmp_path: Path) -> None:
         mock_pos.return_value = MagicMock()
         sim = tmp_path / "Sim.in"
@@ -173,7 +173,7 @@ class TestCompleteModelLoader:
         loader._read_simulation_config()
         mock_pos.assert_called_once()
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_description_based")
+    @patch.object(CompleteModelLoader, "_read_description_based")
     def test_read_config_forces_description(self, mock_desc, tmp_path: Path) -> None:
         mock_desc.return_value = MagicMock()
         sim = tmp_path / "Sim.in"
@@ -181,7 +181,7 @@ class TestCompleteModelLoader:
         loader._read_simulation_config()
         mock_desc.assert_called_once()
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_auto_detect")
+    @patch.object(CompleteModelLoader, "_read_auto_detect")
     def test_read_config_auto_detect(self, mock_auto, tmp_path: Path) -> None:
         mock_auto.return_value = MagicMock()
         sim = tmp_path / "Sim.in"
@@ -198,7 +198,7 @@ class TestCompleteModelLoader:
 class TestLoadCompleteModel:
     """Tests for the load_complete_model() convenience function."""
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader")
+    @patch.object(pyiwfm.io.model_loader, "CompleteModelLoader")
     def test_calls_load_model(self, mock_loader_cls) -> None:
         mock_loader = MagicMock()
         mock_loader.load_model.return_value = MagicMock()
@@ -221,7 +221,7 @@ class TestCommentAwareModelLoader:
         loader = CommentAwareModelLoader(sim, preserve_comments=True)
         assert loader.preserve_comments is True
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader.load")
+    @patch.object(CompleteModelLoader, "load")
     def test_load_returns_with_comments(self, mock_base_load, tmp_path: Path) -> None:
         mock_result = ModelLoadResult(model=None, errors={"sim": "fail"})
         mock_base_load.return_value = mock_result
@@ -240,7 +240,7 @@ class TestCommentAwareModelLoader:
 class TestPreprocessorResolutionFromSimConfig:
     """Tests for lines 122-128: preprocessor file resolution from sim_config."""
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_pp_resolved_from_sim_config_exists(self, mock_read, tmp_path: Path) -> None:
         """When no pp_file given, resolve from sim_config.preprocessor_file (exists)."""
         pp = tmp_path / "PP.in"
@@ -265,7 +265,7 @@ class TestPreprocessorResolutionFromSimConfig:
         assert result.success
         assert result.simulation_config is mock_config
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_pp_resolved_from_sim_config_not_found(self, mock_read, tmp_path: Path) -> None:
         """When pp resolved from sim_config but file does not exist."""
         mock_config = MagicMock()
@@ -285,7 +285,7 @@ class TestPreprocessorResolutionFromSimConfig:
 class TestModelLoadExceptionInFromSimulation:
     """Tests for lines 154-156: exception during model construction."""
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_model_construction_raises(self, mock_read, tmp_path: Path) -> None:
         """When IWFMModel.from_simulation_with_preprocessor raises an exception."""
         mock_config = MagicMock()
@@ -312,7 +312,7 @@ class TestModelLoadExceptionInFromSimulation:
 class TestComponentErrorMetadataLoop:
     """Tests for line 147->146: iterating metadata for _load_error keys."""
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_multiple_load_errors_collected(self, mock_read, tmp_path: Path) -> None:
         """When metadata has multiple _load_error entries they are all collected."""
         mock_config = MagicMock()
@@ -343,7 +343,7 @@ class TestComponentErrorMetadataLoop:
         assert "stream" in result.errors
         assert "name" not in result.errors
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_no_load_errors_in_metadata(self, mock_read, tmp_path: Path) -> None:
         """When metadata has no _load_error keys, errors dict stays empty."""
         mock_config = MagicMock()
@@ -372,7 +372,7 @@ class TestComponentErrorMetadataLoop:
 class TestLoadModelSuccessPath:
     """Tests for line 175: load_model() successful return."""
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_simulation_config")
+    @patch.object(CompleteModelLoader, "_read_simulation_config")
     def test_load_model_returns_model_on_success(self, mock_read, tmp_path: Path) -> None:
         """load_model() returns the IWFMModel instance when loading succeeds."""
         mock_config = MagicMock()
@@ -400,7 +400,7 @@ class TestLoadModelSuccessPath:
 class TestAutoDetectReturnsConfig:
     """Tests for line 224: _read_auto_detect returning config with dates/files."""
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_description_based")
+    @patch.object(CompleteModelLoader, "_read_description_based")
     def test_auto_detect_returns_config_with_dates(self, mock_desc, tmp_path: Path) -> None:
         """Auto-detect returns config when has_dates is True."""
         from datetime import datetime
@@ -419,7 +419,7 @@ class TestAutoDetectReturnsConfig:
 
         assert result is mock_config
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_description_based")
+    @patch.object(CompleteModelLoader, "_read_description_based")
     def test_auto_detect_returns_config_with_files(self, mock_desc, tmp_path: Path) -> None:
         """Auto-detect returns config when has_files is True."""
         from datetime import datetime
@@ -438,8 +438,8 @@ class TestAutoDetectReturnsConfig:
 
         assert result is mock_config
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_positional")
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_description_based")
+    @patch.object(CompleteModelLoader, "_read_positional")
+    @patch.object(CompleteModelLoader, "_read_description_based")
     def test_auto_detect_falls_back_to_positional(
         self, mock_desc, mock_pos, tmp_path: Path
     ) -> None:
@@ -464,8 +464,8 @@ class TestAutoDetectReturnsConfig:
         assert result is mock_pos_config
         mock_pos.assert_called_once()
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_positional")
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader._read_description_based")
+    @patch.object(CompleteModelLoader, "_read_positional")
+    @patch.object(CompleteModelLoader, "_read_description_based")
     def test_auto_detect_exception_falls_back_to_positional(
         self, mock_desc, mock_pos, tmp_path: Path
     ) -> None:
@@ -484,8 +484,8 @@ class TestAutoDetectReturnsConfig:
 class TestCommentAwareModelLoaderExtractAllComments:
     """Tests for lines 359, 374-408: _extract_all_comments in CommentAwareModelLoader."""
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader.load")
-    @patch("pyiwfm.io.model_loader.CommentAwareModelLoader._extract_all_comments")
+    @patch.object(CompleteModelLoader, "load")
+    @patch.object(CommentAwareModelLoader, "_extract_all_comments")
     def test_load_calls_extract_when_preserve_and_success(
         self, mock_extract, mock_base_load, tmp_path: Path
     ) -> None:
@@ -502,7 +502,7 @@ class TestCommentAwareModelLoaderExtractAllComments:
         mock_extract.assert_called_once_with(mock_result)
         assert "simulation_main" in result.comment_metadata
 
-    @patch("pyiwfm.io.model_loader.CompleteModelLoader.load")
+    @patch.object(CompleteModelLoader, "load")
     def test_load_skips_extract_when_not_success(self, mock_base_load, tmp_path: Path) -> None:
         """load() skips comment extraction when model loading failed."""
         mock_result = ModelLoadResult(model=None, errors={"sim": "fail"})
@@ -514,7 +514,7 @@ class TestCommentAwareModelLoaderExtractAllComments:
 
         assert result.comment_metadata == {}
 
-    @patch("pyiwfm.io.model_loader.CommentAwareModelLoader._extract_component_comments")
+    @patch.object(CommentAwareModelLoader, "_extract_component_comments")
     @patch("pyiwfm.io.comment_extractor.CommentExtractor.extract")
     def test_extract_all_comments_simulation_and_pp(
         self, mock_extract, mock_comp_extract, tmp_path: Path
@@ -540,7 +540,7 @@ class TestCommentAwareModelLoaderExtractAllComments:
         assert comments["preprocessor_main"] is mock_pp_comments
         mock_comp_extract.assert_called_once()
 
-    @patch("pyiwfm.io.model_loader.CommentAwareModelLoader._extract_component_comments")
+    @patch.object(CommentAwareModelLoader, "_extract_component_comments")
     @patch("pyiwfm.io.comment_extractor.CommentExtractor.extract")
     def test_extract_all_comments_sim_extract_fails(
         self, mock_extract, mock_comp_extract, tmp_path: Path
@@ -562,7 +562,7 @@ class TestCommentAwareModelLoaderExtractAllComments:
         # Sim comments extraction failed, pp does not exist
         assert "simulation_main" not in comments
 
-    @patch("pyiwfm.io.model_loader.CommentAwareModelLoader._extract_component_comments")
+    @patch.object(CommentAwareModelLoader, "_extract_component_comments")
     @patch("pyiwfm.io.comment_extractor.CommentExtractor.extract")
     def test_extract_all_comments_pp_from_sim_config(
         self, mock_extract, mock_comp_extract, tmp_path: Path
@@ -696,7 +696,7 @@ class TestExtractComponentComments:
 class TestLoadModelWithComments:
     """Tests for lines 476-488: load_model_with_comments() convenience function."""
 
-    @patch("pyiwfm.io.model_loader.CommentAwareModelLoader.load")
+    @patch.object(CommentAwareModelLoader, "load")
     def test_returns_model_and_comments_on_success(self, mock_load, tmp_path: Path) -> None:
         """load_model_with_comments returns (model, comments) on success."""
         mock_model = MagicMock()
@@ -709,7 +709,7 @@ class TestLoadModelWithComments:
         assert model is mock_model
         assert comments is mock_comments
 
-    @patch("pyiwfm.io.model_loader.CommentAwareModelLoader.load")
+    @patch.object(CommentAwareModelLoader, "load")
     def test_raises_on_failure(self, mock_load, tmp_path: Path) -> None:
         """load_model_with_comments raises RuntimeError when loading fails."""
         mock_result = ModelLoadResultWithComments(model=None, errors={"simulation": "bad file"})
@@ -718,7 +718,7 @@ class TestLoadModelWithComments:
         with pytest.raises(RuntimeError, match="Failed to load IWFM model"):
             load_model_with_comments(tmp_path / "Sim.in")
 
-    @patch("pyiwfm.io.model_loader.CommentAwareModelLoader.load")
+    @patch.object(CommentAwareModelLoader, "load")
     def test_passes_format_flag(self, mock_load, tmp_path: Path) -> None:
         """load_model_with_comments passes use_positional_format to loader."""
         mock_model = MagicMock()

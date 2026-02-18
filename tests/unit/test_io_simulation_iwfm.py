@@ -620,7 +620,7 @@ DAY                                     / TIME_STEP_UNIT
     def test_resolve_path_absolute(self, tmp_path: Path) -> None:
         loader = CompleteModelLoader(tmp_path / "sim.in")
 
-        abs_path = Path("C:/absolute/path.dat")
+        abs_path = tmp_path / "absolute" / "path.dat"
         result = loader._resolve_path(abs_path)
         assert result == abs_path
 
