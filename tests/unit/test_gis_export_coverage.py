@@ -5,12 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import geopandas as gpd
 import pytest
 
-gpd = pytest.importorskip("geopandas", reason="geopandas not available")
-
-from pyiwfm.visualization.gis_export import GISExporter  # noqa: E402
-from tests.conftest import make_simple_grid, make_simple_stratigraphy  # noqa: E402
+from pyiwfm.visualization.gis_export import GISExporter
+from tests.conftest import make_simple_grid, make_simple_stratigraphy
 
 # ---------------------------------------------------------------------------
 # Helpers

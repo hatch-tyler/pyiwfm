@@ -127,9 +127,6 @@ def run_export(args: argparse.Namespace) -> int:
         try:
             from pyiwfm.visualization import GISExporter
 
-            if GISExporter is None:
-                raise ImportError("GeoPackage export requires 'geopandas' and 'shapely'")
-
             if model.mesh:
                 gis_exporter = GISExporter(
                     grid=model.mesh,

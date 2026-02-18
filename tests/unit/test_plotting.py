@@ -4,16 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-# Skip all tests if matplotlib is not available
-plt = pytest.importorskip("matplotlib.pyplot")
-
-from pyiwfm.components.stream import AppStream, StrmNode, StrmReach  # noqa: E402
-from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
-from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection  # noqa: E402
-from pyiwfm.visualization.plotting import (  # noqa: E402
+from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
+from pyiwfm.core.mesh import AppGrid, Element, Node
+from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
+from pyiwfm.visualization.plotting import (
     # Budget plotting
     BudgetPlotter,
     MeshPlotter,

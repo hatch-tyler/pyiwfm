@@ -34,9 +34,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:
-    import geopandas as gpd
+import geopandas as gpd
+from shapely.geometry import LineString, Point, Polygon
 
+if TYPE_CHECKING:
     from pyiwfm.components.stream import AppStream
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.stratigraphy import Stratigraphy
@@ -109,15 +110,6 @@ class GISExporter:
             streams: Stream network (optional)
             crs: Coordinate reference system (e.g., 'EPSG:26910')
         """
-        try:
-            import geopandas  # noqa: F401
-            from shapely.geometry import LineString, Point, Polygon  # noqa: F401
-        except ImportError as e:
-            raise ImportError(
-                "geopandas and shapely are required for GIS export. "
-                "Install with: pip install geopandas shapely"
-            ) from e
-
         self.grid = grid
         self.stratigraphy = stratigraphy
         self.streams = streams
@@ -136,9 +128,6 @@ class GISExporter:
         Returns:
             GeoDataFrame with node points
         """
-        import geopandas as gpd
-        from shapely.geometry import Point
-
         data = []
 
         for node in self.grid.iter_nodes():
@@ -188,9 +177,6 @@ class GISExporter:
         Returns:
             GeoDataFrame with element polygons
         """
-        import geopandas as gpd
-        from shapely.geometry import Polygon
-
         data = []
 
         for elem in self.grid.iter_elements():
@@ -228,9 +214,6 @@ class GISExporter:
         Returns:
             GeoDataFrame with stream reach linestrings
         """
-        import geopandas as gpd
-        from shapely.geometry import LineString
-
         if self.streams is None:
             return gpd.GeoDataFrame(columns=["reach_id", "name", "geometry"], crs=self.crs)
 
@@ -286,7 +269,6 @@ class GISExporter:
         Returns:
             GeoDataFrame with model boundary polygon
         """
-        import geopandas as gpd
         from shapely.ops import unary_union
 
         # Get elements and dissolve all to get boundary

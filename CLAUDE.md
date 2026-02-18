@@ -10,9 +10,8 @@ pyiwfm is a Python package for working with IWFM (Integrated Water Flow Model) m
 
 ### Installation
 ```bash
-pip install -e .              # Basic install
+pip install -e .              # Basic install (includes matplotlib, geopandas, shapely)
 pip install -e ".[dev]"       # Development (pytest, mypy, ruff)
-pip install -e ".[gis]"       # GIS support (geopandas, shapely)
 pip install -e ".[webapi]"    # Web viewer (FastAPI + vtk.js + deck.gl)
 pip install -e ".[all]"       # All optional dependencies
 ```
@@ -169,10 +168,9 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 
 ## Optional Dependencies
 
-Many modules have optional imports. Handle ImportError gracefully:
-- `gis`: geopandas, shapely
+Core dependencies include matplotlib, geopandas, shapely, and pyogrio (always installed). The following extras have optional imports — handle ImportError gracefully:
 - `mesh`: triangle, gmsh
-- `viz`: vtk, matplotlib
+- `viz`: vtk
 - `webapi`: fastapi, uvicorn, pydantic, pyvista, vtk, pyproj, python-multipart
 - `dss`: bundled HEC-DSS 7 C library (`io/dss/lib/hecdss.dll`) with ctypes wrapper; no extra install needed. On Linux, build `libhecdss.so` from source via `dss-build/` (see `dss-build/build_hecdss.py`). Set `HECDSS_LIB` env var to override library path.
 - `pest`: scipy

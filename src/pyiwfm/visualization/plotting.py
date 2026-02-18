@@ -48,32 +48,20 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 from numpy.typing import NDArray
 
-if TYPE_CHECKING:
-    from matplotlib.axes import Axes
-    from matplotlib.figure import Figure
+matplotlib.use("Agg")  # Non-interactive backend for saving
 
+if TYPE_CHECKING:
     from pyiwfm.components.stream import AppStream
     from pyiwfm.core.cross_section import CrossSection
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
-
-
-def _get_matplotlib() -> Any:
-    """Import matplotlib with proper backend handling."""
-    try:
-        import matplotlib
-
-        matplotlib.use("Agg")  # Non-interactive backend for saving
-        import matplotlib.pyplot as plt
-
-        return plt
-    except ImportError as e:
-        raise ImportError(
-            "matplotlib is required for plotting. Install with: pip install matplotlib"
-        ) from e
 
 
 def plot_mesh(
@@ -106,7 +94,7 @@ def plot_mesh(
     Returns:
         Tuple of (Figure, Axes)
     """
-    plt = _get_matplotlib()
+
     from matplotlib.collections import PolyCollection
 
     if ax is None:
@@ -193,7 +181,6 @@ def plot_nodes(
     Returns:
         Tuple of (Figure, Axes)
     """
-    plt = _get_matplotlib()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -255,7 +242,7 @@ def plot_elements(
     Returns:
         Tuple of (Figure, Axes)
     """
-    plt = _get_matplotlib()
+
     import matplotlib.colors as mcolors
     from matplotlib.collections import PolyCollection
 
@@ -353,7 +340,7 @@ def plot_scalar_field(
     Returns:
         Tuple of (Figure, Axes)
     """
-    plt = _get_matplotlib()
+
     import matplotlib.colors as mcolors
     from matplotlib.collections import PolyCollection
     from matplotlib.tri import Triangulation
@@ -456,7 +443,6 @@ def plot_streams(
     Returns:
         Tuple of (Figure, Axes)
     """
-    plt = _get_matplotlib()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -515,7 +501,7 @@ def plot_boundary(
     Returns:
         Tuple of (Figure, Axes)
     """
-    plt = _get_matplotlib()
+
     from matplotlib.patches import Polygon as MplPolygon
 
     if ax is None:
@@ -675,7 +661,7 @@ class MeshPlotter:
         Returns:
             Tuple of (Figure, Axes)
         """
-        plt = _get_matplotlib()
+
         fig, ax = plt.subplots(figsize=self.figsize)
 
         # Plot scalar field if provided
@@ -798,7 +784,7 @@ def plot_timeseries(
 
     >>> fig, ax = plot_timeseries([ts1, ts2, ts3], legend=True)
     """
-    plt = _get_matplotlib()
+
     import matplotlib.dates as mdates
 
     if ax is None:
@@ -921,7 +907,6 @@ def plot_timeseries_comparison(
     ...     show_metrics=True
     ... )
     """
-    plt = _get_matplotlib()
 
     if show_residuals:
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize, height_ratios=[3, 1], sharex=True)
@@ -1125,7 +1110,6 @@ def plot_budget_bar(
     ... }
     >>> fig, ax = plot_budget_bar(budget, title='Annual Water Budget')
     """
-    plt = _get_matplotlib()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -1235,7 +1219,6 @@ def plot_budget_stacked(
     ... }
     >>> fig, ax = plot_budget_stacked(times, components)
     """
-    plt = _get_matplotlib()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -1323,7 +1306,6 @@ def plot_budget_pie(
     tuple
         (Figure, Axes) matplotlib objects.
     """
-    plt = _get_matplotlib()
 
     inflows = {k: v for k, v in components.items() if v > 0}
     outflows = {k: abs(v) for k, v in components.items() if v < 0}
@@ -1413,7 +1395,6 @@ def plot_water_balance(
     >>> outflows = {'ET': 600, 'Pumping': 800, 'Stream Out': 300}
     >>> fig, ax = plot_water_balance(inflows, outflows, storage_change=-100)
     """
-    plt = _get_matplotlib()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -1542,7 +1523,6 @@ def plot_zbudget(
     ... }
     >>> fig, ax = plot_zbudget(zone_budgets, title='Subregion Budgets')
     """
-    plt = _get_matplotlib()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -1643,7 +1623,6 @@ def plot_budget_timeseries(
     tuple
         (Figure, Axes) matplotlib objects.
     """
-    plt = _get_matplotlib()
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -1853,7 +1832,7 @@ def plot_cross_section(
     tuple
         ``(Figure, Axes)`` matplotlib objects.
     """
-    plt = _get_matplotlib()
+
     import matplotlib.colors as mcolors
 
     if ax is None:

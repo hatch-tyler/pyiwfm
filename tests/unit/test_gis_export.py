@@ -4,16 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import geopandas
 import numpy as np
 import pytest
 
-# Skip all tests if geopandas is not available
-geopandas = pytest.importorskip("geopandas")
-
-from pyiwfm.components.stream import AppStream, StrmNode, StrmReach  # noqa: E402
-from pyiwfm.core.mesh import AppGrid, Element, Node  # noqa: E402
-from pyiwfm.core.stratigraphy import Stratigraphy  # noqa: E402
-from pyiwfm.visualization.gis_export import GISExporter  # noqa: E402
+from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
+from pyiwfm.core.mesh import AppGrid, Element, Node
+from pyiwfm.core.stratigraphy import Stratigraphy
+from pyiwfm.visualization.gis_export import GISExporter
 
 # Default CRS for tests (UTM Zone 10N - California)
 TEST_CRS = "EPSG:26910"
@@ -481,15 +479,3 @@ class TestGISExporterStreamCoordinateResolution:
         # First from grid node 2 (100, 0), second from direct coords
         assert coords[0] == (100.0, 0.0)
         assert coords[1] == (150.0, 150.0)
-
-
-class TestGISExporterImportError:
-    """Tests for import error handling."""
-
-    def test_import_error_when_geopandas_missing(self, simple_grid: AppGrid) -> None:
-        """Test that ImportError is raised when geopandas unavailable."""
-        import unittest.mock as mock
-
-        with mock.patch.dict("sys.modules", {"geopandas": None}):
-            with pytest.raises(ImportError, match="geopandas"):
-                GISExporter(grid=simple_grid)

@@ -30,21 +30,19 @@ dependencies = [
     "pandas>=2.0",
     "h5py>=3.7",
     "jinja2>=3.0",
-]
-
-[project.optional-dependencies]
-gis = [
+    "matplotlib>=3.5",
     "geopandas>=1.0",
     "shapely>=2.0",
     "pyogrio>=0.7",
 ]
+
+[project.optional-dependencies]
 mesh = [
     "triangle>=20220202",
     "gmsh>=4.11",
 ]
 viz = [
     "vtk>=9.0",
-    "matplotlib>=3.5",
 ]
 webapi = [
     "fastapi>=0.104",
@@ -76,10 +74,9 @@ docs = [
     "sphinx-design>=0.5",
     "myst-parser>=2.0",
     "numpydoc>=1.6",
-    "matplotlib>=3.5",
 ]
 all = [
-    "pyiwfm[gis,mesh,viz,webapi,pest]",
+    "pyiwfm[mesh,viz,webapi,pest]",
 ]
 
 [project.scripts]
@@ -158,8 +155,6 @@ disallow_untyped_defs = true
 [[tool.mypy.overrides]]
 module = [
     "h5py.*",
-    "geopandas.*",
-    "shapely.*",
     "triangle.*",
     "gmsh.*",
     "vtk.*",
@@ -168,10 +163,11 @@ module = [
     "uvicorn.*",
     "scipy.*",
     "dateutil.*",
-    "matplotlib.*",
     "pydantic.*",
     "pyproj.*",
     "starlette.*",
+    "geopandas.*",
+    "shapely.*",
 ]
 ignore_missing_imports = true
 

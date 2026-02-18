@@ -82,9 +82,6 @@ autodoc_mock_imports = [
     "multipart",
     "python_multipart",
     "scipy",
-    "geopandas",
-    "shapely",
-    "pyogrio",
     "triangle",
     "gmsh",
 ]
