@@ -679,6 +679,17 @@ def _make_text_ts_file(filepath: Path, n_cols: int = 3, n_times: int = 3) -> Non
             f.write(f"    {ts_str} {vals}\n")
 
 
+def _dss_available() -> bool:
+    """Check if the HEC-DSS library is available."""
+    try:
+        from pyiwfm.io.dss.wrapper import _get_library_path
+
+        return _get_library_path() is not None
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(not _dss_available(), reason="HEC-DSS library not available")
 class TestDSSStubWriting:
     """Tests for text-to-DSS conversion producing stub .dat files."""
 

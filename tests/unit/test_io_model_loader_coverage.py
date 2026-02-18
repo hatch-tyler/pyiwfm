@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import pyiwfm.io.model_loader  # noqa: F401 -- ensure submodule is registered as attribute
+from pyiwfm.io.comment_extractor import CommentExtractor
 from pyiwfm.io.model_loader import (
     CommentAwareModelLoader,
     CompleteModelLoader,
@@ -515,7 +516,7 @@ class TestCommentAwareModelLoaderExtractAllComments:
         assert result.comment_metadata == {}
 
     @patch.object(CommentAwareModelLoader, "_extract_component_comments")
-    @patch("pyiwfm.io.comment_extractor.CommentExtractor.extract")
+    @patch.object(CommentExtractor, "extract")
     def test_extract_all_comments_simulation_and_pp(
         self, mock_extract, mock_comp_extract, tmp_path: Path
     ) -> None:
@@ -541,7 +542,7 @@ class TestCommentAwareModelLoaderExtractAllComments:
         mock_comp_extract.assert_called_once()
 
     @patch.object(CommentAwareModelLoader, "_extract_component_comments")
-    @patch("pyiwfm.io.comment_extractor.CommentExtractor.extract")
+    @patch.object(CommentExtractor, "extract")
     def test_extract_all_comments_sim_extract_fails(
         self, mock_extract, mock_comp_extract, tmp_path: Path
     ) -> None:
@@ -563,7 +564,7 @@ class TestCommentAwareModelLoaderExtractAllComments:
         assert "simulation_main" not in comments
 
     @patch.object(CommentAwareModelLoader, "_extract_component_comments")
-    @patch("pyiwfm.io.comment_extractor.CommentExtractor.extract")
+    @patch.object(CommentExtractor, "extract")
     def test_extract_all_comments_pp_from_sim_config(
         self, mock_extract, mock_comp_extract, tmp_path: Path
     ) -> None:
@@ -587,7 +588,7 @@ class TestCommentAwareModelLoaderExtractAllComments:
 
         assert "preprocessor_main" in comments
 
-    @patch("pyiwfm.io.comment_extractor.CommentExtractor.extract")
+    @patch.object(CommentExtractor, "extract")
     def test_extract_all_comments_pp_extract_fails(self, mock_extract, tmp_path: Path) -> None:
         """Preprocessor comment extraction failure is logged but not fatal."""
         sim = tmp_path / "Sim.in"
@@ -613,7 +614,7 @@ class TestCommentAwareModelLoaderExtractAllComments:
 class TestExtractComponentComments:
     """Tests for lines 424-442: _extract_component_comments."""
 
-    @patch("pyiwfm.io.comment_extractor.CommentExtractor.extract")
+    @patch.object(CommentExtractor, "extract")
     def test_extracts_comments_from_existing_component_files(
         self, mock_extract, tmp_path: Path
     ) -> None:
