@@ -155,8 +155,6 @@ python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-plugins = ["numpy.typing.mypy_plugin"]
-
 [[tool.mypy.overrides]]
 module = [
     "h5py.*",
@@ -170,6 +168,10 @@ module = [
     "uvicorn.*",
     "scipy.*",
     "dateutil.*",
+    "matplotlib.*",
+    "pydantic.*",
+    "pyproj.*",
+    "starlette.*",
 ]
 ignore_missing_imports = true
 

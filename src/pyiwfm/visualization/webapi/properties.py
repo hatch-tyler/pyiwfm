@@ -353,7 +353,7 @@ class PropertyVisualizer:
                     mask = self.mesh.cell_data["layer"] != layer
                     array = array.copy()
                     array[mask] = np.nan
-                return array
+                return np.asarray(array, dtype=np.float64)
             return np.ones(n_cells)
 
         elif name == "thickness":
@@ -375,7 +375,7 @@ class PropertyVisualizer:
                     mask = self.mesh.cell_data["layer"] != layer
                     array = array.copy()
                     array[mask] = np.nan
-                return array
+                return np.asarray(array, dtype=np.float64)
 
         return None
 

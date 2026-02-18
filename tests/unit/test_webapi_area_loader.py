@@ -21,7 +21,9 @@ import h5py
 import numpy as np
 import pytest
 
-from pyiwfm.visualization.webapi.area_loader import (
+pytest.importorskip("fastapi", reason="fastapi not installed")
+
+from pyiwfm.visualization.webapi.area_loader import (  # noqa: E402
     AreaDataManager,
     LazyAreaDataLoader,
     _iwfm_date_to_iso,

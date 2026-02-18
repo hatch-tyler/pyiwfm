@@ -52,7 +52,7 @@ class SlicingController:
     @property
     def bounds(self) -> tuple[float, float, float, float, float, float]:
         """Get mesh bounds (xmin, xmax, ymin, ymax, zmin, zmax)."""
-        return self._bounds
+        return tuple(self._bounds)  # type: ignore[return-value]
 
     @property
     def x_range(self) -> tuple[float, float]:
@@ -72,7 +72,7 @@ class SlicingController:
     @property
     def center(self) -> tuple[float, float, float]:
         """Get mesh center point."""
-        return self.mesh.center
+        return tuple(self.mesh.center)  # type: ignore[return-value]
 
     def _get_cache_key(
         self,

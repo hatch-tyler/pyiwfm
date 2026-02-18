@@ -85,7 +85,7 @@ def _get_library_path() -> Path | None:
             # Add lib directory to DLL search path on Windows
             if platform.system() == "Windows":
                 try:
-                    os.add_dll_directory(str(package_lib_dir))
+                    os.add_dll_directory(str(package_lib_dir))  # type: ignore[attr-defined]
                 except (AttributeError, OSError):
                     pass  # Python < 3.8 or directory already added
             return package_lib
