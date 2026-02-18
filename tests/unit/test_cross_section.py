@@ -612,6 +612,9 @@ class TestTriangleMesh:
 # ===========================================================================
 
 
+pytest.importorskip("matplotlib", reason="matplotlib not installed")
+
+
 class TestPlotCrossSection:
     """Tests for cross-section plotting functions."""
 
