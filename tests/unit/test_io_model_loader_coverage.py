@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+import pyiwfm.io.model_loader  # noqa: F401 -- ensure submodule is registered as attribute
 from pyiwfm.io.model_loader import (
     CommentAwareModelLoader,
     CompleteModelLoader,

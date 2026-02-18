@@ -20,4 +20,5 @@ except ImportError:  # fastapi not installed
         """Stub — raises ImportError when webapi extras are not installed."""
         raise ImportError("webapi extras required: pip install pyiwfm[webapi]")
 
+
 __all__ = ["create_app", "launch_viewer"]

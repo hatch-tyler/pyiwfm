@@ -424,7 +424,7 @@ class TestConstrainedGHBCReading:
             f"                                   / Spec flow file\n"
             f"                                   / Spec head file\n"
             f"                                   / Gen head file\n"
-            f"     {cgh_file!s:<30s}  / Constrained GH file\n"
+            f"     {'cgh.dat':<30s}  / Constrained GH file\n"
             f"                                   / TS data file\n"
         )
         main_file = tmp_path / "bc_main.dat"
@@ -466,7 +466,7 @@ class TestWellNameParsing:
 
         pump_content = (
             "#4.0\n"
-            f"     {well_file!s:<30s}  / Well spec file\n"
+            f"     {'wells.dat':<30s}  / Well spec file\n"
             "                                   / Elem pump file\n"
             "                                   / TS data file\n"
             "                                   / Output file\n"
@@ -496,7 +496,7 @@ class TestWellNameParsing:
 
         pump_content = (
             "#4.0\n"
-            f"     {well_file!s:<30s}  / Well spec file\n"
+            f"     {'wells.dat':<30s}  / Well spec file\n"
             "                                   / Elem pump file\n"
             "                                   / TS data file\n"
             "                                   / Output file\n"
