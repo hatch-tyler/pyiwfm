@@ -100,7 +100,7 @@ def plot_mesh(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     # Build element polygons
     polygons = []
@@ -185,7 +185,7 @@ def plot_nodes(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     # Collect node coordinates
     interior_x, interior_y = [], []
@@ -249,7 +249,7 @@ def plot_elements(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     # Build element polygons and get color values
     polygons = []
@@ -348,7 +348,7 @@ def plot_scalar_field(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     if vmin is None:
         vmin = values.min()
@@ -405,7 +405,7 @@ def plot_scalar_field(
         )
         ax.add_collection(collection)
         ax.autoscale_view()
-        tcf = collection
+        tcf = collection  # type: ignore[assignment]
 
     if show_colorbar:
         fig.colorbar(tcf, ax=ax)
@@ -447,7 +447,7 @@ def plot_streams(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     # Plot reaches as lines
     for reach in streams.iter_reaches():
@@ -507,7 +507,7 @@ def plot_boundary(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     # Extract boundary nodes (ordered)
     boundary_nodes = [n for n in grid.iter_nodes() if n.is_boundary]
@@ -790,7 +790,7 @@ def plot_timeseries(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     # Ensure we have a list of time series
     series_list: list[TimeSeries]
@@ -915,7 +915,7 @@ def plot_timeseries_comparison(
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
         else:
-            fig = ax.get_figure()
+            fig = ax.get_figure()  # type: ignore[assignment]
 
     # Plot observed
     obs_times = observed.times.astype("datetime64[us]").astype("O")
@@ -1114,7 +1114,7 @@ def plot_budget_bar(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     names = list(components.keys())
     values = list(components.values())
@@ -1223,7 +1223,7 @@ def plot_budget_stacked(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     # Convert times
     times_plot = times.astype("datetime64[us]").astype("O")
@@ -1338,7 +1338,7 @@ def plot_budget_pie(
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
         else:
-            fig = ax.get_figure()
+            fig = ax.get_figure()  # type: ignore[assignment]
 
         data = inflows if budget_type == "inflow" else outflows
         labels = list(data.keys())
@@ -1348,7 +1348,7 @@ def plot_budget_pie(
         if show_values:
             labels = [f"{k}\n({v:,.0f} {units})" for k, v in zip(labels, values, strict=False)]
 
-        ax.pie(values, labels=labels, autopct="%1.1f%%", colors=colors, startangle=90)
+        ax.pie(values, labels=labels, autopct="%1.1f%%", colors=colors, startangle=90)  # type: ignore[arg-type]
         ax.set_title(title, fontsize=12, fontweight="bold")
 
     fig.tight_layout()
@@ -1399,7 +1399,7 @@ def plot_water_balance(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     total_in = sum(inflows.values())
     total_out = sum(outflows.values())
@@ -1527,7 +1527,7 @@ def plot_zbudget(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     zones = list(zone_budgets.keys())
     all_components: set[str] = set()
@@ -1627,7 +1627,7 @@ def plot_budget_timeseries(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     times_plot = times.astype("datetime64[us]").astype("O")
     colors = plt.get_cmap("tab10")(np.linspace(0, 1, len(budgets)))
@@ -1838,7 +1838,7 @@ def plot_cross_section(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     else:
-        fig = ax.get_figure()
+        fig = ax.get_figure()  # type: ignore[assignment]
 
     n_layers = cross_section.n_layers
     dist = cross_section.distance
