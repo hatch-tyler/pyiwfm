@@ -110,7 +110,7 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 **Backend** (`visualization/webapi/`):
 - `config.py` — `ModelState` singleton that holds the loaded `IWFMModel` and provides lazy getters for head data, budget data, stream reach boundaries, etc.
 - `server.py` — FastAPI app creation with CRS configuration and static file serving
-- `routes/` — 14 route modules: model, mesh, results, groundwater, streams, lakes, rootzone, small_watersheds, budgets, export, observations, slices, properties
+- `routes/` — 13 route modules: model, mesh, results, groundwater, streams, lakes, rootzone, small_watersheds, budgets, export, observations, slices, properties
 - `head_loader.py` — `LazyHeadDataLoader` reads HDF5 head results on demand
 - `hydrograph_reader.py` — Parses IWFM `.out` text hydrograph files
 - Coordinate reprojection: server-side via `pyproj` (model CRS → WGS84), `--crs` CLI flag
@@ -147,7 +147,7 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - Line length: 100 characters
 - NumPy-style docstrings
 - Uses 1-based IDs to match IWFM Fortran conventions
-- Pre-commit hooks: trailing whitespace, end-of-file-fixer, ruff lint/format, mypy
+- Pre-commit hooks: trailing whitespace, end-of-file-fixer, check-yaml, check-toml, check-added-large-files, ruff lint/format, mypy
 - Ruff rules: E, W, F, I (isort), B (bugbear), C4 (comprehensions), UP (pyupgrade), NPY
 
 ## IWFM Domain Conventions
