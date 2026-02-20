@@ -1392,6 +1392,7 @@ class IWFMModel:
                                                 and sn.rating is None
                                             ):
                                                 import numpy as np
+
                                                 from pyiwfm.components.stream import StreamRating
 
                                                 stages, flows = rs.node_rating_tables[sn_id]

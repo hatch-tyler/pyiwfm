@@ -18,7 +18,6 @@ orchestrating the writing of all groundwater-related input files including:
 from __future__ import annotations
 
 import logging
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -439,7 +438,7 @@ class GWComponentWriter(TemplateWriter):
         lines.append(f"    {cfg.return_flow_flag}                           / IFLAGRF")
 
         # ── Initial heads ─────────────────────────────────
-        lines.append(f"    1.0                         / FACTHP")
+        lines.append("    1.0                         / FACTHP")
 
         if gw and gw.heads is not None:
             for node_idx in range(n_nodes):
@@ -576,7 +575,7 @@ class GWComponentWriter(TemplateWriter):
         lines.append(
             "C-------------------------------------------------------------------------------"
         )
-        lines.append(f"    0                           / NEBK")
+        lines.append("    0                           / NEBK")
         lines.append("    1.0                         / FACT")
         lines.append("    DAY                         / TUNITH")
 
@@ -588,7 +587,7 @@ class GWComponentWriter(TemplateWriter):
         lines.append(
             "C-------------------------------------------------------------------------------"
         )
-        lines.append(f"    0                           / IFLAGRF")
+        lines.append("    0                           / IFLAGRF")
 
         # Initial heads section
         lines.append(
@@ -645,8 +644,6 @@ class GWComponentWriter(TemplateWriter):
         # Group BCs by type
         spec_head = [bc for bc in bcs if bc.bc_type == "specified_head"]
         spec_flow = [bc for bc in bcs if bc.bc_type == "specified_flow"]
-        gen_head = [bc for bc in bcs if bc.bc_type == "general_head"]
-        constrained_gh = [bc for bc in bcs if bc.bc_type == "constrained_general_head"]
 
         generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         subdir = self.config.gw_subdir
