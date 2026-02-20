@@ -148,6 +148,23 @@ def _apply_parametric_grids(
     kv = np.zeros((n_nodes, n_layers), dtype=np.float64)
 
     for grid_data in parametric_grids:
+        # Special case: single node with no elements means "uniform everywhere"
+        if grid_data.n_nodes == 1 and grid_data.n_elements == 0:
+            uniform_vals = grid_data.node_values[0]  # shape (n_layers, 5)
+            for i in range(n_nodes):
+                for layer in range(min(n_layers, uniform_vals.shape[0])):
+                    if uniform_vals[layer, 0] >= 0:
+                        kh[i, layer] = uniform_vals[layer, 0]
+                    if uniform_vals[layer, 1] >= 0:
+                        ss[i, layer] = uniform_vals[layer, 1]
+                    if uniform_vals[layer, 2] >= 0:
+                        sy[i, layer] = uniform_vals[layer, 2]
+                    if uniform_vals[layer, 3] >= 0:
+                        aquitard_kv[i, layer] = uniform_vals[layer, 3]
+                    if uniform_vals[layer, 4] >= 0:
+                        kv[i, layer] = uniform_vals[layer, 4]
+            continue
+
         # Build ParametricGrid from raw data
         pnodes = []
         for j in range(grid_data.n_nodes):
@@ -170,15 +187,15 @@ def _apply_parametric_grids(
             if result is None:
                 continue
             for layer in range(min(n_layers, result.shape[0])):
-                if result[layer, 0] > 0:
+                if result[layer, 0] >= 0:
                     kh[i, layer] = result[layer, 0]
-                if result[layer, 1] > 0:
+                if result[layer, 1] >= 0:
                     ss[i, layer] = result[layer, 1]
-                if result[layer, 2] > 0:
+                if result[layer, 2] >= 0:
                     sy[i, layer] = result[layer, 2]
-                if result[layer, 3] > 0:
+                if result[layer, 3] >= 0:
                     aquitard_kv[i, layer] = result[layer, 3]
-                if result[layer, 4] > 0:
+                if result[layer, 4] >= 0:
                     kv[i, layer] = result[layer, 4]
 
     params = AquiferParameters(
@@ -195,6 +212,97 @@ def _apply_parametric_grids(
     except ValueError:
         gw.aquifer_params = params
     return True
+
+
+def _apply_parametric_subsidence(
+    subs_config: Any,
+    mesh: AppGrid,
+    n_nodes: int,
+    n_layers: int,
+) -> list:
+    """Interpolate subsidence parameters from parametric grids onto model nodes.
+
+    Returns a list of SubsidenceNodeParams objects.
+    """
+    import numpy as np
+
+    from pyiwfm.io.gw_subsidence import SubsidenceNodeParams
+    from pyiwfm.io.parametric_grid import ParamElement, ParametricGrid, ParamNode
+
+    node_ids = sorted(mesh.nodes.keys())
+    node_coords = [(mesh.nodes[nid].x, mesh.nodes[nid].y) for nid in node_ids]
+
+    # Initialize arrays: shape (n_nodes, n_layers)
+    elastic_sc = np.zeros((n_nodes, n_layers), dtype=np.float64)
+    inelastic_sc = np.zeros((n_nodes, n_layers), dtype=np.float64)
+    interbed_thick = np.zeros((n_nodes, n_layers), dtype=np.float64)
+    interbed_thick_min = np.zeros((n_nodes, n_layers), dtype=np.float64)
+    precompact_head = np.zeros((n_nodes, n_layers), dtype=np.float64)
+
+    for grid_data in subs_config.parametric_grids:
+        # Special case: single node with no elements means "uniform everywhere"
+        if grid_data.n_nodes == 1 and grid_data.n_elements == 0:
+            uniform_vals = grid_data.node_values[0]  # shape (n_layers, 5)
+            for i in range(n_nodes):
+                for layer in range(min(n_layers, uniform_vals.shape[0])):
+                    if uniform_vals[layer, 0] >= 0:
+                        elastic_sc[i, layer] = uniform_vals[layer, 0]
+                    if uniform_vals[layer, 1] >= 0:
+                        inelastic_sc[i, layer] = uniform_vals[layer, 1]
+                    if uniform_vals[layer, 2] >= 0:
+                        interbed_thick[i, layer] = uniform_vals[layer, 2]
+                    if uniform_vals[layer, 3] >= 0:
+                        interbed_thick_min[i, layer] = uniform_vals[layer, 3]
+                    if uniform_vals[layer, 4] >= 0:
+                        precompact_head[i, layer] = uniform_vals[layer, 4]
+            continue
+
+        pnodes = []
+        for j in range(grid_data.n_nodes):
+            pnodes.append(
+                ParamNode(
+                    node_id=j,
+                    x=grid_data.node_coords[j, 0],
+                    y=grid_data.node_coords[j, 1],
+                    values=grid_data.node_values[j],
+                )
+            )
+        pelems = []
+        for j, verts in enumerate(grid_data.elements):
+            pelems.append(ParamElement(elem_id=j, vertices=verts))
+
+        pgrid = ParametricGrid(nodes=pnodes, elements=pelems)
+
+        for i, (x, y) in enumerate(node_coords):
+            result = pgrid.interpolate(x, y)
+            if result is None:
+                continue
+            for layer in range(min(n_layers, result.shape[0])):
+                if result[layer, 0] >= 0:
+                    elastic_sc[i, layer] = result[layer, 0]
+                if result[layer, 1] >= 0:
+                    inelastic_sc[i, layer] = result[layer, 1]
+                if result[layer, 2] >= 0:
+                    interbed_thick[i, layer] = result[layer, 2]
+                if result[layer, 3] >= 0:
+                    interbed_thick_min[i, layer] = result[layer, 3]
+                if result[layer, 4] >= 0:
+                    precompact_head[i, layer] = result[layer, 4]
+
+    # Build SubsidenceNodeParams list
+    node_params = []
+    for i, nid in enumerate(node_ids):
+        node_params.append(
+            SubsidenceNodeParams(
+                node_id=nid,
+                elastic_sc=elastic_sc[i].tolist(),
+                inelastic_sc=inelastic_sc[i].tolist(),
+                interbed_thick=interbed_thick[i].tolist(),
+                interbed_thick_min=interbed_thick_min[i].tolist(),
+                precompact_head=precompact_head[i].tolist(),
+            )
+        )
+    return node_params
 
 
 @dataclass
@@ -386,7 +494,7 @@ class IWFMModel:
         # Load lake geometry if requested
         if load_lakes and config.lakes_file and config.lakes_file.exists():
             try:
-                from pyiwfm.components.lake import AppLake
+                from pyiwfm.components.lake import AppLake, LakeElement
                 from pyiwfm.io.lakes import LakeReader
 
                 lake_reader = LakeReader()
@@ -395,6 +503,8 @@ class IWFMModel:
                 lakes = AppLake()
                 for lake in lakes_dict.values():
                     lakes.add_lake(lake)
+                    for elem_id in lake.elements:
+                        lakes.add_lake_element(LakeElement(element_id=elem_id, lake_id=lake.id))
 
                 model.lakes = lakes
             except Exception as e:
@@ -950,6 +1060,22 @@ class IWFMModel:
                                 # Store full config for roundtrip
                                 gw.subsidence_config = subs_config
 
+                                # Interpolate parametric grids if needed
+                                if (
+                                    not subs_config.node_params
+                                    and subs_config.parametric_grids
+                                    and model.mesh
+                                ):
+                                    subs_config.node_params = _apply_parametric_subsidence(
+                                        subs_config,
+                                        model.mesh,
+                                        n_nodes,
+                                        n_layers,
+                                    )
+                                    model.metadata["gw_subsidence_n_nodes"] = len(
+                                        subs_config.node_params
+                                    )
+
                                 # Populate NodeSubsidence objects
                                 from pyiwfm.components.groundwater import (
                                     NodeSubsidence,
@@ -1429,7 +1555,7 @@ class IWFMModel:
             model.source_files["lake_main"] = lake_file
             if lake_file.exists():
                 try:
-                    from pyiwfm.components.lake import AppLake
+                    from pyiwfm.components.lake import AppLake, LakeElement
 
                     lakes = AppLake()
 
@@ -1461,6 +1587,10 @@ class IWFMModel:
                                 precip_column=lp.precip_col,
                             )
                             lakes.add_lake(lake)
+                            for elem_id in lake.elements:
+                                lakes.add_lake_element(
+                                    LakeElement(element_id=elem_id, lake_id=lake.id)
+                                )
 
                         # Store conductance parameters
                         model.metadata["lake_conductance_factor"] = lake_config.conductance_factor
@@ -1479,6 +1609,10 @@ class IWFMModel:
                             lakes_dict = lake_reader.read_lake_definitions(lake_file)
                             for lake in lakes_dict.values():
                                 lakes.add_lake(lake)
+                                for elem_id in lake.elements:
+                                    lakes.add_lake_element(
+                                        LakeElement(element_id=elem_id, lake_id=lake.id)
+                                    )
                         except Exception:
                             pass
 

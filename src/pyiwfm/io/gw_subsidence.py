@@ -33,6 +33,9 @@ from pyiwfm.io.iwfm_reader import (
 from pyiwfm.io.iwfm_reader import (
     resolve_path as _resolve_path_f,
 )
+from pyiwfm.io.iwfm_reader import (
+    strip_inline_comment as _strip_comment,
+)
 
 
 @dataclass
@@ -82,6 +85,27 @@ class SubsidenceNodeParams:
 
 
 @dataclass
+class ParametricSubsidenceData:
+    """Raw parametric grid data for subsidence parameters.
+
+    Attributes:
+        n_nodes: Number of parametric grid nodes.
+        n_elements: Number of parametric grid elements.
+        elements: Element vertex index tuples (0-based into node arrays).
+        node_coords: Parametric node coordinates, shape (n_nodes, 2).
+        node_values: Parameter values per node, shape (n_nodes, n_layers, n_params).
+            The 5 params are: ElasticSC, InelasticSC, InterbedThick, InterbedThickMin,
+            PreCompactHead.
+    """
+
+    n_nodes: int
+    n_elements: int
+    elements: list[tuple[int, ...]]
+    node_coords: NDArray[np.float64]
+    node_values: NDArray[np.float64]
+
+
+@dataclass
 class SubsidenceConfig:
     """Complete subsidence configuration.
 
@@ -120,6 +144,8 @@ class SubsidenceConfig:
     hydrograph_coord_factor: float = 1.0
     hydrograph_output_file: Path | None = None
     hydrograph_specs: list[SubsidenceHydrographSpec] = field(default_factory=list)
+
+    parametric_grids: list[ParametricSubsidenceData] = field(default_factory=list)
 
     node_params: list[SubsidenceNodeParams] = field(default_factory=list)
     n_nodes: int = 0
@@ -217,25 +243,35 @@ class SubsidenceReader:
                 if hydout_path:
                     config.hydrograph_output_file = _resolve_path_f(base_dir, hydout_path)
 
-                # Read NOUTS rows: ID HYDTYP ILYR X Y NAME
+                # Read NOUTS rows:
+                #   SUBTYP=0: ID SUBTYP IOUTSL X Y NAME
+                #   SUBTYP=1: ID SUBTYP IOUTSL IOUTS NAME
                 for _ in range(config.n_hydrograph_outputs):
                     line = self._next_data_line(f)
                     parts = line.split()
-                    if len(parts) < 5:
+                    if len(parts) < 4:
                         continue
+                    hydtyp = int(float(parts[1]))
                     spec = SubsidenceHydrographSpec(
                         id=int(float(parts[0])),
-                        hydtyp=int(float(parts[1])),
+                        hydtyp=hydtyp,
                         layer=int(float(parts[2])),
-                        x=float(parts[3]) * config.hydrograph_coord_factor,
-                        y=float(parts[4]) * config.hydrograph_coord_factor,
                     )
-                    # Name may be after / delimiter or remaining parts
+                    if hydtyp == 0 and len(parts) >= 5:
+                        # X-Y coordinate format
+                        spec.x = float(parts[3]) * config.hydrograph_coord_factor
+                        spec.y = float(parts[4]) * config.hydrograph_coord_factor
+                        if len(parts) > 5:
+                            spec.name = " ".join(parts[5:])
+                    else:
+                        # Node number format (SUBTYP=1)
+                        spec.x = float(parts[3])  # node ID stored as x
+                        if len(parts) > 4:
+                            spec.name = " ".join(parts[4:])
+                    # Name from / delimiter overrides
                     if "/" in line:
                         name_start = line.index("/") + 1
                         spec.name = line[name_start:].strip()
-                    elif len(parts) > 5:
-                        spec.name = " ".join(parts[5:])
                     config.hydrograph_specs.append(spec)
             # When NOUTS=0, Fortran does NOT read FACTXY/SUBHYDOUTFL
 
@@ -262,9 +298,13 @@ class SubsidenceReader:
                     if more:
                         config.conversion_factors.extend(float(x) for x in more.split())
 
-            # Read parameter data (only for direct input, NGroup == 0)
+            # Read parameter data
             if config.n_parametric_grids == 0 and n_nodes > 0 and n_layers > 0:
                 self._read_direct_params(f, config, is_v50)
+            elif config.n_parametric_grids > 0:
+                config.parametric_grids = self._read_parametric_params(
+                    f, config.n_parametric_grids, config.conversion_factors
+                )
 
         # Read initial conditions file
         if config.ic_file and config.ic_file.exists() and n_nodes > 0:
@@ -334,6 +374,148 @@ class SubsidenceReader:
                     node_params.precompact_head.append(precompact)
 
             config.node_params.append(node_params)
+
+    def _read_parametric_params(
+        self,
+        f: TextIO,
+        ngroup: int,
+        factors: list[float],
+    ) -> list[ParametricSubsidenceData]:
+        """Read NGROUP parametric grid definitions for subsidence.
+
+        Each parametric grid group contains:
+        1. Node range string (e.g., "1-441")
+        2. NDP (number of parametric nodes)
+        3. NEP (number of parametric elements)
+        4. NEP element definition lines (if NEP > 0)
+        5. NDP node data lines with continuation rows per layer
+
+        The 5 subsidence params per layer are:
+        ElasticSC, InelasticSC, InterbedThick, InterbedThickMin, PreCompactHead.
+        """
+        # Conversion factors: [0]=FX, [1..5]=param factors
+        fx = factors[0] if len(factors) > 0 else 1.0
+        param_factors = [factors[i] if i < len(factors) else 1.0 for i in range(1, 6)]
+
+        grids: list[ParametricSubsidenceData] = []
+
+        for _ in range(ngroup):
+            # Node range string
+            node_range_str = _next_data_or_empty(f)
+            if not node_range_str:
+                break
+
+            # NDP
+            ndp_str = _next_data_or_empty(f)
+            if not ndp_str:
+                break
+            try:
+                ndp = int(ndp_str)
+            except ValueError:
+                break
+
+            # NEP
+            nep_str = _next_data_or_empty(f)
+            if not nep_str:
+                break
+            try:
+                nep = int(nep_str)
+            except ValueError:
+                break
+
+            # Read NEP element definitions
+            elements: list[tuple[int, ...]] = []
+            if nep > 0:
+                elem_count = 0
+                for line in f:
+                    self._line_num += 1
+                    if _is_comment_line(line):
+                        continue
+                    value, _ = _strip_comment(line)
+                    eparts = value.split()
+                    if len(eparts) < 4:
+                        break
+                    try:
+                        verts = [int(p) - 1 for p in eparts[1:]]
+                        verts = [v for v in verts if v >= 0]
+                        elements.append(tuple(verts))
+                    except ValueError:
+                        break
+                    elem_count += 1
+                    if elem_count >= nep:
+                        break
+
+            # Read NDP parametric node data lines
+            # First line per node: NodeID X Y P1_L1 P2_L1 P3_L1 P4_L1 P5_L1 (8+ tokens)
+            # Continuation lines (layers 2..NL): P1 P2 P3 P4 P5 (5 tokens)
+            node_coords = np.zeros((ndp, 2), dtype=np.float64)
+            all_raw_values: list[list[float]] = []
+            node_count = 0
+
+            for line in f:
+                self._line_num += 1
+                if _is_comment_line(line):
+                    if node_count >= ndp:
+                        break
+                    continue
+                value, _ = _strip_comment(line)
+                nparts = value.split()
+                if not nparts:
+                    continue
+
+                # Detect new node line vs continuation line
+                is_new_node = False
+                if node_count < ndp and len(nparts) >= 8:
+                    try:
+                        int(nparts[0])
+                        float(nparts[1])
+                        float(nparts[2])
+                        is_new_node = True
+                    except (ValueError, IndexError):
+                        pass
+
+                if is_new_node:
+                    node_coords[node_count, 0] = float(nparts[1]) * fx
+                    node_coords[node_count, 1] = float(nparts[2]) * fx
+                    raw_vals = [float(v) for v in nparts[3:]]
+                    all_raw_values.append(raw_vals)
+                    node_count += 1
+                elif len(nparts) == 5 and all_raw_values:
+                    try:
+                        cont_vals = [float(v) for v in nparts]
+                        all_raw_values[-1].extend(cont_vals)
+                    except ValueError:
+                        break
+                else:
+                    break
+
+            if not all_raw_values:
+                continue
+
+            # Determine n_layers from value count (5 params * n_layers)
+            n_values = len(all_raw_values[0])
+            n_layers = n_values // 5 if n_values >= 5 else 1
+
+            # Build node_values array: shape (ndp, n_layers, 5)
+            node_values = np.zeros((ndp, n_layers, 5), dtype=np.float64)
+            for i, raw in enumerate(all_raw_values):
+                for lay in range(n_layers):
+                    for p in range(5):
+                        idx = lay * 5 + p
+                        if idx < len(raw):
+                            node_values[i, lay, p] = raw[idx] * param_factors[p]
+
+            grids.append(
+                ParametricSubsidenceData(
+                    n_nodes=node_count,
+                    n_elements=nep,
+                    elements=elements,
+                    node_coords=node_coords[:node_count],
+                    node_values=node_values[:node_count],
+                )
+            )
+
+        return grids
 
     def _read_ic_file(self, filepath: Path, config: SubsidenceConfig) -> None:
         """Read subsidence initial conditions file.

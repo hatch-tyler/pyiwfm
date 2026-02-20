@@ -18,6 +18,7 @@ from pyiwfm.components.lake import (
     AppLake,
     Lake,
     LakeElement,
+    LakeOutflow,
     LakeRating,
 )
 from pyiwfm.core.exceptions import FileFormatError
@@ -306,10 +307,14 @@ class LakeReader:
             line_num = 0
             n_lakes = None
 
-            # Find NLAKES
+            # Find NLAKES (skip version header lines starting with #)
             for line in f:
                 line_num += 1
                 if _is_comment_line(line):
+                    continue
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    # Version header (e.g., "#4.0") — skip
                     continue
 
                 value, _ = _strip_comment(line)
@@ -324,7 +329,8 @@ class LakeReader:
             if n_lakes is None:
                 raise FileFormatError("Could not find NLAKES in file")
 
-            # Read lake data
+            # Read lake data — detect preprocessor vs simulation format
+            lakes_read = 0
             for line in f:
                 line_num += 1
                 if _is_comment_line(line):
@@ -336,16 +342,99 @@ class LakeReader:
 
                 try:
                     lake_id = int(parts[0])
-                    max_elev = float(parts[1])
-                    initial_storage = float(parts[2])
-                    name = " ".join(parts[3:]) if len(parts) > 3 else ""
 
-                    lakes[lake_id] = Lake(
-                        id=lake_id,
-                        max_elevation=max_elev if max_elev < 9990 else float("inf"),
-                        initial_storage=initial_storage,
-                        name=name,
-                    )
+                    # Preprocessor format: ID TYPDST DST NELAKE IELAKE(first)
+                    # Simulation format:   ID MAX_ELEV INITIAL_STORAGE [NAME]
+                    if len(parts) >= 5 and lakes_read == 0:
+                        # Check if this is preprocessor format by testing
+                        # if columns 1-3 are all integers
+                        try:
+                            typdst = int(parts[1])
+                            dst = int(parts[2])
+                            nelake = int(parts[3])
+                            is_preproc = True
+                        except ValueError:
+                            is_preproc = False
+                    else:
+                        is_preproc = lakes_read == 0 and False
+
+                    if is_preproc:
+                        # Preprocessor Lake.dat format
+                        first_elem = int(parts[4]) if len(parts) > 4 else 0
+                        elem_ids = [first_elem] if first_elem > 0 else []
+
+                        # Read remaining NELAKE-1 continuation element rows
+                        for _ce in range(nelake - 1):
+                            for cont_line in f:
+                                line_num += 1
+                                if _is_comment_line(cont_line):
+                                    continue
+                                cont_parts = cont_line.split()
+                                if cont_parts:
+                                    elem_ids.append(int(cont_parts[0]))
+                                break
+
+                        lake = Lake(
+                            id=lake_id,
+                            elements=elem_ids,
+                        )
+                        if typdst == 1:
+                            lake.outflow = LakeOutflow(
+                                lake_id=lake_id,
+                                destination_type="stream",
+                                destination_id=dst,
+                            )
+                        lakes[lake_id] = lake
+                        lakes_read += 1
+
+                        # Read remaining lakes in preprocessor format
+                        for _lk in range(n_lakes - 1):
+                            for lline in f:
+                                line_num += 1
+                                if _is_comment_line(lline):
+                                    continue
+                                lp = lline.split()
+                                if len(lp) < 5:
+                                    break
+                                lid = int(lp[0])
+                                lt = int(lp[1])
+                                ld = int(lp[2])
+                                nl = int(lp[3])
+                                fe = int(lp[4]) if len(lp) > 4 else 0
+                                eids = [fe] if fe > 0 else []
+                                for _ce2 in range(nl - 1):
+                                    for cl2 in f:
+                                        line_num += 1
+                                        if _is_comment_line(cl2):
+                                            continue
+                                        cp2 = cl2.split()
+                                        if cp2:
+                                            eids.append(int(cp2[0]))
+                                        break
+                                lk = Lake(id=lid, elements=eids)
+                                if lt == 1:
+                                    lk.outflow = LakeOutflow(
+                                        lake_id=lid,
+                                        destination_type="stream",
+                                        destination_id=ld,
+                                    )
+                                lakes[lid] = lk
+                                lakes_read += 1
+                                break
+                        break  # Done reading all lakes in preprocessor format
+                    else:
+                        # Simulation format: ID MAX_ELEV INITIAL_STORAGE [NAME]
+                        max_elev = float(parts[1])
+                        initial_storage = float(parts[2])
+                        name = " ".join(parts[3:]) if len(parts) > 3 else ""
+
+                        lakes[lake_id] = Lake(
+                            id=lake_id,
+                            max_elevation=max_elev if max_elev < 9990 else float("inf"),
+                            initial_storage=initial_storage,
+                            name=name,
+                        )
+                        lakes_read += 1
 
                 except ValueError as e:
                     raise FileFormatError(

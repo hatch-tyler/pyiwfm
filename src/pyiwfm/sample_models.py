@@ -702,18 +702,38 @@ def build_tutorial_model() -> types.SimpleNamespace:
         - **grid** -- 21x21 AppGrid (441 nodes, 400 elements, 2 subregions)
         - **gs_elev** -- Ground-surface elevation, shape (441,)
         - **stratigraphy** -- 2-layer Stratigraphy
-        - **initial_heads** -- shape (441, 2): gs_elev-20, gs_elev-40
-        - **stream** -- AppStream with 23 nodes, 3 reaches
-        - **lakes** -- AppLake with 1 lake (10 elements)
+        - **initial_heads** -- shape (441, 2): uniform 280/290
+        - **groundwater** -- AppGW with aquifer params, BCs, pumping, tile
+          drains, subsidence, hydrograph locations
+        - **stream** -- AppStream with 23 nodes, 3 reaches, 5 diversions,
+          2 bypasses
+        - **lakes** -- AppLake with 1 lake (10 elements) with outflow
         - **lake_elem_ids** -- list of the 10 element IDs in the lake
+        - **rootzone** -- RootZone with 7 crop types and 400 soil params
         - **final_heads** -- shape (441,): initial heads with drawdown cone
         - **head_timeseries** -- list of 3 TimeSeries (nodes 111, 221, 331)
         - **gw_budget** -- dict[str, float] for bar chart
         - **gw_budget_timeseries** -- (times, components) for stacked chart
         - **rz_budget** -- dict[str, float] for pie chart
     """
-    from pyiwfm.components.lake import AppLake, Lake, LakeElement
-    from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
+    from pyiwfm.components.groundwater import (
+        AppGW,
+        AquiferParameters,
+        BoundaryCondition,
+        ElementPumping,
+        HydrographLocation,
+        NodeSubsidence,
+        TileDrain,
+    )
+    from pyiwfm.components.lake import AppLake, Lake, LakeElement, LakeOutflow
+    from pyiwfm.components.rootzone import CropType, RootZone, SoilParameters
+    from pyiwfm.components.stream import (
+        AppStream,
+        Bypass,
+        Diversion,
+        StrmNode,
+        StrmReach,
+    )
 
     # ---- Grid (matches IWFM sample model: 21x21, 2000-unit spacing) ----
     nx, ny = 21, 21
@@ -783,8 +803,110 @@ def build_tutorial_model() -> types.SimpleNamespace:
         active_node=active_node,
     )
 
-    # ---- Initial heads ----
-    initial_heads = np.column_stack([gs_elev - 20.0, gs_elev - 40.0])
+    # ---- Initial heads (uniform 280/290, matching GW_MAIN.dat) ----
+    initial_heads = np.column_stack(
+        [
+            np.full(n_nodes, 280.0),
+            np.full(n_nodes, 290.0),
+        ]
+    )
+
+    # ---- Groundwater component ----
+    n_layers = 2
+    aquifer_params = AquiferParameters(
+        n_nodes=n_nodes,
+        n_layers=n_layers,
+        kh=np.full((n_nodes, n_layers), 50.0),
+        kv=np.full((n_nodes, n_layers), 1.0),
+        specific_storage=np.full((n_nodes, n_layers), 1e-6),
+        specific_yield=np.full((n_nodes, n_layers), 0.25),
+        aquitard_kv=np.full((n_nodes, n_layers), 0.2),
+    )
+
+    # West boundary: 21 nodes (column 0), constant specified head = 290
+    west_nodes = [j * nx + 1 for j in range(ny)]
+    bc_west = BoundaryCondition(
+        id=1,
+        bc_type="specified_head",
+        nodes=west_nodes,
+        values=[290.0] * len(west_nodes),
+        layer=1,
+    )
+
+    # East boundary: 21 nodes (column 20), time-series driven
+    east_nodes = [j * nx + nx for j in range(ny)]
+    bc_east = BoundaryCondition(
+        id=2,
+        bc_type="specified_head",
+        nodes=east_nodes,
+        values=[290.0] * len(east_nodes),
+        layer=1,
+        ts_column=1,
+    )
+
+    # Element pumping: 5 pumping wells
+    element_pumping = [
+        ElementPumping(element_id=73, layer=1, pump_rate=0.0, pump_column=1),
+        ElementPumping(element_id=193, layer=1, pump_rate=0.0, pump_column=2),
+        ElementPumping(element_id=333, layer=1, pump_rate=0.0, pump_column=3),
+        ElementPumping(element_id=134, layer=2, pump_rate=0.0, pump_column=4),
+        ElementPumping(element_id=274, layer=2, pump_rate=0.0, pump_column=5),
+    ]
+
+    # Tile drains: 21 drains along column 5 (node 6, 27, 48, ...)
+    tile_drains: dict[int, TileDrain] = {}
+    for td_i in range(ny):
+        td_node = td_i * nx + 6
+        td_id = td_i + 1
+        tile_drains[td_id] = TileDrain(
+            id=td_id,
+            element=td_node,  # element containing this node
+            elevation=280.0,
+            conductance=20_000.0,
+            destination_type="stream",
+            destination_id=20,
+        )
+
+    # Node subsidence: uniform parameters for all 441 nodes
+    node_subsidence = [
+        NodeSubsidence(
+            node_id=nid,
+            elastic_sc=[5e-6, 5e-6],
+            inelastic_sc=[5e-5, 5e-5],
+            interbed_thick=[10.0, 10.0],
+            interbed_thick_min=[2.0, 2.0],
+        )
+        for nid in range(1, n_nodes + 1)
+    ]
+
+    # Hydrograph locations: 21 nodes along center column (col 10), 2 layers
+    center_col = 11  # 1-based column index 11
+    hydrograph_locations = []
+    for j in range(ny):
+        hyd_nid = j * nx + center_col
+        for layer in range(1, n_layers + 1):
+            hydrograph_locations.append(
+                HydrographLocation(
+                    node_id=hyd_nid,
+                    layer=layer,
+                    x=nodes[hyd_nid].x,
+                    y=nodes[hyd_nid].y,
+                    name=f"Obs_N{hyd_nid}_L{layer}",
+                )
+            )
+
+    groundwater = AppGW(
+        n_nodes=n_nodes,
+        n_layers=n_layers,
+        n_elements=grid.n_elements,
+        aquifer_params=aquifer_params,
+        heads=initial_heads,
+        boundary_conditions=[bc_west, bc_east],
+        element_pumping=element_pumping,
+        tile_drains=tile_drains,
+        node_subsidence=node_subsidence,
+        hydrograph_locations=hydrograph_locations,
+    )
 
     # ---- Streams (matches IWFM sample model: 3 reaches, 23 nodes) ----
     stream = AppStream()
@@ -806,6 +928,9 @@ def build_tutorial_model() -> types.SimpleNamespace:
                 x=nodes[gw_nid].x,
                 y=nodes[gw_nid].y,
                 bottom_elev=bottom_elevs[sid - 1],
+                conductivity=10.0,
+                bed_thickness=1.0,
+                wetted_perimeter=150.0,
             )
         )
 
@@ -817,6 +942,74 @@ def build_tutorial_model() -> types.SimpleNamespace:
         StrmReach(id=3, upstream_node=17, downstream_node=23, nodes=list(range(17, 24)))
     )
 
+    # Diversions: 5 diversions from various stream nodes
+    stream.add_diversion(
+        Diversion(
+            id=1,
+            source_node=3,
+            destination_type="element",
+            destination_id=152,
+            name="Div1",
+            max_div_column=1,
+        )
+    )
+    stream.add_diversion(
+        Diversion(
+            id=2,
+            source_node=5,
+            destination_type="element",
+            destination_id=128,
+            name="Div2",
+            max_div_column=2,
+        )
+    )
+    stream.add_diversion(
+        Diversion(
+            id=3,
+            source_node=8,
+            destination_type="element",
+            destination_id=65,
+            name="Div3",
+            max_div_column=3,
+        )
+    )
+    stream.add_diversion(
+        Diversion(
+            id=4,
+            source_node=13,
+            destination_type="element",
+            destination_id=181,
+            name="Div4",
+            max_div_column=4,
+        )
+    )
+    stream.add_diversion(
+        Diversion(
+            id=5,
+            source_node=20,
+            destination_type="element",
+            destination_id=55,
+            name="Div5",
+            max_div_column=5,
+        )
+    )
+
+    # Bypasses: 2 bypasses
+    stream.add_bypass(
+        Bypass(id=1, source_node=10, destination_node=11, name="Bypass1", capacity=500.0)
+    )
+    stream.add_bypass(
+        Bypass(
+            id=2,
+            source_node=16,
+            destination_node=17,
+            name="Bypass2",
+            capacity=1000.0,
+            rating_table_flows=[0.0, 500.0, 1000.0, 2000.0],
+            rating_table_spills=[0.0, 100.0, 300.0, 800.0],
+        )
+    )
+
     # ---- Lake (matches IWFM sample model: 1 lake, 10 elements) ----
     lake_comp = AppLake()
     lake_comp.add_lake(
@@ -824,11 +1017,61 @@ def build_tutorial_model() -> types.SimpleNamespace:
             id=1,
             name="Sample Lake",
             max_elevation=350.0,
+            initial_elevation=280.0,
+            bed_conductivity=2.0,
+            bed_thickness=1.0,
+            et_column=7,
+            precip_column=2,
+            max_elev_column=1,
+            outflow=LakeOutflow(
+                lake_id=1,
+                destination_type="stream",
+                destination_id=10,
+            ),
         )
     )
     lake_elem_ids = [169, 170, 171, 188, 189, 190, 207, 208, 209, 210]
     for lake_eid in lake_elem_ids:
         lake_comp.add_lake_element(LakeElement(lake_id=1, element_id=lake_eid))
+
+    # ---- Root Zone ----
+    rootzone = RootZone(n_elements=grid.n_elements, n_layers=n_layers)
+    crop_defs = [
+        CropType(id=1, name="TO", root_depth=5.0),
+        CropType(id=2, name="AL", root_depth=6.0),
+        CropType(id=3, name="RICE_FL", root_depth=3.0),
+        CropType(id=4, name="RICE_NFL", root_depth=3.0),
+        CropType(id=5, name="RICE_NDC", root_depth=3.0),
+        CropType(id=6, name="REFUGE_SL", root_depth=3.0),
+        CropType(id=7, name="REFUGE_PR", root_depth=3.0),
+    ]
+    for crop in crop_defs:
+        rootzone.add_crop_type(crop)
+
+    # Sandy soils: elements 1-200
+    for eid in range(1, 201):
+        rootzone.set_soil_parameters(
+            eid,
+            SoilParameters(
+                porosity=0.45,
+                field_capacity=0.20,
+                wilting_point=0.0,
+                saturated_kv=2.60,
+                lambda_param=0.62,
+            ),
+        )
+    # Clay soils: elements 201-400
+    for eid in range(201, 401):
+        rootzone.set_soil_parameters(
+            eid,
+            SoilParameters(
+                porosity=0.50,
+                field_capacity=0.33,
+                wilting_point=0.0,
+                saturated_kv=0.68,
+                lambda_param=0.36,
+            ),
+        )
 
     # ---- Final heads (with drawdown cone) ----
     rng = np.random.default_rng(42)
@@ -901,9 +1144,11 @@ def build_tutorial_model() -> types.SimpleNamespace:
         gs_elev=gs_elev,
         stratigraphy=stratigraphy,
         initial_heads=initial_heads,
+        groundwater=groundwater,
         stream=stream,
         lakes=lake_comp,
         lake_elem_ids=lake_elem_ids,
+        rootzone=rootzone,
         final_heads=final_heads,
         head_timeseries=head_timeseries,
         gw_budget=gw_budget,

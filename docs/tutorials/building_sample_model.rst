@@ -28,7 +28,7 @@ The IWFM sample model we are building has these properties:
 - **Stratigraphy**: 2 aquifer layers
 - **Streams**: 3 reaches with 23 stream nodes
 - **Lakes**: 1 lake
-- **Root Zone**: Non-ponded crops, ponded (rice), urban, native vegetation
+- **Root Zone**: 2 nonponded crops + 5 ponded crops (7 crop types)
 - **Simulation period**: 10/01/1990 -- 09/30/2000 (daily timestep)
 
 Section 1: Create the Mesh
@@ -39,7 +39,7 @@ Build the 21 x 21 node grid (441 nodes) and 400 quadrilateral elements:
 .. code-block:: python
 
    import numpy as np
-   from pyiwfm.core.mesh import AppGrid, Node, Element
+   from pyiwfm.core.mesh import AppGrid, Node, Element, Subregion
 
    # Grid dimensions
    nx, ny = 21, 21
@@ -82,8 +82,14 @@ Build the 21 x 21 node grid (441 nodes) and 400 quadrilateral elements:
 
    print(f"Created {len(elements)} elements")
 
+   # Subregion definitions
+   subregions = {
+       1: Subregion(id=1, name="Region1"),
+       2: Subregion(id=2, name="Region2"),
+   }
+
    # Assemble the grid
-   grid = AppGrid(nodes=nodes, elements=elements)
+   grid = AppGrid(nodes=nodes, elements=elements, subregions=subregions)
    grid.compute_connectivity()
 
    print(f"Grid: {grid.n_nodes} nodes, {grid.n_elements} elements")
@@ -200,45 +206,98 @@ heads, and boundary conditions:
 .. code-block:: python
 
    from pyiwfm.components.groundwater import (
-       AppGW, AquiferParameters, BoundaryCondition, Well,
+       AppGW, AquiferParameters, BoundaryCondition,
+       ElementPumping, TileDrain, NodeSubsidence, HydrographLocation,
    )
 
-   # Aquifer parameters (uniform)
+   n_layers = 2
+
+   # Aquifer parameters (uniform across all nodes and layers)
    aquifer_params = AquiferParameters(
-       pkh=np.full((n_nodes, n_layers), 50.0),     # Horiz. hydraulic conductivity (ft/day)
-       ps=np.full((n_nodes, n_layers), 1e-6),       # Specific storage (1/ft)
-       pn=np.full((n_nodes, n_layers), 0.25),       # Porosity
-       pv=np.full((n_nodes, n_layers), 0.2),        # Vertical anisotropy (Kv/Kh)
-   )
-
-   # Initial heads: approximates ground surface with slight offset
-   initial_heads = np.column_stack([
-       gs_elev - 20.0,   # Layer 1: 20 ft below ground
-       gs_elev - 40.0,   # Layer 2: 40 ft below ground
-   ])
-
-   # Specified head boundary conditions at upstream nodes (south boundary)
-   boundary_conditions = []
-   for node_id in range(1, nx + 1):  # Row 1 (south)
-       bc = BoundaryCondition(
-           node_id=node_id,
-           layer=1,
-           bc_type="specified_head",
-           head=gs_elev[node_id - 1] - 20.0,
-       )
-       boundary_conditions.append(bc)
-
-   # Create groundwater component
-   gw = AppGW(
        n_nodes=n_nodes,
        n_layers=n_layers,
-       n_elements=grid.n_elements,
-       aquifer_params=aquifer_params,
-       heads=initial_heads,
-       boundary_conditions=boundary_conditions,
+       kh=np.full((n_nodes, n_layers), 50.0),            # Horiz. K (ft/day)
+       kv=np.full((n_nodes, n_layers), 1.0),              # Vert. K (ft/day)
+       specific_storage=np.full((n_nodes, n_layers), 1e-6),
+       specific_yield=np.full((n_nodes, n_layers), 0.25),
+       aquitard_kv=np.full((n_nodes, n_layers), 0.2),
    )
 
-   print(f"GW: {len(gw.boundary_conditions)} boundary conditions")
+   # Initial heads: uniform 280 (layer 1) and 290 (layer 2)
+   initial_heads = np.column_stack([
+       np.full(n_nodes, 280.0),
+       np.full(n_nodes, 290.0),
+   ])
+
+   # West boundary: 21 nodes, constant specified head = 290
+   west_nodes = [j * nx + 1 for j in range(ny)]
+   bc_west = BoundaryCondition(
+       id=1, bc_type="specified_head",
+       nodes=west_nodes, values=[290.0] * len(west_nodes), layer=1,
+   )
+
+   # East boundary: 21 nodes, time-series driven
+   east_nodes = [j * nx + nx for j in range(ny)]
+   bc_east = BoundaryCondition(
+       id=2, bc_type="specified_head",
+       nodes=east_nodes, values=[290.0] * len(east_nodes), layer=1,
+       ts_column=1,
+   )
+
+   # Element pumping: 5 wells
+   element_pumping = [
+       ElementPumping(element_id=73,  layer=1, pump_rate=0.0, pump_column=1),
+       ElementPumping(element_id=193, layer=1, pump_rate=0.0, pump_column=2),
+       ElementPumping(element_id=333, layer=1, pump_rate=0.0, pump_column=3),
+       ElementPumping(element_id=134, layer=2, pump_rate=0.0, pump_column=4),
+       ElementPumping(element_id=274, layer=2, pump_rate=0.0, pump_column=5),
+   ]
+
+   # Tile drains: 21 drains along column 6 (1-based: node 6, 27, 48, ...)
+   tile_drains = {}
+   for td_i in range(ny):
+       td_node = td_i * nx + 6
+       td_id = td_i + 1
+       tile_drains[td_id] = TileDrain(
+           id=td_id, element=td_node, elevation=280.0,
+           conductance=20_000.0, destination_type="stream", destination_id=20,
+       )
+
+   # Node subsidence: uniform parameters for all nodes
+   node_subsidence = [
+       NodeSubsidence(
+           node_id=nid,
+           elastic_sc=[5e-6, 5e-6], inelastic_sc=[5e-5, 5e-5],
+           interbed_thick=[10.0, 10.0], interbed_thick_min=[2.0, 2.0],
+       )
+       for nid in range(1, n_nodes + 1)
+   ]
+
+   # Hydrograph locations: center column, both layers
+   center_col = 11  # 1-based column index
+   hydrograph_locations = []
+   for j in range(ny):
+       hyd_nid = j * nx + center_col
+       for layer in range(1, n_layers + 1):
+           hydrograph_locations.append(HydrographLocation(
+               node_id=hyd_nid, layer=layer,
+               x=nodes[hyd_nid].x, y=nodes[hyd_nid].y,
+               name=f"Obs_N{hyd_nid}_L{layer}",
+           ))
+
+   # Assemble groundwater component
+   gw = AppGW(
+       n_nodes=n_nodes, n_layers=n_layers, n_elements=grid.n_elements,
+       aquifer_params=aquifer_params, heads=initial_heads,
+       boundary_conditions=[bc_west, bc_east],
+       element_pumping=element_pumping, tile_drains=tile_drains,
+       node_subsidence=node_subsidence, hydrograph_locations=hydrograph_locations,
+   )
+
+   print(f"GW: {len(gw.boundary_conditions)} BCs, "
+         f"{len(gw.element_pumping)} pumps, "
+         f"{len(gw.tile_drains)} tile drains, "
+         f"{len(gw.hydrograph_locations)} hydrograph locations")
 
 Visualize initial head distribution:
 
@@ -267,7 +326,9 @@ Reach 1 flowing from north to south, then Reaches 2 and 3 branching:
 
 .. code-block:: python
 
-   from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
+   from pyiwfm.components.stream import (
+       AppStream, StrmNode, StrmReach, Diversion, Bypass,
+   )
 
    stream = AppStream()
 
@@ -282,11 +343,10 @@ Reach 1 flowing from north to south, then Reaches 2 and 3 branching:
 
    for sid, gw_nid in enumerate(all_gw, start=1):
        stream.add_node(StrmNode(
-           id=sid,
-           gw_node=gw_nid,
-           x=nodes[gw_nid].x,
-           y=nodes[gw_nid].y,
+           id=sid, gw_node=gw_nid,
+           x=nodes[gw_nid].x, y=nodes[gw_nid].y,
            bottom_elev=bottom_elevs[sid - 1],
+           conductivity=10.0, bed_thickness=1.0, wetted_perimeter=150.0,
        ))
 
    # 3 reaches
@@ -297,7 +357,28 @@ Reach 1 flowing from north to south, then Reaches 2 and 3 branching:
    stream.add_reach(StrmReach(id=3, upstream_node=17, downstream_node=23,
                                nodes=list(range(17, 24))))
 
-   print(f"Streams: {len(stream.nodes)} nodes, {len(stream.reaches)} reaches")
+   # 5 diversions
+   stream.add_diversion(Diversion(id=1, source_node=3,  destination_type="element",
+                                   destination_id=152, name="Div1", max_div_column=1))
+   stream.add_diversion(Diversion(id=2, source_node=5,  destination_type="element",
+                                   destination_id=128, name="Div2", max_div_column=2))
+   stream.add_diversion(Diversion(id=3, source_node=8,  destination_type="element",
+                                   destination_id=65,  name="Div3", max_div_column=3))
+   stream.add_diversion(Diversion(id=4, source_node=13, destination_type="element",
+                                   destination_id=181, name="Div4", max_div_column=4))
+   stream.add_diversion(Diversion(id=5, source_node=20, destination_type="element",
+                                   destination_id=55,  name="Div5", max_div_column=5))
+
+   # 2 bypasses (second has a rating table)
+   stream.add_bypass(Bypass(id=1, source_node=10, destination_node=11,
+                             name="Bypass1", capacity=500.0))
+   stream.add_bypass(Bypass(id=2, source_node=16, destination_node=17,
+                             name="Bypass2", capacity=1000.0,
+                             rating_table_flows=[0.0, 500.0, 1000.0, 2000.0],
+                             rating_table_spills=[0.0, 100.0, 300.0, 800.0]))
+
+   print(f"Streams: {stream.n_nodes} nodes, {stream.n_reaches} reaches, "
+         f"{len(stream.diversions)} diversions, {len(stream.bypasses)} bypasses")
 
 Visualize the stream network overlaid on the mesh:
 
@@ -325,7 +406,7 @@ Define a lake occupying 10 elements in the upper-center of the domain
 
 .. code-block:: python
 
-   from pyiwfm.components.lake import AppLake, Lake, LakeElement
+   from pyiwfm.components.lake import AppLake, Lake, LakeElement, LakeOutflow
 
    lake_component = AppLake()
 
@@ -333,6 +414,15 @@ Define a lake occupying 10 elements in the upper-center of the domain
        id=1,
        name="Sample Lake",
        max_elevation=350.0,
+       initial_elevation=280.0,
+       bed_conductivity=2.0,
+       bed_thickness=1.0,
+       et_column=7,
+       precip_column=2,
+       max_elev_column=1,
+       outflow=LakeOutflow(
+           lake_id=1, destination_type="stream", destination_id=10,
+       ),
    )
    lake_component.add_lake(lake)
 
@@ -365,40 +455,41 @@ Visualize lake elements highlighted on the mesh:
 Section 6: Root Zone Component
 -------------------------------
 
-Configure root zone with non-ponded crops, ponded agriculture (rice),
-urban, and native vegetation:
+Configure root zone with non-ponded crops (tomato, alfalfa) and ponded
+crops (rice varieties, refuge):
 
 .. code-block:: python
 
-   from pyiwfm.components.rootzone import (
-       RootZone, CropType, SoilParameters, ElementLandUse,
-   )
+   from pyiwfm.components.rootzone import RootZone, CropType, SoilParameters
 
-   rz = RootZone(
-       n_elements=grid.n_elements,
-       n_layers=n_layers,
-   )
+   rz = RootZone(n_elements=grid.n_elements, n_layers=n_layers)
 
-   # Define crop types
+   # Define crop types with root depths (ft)
+   # 2 nonponded + 5 ponded = 7 crop types (matching IWFM sample model)
    crops = [
-       CropType(id=1, name="Tomato"),
-       CropType(id=2, name="Alfalfa"),
-       CropType(id=3, name="Rice"),        # ponded
-       CropType(id=4, name="Urban"),
-       CropType(id=5, name="Native Veg"),
-       CropType(id=6, name="Riparian"),
+       CropType(id=1, name="TO",         root_depth=5.0),  # Tomato (nonponded)
+       CropType(id=2, name="AL",         root_depth=6.0),  # Alfalfa (nonponded)
+       CropType(id=3, name="RICE_FL",    root_depth=3.0),  # Rice - fully irrigated
+       CropType(id=4, name="RICE_NFL",   root_depth=3.0),  # Rice - not fully irrigated
+       CropType(id=5, name="RICE_NDC",   root_depth=3.0),  # Rice - no decomposition
+       CropType(id=6, name="REFUGE_SL",  root_depth=3.0),  # Refuge - seasonal
+       CropType(id=7, name="REFUGE_PR",  root_depth=3.0),  # Refuge - permanent
    ]
    for crop in crops:
        rz.add_crop_type(crop)
 
-   # Set soil parameters for all elements
-   for eid in range(1, grid.n_elements + 1):
+   # Sandy soils: elements 1-200 (south half, subregion 1)
+   for eid in range(1, 201):
        rz.set_soil_parameters(eid, SoilParameters(
-           wilting_point=0.10,
-           field_capacity=0.30,
-           total_porosity=0.40,
-           root_depth=4.0,           # ft
-           saturated_kh=10.0,        # ft/day
+           porosity=0.45, field_capacity=0.20, wilting_point=0.0,
+           saturated_kv=2.60, lambda_param=0.62,
+       ))
+
+   # Clay soils: elements 201-400 (north half, subregion 2)
+   for eid in range(201, 401):
+       rz.set_soil_parameters(eid, SoilParameters(
+           porosity=0.50, field_capacity=0.33, wilting_point=0.0,
+           saturated_kv=0.68, lambda_param=0.36,
        ))
 
    print(f"Root Zone: {len(rz.crop_types)} crop types, "
@@ -442,7 +533,6 @@ Combine all components into an ``IWFMModel`` and write to disk:
            "start_date": "10/01/1990",
            "end_date": "09/30/2000",
            "timestep": "1DAY",
-           "description": "IWFM sample model built with pyiwfm",
        },
    )
 
@@ -625,9 +715,12 @@ Here is the complete script combining all steps:
    from pyiwfm.core.model import IWFMModel
    from pyiwfm.components.groundwater import (
        AppGW, AquiferParameters, BoundaryCondition,
+       ElementPumping, TileDrain, NodeSubsidence, HydrographLocation,
    )
-   from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
-   from pyiwfm.components.lake import AppLake, Lake, LakeElement
+   from pyiwfm.components.stream import (
+       AppStream, StrmNode, StrmReach, Diversion, Bypass,
+   )
+   from pyiwfm.components.lake import AppLake, Lake, LakeElement, LakeOutflow
    from pyiwfm.components.rootzone import RootZone, CropType, SoilParameters
    from pyiwfm.io import save_complete_model
    from pyiwfm.visualization.plotting import (
@@ -668,6 +761,7 @@ Here is the complete script combining all steps:
 
    # ---- 2. Stratigraphy ----
    n_nodes = grid.n_nodes
+   n_layers = 2
    gs_elev = np.full(n_nodes, 500.0)
    for nid in [177, 178, 180, 197, 198, 200, 217, 218]:
        gs_elev[nid - 1] = 270.0
@@ -681,7 +775,7 @@ Here is the complete script combining all steps:
    top_elev_l2 = bottom_elev_l1 - confining
    bottom_elev_l2 = top_elev_l2 - 100.0
 
-   strat = Stratigraphy(
+   stratigraphy = Stratigraphy(
        n_layers=2, n_nodes=n_nodes, gs_elev=gs_elev,
        top_elev=np.column_stack([top_elev_l1, top_elev_l2]),
        bottom_elev=np.column_stack([bottom_elev_l1, bottom_elev_l2]),
@@ -689,24 +783,52 @@ Here is the complete script combining all steps:
    )
 
    # ---- 3. Groundwater ----
-   initial_heads = np.column_stack([gs_elev - 20.0, gs_elev - 40.0])
-   bcs = [
-       BoundaryCondition(
-           node_id=i, layer=1, bc_type="specified_head",
-           head=gs_elev[i - 1] - 20.0,
-       )
-       for i in range(1, nx + 1)
-   ]
+   initial_heads = np.column_stack([
+       np.full(n_nodes, 280.0), np.full(n_nodes, 290.0),
+   ])
+   aquifer_params = AquiferParameters(
+       n_nodes=n_nodes, n_layers=n_layers,
+       kh=np.full((n_nodes, n_layers), 50.0),
+       kv=np.full((n_nodes, n_layers), 1.0),
+       specific_storage=np.full((n_nodes, n_layers), 1e-6),
+       specific_yield=np.full((n_nodes, n_layers), 0.25),
+       aquitard_kv=np.full((n_nodes, n_layers), 0.2),
+   )
+   west_nodes = [j * nx + 1 for j in range(ny)]
+   east_nodes = [j * nx + nx for j in range(ny)]
    gw = AppGW(
-       n_nodes=n_nodes, n_layers=2, n_elements=grid.n_elements,
-       aquifer_params=AquiferParameters(
-           pkh=np.full((n_nodes, 2), 50.0),
-           ps=np.full((n_nodes, 2), 1e-6),
-           pn=np.full((n_nodes, 2), 0.25),
-           pv=np.full((n_nodes, 2), 0.2),
-       ),
-       heads=initial_heads,
-       boundary_conditions=bcs,
+       n_nodes=n_nodes, n_layers=n_layers, n_elements=grid.n_elements,
+       aquifer_params=aquifer_params, heads=initial_heads,
+       boundary_conditions=[
+           BoundaryCondition(id=1, bc_type="specified_head",
+                             nodes=west_nodes, values=[290.0]*len(west_nodes), layer=1),
+           BoundaryCondition(id=2, bc_type="specified_head",
+                             nodes=east_nodes, values=[290.0]*len(east_nodes),
+                             layer=1, ts_column=1),
+       ],
+       element_pumping=[
+           ElementPumping(element_id=e, layer=l, pump_rate=0.0, pump_column=c)
+           for e, l, c in [(73,1,1),(193,1,2),(333,1,3),(134,2,4),(274,2,5)]
+       ],
+       tile_drains={
+           i+1: TileDrain(id=i+1, element=i*nx+6, elevation=280.0,
+                           conductance=20_000.0, destination_type="stream",
+                           destination_id=20)
+           for i in range(ny)
+       },
+       node_subsidence=[
+           NodeSubsidence(node_id=n, elastic_sc=[5e-6,5e-6],
+                          inelastic_sc=[5e-5,5e-5],
+                          interbed_thick=[10.0,10.0],
+                          interbed_thick_min=[2.0,2.0])
+           for n in range(1, n_nodes+1)
+       ],
+       hydrograph_locations=[
+           HydrographLocation(node_id=j*nx+11, layer=lay,
+                               x=nodes[j*nx+11].x, y=nodes[j*nx+11].y,
+                               name=f"Obs_N{j*nx+11}_L{lay}")
+           for j in range(ny) for lay in range(1, n_layers+1)
+       ],
    )
 
    # ---- 4. Streams ----
@@ -719,35 +841,62 @@ Here is the complete script combining all steps:
    for sid, gw_nid in enumerate(all_gw, start=1):
        stream.add_node(StrmNode(id=sid, gw_node=gw_nid,
                                 x=nodes[gw_nid].x, y=nodes[gw_nid].y,
-                                bottom_elev=bottom_elevs[sid - 1]))
+                                bottom_elev=bottom_elevs[sid - 1],
+                                conductivity=10.0, bed_thickness=1.0,
+                                wetted_perimeter=150.0))
    stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=10,
                                nodes=list(range(1, 11))))
    stream.add_reach(StrmReach(id=2, upstream_node=11, downstream_node=16,
                                nodes=list(range(11, 17))))
    stream.add_reach(StrmReach(id=3, upstream_node=17, downstream_node=23,
                                nodes=list(range(17, 24))))
+   for did, sn, de in [(1,3,152),(2,5,128),(3,8,65),(4,13,181),(5,20,55)]:
+       stream.add_diversion(Diversion(id=did, source_node=sn,
+                                       destination_type="element",
+                                       destination_id=de,
+                                       name=f"Div{did}", max_div_column=did))
+   stream.add_bypass(Bypass(id=1, source_node=10, destination_node=11,
+                             name="Bypass1", capacity=500.0))
+   stream.add_bypass(Bypass(id=2, source_node=16, destination_node=17,
+                             name="Bypass2", capacity=1000.0,
+                             rating_table_flows=[0.0, 500.0, 1000.0, 2000.0],
+                             rating_table_spills=[0.0, 100.0, 300.0, 800.0]))
 
    # ---- 5. Lake ----
    lake_comp = AppLake()
-   lake_comp.add_lake(Lake(id=1, name="Sample Lake", max_elevation=350.0))
+   lake_comp.add_lake(Lake(id=1, name="Sample Lake", max_elevation=350.0,
+                            initial_elevation=280.0, bed_conductivity=2.0,
+                            bed_thickness=1.0, et_column=7, precip_column=2,
+                            max_elev_column=1,
+                            outflow=LakeOutflow(lake_id=1,
+                                                 destination_type="stream",
+                                                 destination_id=10)))
    for lake_eid in [169, 170, 171, 188, 189, 190, 207, 208, 209, 210]:
        lake_comp.add_lake_element(LakeElement(lake_id=1, element_id=lake_eid))
 
    # ---- 6. Root Zone ----
-   rz = RootZone(n_elements=grid.n_elements, n_layers=2)
-   for crop in [CropType(id=1, name="Tomato"), CropType(id=2, name="Alfalfa"),
-                CropType(id=3, name="Rice"), CropType(id=4, name="Urban"),
-                CropType(id=5, name="Native Veg"), CropType(id=6, name="Riparian")]:
+   rz = RootZone(n_elements=grid.n_elements, n_layers=n_layers)
+   for crop in [CropType(id=1, name="TO", root_depth=5.0),
+                CropType(id=2, name="AL", root_depth=6.0),
+                CropType(id=3, name="RICE_FL", root_depth=3.0),
+                CropType(id=4, name="RICE_NFL", root_depth=3.0),
+                CropType(id=5, name="RICE_NDC", root_depth=3.0),
+                CropType(id=6, name="REFUGE_SL", root_depth=3.0),
+                CropType(id=7, name="REFUGE_PR", root_depth=3.0)]:
        rz.add_crop_type(crop)
-   for e in range(1, grid.n_elements + 1):
+   for e in range(1, 201):
        rz.set_soil_parameters(e, SoilParameters(
-           wilting_point=0.10, field_capacity=0.30,
-           total_porosity=0.40, root_depth=4.0, saturated_kh=10.0))
+           porosity=0.45, field_capacity=0.20, wilting_point=0.0,
+           saturated_kv=2.60, lambda_param=0.62))
+   for e in range(201, 401):
+       rz.set_soil_parameters(e, SoilParameters(
+           porosity=0.50, field_capacity=0.33, wilting_point=0.0,
+           saturated_kv=0.68, lambda_param=0.36))
 
    # ---- 7. Assemble and Write ----
    model = IWFMModel(
        name="IWFM Sample Model",
-       mesh=grid, stratigraphy=strat,
+       mesh=grid, stratigraphy=stratigraphy,
        groundwater=gw, streams=stream,
        lakes=lake_comp, rootzone=rz,
        metadata={
