@@ -400,13 +400,16 @@ class AppGW:
     parametric_groups: list[Any] = field(default_factory=list)
     # Full config objects for roundtrip fidelity
     subsidence_config: Any = field(default=None, repr=False)
+    bc_config: Any = field(default=None, repr=False)
+    gw_main_config: Any = field(default=None, repr=False)
     # Time series file paths for lazy loading
     pumping_ts_file: Any = field(default=None, repr=False)
     bc_ts_file: Any = field(default=None, repr=False)
     # Boundary node flow output (NOUTB section in BC_MAIN)
     n_bc_output_nodes: int = 0
     bc_output_file: str = ""
-    bc_output_specs: list[int] = field(default_factory=list)
+    bc_output_file_raw: str = ""
+    bc_output_specs: list[Any] = field(default_factory=list)
     # Tile drain conversion factors (preserved for roundtrip fidelity)
     td_elev_factor: float = 1.0
     td_cond_factor: float = 1.0
@@ -415,6 +418,12 @@ class AppGW:
     si_elev_factor: float = 1.0
     si_cond_factor: float = 1.0
     si_time_unit: str = "1MON"
+    # Tile drain hydrograph output (preserved for roundtrip fidelity)
+    td_n_hydro: int = 0
+    td_hydro_volume_factor: float = 1.0
+    td_hydro_volume_unit: str = ""
+    td_output_file_raw: str = ""
+    td_hydro_specs: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def n_wells(self) -> int:

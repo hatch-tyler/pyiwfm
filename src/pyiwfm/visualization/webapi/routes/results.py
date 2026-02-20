@@ -224,9 +224,9 @@ def get_hydrograph(
             cache = model_state.get_cache_loader()
             if cache is not None and columns:
                 col_idx = columns[0][0]
-                result = cache.get_hydrograph("gw", col_idx)
-                if result is not None:
-                    times_list, values_arr = result
+                cached = cache.get_hydrograph("gw", col_idx)
+                if cached is not None:
+                    times_list, values_arr = cached
                     return {
                         "location_id": location_id,
                         "name": name,

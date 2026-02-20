@@ -452,9 +452,8 @@ class TestGWComponentWriterWritePumpMain:
 
         content = path.read_text()
 
-        # NPUMP = 1 for element-based pumping
-        assert "1" in content
         assert "ElemPump.dat" in content
+        assert "ELEMPUMPFL" in content
 
     def test_write_pump_main_no_pumping(self, mock_model_with_gw, config):
         """Test writing pump main file with no pumping."""
