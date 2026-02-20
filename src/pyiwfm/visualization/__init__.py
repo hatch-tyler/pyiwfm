@@ -37,6 +37,7 @@ try:
         plot_budget_timeseries,
         plot_dual_axis,
         plot_elements,
+        plot_lakes,
         plot_mesh,
         plot_nodes,
         plot_scalar_field,
@@ -57,6 +58,7 @@ except ImportError:
     plot_mesh = None  # type: ignore
     plot_nodes = None  # type: ignore
     plot_elements = None  # type: ignore
+    plot_lakes = None  # type: ignore
     plot_scalar_field = None  # type: ignore
     plot_streams = None  # type: ignore
     plot_streams_colored = None  # type: ignore
@@ -88,6 +90,7 @@ __all__ = [
     "plot_elements",
     "plot_scalar_field",
     "plot_streams",
+    "plot_lakes",
     "plot_streams_colored",
     "plot_boundary",
     # Time series plotting

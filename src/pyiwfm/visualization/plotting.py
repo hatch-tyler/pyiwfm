@@ -12,6 +12,7 @@ Mesh Plotting Functions
 - :func:`plot_elements`: Plot elements with coloring options
 - :func:`plot_scalar_field`: Plot scalar values on mesh
 - :func:`plot_streams`: Plot stream network
+- :func:`plot_lakes`: Plot lake elements on mesh
 - :func:`plot_boundary`: Plot model boundary
 
 Time Series Plotting Functions
@@ -65,6 +66,7 @@ from numpy.typing import NDArray
 matplotlib.use("Agg")  # Non-interactive backend for saving
 
 if TYPE_CHECKING:
+    from pyiwfm.components.lake import AppLake
     from pyiwfm.components.stream import AppStream
     from pyiwfm.core.cross_section import CrossSection
     from pyiwfm.core.mesh import AppGrid
@@ -475,6 +477,115 @@ def plot_streams(
         y = [node.y for node in streams.nodes.values()]
         ax.scatter(x, y, s=node_size, c=node_color, zorder=5)
 
+    ax.set_aspect("equal")
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+
+    return fig, ax
+
+
+def plot_lakes(
+    lakes: AppLake,
+    grid: AppGrid,
+    ax: Axes | None = None,
+    fill_color: str = "cyan",
+    edge_color: str = "blue",
+    edge_width: float = 1.5,
+    alpha: float = 0.5,
+    show_labels: bool = True,
+    label_fontsize: float = 9,
+    cmap: str | None = None,
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
+    """
+    Plot lake elements on the mesh.
+
+    Parameters
+    ----------
+    lakes : AppLake
+        Lake component containing lake definitions and element assignments.
+    grid : AppGrid
+        Model mesh used to look up element vertex coordinates.
+    ax : Axes, optional
+        Existing axes to plot on. Creates new figure if None.
+    fill_color : str, default "cyan"
+        Fill color for lake elements (used when *cmap* is None).
+    edge_color : str, default "blue"
+        Edge color for lake element polygons.
+    edge_width : float, default 1.5
+        Width of lake element edges.
+    alpha : float, default 0.5
+        Transparency of lake element fill.
+    show_labels : bool, default True
+        Show lake name labels at the centroid of each lake.
+    label_fontsize : float, default 9
+        Font size for lake labels.
+    cmap : str, optional
+        If provided, color each lake with a different color from this
+        colormap instead of using *fill_color*.
+    figsize : tuple, default (10, 8)
+        Figure size in inches.
+
+    Returns
+    -------
+    tuple
+        (Figure, Axes) matplotlib objects.
+    """
+
+    from matplotlib.patches import Polygon as MplPolygon
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()  # type: ignore[assignment]
+
+    lake_list = list(lakes.iter_lakes())
+
+    if cmap is not None:
+        colormap = plt.get_cmap(cmap)
+        n_lakes = max(len(lake_list), 1)
+
+    for idx, lake in enumerate(lake_list):
+        color = colormap(idx / n_lakes) if cmap is not None else fill_color
+        lake_elems = lakes.get_elements_for_lake(lake.id)
+
+        all_x: list[float] = []
+        all_y: list[float] = []
+
+        for le in lake_elems:
+            if le.element_id not in grid.elements:
+                continue
+            elem = grid.elements[le.element_id]
+            verts = [(grid.nodes[vid].x, grid.nodes[vid].y) for vid in elem.vertices]
+            patch = MplPolygon(
+                verts,
+                facecolor=color,
+                edgecolor=edge_color,
+                linewidth=edge_width,
+                alpha=alpha,
+            )
+            ax.add_patch(patch)
+
+            for vx, vy in verts:
+                all_x.append(vx)
+                all_y.append(vy)
+
+        if show_labels and all_x:
+            cx = sum(all_x) / len(all_x)
+            cy = sum(all_y) / len(all_y)
+            label = lake.name or f"Lake {lake.id}"
+            ax.text(
+                cx,
+                cy,
+                label,
+                ha="center",
+                va="center",
+                fontsize=label_fontsize,
+                fontweight="bold",
+                zorder=10,
+            )
+
+    ax.autoscale_view()
     ax.set_aspect("equal")
     ax.set_xlabel("X")
     ax.set_ylabel("Y")

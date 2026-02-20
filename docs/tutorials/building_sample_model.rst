@@ -95,15 +95,13 @@ Here is what the mesh looks like with subregions colored:
    :include-source:
 
    import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_mesh
 
-   # Create a 21x21 mesh with 2 subregions (similar to sample model)
-   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
-
-   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='gray',
+   m = build_tutorial_model()
+   fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='gray',
                        fill_color='lightblue', alpha=0.3)
-   ax.set_title(f'Sample Model Mesh ({mesh.n_nodes} nodes, {mesh.n_elements} elements)')
+   ax.set_title(f'Sample Model Mesh ({m.grid.n_nodes} nodes, {m.grid.n_elements} elements)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
    plt.show()
@@ -157,14 +155,11 @@ Visualize ground surface elevation:
    :include-source:
 
    import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_scalar_field
 
-   # In practice: plot_scalar_field(grid, gs_elev, ...)
-   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
-   gs_elev = create_sample_scalar_field(mesh, field_type='head')
-
-   fig, ax = plot_scalar_field(mesh, gs_elev, field_type='node', cmap='terrain',
+   m = build_tutorial_model()
+   fig, ax = plot_scalar_field(m.grid, m.gs_elev, field_type='node', cmap='terrain',
                                show_mesh=True, edge_color='white')
    ax.set_title('Ground Surface Elevation (ft)')
    ax.set_xlabel('X (feet)')
@@ -177,16 +172,12 @@ Visualize layer thickness:
    :include-source:
 
    import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh, create_sample_stratigraphy
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_scalar_field
 
-   # In practice: plot_scalar_field(grid, top_elev[:, 0] - bottom_elev[:, 0], ...)
-   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
-   strat = create_sample_stratigraphy(mesh, n_layers=2, surface_base=400.0,
-                                       layer_thickness=120.0)
-
-   thickness = strat.top_elev[:, 0] - strat.bottom_elev[:, 0]
-   fig, ax = plot_scalar_field(mesh, thickness, field_type='node', cmap='YlOrRd')
+   m = build_tutorial_model()
+   thickness = m.stratigraphy.top_elev[:, 0] - m.stratigraphy.bottom_elev[:, 0]
+   fig, ax = plot_scalar_field(m.grid, thickness, field_type='node', cmap='YlOrRd')
    ax.set_title('Layer 1 Thickness (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
@@ -247,14 +238,11 @@ Visualize initial head distribution:
    :include-source:
 
    import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_scalar_field
 
-   # In practice: plot_scalar_field(grid, initial_heads[:, 0], ...)
-   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
-   initial_heads = create_sample_scalar_field(mesh, field_type='head')
-
-   fig, ax = plot_scalar_field(mesh, initial_heads, field_type='node',
+   m = build_tutorial_model()
+   fig, ax = plot_scalar_field(m.grid, m.initial_heads[:, 0], field_type='node',
                                cmap='viridis', show_mesh=True, edge_color='white')
    ax.set_title('Initial Head - Layer 1 (ft)')
    ax.set_xlabel('X (feet)')
@@ -308,27 +296,15 @@ Visualize the stream network overlaid on the mesh:
    :include-source:
 
    import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh, create_sample_stream_network
-   from pyiwfm.visualization.plotting import plot_mesh
+   from pyiwfm.sample_models import build_tutorial_model
+   from pyiwfm.visualization.plotting import plot_mesh, plot_streams
 
-   # In practice: plot_streams(stream, ax=ax, ...)
-   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
-   stream_nodes, reaches = create_sample_stream_network(mesh)
-
-   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='lightgray', alpha=0.2)
-
-   # Overlay stream reaches
-   for from_idx, to_idx in reaches:
-       x1, y1 = stream_nodes[from_idx]
-       x2, y2 = stream_nodes[to_idx]
-       ax.plot([x1, x2], [y1, y2], 'b-', linewidth=2, zorder=3)
-   sx, sy = zip(*stream_nodes)
-   ax.scatter(sx, sy, c='blue', s=20, zorder=4, label='Stream Nodes')
-
+   m = build_tutorial_model()
+   fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='lightgray', alpha=0.2)
+   plot_streams(m.stream, ax=ax, show_nodes=True, line_width=2)
    ax.set_title('Stream Network (3 Reaches)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   ax.legend()
    plt.show()
 
 Section 5: Lake Component
@@ -370,30 +346,12 @@ Visualize lake elements highlighted on the mesh:
    :include-source:
 
    import matplotlib.pyplot as plt
-   import numpy as np
-   from pyiwfm.sample_models import create_sample_mesh
-   from pyiwfm.visualization.plotting import plot_mesh
+   from pyiwfm.sample_models import build_tutorial_model
+   from pyiwfm.visualization.plotting import plot_mesh, plot_lakes
 
-   # Create mesh and identify lake elements (NE corner)
-   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
-
-   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='lightgray', alpha=0.2)
-
-   # Highlight a 3x3 block of lake elements in the northeast
-   nx_elem = 20
-   lake_elem_ids = []
-   for j in range(17, 20):
-       for i in range(17, 20):
-           lake_elem_ids.append(j * nx_elem + i + 1)
-
-   from matplotlib.patches import Polygon as MplPolygon
-   for eid in lake_elem_ids:
-       if eid in mesh.elements:
-           elem = mesh.elements[eid]
-           verts = [(mesh.nodes[v].x, mesh.nodes[v].y) for v in elem.vertices]
-           ax.add_patch(MplPolygon(verts, facecolor='cyan', edgecolor='blue',
-                                   alpha=0.7, linewidth=1))
-
+   m = build_tutorial_model()
+   fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='lightgray', alpha=0.2)
+   plot_lakes(m.lakes, m.grid, ax=ax)
    ax.set_title('Lake Elements (NE Corner)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
@@ -534,14 +492,11 @@ sample data to demonstrate what each plot looks like:
    :include-source:
 
    import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_scalar_field
 
-   # In practice: plot_scalar_field(grid, final_heads, ...)
-   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
-   final_heads = create_sample_scalar_field(mesh, field_type='head')
-
-   fig, ax = plot_scalar_field(mesh, final_heads, field_type='node',
+   m = build_tutorial_model()
+   fig, ax = plot_scalar_field(m.grid, m.final_heads, field_type='node',
                                cmap='viridis', show_mesh=True, edge_color='white')
    ax.set_title('Final Groundwater Head (ft)')
    ax.set_xlabel('X (feet)')
@@ -554,14 +509,12 @@ sample data to demonstrate what each plot looks like:
    :include-source:
 
    import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_scalar_field
 
-   # In practice: plot_scalar_field(grid, final_heads - initial_heads, ...)
-   mesh = create_sample_mesh(nx=21, ny=21, n_subregions=2)
-   head_change = create_sample_scalar_field(mesh, field_type='drawdown')
-
-   fig, ax = plot_scalar_field(mesh, -head_change, field_type='node', cmap='RdBu')
+   m = build_tutorial_model()
+   head_change = m.final_heads - m.initial_heads[:, 0]
+   fig, ax = plot_scalar_field(m.grid, head_change, field_type='node', cmap='RdBu')
    ax.set_title('Head Change: Final - Initial (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
@@ -573,17 +526,11 @@ sample data to demonstrate what each plot looks like:
    :include-source:
 
    import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_timeseries
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_timeseries
 
-   # In practice: create TimeSeries from heads[:, node_id] arrays
-   series_list = [
-       create_sample_timeseries(name="Node 111", n_years=10, trend=-0.3, noise_level=0.05),
-       create_sample_timeseries(name="Node 221", n_years=10, trend=-0.6, noise_level=0.08),
-       create_sample_timeseries(name="Node 331", n_years=10, trend=-0.4, noise_level=0.06),
-   ]
-
-   fig, ax = plot_timeseries(series_list, title='Head at Selected Nodes',
+   m = build_tutorial_model()
+   fig, ax = plot_timeseries(m.head_timeseries, title='Head at Selected Nodes',
                               ylabel='Head (ft)')
    plt.show()
 
@@ -593,14 +540,11 @@ sample data to demonstrate what each plot looks like:
    :include-source:
 
    import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_budget_bar
 
-   budget_components = {
-       'Recharge': 5200, 'Stream Seepage': 3100,
-       'Subsurface Inflow': 1800, 'Pumping': -7500,
-       'Stream Baseflow': -2100, 'GW ET': -900,
-   }
-   fig, ax = plot_budget_bar(budget_components, title='GW Budget Summary',
+   m = build_tutorial_model()
+   fig, ax = plot_budget_bar(m.gw_budget, title='GW Budget Summary',
                               units='AF/year')
    plt.show()
 
@@ -610,20 +554,12 @@ sample data to demonstrate what each plot looks like:
    :include-source:
 
    import matplotlib.pyplot as plt
-   import numpy as np
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_budget_stacked
 
-   np.random.seed(42)
-   n_years = 10
-   budget_times = np.arange('1991-01-01', '2001-01-01', dtype='datetime64[Y]')
-   time_budgets = {
-       'Recharge': 5200 + np.random.normal(0, 500, n_years),
-       'Stream Seepage': 3100 + np.random.normal(0, 300, n_years),
-       'Pumping': -(7500 + np.arange(n_years) * 100 + np.random.normal(0, 200, n_years)),
-       'Baseflow': -(2100 + np.random.normal(0, 200, n_years)),
-   }
-
-   fig, ax = plot_budget_stacked(budget_times, time_budgets,
+   m = build_tutorial_model()
+   budget_times, budget_components = m.gw_budget_timeseries
+   fig, ax = plot_budget_stacked(budget_times, budget_components,
                                   title='GW Budget Over Time', units='AF/year')
    plt.show()
 
@@ -633,16 +569,11 @@ sample data to demonstrate what each plot looks like:
    :include-source:
 
    import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import build_tutorial_model
    from pyiwfm.visualization.plotting import plot_budget_pie
 
-   rz_components = {
-       'Precipitation': 12000,
-       'Applied Water': 8500,
-       'ET': 15000,
-       'Deep Percolation': 4000,
-       'Runoff': 1500,
-   }
-   fig, ax = plot_budget_pie(rz_components, title='Root Zone Water Balance',
+   m = build_tutorial_model()
+   fig, ax = plot_budget_pie(m.rz_budget, title='Root Zone Water Balance',
                               budget_type='both')
    plt.show()
 
