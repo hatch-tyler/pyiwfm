@@ -687,11 +687,12 @@ def create_sample_model(
 
 def build_tutorial_model() -> types.SimpleNamespace:
     """
-    Build the exact model described in the tutorial.
+    Build the IWFM sample model for the tutorial.
 
-    Constructs a 21x21 rectangular grid at tutorial coordinates with
-    stratigraphy, streams, a lake, synthetic heads, budget data, and
-    time series.  All data is deterministic (seeded RNG).
+    Mirrors the official IWFM 2025 sample model: 21x21 node grid with
+    2000-unit square spacing, 2 aquifer layers, 3 stream reaches (23
+    nodes), 1 lake (10 elements), and synthetic result data.  All
+    random data is deterministic (seeded RNG).
 
     Returns
     -------
@@ -700,11 +701,11 @@ def build_tutorial_model() -> types.SimpleNamespace:
 
         - **grid** -- 21x21 AppGrid (441 nodes, 400 elements, 2 subregions)
         - **gs_elev** -- Ground-surface elevation, shape (441,)
-        - **stratigraphy** -- 2-layer Stratigraphy (120 ft each)
+        - **stratigraphy** -- 2-layer Stratigraphy
         - **initial_heads** -- shape (441, 2): gs_elev-20, gs_elev-40
-        - **stream** -- AppStream with 21 nodes along column 11, 3 reaches
-        - **lakes** -- AppLake with 1 lake (9 elements in NE 3x3 block)
-        - **lake_elem_ids** -- list of the 9 element IDs in the lake
+        - **stream** -- AppStream with 23 nodes, 3 reaches
+        - **lakes** -- AppLake with 1 lake (10 elements)
+        - **lake_elem_ids** -- list of the 10 element IDs in the lake
         - **final_heads** -- shape (441,): initial heads with drawdown cone
         - **head_timeseries** -- list of 3 TimeSeries (nodes 111, 221, 331)
         - **gw_budget** -- dict[str, float] for bar chart
@@ -714,10 +715,10 @@ def build_tutorial_model() -> types.SimpleNamespace:
     from pyiwfm.components.lake import AppLake, Lake, LakeElement
     from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
 
-    # ---- Grid ----
+    # ---- Grid (matches IWFM sample model: 21x21, 2000-unit spacing) ----
     nx, ny = 21, 21
-    x0, y0 = 1_804_440.0, 14_435_520.0
-    dx, dy = 6_561.6, 2_296.56
+    x0, y0 = 550_000.0, 4_400_000.0
+    dx, dy = 2_000.0, 2_000.0
 
     nodes: dict[int, Node] = {}
     nid = 1
@@ -732,28 +733,47 @@ def build_tutorial_model() -> types.SimpleNamespace:
     for j in range(ny - 1):
         for i in range(nx - 1):
             n1 = j * nx + i + 1
+            # Subregion 1 = south half (elem rows 0-9), 2 = north half (rows 10-19)
             elements[eid] = Element(
                 id=eid,
                 vertices=(n1, n1 + 1, n1 + 1 + nx, n1 + nx),
-                subregion=1 if i < (nx - 1) // 2 else 2,
+                subregion=1 if j < 10 else 2,
             )
             eid += 1
 
     subregions = {
-        1: Subregion(id=1, name="Left"),
-        2: Subregion(id=2, name="Right"),
+        1: Subregion(id=1, name="Region1"),
+        2: Subregion(id=2, name="Region2"),
     }
     grid = AppGrid(nodes=nodes, elements=elements, subregions=subregions)
     grid.compute_connectivity()
 
-    # ---- Stratigraphy ----
+    # ---- Stratigraphy (matches IWFM sample model) ----
     n_nodes = grid.n_nodes
-    gs_elev = np.array(
-        [400.0 - 200.0 * (nodes[i].y - y0) / ((ny - 1) * dy) for i in range(1, n_nodes + 1)]
-    )
-    top_elev = np.column_stack([gs_elev, gs_elev - 120.0])
-    bottom_elev = np.column_stack([gs_elev - 120.0, gs_elev - 240.0])
+    gs_elev = np.full(n_nodes, 500.0)
+
+    # Lake-bed depression: lower elevations around the lake area
+    _low_270 = [177, 178, 180, 197, 198, 200, 217, 218]
+    _low_250 = [179, 199, 219, 220]
+    for nid in _low_270:
+        gs_elev[nid - 1] = 270.0
+    for nid in _low_250:
+        gs_elev[nid - 1] = 250.0
+
+    # Layer 1: no confining layer, aquifer extends from gs_elev down to 0
+    top_elev_l1 = gs_elev.copy()
+    bottom_elev_l1 = np.zeros(n_nodes)
+
+    # Layer 2: 10-ft confining for nodes 1-231, none for 232+; 100-ft aquifer
+    confining_l2 = np.zeros(n_nodes)
+    confining_l2[:231] = 10.0
+    top_elev_l2 = bottom_elev_l1 - confining_l2
+    bottom_elev_l2 = top_elev_l2 - 100.0
+
+    top_elev = np.column_stack([top_elev_l1, top_elev_l2])
+    bottom_elev = np.column_stack([bottom_elev_l1, bottom_elev_l2])
     active_node = np.ones((n_nodes, 2), dtype=np.bool_)
+
     stratigraphy = Stratigraphy(
         n_layers=2,
         n_nodes=n_nodes,
@@ -766,19 +786,38 @@ def build_tutorial_model() -> types.SimpleNamespace:
     # ---- Initial heads ----
     initial_heads = np.column_stack([gs_elev - 20.0, gs_elev - 40.0])
 
-    # ---- Streams ----
+    # ---- Streams (matches IWFM sample model: 3 reaches, 23 nodes) ----
     stream = AppStream()
-    center_col = nx // 2  # column index 10
-    for j in range(ny):
-        gw_nid = j * nx + center_col + 1
-        stream.add_node(StrmNode(id=j + 1, gw_node=gw_nid, x=nodes[gw_nid].x, y=nodes[gw_nid].y))
-    stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=7, nodes=list(range(1, 8))))
-    stream.add_reach(StrmReach(id=2, upstream_node=7, downstream_node=14, nodes=list(range(7, 15))))
+
+    # GW node mapping for each stream node (from Stream.dat)
+    reach1_gw = [433, 412, 391, 370, 349, 328, 307, 286, 265, 264]
+    reach2_gw = [222, 223, 202, 181, 160, 139]
+    reach3_gw = [139, 118, 97, 76, 55, 34, 13]
+    all_gw = reach1_gw + reach2_gw + reach3_gw
+
+    # Stream bottom elevations decline 2 ft per node
+    bottom_elevs = [300.0 - 2.0 * i for i in range(23)]
+
+    for sid, gw_nid in enumerate(all_gw, start=1):
+        stream.add_node(
+            StrmNode(
+                id=sid,
+                gw_node=gw_nid,
+                x=nodes[gw_nid].x,
+                y=nodes[gw_nid].y,
+                bottom_elev=bottom_elevs[sid - 1],
+            )
+        )
+
+    stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=10, nodes=list(range(1, 11))))
     stream.add_reach(
-        StrmReach(id=3, upstream_node=14, downstream_node=21, nodes=list(range(14, 22)))
+        StrmReach(id=2, upstream_node=11, downstream_node=16, nodes=list(range(11, 17)))
+    )
+    stream.add_reach(
+        StrmReach(id=3, upstream_node=17, downstream_node=23, nodes=list(range(17, 24)))
     )
 
-    # ---- Lake ----
+    # ---- Lake (matches IWFM sample model: 1 lake, 10 elements) ----
     lake_comp = AppLake()
     lake_comp.add_lake(
         Lake(
@@ -787,26 +826,20 @@ def build_tutorial_model() -> types.SimpleNamespace:
             max_elevation=350.0,
         )
     )
-    lake_elem_ids: list[int] = []
-    for j in range(17, 20):
-        for i in range(17, 20):
-            lake_eid = j * (nx - 1) + i + 1
-            lake_elem_ids.append(lake_eid)
-            lake_comp.add_lake_element(LakeElement(lake_id=1, element_id=lake_eid))
+    lake_elem_ids = [169, 170, 171, 188, 189, 190, 207, 208, 209, 210]
+    for lake_eid in lake_elem_ids:
+        lake_comp.add_lake_element(LakeElement(lake_id=1, element_id=lake_eid))
 
     # ---- Final heads (with drawdown cone) ----
     rng = np.random.default_rng(42)
     final_heads = initial_heads[:, 0].copy()
-    # Drawdown cone near center of domain
     cx_idx, cy_idx = 10, 10
     center_nid = cy_idx * nx + cx_idx + 1
     center_x = nodes[center_nid].x
     center_y = nodes[center_nid].y
     for i in range(1, n_nodes + 1):
         dist = math.sqrt((nodes[i].x - center_x) ** 2 + (nodes[i].y - center_y) ** 2)
-        # Gaussian drawdown cone (max ~15 ft at center, decaying with distance)
-        final_heads[i - 1] -= 15.0 * math.exp(-(dist**2) / (2 * (30_000.0**2)))
-    # Add minor noise
+        final_heads[i - 1] -= 15.0 * math.exp(-(dist**2) / (2 * (20_000.0**2)))
     final_heads += rng.normal(0, 0.5, n_nodes)
 
     # ---- Head time series ----
@@ -817,7 +850,7 @@ def build_tutorial_model() -> types.SimpleNamespace:
     )
     t_frac = np.arange(n_months, dtype=np.float64) / n_months
     head_timeseries: list[TimeSeries] = []
-    for node_id, base_head in [(111, 350.0), (221, 300.0), (331, 250.0)]:
+    for node_id, base_head in [(111, 450.0), (221, 460.0), (331, 470.0)]:
         vals = (
             base_head
             - 10.0 * t_frac

@@ -24,7 +24,7 @@ Overview
 The IWFM sample model we are building has these properties:
 
 - **Mesh**: 21 x 21 rectangular grid (441 nodes, 400 quad elements)
-- **Subregions**: 2 (left half and right half)
+- **Subregions**: 2 (south half and north half)
 - **Stratigraphy**: 2 aquifer layers
 - **Streams**: 3 reaches with 23 stream nodes
 - **Lakes**: 1 lake
@@ -43,8 +43,8 @@ Build the 21 x 21 node grid (441 nodes) and 400 quadrilateral elements:
 
    # Grid dimensions
    nx, ny = 21, 21
-   x0, y0 = 1_804_440.0, 14_435_520.0   # Lower-left corner (ft)
-   dx, dy = 6_561.6, 2_296.56             # Node spacing (ft)
+   x0, y0 = 550_000.0, 4_400_000.0   # Lower-left corner
+   dx, dy = 2_000.0, 2_000.0          # Node spacing (square elements)
 
    # Create nodes
    nodes = {}
@@ -71,8 +71,8 @@ Build the 21 x 21 node grid (441 nodes) and 400 quadrilateral elements:
            n2 = n1 + 1
            n3 = n2 + nx
            n4 = n1 + nx
-           # Left half = subregion 1, right half = subregion 2
-           subregion = 1 if i < (nx - 1) // 2 else 2
+           # South half = subregion 1, north half = subregion 2
+           subregion = 1 if j < 10 else 2
            elements[elem_id] = Element(
                id=elem_id,
                vertices=(n1, n2, n3, n4),
@@ -101,17 +101,17 @@ Here is what the mesh looks like with subregions colored:
    m = build_tutorial_model()
    fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='gray',
                        fill_color='lightblue', alpha=0.3)
-   ax.set_aspect('auto')
+
    ax.set_title(f'Sample Model Mesh ({m.grid.n_nodes} nodes, {m.grid.n_elements} elements)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 Section 2: Define Stratigraphy
 -------------------------------
 
-Create a 2-layer stratigraphy with sloping ground surface:
+Create a 2-layer stratigraphy. The ground surface is mostly flat at 500 ft,
+with a depression where the lake bed sits:
 
 .. code-block:: python
 
@@ -120,23 +120,27 @@ Create a 2-layer stratigraphy with sloping ground surface:
    n_nodes = grid.n_nodes
    n_layers = 2
 
-   # Ground surface elevation: slopes from 400 ft (south) to 200 ft (north)
-   gs_elev = np.array([
-       400.0 - 200.0 * (nodes[i].y - y0) / ((ny - 1) * dy)
-       for i in range(1, n_nodes + 1)
-   ])
+   # Ground surface elevation: 500 ft everywhere, with lake-bed depression
+   gs_elev = np.full(n_nodes, 500.0)
 
-   # Layer 1: top 120 ft
-   top_elev = np.column_stack([
-       gs_elev,
-       gs_elev - 120.0,
-   ])
-   bottom_elev = np.column_stack([
-       gs_elev - 120.0,
-       gs_elev - 240.0,
-   ])
+   # Lower elevations around the lake area (nodes from the Strata.dat)
+   for nid in [177, 178, 180, 197, 198, 200, 217, 218]:
+       gs_elev[nid - 1] = 270.0
+   for nid in [179, 199, 219, 220]:
+       gs_elev[nid - 1] = 250.0
 
-   # All nodes active in all layers
+   # Layer 1: aquifer extends from ground surface down to elevation 0
+   top_elev_l1 = gs_elev.copy()
+   bottom_elev_l1 = np.zeros(n_nodes)
+
+   # Layer 2: 10-ft confining layer for nodes 1-231, then 100-ft aquifer
+   confining = np.zeros(n_nodes)
+   confining[:231] = 10.0
+   top_elev_l2 = bottom_elev_l1 - confining
+   bottom_elev_l2 = top_elev_l2 - 100.0
+
+   top_elev = np.column_stack([top_elev_l1, top_elev_l2])
+   bottom_elev = np.column_stack([bottom_elev_l1, bottom_elev_l2])
    active_node = np.ones((n_nodes, n_layers), dtype=bool)
 
    stratigraphy = Stratigraphy(
@@ -163,11 +167,10 @@ Visualize ground surface elevation:
    m = build_tutorial_model()
    fig, ax = plot_scalar_field(m.grid, m.gs_elev, field_type='node', cmap='terrain',
                                show_mesh=True, edge_color='white')
-   ax.set_aspect('auto')
+
    ax.set_title('Ground Surface Elevation (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 Visualize layer thickness:
@@ -182,11 +185,10 @@ Visualize layer thickness:
    m = build_tutorial_model()
    thickness = m.stratigraphy.top_elev[:, 0] - m.stratigraphy.bottom_elev[:, 0]
    fig, ax = plot_scalar_field(m.grid, thickness, field_type='node', cmap='YlOrRd')
-   ax.set_aspect('auto')
+
    ax.set_title('Layer 1 Thickness (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 Section 3: Groundwater Component
@@ -250,17 +252,18 @@ Visualize initial head distribution:
    m = build_tutorial_model()
    fig, ax = plot_scalar_field(m.grid, m.initial_heads[:, 0], field_type='node',
                                cmap='viridis', show_mesh=True, edge_color='white')
-   ax.set_aspect('auto')
+
    ax.set_title('Initial Head - Layer 1 (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 Section 4: Stream Component
 ----------------------------
 
-Create the stream network with 3 reaches flowing south to north:
+Create the stream network with 3 reaches and 23 stream nodes. The
+groundwater node mapping follows the official IWFM sample model, with
+Reach 1 flowing from north to south, then Reaches 2 and 3 branching:
 
 .. code-block:: python
 
@@ -268,33 +271,31 @@ Create the stream network with 3 reaches flowing south to north:
 
    stream = AppStream()
 
-   # Create stream nodes along a central channel
-   # Main channel runs from south to north through column 11
-   center_col = nx // 2  # column index 10 (node x index)
-   strm_id = 1
-   for j in range(ny):
-       gw_node_id = j * nx + center_col + 1
-       node = StrmNode(
-           id=strm_id,
-           gw_node=gw_node_id,
-           x=nodes[gw_node_id].x,
-           y=nodes[gw_node_id].y,
-       )
-       stream.add_node(node)
-       strm_id += 1
+   # GW node mapping for each stream node (from Stream.dat)
+   reach1_gw = [433, 412, 391, 370, 349, 328, 307, 286, 265, 264]
+   reach2_gw = [222, 223, 202, 181, 160, 139]
+   reach3_gw = [139, 118, 97, 76, 55, 34, 13]
+   all_gw = reach1_gw + reach2_gw + reach3_gw
 
-   # Create 3 reaches
-   # Reach 1: stream nodes 1-7 (southern third)
-   reach1 = StrmReach(id=1, nodes=list(range(1, 8)))
-   stream.add_reach(reach1)
+   # Stream bottom elevations decline 2 ft per node
+   bottom_elevs = [300.0 - 2.0 * i for i in range(23)]
 
-   # Reach 2: stream nodes 7-14 (middle third)
-   reach2 = StrmReach(id=2, nodes=list(range(7, 15)))
-   stream.add_reach(reach2)
+   for sid, gw_nid in enumerate(all_gw, start=1):
+       stream.add_node(StrmNode(
+           id=sid,
+           gw_node=gw_nid,
+           x=nodes[gw_nid].x,
+           y=nodes[gw_nid].y,
+           bottom_elev=bottom_elevs[sid - 1],
+       ))
 
-   # Reach 3: stream nodes 14-21 (northern third)
-   reach3 = StrmReach(id=3, nodes=list(range(14, 22)))
-   stream.add_reach(reach3)
+   # 3 reaches
+   stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=10,
+                               nodes=list(range(1, 11))))
+   stream.add_reach(StrmReach(id=2, upstream_node=11, downstream_node=16,
+                               nodes=list(range(11, 17))))
+   stream.add_reach(StrmReach(id=3, upstream_node=17, downstream_node=23,
+                               nodes=list(range(17, 24))))
 
    print(f"Streams: {len(stream.nodes)} nodes, {len(stream.reaches)} reaches")
 
@@ -310,17 +311,17 @@ Visualize the stream network overlaid on the mesh:
    m = build_tutorial_model()
    fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='lightgray', alpha=0.2)
    plot_streams(m.stream, ax=ax, show_nodes=True, line_width=2)
-   ax.set_aspect('auto')
+
    ax.set_title('Stream Network (3 Reaches)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 Section 5: Lake Component
 --------------------------
 
-Define a lake occupying a cluster of elements in the northeast:
+Define a lake occupying 10 elements in the upper-center of the domain
+(matching the official sample model's Lake.dat):
 
 .. code-block:: python
 
@@ -328,22 +329,15 @@ Define a lake occupying a cluster of elements in the northeast:
 
    lake_component = AppLake()
 
-   # Lake 1 occupies a 3x3 block of elements in the northeast corner
-   lake_elem_ids = []
-   for j in range(17, 20):       # Top 3 rows
-       for i in range(17, 20):   # Right 3 columns
-           eid = j * (nx - 1) + i + 1
-           lake_elem_ids.append(eid)
-
    lake = Lake(
        id=1,
        name="Sample Lake",
        max_elevation=350.0,
-       bed_conductance=0.1,
-       outflow_destination=0,  # No outflow destination
    )
    lake_component.add_lake(lake)
 
+   # 10 lake elements (from Lake.dat)
+   lake_elem_ids = [169, 170, 171, 188, 189, 190, 207, 208, 209, 210]
    for eid in lake_elem_ids:
        lake_component.add_lake_element(LakeElement(lake_id=1, element_id=eid))
 
@@ -362,11 +356,10 @@ Visualize lake elements highlighted on the mesh:
    m = build_tutorial_model()
    fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='lightgray', alpha=0.2)
    plot_lakes(m.lakes, m.grid, ax=ax)
-   ax.set_aspect('auto')
-   ax.set_title('Lake Elements (NE Corner)')
+
+   ax.set_title('Lake Elements')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 Section 6: Root Zone Component
@@ -410,6 +403,20 @@ urban, and native vegetation:
 
    print(f"Root Zone: {len(rz.crop_types)} crop types, "
          f"{len(rz.soil_params)} element soil params")
+
+Visualize the root zone water balance as a pie chart:
+
+.. plot::
+   :include-source:
+
+   import matplotlib.pyplot as plt
+   from pyiwfm.sample_models import build_tutorial_model
+   from pyiwfm.visualization.plotting import plot_budget_pie
+
+   m = build_tutorial_model()
+   fig, ax = plot_budget_pie(m.rz_budget, title='Root Zone Water Balance',
+                              budget_type='both')
+   plt.show()
 
 Section 7: Assemble and Write the Model
 -----------------------------------------
@@ -510,11 +517,10 @@ sample data to demonstrate what each plot looks like:
    m = build_tutorial_model()
    fig, ax = plot_scalar_field(m.grid, m.final_heads, field_type='node',
                                cmap='viridis', show_mesh=True, edge_color='white')
-   ax.set_aspect('auto')
+
    ax.set_title('Final Groundwater Head (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 **Head change (final minus initial):**
@@ -529,11 +535,10 @@ sample data to demonstrate what each plot looks like:
    m = build_tutorial_model()
    head_change = m.final_heads - m.initial_heads[:, 0]
    fig, ax = plot_scalar_field(m.grid, head_change, field_type='node', cmap='RdBu')
-   ax.set_aspect('auto')
+
    ax.set_title('Head Change: Final - Initial (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 **Head time series at selected nodes:**
@@ -615,7 +620,7 @@ Here is the complete script combining all steps:
 
    import numpy as np
    from pathlib import Path
-   from pyiwfm.core.mesh import AppGrid, Node, Element
+   from pyiwfm.core.mesh import AppGrid, Node, Element, Subregion
    from pyiwfm.core.stratigraphy import Stratigraphy
    from pyiwfm.core.model import IWFMModel
    from pyiwfm.components.groundwater import (
@@ -626,15 +631,14 @@ Here is the complete script combining all steps:
    from pyiwfm.components.rootzone import RootZone, CropType, SoilParameters
    from pyiwfm.io import save_complete_model
    from pyiwfm.visualization.plotting import (
-       plot_mesh, plot_elements, plot_scalar_field, plot_streams,
+       plot_mesh, plot_elements, plot_scalar_field, plot_streams, plot_lakes,
        plot_timeseries, plot_budget_bar,
    )
-   from pyiwfm.core.timeseries import TimeSeries
 
    # ---- 1. Mesh ----
    nx, ny = 21, 21
-   x0, y0 = 1_804_440.0, 14_435_520.0
-   dx, dy = 6_561.6, 2_296.56
+   x0, y0 = 550_000.0, 4_400_000.0
+   dx, dy = 2_000.0, 2_000.0
 
    nodes = {}
    nid = 1
@@ -653,26 +657,35 @@ Here is the complete script combining all steps:
            elements[eid] = Element(
                id=eid,
                vertices=(n1, n1 + 1, n1 + 1 + nx, n1 + nx),
-               subregion=1 if i < 10 else 2,
+               subregion=1 if j < 10 else 2,
            )
            eid += 1
 
-   grid = AppGrid(nodes=nodes, elements=elements)
+   subregions = {1: Subregion(id=1, name="Region1"),
+                 2: Subregion(id=2, name="Region2")}
+   grid = AppGrid(nodes=nodes, elements=elements, subregions=subregions)
    grid.compute_connectivity()
 
    # ---- 2. Stratigraphy ----
    n_nodes = grid.n_nodes
-   gs_elev = np.array([
-       400.0 - 200.0 * (nodes[i].y - y0) / ((ny - 1) * dy)
-       for i in range(1, n_nodes + 1)
-   ])
-   top_elev = np.column_stack([gs_elev, gs_elev - 120.0])
-   bottom_elev = np.column_stack([gs_elev - 120.0, gs_elev - 240.0])
-   active_node = np.ones((n_nodes, 2), dtype=bool)
+   gs_elev = np.full(n_nodes, 500.0)
+   for nid in [177, 178, 180, 197, 198, 200, 217, 218]:
+       gs_elev[nid - 1] = 270.0
+   for nid in [179, 199, 219, 220]:
+       gs_elev[nid - 1] = 250.0
+
+   top_elev_l1 = gs_elev.copy()
+   bottom_elev_l1 = np.zeros(n_nodes)
+   confining = np.zeros(n_nodes)
+   confining[:231] = 10.0
+   top_elev_l2 = bottom_elev_l1 - confining
+   bottom_elev_l2 = top_elev_l2 - 100.0
 
    strat = Stratigraphy(
        n_layers=2, n_nodes=n_nodes, gs_elev=gs_elev,
-       top_elev=top_elev, bottom_elev=bottom_elev, active_node=active_node,
+       top_elev=np.column_stack([top_elev_l1, top_elev_l2]),
+       bottom_elev=np.column_stack([bottom_elev_l1, bottom_elev_l2]),
+       active_node=np.ones((n_nodes, 2), dtype=bool),
    )
 
    # ---- 3. Groundwater ----
@@ -698,24 +711,27 @@ Here is the complete script combining all steps:
 
    # ---- 4. Streams ----
    stream = AppStream()
-   center_col = nx // 2
-   for j in range(ny):
-       gw_nid = j * nx + center_col + 1
-       stream.add_node(StrmNode(id=j + 1, gw_node=gw_nid,
-                                x=nodes[gw_nid].x, y=nodes[gw_nid].y))
-   stream.add_reach(StrmReach(id=1, nodes=list(range(1, 8))))
-   stream.add_reach(StrmReach(id=2, nodes=list(range(7, 15))))
-   stream.add_reach(StrmReach(id=3, nodes=list(range(14, 22))))
+   reach1_gw = [433, 412, 391, 370, 349, 328, 307, 286, 265, 264]
+   reach2_gw = [222, 223, 202, 181, 160, 139]
+   reach3_gw = [139, 118, 97, 76, 55, 34, 13]
+   all_gw = reach1_gw + reach2_gw + reach3_gw
+   bottom_elevs = [300.0 - 2.0 * i for i in range(23)]
+   for sid, gw_nid in enumerate(all_gw, start=1):
+       stream.add_node(StrmNode(id=sid, gw_node=gw_nid,
+                                x=nodes[gw_nid].x, y=nodes[gw_nid].y,
+                                bottom_elev=bottom_elevs[sid - 1]))
+   stream.add_reach(StrmReach(id=1, upstream_node=1, downstream_node=10,
+                               nodes=list(range(1, 11))))
+   stream.add_reach(StrmReach(id=2, upstream_node=11, downstream_node=16,
+                               nodes=list(range(11, 17))))
+   stream.add_reach(StrmReach(id=3, upstream_node=17, downstream_node=23,
+                               nodes=list(range(17, 24))))
 
    # ---- 5. Lake ----
    lake_comp = AppLake()
-   lake_comp.add_lake(Lake(id=1, name="Sample Lake",
-                           max_elevation=350.0, bed_conductance=0.1,
-                           outflow_destination=0))
-   for j in range(17, 20):
-       for i in range(17, 20):
-           lake_comp.add_lake_element(
-               LakeElement(lake_id=1, element_id=j * (nx - 1) + i + 1))
+   lake_comp.add_lake(Lake(id=1, name="Sample Lake", max_elevation=350.0))
+   for lake_eid in [169, 170, 171, 188, 189, 190, 207, 208, 209, 210]:
+       lake_comp.add_lake_element(LakeElement(lake_id=1, element_id=lake_eid))
 
    # ---- 6. Root Zone ----
    rz = RootZone(n_elements=grid.n_elements, n_layers=2)
@@ -760,6 +776,11 @@ Here is the complete script combining all steps:
    plot_streams(stream, ax=ax, show_nodes=True, line_width=2)
    ax.set_title('Stream Network')
    fig.savefig(output_dir / "streams.png", dpi=150)
+
+   fig, ax = plot_mesh(grid, edge_color='lightgray', alpha=0.2)
+   plot_lakes(lake_comp, grid, ax=ax)
+   ax.set_title('Lake Elements')
+   fig.savefig(output_dir / "lake.png", dpi=150)
 
    fig, ax = plot_scalar_field(grid, initial_heads[:, 0], cmap='viridis')
    ax.set_title('Initial Head - Layer 1 (ft)')

@@ -53,8 +53,8 @@ class TestBuildTutorialModel:
 
     def test_gs_elev_range(self, model):
         assert model.gs_elev.shape == (441,)
-        assert model.gs_elev.min() == pytest.approx(200.0, abs=1.0)
-        assert model.gs_elev.max() == pytest.approx(400.0, abs=1.0)
+        assert model.gs_elev.min() == pytest.approx(250.0, abs=1.0)
+        assert model.gs_elev.max() == pytest.approx(500.0, abs=1.0)
 
     def test_stratigraphy(self, model):
         assert isinstance(model.stratigraphy, Stratigraphy)
@@ -66,17 +66,17 @@ class TestBuildTutorialModel:
 
     def test_stream(self, model):
         assert isinstance(model.stream, AppStream)
-        assert model.stream.n_nodes == 21
+        assert model.stream.n_nodes == 23
         assert model.stream.n_reaches == 3
 
     def test_lakes(self, model):
         assert isinstance(model.lakes, AppLake)
         assert model.lakes.n_lakes == 1
         lake_elems = model.lakes.get_elements_for_lake(1)
-        assert len(lake_elems) == 9
+        assert len(lake_elems) == 10
 
     def test_lake_elem_ids(self, model):
-        assert len(model.lake_elem_ids) == 9
+        assert len(model.lake_elem_ids) == 10
         for eid in model.lake_elem_ids:
             assert eid in model.grid.elements
 
