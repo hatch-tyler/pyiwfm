@@ -630,8 +630,9 @@ class TestGWComponentWriterWriteAll:
         model = MagicMock()
         gw = MagicMock()
         # Use a SimpleNamespace BC so bc_type attribute works for filtering
-        bc1 = SimpleNamespace(bc_type="specified_head", nodes=[1], values=[100.0],
-                              layer=1, ts_column=0)
+        bc1 = SimpleNamespace(
+            bc_type="specified_head", nodes=[1], values=[100.0], layer=1, ts_column=0
+        )
         gw.boundary_conditions = [bc1]
         gw.wells = {1: MagicMock()}
         gw.element_pumping = []
@@ -726,8 +727,11 @@ class TestGWComponentWriterSpecBCFiles:
 
         model = MagicMock()
         bc = SimpleNamespace(
-            bc_type="specified_head", nodes=[1, 2, 3], values=[100.0, 95.0, 90.0],
-            layer=1, ts_column=0,
+            bc_type="specified_head",
+            nodes=[1, 2, 3],
+            values=[100.0, 95.0, 90.0],
+            layer=1,
+            ts_column=0,
         )
         gw = MagicMock()
         gw.boundary_conditions = [bc]
@@ -755,8 +759,11 @@ class TestGWComponentWriterSpecBCFiles:
 
         model = MagicMock()
         bc = SimpleNamespace(
-            bc_type="specified_flow", nodes=[5, 6], values=[-50.0, -60.0],
-            layer=1, ts_column=0,
+            bc_type="specified_flow",
+            nodes=[5, 6],
+            values=[-50.0, -60.0],
+            layer=1,
+            ts_column=0,
         )
         gw = MagicMock()
         gw.boundary_conditions = [bc]

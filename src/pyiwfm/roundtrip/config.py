@@ -158,11 +158,7 @@ class RoundtripConfig:
 
         # Executables ship in !bin/IWFM-2025.0.1747/ inside the model
         bin_dir = c2vsimcg_dir / "!bin" / "IWFM-2025.0.1747"
-        exe_mgr = (
-            IWFMExecutableManager(search_paths=[bin_dir])
-            if bin_dir.exists()
-            else None
-        )
+        exe_mgr = IWFMExecutableManager(search_paths=[bin_dir]) if bin_dir.exists() else None
 
         return cls(
             source_model_dir=c2vsimcg_dir,

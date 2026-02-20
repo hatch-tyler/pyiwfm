@@ -159,7 +159,10 @@ def launch_viewer(
     )
 
     model_state.set_model(
-        model, crs=crs, no_cache=no_cache, rebuild_cache=rebuild_cache,
+        model,
+        crs=crs,
+        no_cache=no_cache,
+        rebuild_cache=rebuild_cache,
     )
     app = create_app(model=model, settings=settings)
 

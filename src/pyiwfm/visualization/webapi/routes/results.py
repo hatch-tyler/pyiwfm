@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/results", tags=["results"])
 
 
-
 @router.get("/info")
 def get_results_info() -> dict:
     """Get summary of available results data."""
@@ -210,8 +209,7 @@ def get_hydrograph(
             if location_index < 0 or location_index >= len(phys_locs):
                 raise HTTPException(
                     status_code=404,
-                    detail=f"GW hydrograph {location_id} out of range "
-                    f"[1, {len(phys_locs)}]",
+                    detail=f"GW hydrograph {location_id} out of range [1, {len(phys_locs)}]",
                 )
 
             group = phys_locs[location_index]
@@ -278,9 +276,7 @@ def get_hydrograph(
                             "units": "ft",
                         }
 
-            raise HTTPException(
-                status_code=404, detail="No GW hydrograph data available"
-            )
+            raise HTTPException(status_code=404, detail="No GW hydrograph data available")
 
         # --- fallback: no physical location mapping (no GW component) ---
         # Treat location_id - 1 as raw column index.
@@ -299,8 +295,7 @@ def get_hydrograph(
             if col < 0 or col >= reader.n_columns:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"GW hydrograph {location_id} out of range "
-                    f"[1, {reader.n_columns}]",
+                    detail=f"GW hydrograph {location_id} out of range [1, {reader.n_columns}]",
                 )
             times_raw, values_raw = reader.get_time_series(col)
             return {
@@ -458,8 +453,7 @@ def get_gw_hydrograph_all_layers(
         if location_index < 0 or location_index >= len(phys_locs):
             raise HTTPException(
                 status_code=404,
-                detail=f"GW hydrograph {location_id} out of range "
-                f"[1, {len(phys_locs)}]",
+                detail=f"GW hydrograph {location_id} out of range [1, {len(phys_locs)}]",
             )
         group = phys_locs[location_index]
         name = group["name"] or name
@@ -470,8 +464,7 @@ def get_gw_hydrograph_all_layers(
         if location_index < 0 or location_index >= len(locs):
             raise HTTPException(
                 status_code=404,
-                detail=f"GW hydrograph {location_id} out of range "
-                f"[1, {len(locs)}]",
+                detail=f"GW hydrograph {location_id} out of range [1, {len(locs)}]",
             )
         loc = locs[location_index]
         name = getattr(loc, "name", None) or name
@@ -482,9 +475,7 @@ def get_gw_hydrograph_all_layers(
             node_id = 0
     else:
         if model is None or model.groundwater is None:
-            raise HTTPException(
-                status_code=404, detail="No groundwater component"
-            )
+            raise HTTPException(status_code=404, detail="No groundwater component")
 
     # ------------------------------------------------------------------
     # Path 0 (fastest): SQLite cache — pre-extracted from hydrograph file
@@ -524,9 +515,7 @@ def get_gw_hydrograph_all_layers(
             layers_data: list[dict] = []
             for col_idx, layer in columns:
                 times_raw, values_raw = reader.get_time_series(col_idx)
-                layers_data.append(
-                    {"layer": layer, "values": _sanitize_values(values_raw)}
-                )
+                layers_data.append({"layer": layer, "values": _sanitize_values(values_raw)})
             return {
                 "location_id": location_id,
                 "node_id": node_id,
@@ -637,9 +626,7 @@ def get_subsidence_all_layers(
         )
 
     # Find all specs at the same physical location (same node_id or matching x,y)
-    target_node_id = getattr(target_spec, "node_id", 0) or getattr(
-        target_spec, "gw_node", 0
-    )
+    target_node_id = getattr(target_spec, "node_id", 0) or getattr(target_spec, "gw_node", 0)
     target_x = getattr(target_spec, "x", 0.0)
     target_y = getattr(target_spec, "y", 0.0)
 
@@ -663,9 +650,7 @@ def get_subsidence_all_layers(
     if not matched_specs:
         # At minimum, include the target spec itself
         if target_col_idx < reader.n_columns:
-            matched_specs.append(
-                (target_col_idx, target_spec.layer, target_spec)
-            )
+            matched_specs.append((target_col_idx, target_spec.layer, target_spec))
 
     # Sort by layer
     matched_specs.sort(key=lambda t: t[1])

@@ -243,11 +243,16 @@ class RoundtripPipeline:
         if results_dir.exists():
             (self._written_dir / "Results").mkdir(parents=True, exist_ok=True)
         for pattern in [
-            "**/*.bin", "**/*.BIN",
-            "**/*.hdf", "**/*.HDF",
-            "**/*.dss", "**/*.DSS",
-            "**/*.dat", "**/*.DAT",
-            "**/*.IN", "**/*.in",
+            "**/*.bin",
+            "**/*.BIN",
+            "**/*.hdf",
+            "**/*.HDF",
+            "**/*.dss",
+            "**/*.DSS",
+            "**/*.dat",
+            "**/*.DAT",
+            "**/*.IN",
+            "**/*.in",
         ]:
             for f in src.glob(pattern):
                 if f.is_relative_to(results_dir):

@@ -102,8 +102,13 @@ def mock_model_full_gw(mock_model):
 
     # Wells
     well1 = SimpleNamespace(
-        id=1, element=1, x=100.0, y=200.0, name="Well_1",
-        bottom_screen=50.0, top_screen=80.0,
+        id=1,
+        element=1,
+        x=100.0,
+        y=200.0,
+        name="Well_1",
+        bottom_screen=50.0,
+        top_screen=80.0,
     )
     gw.wells = {1: well1}
     gw.element_pumping = []
@@ -410,8 +415,13 @@ class TestGWComponentWriterWriteBCMain:
             bc_type="specified_flow", id=2, nodes=[2], values=[0.0], layer=1, ts_column=0
         )
         bc_gen = SimpleNamespace(
-            bc_type="general_head", id=3, nodes=[3], values=[50.0], layer=1,
-            ts_column=0, conductance=[0.1]
+            bc_type="general_head",
+            id=3,
+            nodes=[3],
+            values=[50.0],
+            layer=1,
+            ts_column=0,
+            conductance=[0.1],
         )
 
         mock_model_full_gw.groundwater.boundary_conditions.extend([bc_flow, bc_gen])

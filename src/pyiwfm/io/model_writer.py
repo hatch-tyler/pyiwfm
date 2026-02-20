@@ -542,9 +542,7 @@ class CompleteModelWriter:
                 strm_node_budget_file=self.config.get_relative_path(
                     "simulation_main", "results_strm_node_budget"
                 ),
-                strm_hyd_file=self.config.get_relative_path(
-                    "simulation_main", "results_strm_hyd"
-                ),
+                strm_hyd_file=self.config.get_relative_path("simulation_main", "results_strm_hyd"),
                 diver_detail_file=self.config.get_relative_path(
                     "simulation_main", "results_diver_detail"
                 ),

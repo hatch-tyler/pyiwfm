@@ -921,9 +921,7 @@ class ModelState:
         order: list[tuple] = []
 
         if self._model is not None and self._model.groundwater:
-            for idx, loc in enumerate(
-                self._model.groundwater.hydrograph_locations
-            ):
+            for idx, loc in enumerate(self._model.groundwater.hydrograph_locations):
                 raw_nid = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
                 nid = int(raw_nid) if isinstance(raw_nid, (int, float)) else 0
                 # Group key: node_id when available, else exact (x, y)
@@ -1026,9 +1024,7 @@ class ModelState:
                         lng, lat = self.reproject_coords(x, y)
                     except Exception:
                         continue
-                    sub_node_id = getattr(spec, "node_id", 0) or getattr(
-                        spec, "gw_node", 0
-                    )
+                    sub_node_id = getattr(spec, "node_id", 0) or getattr(spec, "gw_node", 0)
                     result["subsidence"].append(
                         {
                             "id": spec.id,
@@ -1359,9 +1355,7 @@ class ModelState:
         arr, min_val, max_val = result
         import numpy as np
 
-        values: list[float | None] = [
-            None if np.isnan(v) else round(float(v), 3) for v in arr
-        ]
+        values: list[float | None] = [None if np.isnan(v) else round(float(v), 3) for v in arr]
         return values, min_val, max_val
 
     def get_cached_head_range(self, layer: int) -> dict | None:

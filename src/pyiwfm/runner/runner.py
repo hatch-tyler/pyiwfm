@@ -297,11 +297,13 @@ class IWFMRunner:
         except subprocess.TimeoutExpired as e:
             elapsed = datetime.now() - start_time
             # With text=True, stdout/stderr are already strings
-            stdout = e.stdout if isinstance(e.stdout, str) else (
-                e.stdout.decode() if e.stdout else ""
+            stdout = (
+                e.stdout if isinstance(e.stdout, str) else (e.stdout.decode() if e.stdout else "")
             )
-            stderr = e.stderr if isinstance(e.stderr, str) else (
-                e.stderr.decode() if e.stderr else "Process timed out"
+            stderr = (
+                e.stderr
+                if isinstance(e.stderr, str)
+                else (e.stderr.decode() if e.stderr else "Process timed out")
             )
             return -1, stdout, stderr, elapsed
 

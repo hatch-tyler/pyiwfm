@@ -361,8 +361,7 @@ class GWComponentWriter(TemplateWriter):
 
         for ff in ff_specs:
             lines.append(
-                f"    {ff.id:<5}  {ff.layer:>4}  {ff.node_a:>9}  {ff.node_b:>9}"
-                f"      {ff.name}"
+                f"    {ff.id:<5}  {ff.layer:>4}  {ff.node_a:>9}  {ff.node_b:>9}      {ff.name}"
             )
 
         # ── Aquifer parameters ────────────────────────────
@@ -665,7 +664,9 @@ class GWComponentWriter(TemplateWriter):
             "spec_head_bc_file": f"{prefix}{self.config.spec_head_bc_file}" if spec_head else "",
             "gen_head_bc_file": "",
             "constrained_gh_bc_file": "",
-            "ts_data_file": f"{prefix}{self.config.bound_tsd_file}" if (spec_head or spec_flow) else "",
+            "ts_data_file": f"{prefix}{self.config.bound_tsd_file}"
+            if (spec_head or spec_flow)
+            else "",
             "n_bc_output_nodes": n_bc_output_nodes,
             "bc_output_file": bc_output_file_val,
             "bc_output_nodes": bc_output_specs,
@@ -888,8 +889,7 @@ class GWComponentWriter(TemplateWriter):
             node = bc.nodes[0]
             head_val = bc.values[0] if bc.values else 0.0
             lines.append(
-                f"    {node:>5}    {bc.layer:>5}    {bc.ts_column:>5}"
-                f"    {head_val:>10.1f}"
+                f"    {node:>5}    {bc.layer:>5}    {bc.ts_column:>5}    {head_val:>10.1f}"
             )
 
         output_path.write_text("\n".join(lines) + "\n")
@@ -927,8 +927,7 @@ class GWComponentWriter(TemplateWriter):
             node = bc.nodes[0]
             flow_val = bc.values[0] if bc.values else 0.0
             lines.append(
-                f"    {node:>5}    {bc.layer:>5}    {bc.ts_column:>5}"
-                f"    {flow_val:>10.1f}"
+                f"    {node:>5}    {bc.layer:>5}    {bc.ts_column:>5}    {flow_val:>10.1f}"
             )
 
         output_path.write_text("\n".join(lines) + "\n")

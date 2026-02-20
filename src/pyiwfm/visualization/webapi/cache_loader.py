@@ -56,9 +56,7 @@ class SqliteCacheLoader:
         """Get the per-thread connection, creating if needed."""
         conn = getattr(self._local, "conn", None)
         if conn is None:
-            conn = sqlite3.connect(
-                str(self.cache_path), check_same_thread=False
-            )
+            conn = sqlite3.connect(str(self.cache_path), check_same_thread=False)
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA mmap_size=268435456")  # 256 MB
             conn.execute("PRAGMA cache_size=-65536")  # 64 MB
@@ -80,17 +78,13 @@ class SqliteCacheLoader:
 
     def get_metadata(self, key: str) -> str | None:
         """Get a metadata value by key."""
-        cur = self._conn().execute(
-            "SELECT value FROM metadata WHERE key = ?", (key,)
-        )
+        cur = self._conn().execute("SELECT value FROM metadata WHERE key = ?", (key,))
         row = cur.fetchone()
         return row[0] if row else None
 
     def get_timesteps(self) -> list[str]:
         """Get all timestep datetimes as ISO strings."""
-        cur = self._conn().execute(
-            "SELECT datetime FROM timesteps ORDER BY idx"
-        )
+        cur = self._conn().execute("SELECT datetime FROM timesteps ORDER BY idx")
         return [r[0] for r in cur.fetchall()]
 
     # ------------------------------------------------------------------
@@ -103,8 +97,7 @@ class SqliteCacheLoader:
         Returns None if frame not cached.
         """
         cur = self._conn().execute(
-            "SELECT n_nodes, n_layers, data_blob FROM head_frames "
-            "WHERE frame_idx = ?",
+            "SELECT n_nodes, n_layers, data_blob FROM head_frames WHERE frame_idx = ?",
             (frame_idx,),
         )
         row = cur.fetchone()
@@ -138,8 +131,7 @@ class SqliteCacheLoader:
         Returns dict with percentile_02, percentile_98, abs_min, abs_max.
         """
         cur = self._conn().execute(
-            "SELECT percentile_02, percentile_98, abs_min, abs_max "
-            "FROM head_range WHERE layer = ?",
+            "SELECT percentile_02, percentile_98, abs_min, abs_max FROM head_range WHERE layer = ?",
             (layer,),
         )
         row = cur.fetchone()
@@ -164,9 +156,7 @@ class SqliteCacheLoader:
 
     def get_budget_types(self) -> list[str]:
         """Get list of cached budget types."""
-        cur = self._conn().execute(
-            "SELECT budget_type FROM budget_files ORDER BY budget_type"
-        )
+        cur = self._conn().execute("SELECT budget_type FROM budget_files ORDER BY budget_type")
         return [r[0] for r in cur.fetchall()]
 
     def get_budget_locations(self, budget_type: str) -> list[tuple[int, str, float]]:
@@ -187,9 +177,7 @@ class SqliteCacheLoader:
         )
         return [(r[0], r[1], r[2]) for r in cur.fetchall()]
 
-    def get_budget_data(
-        self, budget_type: str, location_idx: int
-    ) -> NDArray | None:
+    def get_budget_data(self, budget_type: str, location_idx: int) -> NDArray | None:
         """Get budget data for a location as (n_timesteps, n_cols) array."""
         cur = self._conn().execute(
             "SELECT values_blob FROM budget_data "
@@ -217,9 +205,7 @@ class SqliteCacheLoader:
     # Hydrographs
     # ------------------------------------------------------------------
 
-    def get_hydrograph(
-        self, hydro_type: str, column_idx: int
-    ) -> tuple[list[str], NDArray] | None:
+    def get_hydrograph(self, hydro_type: str, column_idx: int) -> tuple[list[str], NDArray] | None:
         """Get a hydrograph timeseries.
 
         Returns (times_list, values_array) or None.
@@ -236,9 +222,7 @@ class SqliteCacheLoader:
         values = _decompress_array(row[1])
         return times, values
 
-    def get_hydrograph_columns(
-        self, hydro_type: str
-    ) -> list[tuple[int, int, int]]:
+    def get_hydrograph_columns(self, hydro_type: str) -> list[tuple[int, int, int]]:
         """Get hydrograph column metadata as (col_idx, node_id, layer) tuples."""
         cur = self._conn().execute(
             "SELECT column_idx, node_id, layer FROM hydrograph_columns "
@@ -307,9 +291,7 @@ class SqliteCacheLoader:
     # Stream ratings
     # ------------------------------------------------------------------
 
-    def get_stream_rating(
-        self, stream_node_id: int
-    ) -> tuple[float, NDArray, NDArray] | None:
+    def get_stream_rating(self, stream_node_id: int) -> tuple[float, NDArray, NDArray] | None:
         """Get a stream node's rating table.
 
         Returns (bottom_elev, stages, flows) or None.
@@ -332,9 +314,7 @@ class SqliteCacheLoader:
     # Area / land-use
     # ------------------------------------------------------------------
 
-    def get_area_snapshot(
-        self, frame_idx: int
-    ) -> list[dict] | None:
+    def get_area_snapshot(self, frame_idx: int) -> list[dict] | None:
         """Get a land-use snapshot for a timestep.
 
         Returns list of element dicts or None.
@@ -363,8 +343,7 @@ class SqliteCacheLoader:
     def get_area_timesteps(self, area_type: str = "landuse") -> list[str]:
         """Get area timestep dates."""
         cur = self._conn().execute(
-            "SELECT datetime FROM area_timesteps "
-            "WHERE area_type = ? ORDER BY idx",
+            "SELECT datetime FROM area_timesteps WHERE area_type = ? ORDER BY idx",
             (area_type,),
         )
         return [r[0] for r in cur.fetchall()]
@@ -379,10 +358,16 @@ class SqliteCacheLoader:
         stats: dict = {}
 
         for table in (
-            "head_frames", "head_by_element", "head_range",
-            "budget_files", "budget_data", "budget_summaries",
-            "hydrograph_series", "hydrograph_columns",
-            "stream_ratings", "landuse_snapshots",
+            "head_frames",
+            "head_by_element",
+            "head_range",
+            "budget_files",
+            "budget_data",
+            "budget_summaries",
+            "hydrograph_series",
+            "hydrograph_columns",
+            "stream_ratings",
+            "landuse_snapshots",
         ):
             try:
                 cur = conn.execute(f"SELECT COUNT(*) FROM {table}")  # noqa: S608
@@ -392,9 +377,7 @@ class SqliteCacheLoader:
 
         # File size
         try:
-            stats["file_size_mb"] = round(
-                self.cache_path.stat().st_size / (1024 * 1024), 1
-            )
+            stats["file_size_mb"] = round(self.cache_path.stat().st_size / (1024 * 1024), 1)
         except Exception:
             stats["file_size_mb"] = 0
 

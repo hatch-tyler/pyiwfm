@@ -475,9 +475,7 @@ C------------------------------------------------------------------------------
             if is_v50_plus:
                 content += f"{node_id:<8}   {cstrm:.3f}   {dstrm:.0f}\n"
             elif is_v40:
-                content += (
-                    f"{node_id:<8}   {cstrm:.3f}   {dstrm:.0f}{wetpr:>7.0f}\n"
-                )
+                content += f"{node_id:<8}   {cstrm:.3f}   {dstrm:.0f}{wetpr:>7.0f}\n"
             else:
                 content += (
                     f"{node_id:<8}{wetpr:>7.0f}     {gw_node:>5d}   {cstrm:.3f}   {dstrm:.0f}\n"

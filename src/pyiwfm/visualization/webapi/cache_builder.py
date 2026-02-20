@@ -281,9 +281,13 @@ class SqliteCacheBuilder:
             self._build_head_data(conn, model, head_loader, progress_callback)
             self._build_budget_data(conn, budget_readers, progress_callback)
             self._build_hydrographs(
-                conn, model, head_loader,
-                gw_hydrograph_reader, stream_hydrograph_reader,
-                subsidence_reader, progress_callback,
+                conn,
+                model,
+                head_loader,
+                gw_hydrograph_reader,
+                stream_hydrograph_reader,
+                subsidence_reader,
+                progress_callback,
             )
             self._build_stream_ratings(conn, model, progress_callback)
             self._build_area_data(conn, area_manager, progress_callback)
@@ -332,11 +336,7 @@ class SqliteCacheBuilder:
 
         for eid in sorted(grid.elements.keys()):
             elem = grid.elements[eid]
-            node_indices = [
-                node_id_to_idx[vid]
-                for vid in elem.vertices
-                if vid in node_id_to_idx
-            ]
+            node_indices = [node_id_to_idx[vid] for vid in elem.vertices if vid in node_id_to_idx]
             if node_indices:
                 elem_node_map.append((eid, node_indices))
 
@@ -347,9 +347,7 @@ class SqliteCacheBuilder:
         layer_all_maxs: list[float] = [float("-inf")] * n_layers
         # Reservoir-sample values for percentile estimation
         sample_size = min(50, n_frames)
-        sample_indices = set(
-            np.linspace(0, n_frames - 1, sample_size, dtype=int).tolist()
-        )
+        sample_indices = set(np.linspace(0, n_frames - 1, sample_size, dtype=int).tolist())
         layer_samples: list[list[float]] = [[] for _ in range(n_layers)]
 
         for ts in range(n_frames):
@@ -383,12 +381,8 @@ class SqliteCacheBuilder:
 
                 # Track range
                 if len(valid_avgs) > 0:
-                    layer_all_mins[layer_idx] = min(
-                        layer_all_mins[layer_idx], min_val
-                    )
-                    layer_all_maxs[layer_idx] = max(
-                        layer_all_maxs[layer_idx], max_val
-                    )
+                    layer_all_mins[layer_idx] = min(layer_all_mins[layer_idx], min_val)
+                    layer_all_maxs[layer_idx] = max(layer_all_maxs[layer_idx], max_val)
                     if ts in sample_indices:
                         layer_samples[layer_idx].extend(valid_avgs.tolist())
 
@@ -415,7 +409,9 @@ class SqliteCacheBuilder:
         conn.commit()
         logger.info(
             "Head data cached: %d frames, %d layers, %d elements",
-            n_frames, n_layers, n_elements,
+            n_frames,
+            n_layers,
+            n_elements,
         )
 
     # ------------------------------------------------------------------
@@ -510,15 +506,16 @@ class SqliteCacheBuilder:
                     total = float(np.sum(valid)) if len(valid) > 0 else 0.0
                     avg = float(np.mean(valid)) if len(valid) > 0 else 0.0
                     conn.execute(
-                        "INSERT OR REPLACE INTO budget_summaries "
-                        "VALUES (?, ?, ?, ?, ?)",
+                        "INSERT OR REPLACE INTO budget_summaries VALUES (?, ?, ?, ?, ?)",
                         (btype, loc_idx, col_idx, total, avg),
                     )
 
             except Exception as e:
                 logger.warning(
                     "Failed to cache budget data for %s loc %d: %s",
-                    btype, loc_idx, e,
+                    btype,
+                    loc_idx,
+                    e,
                 )
 
     # ------------------------------------------------------------------
@@ -541,19 +538,25 @@ class SqliteCacheBuilder:
         # Column layout: n_locations × n_layers consecutive columns.
         if gw_reader and gw_reader.n_timesteps > 0:
             self._cache_hydrograph_with_metadata(
-                conn, "gw", gw_reader,
+                conn,
+                "gw",
+                gw_reader,
             )
 
         # Stream hydrographs
         if stream_reader and stream_reader.n_timesteps > 0:
             self._cache_hydrograph_with_metadata(
-                conn, "stream", stream_reader,
+                conn,
+                "stream",
+                stream_reader,
             )
 
         # Subsidence hydrographs
         if subsidence_reader and subsidence_reader.n_timesteps > 0:
             self._cache_hydrograph_with_metadata(
-                conn, "subsidence", subsidence_reader,
+                conn,
+                "subsidence",
+                subsidence_reader,
             )
 
         conn.commit()
@@ -578,9 +581,7 @@ class SqliteCacheBuilder:
 
         # Compress times once — they're identical for every column.
         times = getattr(reader, "times", None) or []
-        times_blob = zlib.compress(
-            "\n".join(str(t) for t in times).encode("utf-8"), level=1
-        )
+        times_blob = zlib.compress("\n".join(str(t) for t in times).encode("utf-8"), level=1)
 
         # Try bulk HDF5 read path (LazyHydrographDataLoader has _file_path).
         hdf_path = getattr(reader, "_file_path", None)
@@ -591,7 +592,8 @@ class SqliteCacheBuilder:
 
             logger.info(
                 "Bulk-caching %d %s hydrograph columns from HDF5...",
-                n_cols, hydro_type,
+                n_cols,
+                hydro_type,
             )
             with h5py.File(str(hdf_path), "r") as f:
                 ds = f["data"]  # shape (n_timesteps, n_columns)
@@ -603,26 +605,23 @@ class SqliteCacheBuilder:
                         col_idx = start + offset
                         vals = chunk_data[:, offset].copy()
                         layer = layers[col_idx] if col_idx < len(layers) else 0
-                        node_id = (
-                            node_ids[col_idx] if col_idx < len(node_ids) else 0
-                        )
+                        node_id = node_ids[col_idx] if col_idx < len(node_ids) else 0
                         conn.execute(
-                            "INSERT OR REPLACE INTO hydrograph_columns "
-                            "VALUES (?, ?, ?, ?)",
+                            "INSERT OR REPLACE INTO hydrograph_columns VALUES (?, ?, ?, ?)",
                             (hydro_type, col_idx, node_id, layer),
                         )
                         conn.execute(
-                            "INSERT OR REPLACE INTO hydrograph_series "
-                            "VALUES (?, ?, ?, ?)",
-                            (hydro_type, col_idx, times_blob,
-                             _compress_array(vals)),
+                            "INSERT OR REPLACE INTO hydrograph_series VALUES (?, ?, ?, ?)",
+                            (hydro_type, col_idx, times_blob, _compress_array(vals)),
                         )
                     # Commit each chunk to avoid unbounded WAL growth.
                     conn.commit()
                     if start % 5000 == 0 and start > 0:
                         logger.info(
                             "  %s hydrograph progress: %d/%d columns",
-                            hydro_type, start, n_cols,
+                            hydro_type,
+                            start,
+                            n_cols,
                         )
         else:
             # Fallback: per-column via reader.get_time_series().
@@ -631,29 +630,28 @@ class SqliteCacheBuilder:
                     _times, values = reader.get_time_series(col_idx)
                     vals_arr = np.array(values, dtype=np.float64)
                     layer = layers[col_idx] if col_idx < len(layers) else 0
-                    node_id = (
-                        node_ids[col_idx] if col_idx < len(node_ids) else 0
-                    )
+                    node_id = node_ids[col_idx] if col_idx < len(node_ids) else 0
                     conn.execute(
-                        "INSERT OR REPLACE INTO hydrograph_columns "
-                        "VALUES (?, ?, ?, ?)",
+                        "INSERT OR REPLACE INTO hydrograph_columns VALUES (?, ?, ?, ?)",
                         (hydro_type, col_idx, node_id, layer),
                     )
                     conn.execute(
-                        "INSERT OR REPLACE INTO hydrograph_series "
-                        "VALUES (?, ?, ?, ?)",
-                        (hydro_type, col_idx, times_blob,
-                         _compress_array(vals_arr)),
+                        "INSERT OR REPLACE INTO hydrograph_series VALUES (?, ?, ?, ?)",
+                        (hydro_type, col_idx, times_blob, _compress_array(vals_arr)),
                     )
                 except Exception as e:
                     logger.warning(
                         "Failed to cache %s hydrograph col %d: %s",
-                        hydro_type, col_idx, e,
+                        hydro_type,
+                        col_idx,
+                        e,
                     )
             conn.commit()
 
         logger.info(
-            "Cached %d %s hydrograph columns", n_cols, hydro_type,
+            "Cached %d %s hydrograph columns",
+            n_cols,
+            hydro_type,
         )
 
     # ------------------------------------------------------------------
@@ -727,8 +725,7 @@ class SqliteCacheBuilder:
                     for elem_data in snapshot:
                         eid = elem_data.get("element_id", 0)
                         conn.execute(
-                            "INSERT OR REPLACE INTO landuse_snapshots "
-                            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            "INSERT OR REPLACE INTO landuse_snapshots VALUES (?, ?, ?, ?, ?, ?, ?)",
                             (
                                 ts_idx,
                                 eid,
@@ -781,9 +778,7 @@ def is_cache_stale(cache_path: Path, model: IWFMModel) -> bool:
     # Check schema version
     try:
         conn = sqlite3.connect(str(cache_path))
-        cur = conn.execute(
-            "SELECT value FROM metadata WHERE key = 'schema_version'"
-        )
+        cur = conn.execute("SELECT value FROM metadata WHERE key = 'schema_version'")
         row = cur.fetchone()
         conn.close()
         if row is None or row[0] != SCHEMA_VERSION:

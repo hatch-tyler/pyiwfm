@@ -894,9 +894,7 @@ class IWFMModel:
                                             elevation=td.elevation,
                                             conductance=td.conductance,
                                             destination_type=dest_type,
-                                            destination_id=td.dest_id
-                                            if is_stream
-                                            else None,
+                                            destination_id=td.dest_id if is_stream else None,
                                         )
                                     )
                                 # Load sub-irrigation data
@@ -1387,10 +1385,7 @@ class IWFMModel:
                                             ):
                                                 sn.bottom_elev = rs.node_bottom_elevations[sn_id]
                                             # Transfer rating table
-                                            if (
-                                                sn_id in rs.node_rating_tables
-                                                and sn.rating is None
-                                            ):
+                                            if sn_id in rs.node_rating_tables and sn.rating is None:
                                                 import numpy as np
 
                                                 from pyiwfm.components.stream import StreamRating
