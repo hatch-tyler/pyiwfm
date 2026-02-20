@@ -587,9 +587,19 @@ class ModelWriteConfig:
         "results_gw_zbudget": "Results/GW_ZBud.hdf",
         "results_gw_head": "Results/GWHeadAll.out",
         "results_strm_budget": "Results/StrmBud.hdf",
+        "results_strm_node_budget": "Results/StrmNodeBud.hdf",
+        "results_strm_hyd": "Results/StrmHyd.out",
+        "results_diver_detail": "Results/DiverDetail.hdf",
         "results_lake_budget": "Results/LakeBud.hdf",
+        "results_final_lake_elev": "Results/FinalLakeElev.out",
         "results_lwu_budget": "Results/LWU.hdf",
         "results_rz_budget": "Results/RootZone.hdf",
+        "results_lwu_zbudget": "Results/LWU_ZBud.hdf",
+        "results_rz_zbudget": "Results/RootZone_ZBud.hdf",
+        "results_uz_budget": "Results/UZBud.hdf",
+        "results_uz_zbudget": "Results/UZZBud.hdf",
+        "results_final_uz": "Results/FinalUZ.out",
+        "results_pump_output": "Results/ElemWellPumping.out",
     }
 
     def __post_init__(self) -> None:

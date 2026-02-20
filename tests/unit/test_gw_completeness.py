@@ -715,4 +715,4 @@ class TestBCNOUTBSection:
         filepath.write_text(content)
         config = GWBoundaryReader().read(filepath)
         assert config.n_bc_output_nodes == 2
-        assert config.bc_output_specs == [100, 200]
+        assert config.bc_output_specs == [{"id": 100}, {"id": 200}]

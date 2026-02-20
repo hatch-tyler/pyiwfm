@@ -67,6 +67,8 @@ class ParametricGridData:
         node_coords: Parametric node coordinates, shape (n_nodes, 2).
         node_values: Parameter values per node, shape (n_nodes, n_layers, n_params).
             The 5 parameters are: Kh, Ss, Sy, AquitardKv, Kv.
+        node_range_str: Raw node range string from file (e.g., "1-441").
+        raw_node_lines: Raw text lines for each parametric node (before parsing).
     """
 
     n_nodes: int
@@ -74,6 +76,8 @@ class ParametricGridData:
     elements: list[tuple[int, ...]]
     node_coords: NDArray[np.float64]
     node_values: NDArray[np.float64]
+    node_range_str: str = ""
+    raw_node_lines: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -818,6 +822,9 @@ class GWMainFileConfig:
     subsidence_file: Path | None = None
     overwrite_file: Path | None = None
 
+    # Raw (unresolved) path strings for roundtrip fidelity
+    raw_paths: dict[str, str] = field(default_factory=dict)
+
     # Conversion factors
     head_output_factor: float = 1.0
     head_output_unit: str = "FEET"
@@ -850,8 +857,21 @@ class GWMainFileConfig:
     # Aquifer parameters
     aquifer_params: AquiferParameters | None = None
 
+    # Aquifer parameter conversion factors and time units (for roundtrip)
+    n_param_groups: int = 0  # NGROUP
+    aq_factors_line: str = ""  # Raw FX FKH FS FN FV FL line
+    aq_time_unit_kh: str = ""  # TUNITKH
+    aq_time_unit_v: str = ""  # TUNITV (aquitard vertical K)
+    aq_time_unit_l: str = ""  # TUNITL (aquifer vertical K)
+    aq_head_output_flag: int = 1  # IHTPFLAG
+
     # Kh anomaly overwrites (parsed but not yet applied to node arrays)
     kh_anomalies: list[KhAnomalyEntry] = field(default_factory=list)
+    kh_anomaly_factor: float = 1.0  # FACT for Kh anomaly
+    kh_anomaly_time_unit: str = ""  # TUNITH for Kh anomaly
+
+    # Return flow section
+    return_flow_flag: int = 0  # IFLAGRF
 
     # Parametric grid data (NGROUP > 0); interpolated later in model.py
     parametric_grids: list[ParametricGridData] = field(default_factory=list)
@@ -905,26 +925,31 @@ class GWMainFileReader:
             # BCFL (boundary conditions file)
             bc_path = _next_data_or_empty(f)
             if bc_path:
+                config.raw_paths["bc"] = bc_path
                 config.bc_file = _resolve_path_f(base_dir, bc_path)
 
             # TDFL (tile drains file)
             td_path = _next_data_or_empty(f)
             if td_path:
+                config.raw_paths["td"] = td_path
                 config.tile_drain_file = _resolve_path_f(base_dir, td_path)
 
             # PUMPFL (pumping file)
             pump_path = _next_data_or_empty(f)
             if pump_path:
+                config.raw_paths["pump"] = pump_path
                 config.pumping_file = _resolve_path_f(base_dir, pump_path)
 
             # SUBSFL (subsidence file)
             subs_path = _next_data_or_empty(f)
             if subs_path:
+                config.raw_paths["subs"] = subs_path
                 config.subsidence_file = _resolve_path_f(base_dir, subs_path)
 
             # OVRWRTFL (optional overwrite file, may be empty)
             ovr_path = _next_data_or_empty(f)
             if ovr_path:
+                config.raw_paths["overwrite"] = ovr_path
                 config.overwrite_file = _resolve_path_f(base_dir, ovr_path)
 
             # FACTLTOU (head output conversion factor)
@@ -969,42 +994,58 @@ class GWMainFileReader:
             # VELOUTFL (velocity output file - optional)
             vel_path = _next_data_or_empty(f)
             if vel_path:
+                config.raw_paths["velocity"] = vel_path
                 config.velocity_output_file = _resolve_path_f(base_dir, vel_path)
 
             # VFLOWOUTFL (vertical flow output file - optional)
             vflow_path = _next_data_or_empty(f)
             if vflow_path:
+                config.raw_paths["vflow"] = vflow_path
                 config.vertical_flow_output_file = _resolve_path_f(base_dir, vflow_path)
 
             # GWALLOUTFL (GW head all output file - optional)
             headall_path = _next_data_or_empty(f)
             if headall_path:
+                config.raw_paths["headall"] = headall_path
                 config.head_all_output_file = _resolve_path_f(base_dir, headall_path)
 
             # HTPOUTFL (TecPlot head output file - optional)
             htec_path = _next_data_or_empty(f)
             if htec_path:
+                config.raw_paths["tecplot"] = htec_path
                 config.head_tecplot_file = _resolve_path_f(base_dir, htec_path)
 
             # VTPOUTFL (TecPlot velocity output file - optional)
             vtec_path = _next_data_or_empty(f)
             if vtec_path:
+                config.raw_paths["vtk"] = vtec_path
                 config.velocity_tecplot_file = _resolve_path_f(base_dir, vtec_path)
 
             # GWBUDFL (GW budget output file - optional)
             bud_path = _next_data_or_empty(f)
             if bud_path:
+                config.raw_paths["budget"] = bud_path
                 config.budget_output_file = _resolve_path_f(base_dir, bud_path)
 
             # ZBUDFL (Zone budget output file - optional)
             zbud_path = _next_data_or_empty(f)
             if zbud_path:
+                config.raw_paths["zbudget"] = zbud_path
                 config.zbudget_output_file = _resolve_path_f(base_dir, zbud_path)
 
             # FNGWFL (final condition output file - optional)
             final_path = _next_data_or_empty(f)
             if final_path:
+                config.raw_paths["final_heads"] = final_path
                 config.final_heads_file = _resolve_path_f(base_dir, final_path)
+
+            # IHTPFLAG (head print-out type flag: 1=heads, 2=depth-to-gw)
+            ihtpflag = _next_data_or_empty(f)
+            if ihtpflag:
+                try:
+                    config.aq_head_output_flag = int(ihtpflag)
+                except ValueError:
+                    pass
 
             # KDEB (debug flag)
             kdeb = _next_data_or_empty(f)
@@ -1040,6 +1081,7 @@ class GWMainFileReader:
             # GWHYDOUTFL (hydrograph output file — read regardless of NOUTH)
             hydout_path = _next_data_or_empty(f)
             if hydout_path:
+                config.raw_paths["hydout"] = hydout_path
                 config.hydrograph_output_file = _resolve_path_f(base_dir, hydout_path)
 
             # Read inline hydrograph location data (only if NOUTH > 0)
@@ -1060,6 +1102,7 @@ class GWMainFileReader:
             # FCHYDOUTFL (face flow output file - optional)
             fc_path = _next_data_or_empty(f)
             if fc_path:
+                config.raw_paths["faceflow"] = fc_path
                 config.face_flow_output_file = _resolve_path_f(base_dir, fc_path)
 
             # Read inline face flow specifications (NOUTF rows)
@@ -1080,12 +1123,26 @@ class GWMainFileReader:
 
             # ── Anomaly in Hydraulic Conductivity ────────────────────
             try:
-                config.kh_anomalies = self._read_kh_anomaly(f)
+                config.kh_anomalies = self._read_kh_anomaly(f, config)
             except Exception as exc:
                 import logging
 
                 logging.getLogger(__name__).warning(
                     "Failed to read Kh anomalies at line %d: %s",
+                    self._line_num,
+                    exc,
+                )
+
+            # ── Return Flow ──────────────────────────────────────────
+            try:
+                iflagrf_str = _next_data_or_empty(f)
+                if iflagrf_str:
+                    config.return_flow_flag = int(iflagrf_str)
+            except Exception as exc:
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "Failed to read return flow flag at line %d: %s",
                     self._line_num,
                     exc,
                 )
@@ -1264,6 +1321,10 @@ class GWMainFileReader:
         except ValueError:
             return None
 
+        # Store NGROUP on config for roundtrip
+        if config is not None:
+            config.n_param_groups = ngroup
+
         # Conversion factors: FX  FKH  FS  FN  FV  FL
         factors_str = _next_data_or_empty(f)
         if not factors_str:
@@ -1281,10 +1342,18 @@ class GWMainFileReader:
         except ValueError:
             return None
 
-        # Time units: TUNITKH, TUNITV, TUNITL (read and discard)
-        _next_data_or_empty(f)  # TUNITKH
-        _next_data_or_empty(f)  # TUNITV
-        _next_data_or_empty(f)  # TUNITL
+        # Store raw factors line for roundtrip
+        if config is not None:
+            config.aq_factors_line = factors_str
+
+        # Time units: TUNITKH, TUNITV, TUNITL
+        tunitkh = _next_data_or_empty(f)
+        tunitv = _next_data_or_empty(f)
+        tunitl = _next_data_or_empty(f)
+        if config is not None:
+            config.aq_time_unit_kh = tunitkh
+            config.aq_time_unit_v = tunitv
+            config.aq_time_unit_l = tunitl
 
         if ngroup > 0:
             factors = (_fx, fkh, fs, fn, fv, fl)
@@ -1435,70 +1504,116 @@ class GWMainFileReader:
         grids: list[ParametricGridData] = []
 
         for _ in range(ngroup):
-            # NDP  NEP
-            ndp_nep_str = _next_data_or_empty(f)
-            if not ndp_nep_str:
+            # IWFM parametric grid format per group:
+            # 1. Node range string (e.g., "1-441")
+            # 2. NDP (scalar)
+            # 3. NEP (scalar)
+            # 4. NEP element rows (if NEP > 0)
+            # 5. NDP parametric node data rows
+
+            # Node range string
+            node_range_str = _next_data_or_empty(f)
+            if not node_range_str:
                 break
-            parts = ndp_nep_str.split()
-            if len(parts) < 2:
+
+            # NDP
+            ndp_str = _next_data_or_empty(f)
+            if not ndp_str:
                 break
             try:
-                ndp = int(parts[0])
-                nep = int(parts[1])
+                ndp = int(ndp_str)
             except ValueError:
                 break
 
-            # Read NEP element definitions
+            # NEP
+            nep_str = _next_data_or_empty(f)
+            if not nep_str:
+                break
+            try:
+                nep = int(nep_str)
+            except ValueError:
+                break
+
+            # Read NEP element definitions (skip entirely when NEP=0)
             elements: list[tuple[int, ...]] = []
-            elem_count = 0
-            for line in f:
-                self._line_num += 1
-                if _is_comment_line(line):
-                    continue
-                value, _ = _strip_comment(line)
-                eparts = value.split()
-                if len(eparts) < 4:
-                    break
-                try:
-                    # ElemID, Node1, Node2, Node3, Node4
-                    # Node indices are 1-based in the file; convert to
-                    # 0-based indices into the node array.
-                    verts = [int(p) - 1 for p in eparts[1:]]
-                    # Remove trailing -1 entries (Node4=0 means triangle)
-                    verts = [v for v in verts if v >= 0]
-                    elements.append(tuple(verts))
-                except ValueError:
-                    break
-                elem_count += 1
-                if elem_count >= nep:
-                    break
+            if nep > 0:
+                elem_count = 0
+                for line in f:
+                    self._line_num += 1
+                    if _is_comment_line(line):
+                        continue
+                    value, _ = _strip_comment(line)
+                    eparts = value.split()
+                    if len(eparts) < 4:
+                        break
+                    try:
+                        verts = [int(p) - 1 for p in eparts[1:]]
+                        verts = [v for v in verts if v >= 0]
+                        elements.append(tuple(verts))
+                    except ValueError:
+                        break
+                    elem_count += 1
+                    if elem_count >= nep:
+                        break
 
             # Read NDP parametric node data lines
-            # Each line: NodeID  X  Y  P1_L1 P1_L2 ... P5_LN
-            # The parameter values are ordered parameter-major:
-            # all layers of Kh, then all layers of Ss, etc.
+            # First line per node: NodeID  X  Y  PKH  PS  PN  PV  PL  (8+ tokens)
+            # Continuation lines (layers 2..NL): PKH  PS  PN  PV  PL  (5 tokens)
             node_coords = np.zeros((ndp, 2), dtype=np.float64)
-            # We don't know n_layers yet; infer from first line
             all_raw_values: list[list[float]] = []
+            raw_node_lines: list[str] = []
             node_count = 0
+
             for line in f:
                 self._line_num += 1
                 if _is_comment_line(line):
+                    if node_count >= ndp:
+                        # All node first-lines read; a comment after means
+                        # end of section (no more continuations).
+                        break
                     continue
                 value, _ = _strip_comment(line)
                 nparts = value.split()
-                if len(nparts) < 4:
-                    break
-                try:
-                    # NodeID, X, Y, values...
-                    node_coords[node_count, 0] = float(nparts[1]) * fx
-                    node_coords[node_count, 1] = float(nparts[2]) * fx
+                if not nparts:
+                    continue
+
+                # Detect new node line vs continuation line.
+                # A new node line has NodeID(int) X Y + 5 params = 8+ tokens.
+                # A continuation line has exactly 5 float tokens.
+                is_new_node = False
+                if node_count < ndp and len(nparts) >= 8:
+                    try:
+                        _node_id = int(nparts[0])
+                        float(nparts[1])
+                        float(nparts[2])
+                        is_new_node = True
+                    except (ValueError, IndexError):
+                        pass
+
+                if is_new_node:
+                    x_raw = float(nparts[1])
+                    y_raw = float(nparts[2])
+                    node_coords[node_count, 0] = x_raw * fx
+                    node_coords[node_count, 1] = y_raw * fx
                     raw_vals = [float(v) for v in nparts[3:]]
                     all_raw_values.append(raw_vals)
-                except (ValueError, IndexError):
-                    break
-                node_count += 1
-                if node_count >= ndp:
+                    raw_node_lines.append(value.strip())
+                    node_count += 1
+                elif len(nparts) == 5 and all_raw_values:
+                    # Continuation line for current node
+                    try:
+                        cont_vals = [float(v) for v in nparts]
+                        all_raw_values[-1].extend(cont_vals)
+                        raw_node_lines.append(value.strip())
+                    except ValueError:
+                        break
+                else:
+                    # Not a node line or continuation — end of section.
+                    # Use f.seek to restore position so the next reader
+                    # can re-read this line.  Unfortunately, the line is
+                    # already consumed from the iterator.  Instead, we
+                    # simply break — the remaining sections will find
+                    # their data from subsequent lines.
                     break
 
             if not all_raw_values:
@@ -1510,15 +1625,14 @@ class GWMainFileReader:
             n_layers = n_values // 5 if n_values >= 5 else 1
 
             # Build node_values array: shape (ndp, n_layers, 5)
-            # Fortran reshapes with ORDER=[2,1], meaning the data in
-            # the file is parameter-major: all layers of param 1, then
-            # all layers of param 2, etc.
+            # Raw layout per node: PKH_L1 PS_L1 PN_L1 PV_L1 PL_L1  PKH_L2 PS_L2 ...
+            # i.e. all 5 params for layer 1, then all 5 for layer 2, etc.
             node_values = np.zeros((ndp, n_layers, 5), dtype=np.float64)
             param_factors = [fkh, fs, fn, fv, fl]
             for i, raw in enumerate(all_raw_values):
-                for p in range(5):
-                    for lay in range(n_layers):
-                        idx = p * n_layers + lay
+                for lay in range(n_layers):
+                    for p in range(5):
+                        idx = lay * 5 + p
                         if idx < len(raw):
                             node_values[i, lay, p] = raw[idx] * param_factors[p]
 
@@ -1529,12 +1643,16 @@ class GWMainFileReader:
                     elements=elements,
                     node_coords=node_coords[:node_count],
                     node_values=node_values[:node_count],
+                    node_range_str=node_range_str,
+                    raw_node_lines=raw_node_lines,
                 )
             )
 
         return grids
 
-    def _read_kh_anomaly(self, f: TextIO) -> list[KhAnomalyEntry]:
+    def _read_kh_anomaly(
+        self, f: TextIO, config: GWMainFileConfig | None = None
+    ) -> list[KhAnomalyEntry]:
         """Read the Anomaly in Hydraulic Conductivity section.
 
         Format::
@@ -1558,18 +1676,23 @@ class GWMainFileReader:
         except ValueError:
             return []
 
-        if nebk <= 0:
-            return []
-
-        # FACT (conversion factor)
+        # FACT (conversion factor) — always read, even when NEBK=0
         fact_str = _next_data_or_empty(f)
         try:
             fact = float(fact_str)
         except ValueError:
             fact = 1.0
 
-        # TUNITH (time unit — read and store but no conversion applied)
-        _next_data_or_empty(f)
+        # TUNITH (time unit) — always read, even when NEBK=0
+        tunith = _next_data_or_empty(f)
+
+        # Store on config for roundtrip fidelity
+        if config is not None:
+            config.kh_anomaly_factor = fact
+            config.kh_anomaly_time_unit = tunith
+
+        if nebk <= 0:
+            return []
 
         # Read NEBK anomaly data lines
         entries: list[KhAnomalyEntry] = []

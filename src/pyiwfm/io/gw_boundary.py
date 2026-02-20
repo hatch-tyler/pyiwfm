@@ -180,7 +180,8 @@ class GWBoundaryConfig:
     # Boundary node flow output section (NOUTB)
     n_bc_output_nodes: int = 0
     bc_output_file: Path | None = None
-    bc_output_specs: list[int] = field(default_factory=list)
+    bc_output_file_raw: str = ""  # Unresolved path string from file
+    bc_output_specs: list[dict] = field(default_factory=list)  # [{id, layer, node, name}]
 
     @property
     def n_specified_flow(self) -> int:
@@ -276,14 +277,22 @@ class GWBoundaryReader:
                 # Output file path
                 bhydout_path = _next_data_or_empty(f)
                 if bhydout_path:
+                    config.bc_output_file_raw = bhydout_path
                     config.bc_output_file = _resolve_path_f(base_dir, bhydout_path)
-                # Read NOUTB node IDs
+                # Read NOUTB rows: ID, LAYER, NODE, NAME
                 for _ in range(config.n_bc_output_nodes):
                     line = self._next_data_line(f)
-                    parts = line.split()
+                    parts = line.split(maxsplit=3)
                     if parts:
                         try:
-                            config.bc_output_specs.append(int(float(parts[0])))
+                            spec: dict = {"id": int(float(parts[0]))}
+                            if len(parts) > 1:
+                                spec["layer"] = int(float(parts[1]))
+                            if len(parts) > 2:
+                                spec["node"] = int(float(parts[2]))
+                            if len(parts) > 3:
+                                spec["name"] = parts[3].strip()
+                            config.bc_output_specs.append(spec)
                         except ValueError:
                             pass
 

@@ -91,6 +91,7 @@ def _gw_main_output_files_empty() -> list[str]:
 def _gw_main_tail_minimal() -> list[str]:
     """Minimal tail: debug=0, no hydrographs, no face flows, no aq params."""
     return [
+        "1  / IHTPFLAG\n",
         "0  / KDEB\n",
         "0  / NOUTH\n",
         "1.0  / FACTXY\n",
@@ -163,6 +164,7 @@ class TestDebugFlagValueError:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "abc  / KDEB\n",  # non-integer debug flag
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -192,6 +194,7 @@ class TestCoordFactorValueError:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "xyz  / FACTXY\n",  # non-float coord factor
@@ -221,6 +224,7 @@ class TestFaceFlowOutputsValueError:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -252,6 +256,7 @@ class TestSectionExceptionHandlers:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -276,6 +281,7 @@ class TestSectionExceptionHandlers:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -307,6 +313,7 @@ class TestSectionExceptionHandlers:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -323,6 +330,10 @@ class TestSectionExceptionHandlers:
                 "C  End aquifer params\n",
                 # Kh anomaly
                 "0  / NEBK\n",
+                "1.0  / FACT\n",
+                "1DAY  / TUNITH\n",
+                # Return flow flag
+                "0  / IFLAGRF\n",
             ]
         )
         _write_file(filepath, lines)
@@ -388,6 +399,7 @@ class TestHydrographParsingEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 f"{n_hydro}  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -499,6 +511,7 @@ class TestFaceFlowSpecEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -522,6 +535,7 @@ class TestFaceFlowSpecEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -554,6 +568,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -576,6 +591,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -597,6 +613,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -619,6 +636,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -641,6 +659,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -672,6 +691,7 @@ class TestAquiferParamsParsingEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -697,8 +717,14 @@ class TestAquiferParamsParsingEdgeCases:
                 "  / empty value line\n",  # parsed value is empty string
                 "1  10.0  0.001  0.15  0.01  5.0\n",
                 "C  End\n",
+                # Kh anomaly section
                 "0  / NEBK\n",
-                "1.0\n",
+                "1.0  / FACT\n",
+                "1DAY  / TUNITH\n",
+                # Return flow flag
+                "0  / IFLAGRF\n",
+                # Initial heads
+                "1.0  / FACTHP\n",
                 "1  50.0\n",
             ],
         )
@@ -719,8 +745,14 @@ class TestAquiferParamsParsingEdgeCases:
                 "1  10.0  0.001  0.15  0.01  5.0\n",
                 "2  12.0  0.002  0.18  0.02  6.0\n",
                 "abc  def  ghi  jkl  mno  pqr\n",  # 6 fields, non-numeric
+                # Kh anomaly section
                 "0  / NEBK\n",
-                "1.0\n",
+                "1.0  / FACT\n",
+                "1DAY  / TUNITH\n",
+                # Return flow flag
+                "0  / IFLAGRF\n",
+                # Initial heads
+                "1.0  / FACTHP\n",
                 "1  50.0\n",
                 "2  55.0\n",
             ],
@@ -742,8 +774,14 @@ class TestAquiferParamsParsingEdgeCases:
                 "1  10.0  0.001  0.15  0.01  5.0\n",
                 "2  12.0  0.002  0.18  0.02  6.0\n",
                 "abc  def  ghi  jkl  mno\n",  # 5 fields, non-numeric continuation
+                # Kh anomaly section
                 "0  / NEBK\n",
-                "1.0\n",
+                "1.0  / FACT\n",
+                "1DAY  / TUNITH\n",
+                # Return flow flag
+                "0  / IFLAGRF\n",
+                # Initial heads
+                "1.0  / FACTHP\n",
                 "1  50.0\n",
                 "2  55.0\n",
             ],
@@ -761,8 +799,14 @@ class TestAquiferParamsParsingEdgeCases:
             [
                 "1  10.0  0.001  0.15  0.01  5.0\n",
                 "1  2  3  4  5  6  7\n",  # 7 fields -- unexpected
+                # Kh anomaly section
                 "0  / NEBK\n",
-                "1.0\n",
+                "1.0  / FACT\n",
+                "1DAY  / TUNITH\n",
+                # Return flow flag
+                "0  / IFLAGRF\n",
+                # Initial heads
+                "1.0  / FACTHP\n",
                 "1  50.0\n",
             ],
         )
@@ -799,6 +843,7 @@ class TestParametricGridEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -812,7 +857,7 @@ class TestParametricGridEdgeCases:
         return filepath
 
     def test_empty_ndp_nep_string_breaks(self, tmp_path: Path) -> None:
-        """Empty NDP NEP string breaks the loop (line 1480)."""
+        """Empty node range string breaks the loop (line 1516)."""
         filepath = self._build_parametric_file(
             tmp_path,
             [
@@ -821,14 +866,14 @@ class TestParametricGridEdgeCases:
                 "1DAY\n",
                 "1DAY\n",
                 "1DAY\n",
-                "  / NDP NEP\n",  # empty
+                "  / node_range\n",  # empty node range -> breaks
             ],
         )
         config = GWMainFileReader().read(filepath)
         assert config.parametric_grids == []
 
     def test_single_value_ndp_nep_breaks(self, tmp_path: Path) -> None:
-        """NDP NEP line with only 1 part breaks (line 1483)."""
+        """Empty NDP string breaks (line 1521)."""
         filepath = self._build_parametric_file(
             tmp_path,
             [
@@ -837,14 +882,15 @@ class TestParametricGridEdgeCases:
                 "1DAY\n",
                 "1DAY\n",
                 "1DAY\n",
-                "3\n",  # only 1 part
+                "1-441  / node_range\n",
+                "  / NDP\n",  # empty NDP -> breaks
             ],
         )
         config = GWMainFileReader().read(filepath)
         assert config.parametric_grids == []
 
     def test_non_integer_ndp_nep_breaks(self, tmp_path: Path) -> None:
-        """Non-integer NDP or NEP breaks (lines 1487-1488)."""
+        """Non-integer NDP breaks (line 1525)."""
         filepath = self._build_parametric_file(
             tmp_path,
             [
@@ -853,14 +899,15 @@ class TestParametricGridEdgeCases:
                 "1DAY\n",
                 "1DAY\n",
                 "1DAY\n",
-                "abc  def\n",  # non-integer
+                "1-441  / node_range\n",
+                "abc  / NDP\n",  # non-integer NDP
             ],
         )
         config = GWMainFileReader().read(filepath)
         assert config.parametric_grids == []
 
     def test_element_line_too_short_breaks(self, tmp_path: Path) -> None:
-        """Element line with < 4 parts breaks (line 1500)."""
+        """Element line with < 4 parts breaks (line 1547)."""
         filepath = self._build_parametric_file(
             tmp_path,
             [
@@ -869,7 +916,9 @@ class TestParametricGridEdgeCases:
                 "1DAY\n",
                 "1DAY\n",
                 "1DAY\n",
-                "3  2\n",  # 3 nodes, 2 elements
+                "1-441  / node_range\n",
+                "3  / NDP\n",
+                "2  / NEP\n",
                 "1  1  2\n",  # only 3 parts (need >= 4)
             ],
         )
@@ -880,7 +929,7 @@ class TestParametricGridEdgeCases:
         assert config.aquifer_params is None
 
     def test_element_value_error_breaks(self, tmp_path: Path) -> None:
-        """Non-integer element data triggers ValueError (lines 1509-1510)."""
+        """Non-integer element data triggers ValueError (lines 1553-1554)."""
         filepath = self._build_parametric_file(
             tmp_path,
             [
@@ -889,7 +938,9 @@ class TestParametricGridEdgeCases:
                 "1DAY\n",
                 "1DAY\n",
                 "1DAY\n",
-                "3  1\n",  # 3 nodes, 1 element
+                "1-441  / node_range\n",
+                "3  / NDP\n",
+                "1  / NEP\n",
                 "1  abc  def  ghi\n",  # non-integer node indices
             ],
         )
@@ -897,7 +948,7 @@ class TestParametricGridEdgeCases:
         assert config.aquifer_params is None
 
     def test_node_line_too_short_breaks(self, tmp_path: Path) -> None:
-        """Node data line with < 4 parts breaks (line 1530)."""
+        """Node data line with < 8 parts for new node is not a node line."""
         filepath = self._build_parametric_file(
             tmp_path,
             [
@@ -906,16 +957,18 @@ class TestParametricGridEdgeCases:
                 "1DAY\n",
                 "1DAY\n",
                 "1DAY\n",
-                "2  1\n",  # 2 nodes, 1 element
+                "1-441  / node_range\n",
+                "2  / NDP\n",
+                "1  / NEP\n",
                 "1  1  2  3\n",  # element def (triangle)
-                "1  0.0\n",  # only 2 parts for node (need >= 4)
+                "1  0.0\n",  # only 2 parts for node (need >= 8 for new node)
             ],
         )
         config = GWMainFileReader().read(filepath)
         assert config.aquifer_params is None
 
     def test_node_value_error_breaks(self, tmp_path: Path) -> None:
-        """Non-numeric node data triggers ValueError (lines 1537-1538)."""
+        """Non-numeric node data is not detected as a new node line."""
         filepath = self._build_parametric_file(
             tmp_path,
             [
@@ -924,16 +977,18 @@ class TestParametricGridEdgeCases:
                 "1DAY\n",
                 "1DAY\n",
                 "1DAY\n",
-                "2  1\n",
+                "1-441  / node_range\n",
+                "2  / NDP\n",
+                "1  / NEP\n",
                 "1  1  2  3\n",
-                "1  abc  def  ghi  jkl\n",  # non-numeric coords
+                "1  abc  def  ghi  jkl  mno  pqr  stu\n",  # 8 parts but non-numeric
             ],
         )
         config = GWMainFileReader().read(filepath)
         assert config.aquifer_params is None
 
     def test_empty_raw_values_skips_grid(self, tmp_path: Path) -> None:
-        """If no node values parsed, the grid is skipped (line 1544)."""
+        """If no node values parsed, the grid is skipped (line 1619)."""
         filepath = self._build_parametric_file(
             tmp_path,
             [
@@ -942,7 +997,9 @@ class TestParametricGridEdgeCases:
                 "1DAY\n",
                 "1DAY\n",
                 "1DAY\n",
-                "1  1\n",  # 1 node, 1 element
+                "1-441  / node_range\n",
+                "1  / NDP\n",
+                "1  / NEP\n",
                 "1  1  2  3\n",
                 # No node data lines follow => empty raw_values
                 "C  End\n",
@@ -952,7 +1009,7 @@ class TestParametricGridEdgeCases:
         assert config.parametric_grids == []
 
     def test_comment_in_element_section_skipped(self, tmp_path: Path) -> None:
-        """Comment lines in element definitions are skipped (line 1496)."""
+        """Comment lines in element definitions are skipped (line 1543)."""
         filepath = self._build_parametric_file(
             tmp_path,
             [
@@ -961,7 +1018,9 @@ class TestParametricGridEdgeCases:
                 "1DAY\n",
                 "1DAY\n",
                 "1DAY\n",
-                "3  1\n",  # 3 nodes, 1 element
+                "1-441  / node_range\n",
+                "3  / NDP\n",
+                "1  / NEP\n",
                 "C  Element data below\n",
                 "1  1  2  3\n",  # single triangle element
                 "C  Node data below\n",
@@ -970,7 +1029,12 @@ class TestParametricGridEdgeCases:
                 "3  50.0  100.0  11.0  0.0015  0.16  0.015  5.5\n",
                 # Kh anomaly
                 "0  / NEBK\n",
-                "1.0\n",
+                "1.0  / FACT\n",
+                "1DAY  / TUNITH\n",
+                # Return flow flag
+                "0  / IFLAGRF\n",
+                # Initial heads
+                "1.0  / FACTHP\n",
                 "1  50.0\n",
                 "2  55.0\n",
                 "3  60.0\n",
@@ -996,6 +1060,7 @@ class TestKhAnomalyEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -1022,8 +1087,6 @@ class TestKhAnomalyEdgeCases:
             tmp_path,
             [
                 "abc  / NEBK\n",  # non-integer
-                "1.0\n",
-                "1  50.0\n",
             ],
         )
         config = GWMainFileReader().read(filepath)
@@ -1036,10 +1099,12 @@ class TestKhAnomalyEdgeCases:
             [
                 "1  / NEBK\n",
                 "abc  / FACT\n",  # non-float fact
-                "1DAY\n",
+                "1DAY  / TUNITH\n",
                 "1  5  0.5\n",
+                # Return flow flag
+                "0  / IFLAGRF\n",
                 # Initial heads
-                "1.0\n",
+                "1.0  / FACTHP\n",
                 "1  50.0\n",
             ],
         )
@@ -1055,10 +1120,12 @@ class TestKhAnomalyEdgeCases:
             [
                 "2  / NEBK\n",
                 "1.0  / FACT\n",
-                "1DAY\n",
+                "1DAY  / TUNITH\n",
                 "1  5\n",  # only 2 parts -- breaks
+                # Return flow flag
+                "0  / IFLAGRF\n",
                 # Initial heads
-                "1.0\n",
+                "1.0  / FACTHP\n",
                 "1  50.0\n",
             ],
         )
@@ -1072,9 +1139,12 @@ class TestKhAnomalyEdgeCases:
             [
                 "2  / NEBK\n",
                 "1.0  / FACT\n",
-                "1DAY\n",
+                "1DAY  / TUNITH\n",
                 "abc  def  ghi\n",  # non-numeric
-                "1.0\n",
+                # Return flow flag
+                "0  / IFLAGRF\n",
+                # Initial heads
+                "1.0  / FACTHP\n",
                 "1  50.0\n",
             ],
         )
@@ -1097,6 +1167,7 @@ class TestInitialHeadsEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
+                "1  / IHTPFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -1113,6 +1184,10 @@ class TestInitialHeadsEdgeCases:
                 "C  End aquifer params\n",
                 # Kh anomaly (none)
                 "0  / NEBK\n",
+                "1.0  / FACT\n",
+                "1DAY  / TUNITH\n",
+                # Return flow flag
+                "0  / IFLAGRF\n",
             ]
             + heads_lines
         )
@@ -1208,12 +1283,12 @@ class TestReadGwMainFileConvenience:
                 "  / PUMPFL\n",
                 "  / SUBSFL\n",
                 "  / OVRWRTFL\n",
-                "1.0\n",
-                "FT\n",
-                "1.0\n",
-                "TAF\n",
-                "1.0\n",
-                "FT/DAY\n",
+                "1.0  / FACTLTOU\n",
+                "FT  / UNITLTOU\n",
+                "1.0  / FACTVLOU\n",
+                "TAF  / UNITVLOU\n",
+                "1.0  / FACTVROU\n",
+                "FT/DAY  / UNITVROU\n",
             ]
             + _gw_main_output_files_empty()
             + _gw_main_tail_minimal()

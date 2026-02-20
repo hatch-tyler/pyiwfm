@@ -490,6 +490,9 @@ class CompleteModelWriter:
                     "simulation_main", "results_gw_zbudget"
                 ),
                 gw_head_file=self.config.get_relative_path("simulation_main", "results_gw_head"),
+                pump_output_file=self.config.get_relative_path(
+                    "simulation_main", "results_pump_output"
+                ),
             )
 
             writer = GWComponentWriter(self.model, gw_config)
@@ -536,6 +539,15 @@ class CompleteModelWriter:
                 strm_budget_file=self.config.get_relative_path(
                     "simulation_main", "results_strm_budget"
                 ),
+                strm_node_budget_file=self.config.get_relative_path(
+                    "simulation_main", "results_strm_node_budget"
+                ),
+                strm_hyd_file=self.config.get_relative_path(
+                    "simulation_main", "results_strm_hyd"
+                ),
+                diver_detail_file=self.config.get_relative_path(
+                    "simulation_main", "results_diver_detail"
+                ),
             )
 
             writer = StreamComponentWriter(self.model, stream_config)
@@ -556,15 +568,25 @@ class CompleteModelWriter:
 
             lake_main_path = self.config.get_path("lake_main")
             lake_dir = lake_main_path.parent
+            sim_dir = self.config.get_path("simulation_main").parent
+
+            # lake_subdir controls both output directory nesting AND path
+            # references, same as gw_subdir and stream_subdir.
+            lake_subdir = os.path.relpath(lake_dir, sim_dir)
+            if lake_subdir == ".":
+                lake_subdir = ""
 
             lake_config = LakeWriterConfig(
-                output_dir=lake_dir,
-                lake_subdir="",
+                output_dir=sim_dir,
+                lake_subdir=lake_subdir,
                 version=self.config.lake_version,
                 main_file=lake_main_path.name,
                 max_elev_file=self.config.get_path("lake_max_elev").name,
                 lake_budget_file=self.config.get_relative_path(
                     "simulation_main", "results_lake_budget"
+                ),
+                final_elev_file=self.config.get_relative_path(
+                    "simulation_main", "results_final_lake_elev"
                 ),
             )
 
@@ -597,6 +619,11 @@ class CompleteModelWriter:
             if rz_subdir == ".":
                 rz_subdir = ""
 
+            # Get rootzone conversion factors from model metadata
+            rz_k_factor = self.model.metadata.get("rootzone_k_factor", 0.03281)
+            rz_cprise_factor = self.model.metadata.get("rootzone_cprise_factor", 1.0)
+            rz_k_time_unit = self.model.metadata.get("rootzone_k_time_unit", "1hour")
+
             rz_config = RootZoneWriterConfig(
                 output_dir=sim_dir,
                 rootzone_subdir=rz_subdir,
@@ -612,6 +639,15 @@ class CompleteModelWriter:
                 rz_budget_file=self.config.get_relative_path(
                     "simulation_main", "results_rz_budget"
                 ),
+                lwu_zbudget_file=self.config.get_relative_path(
+                    "simulation_main", "results_lwu_zbudget"
+                ),
+                rz_zbudget_file=self.config.get_relative_path(
+                    "simulation_main", "results_rz_zbudget"
+                ),
+                k_factor=rz_k_factor,
+                cprise_factor=rz_cprise_factor,
+                k_time_unit=rz_k_time_unit,
             )
 
             writer = RootZoneComponentWriter(self.model, rz_config)
@@ -696,12 +732,29 @@ class CompleteModelWriter:
 
                 uz_main_path = self.config.get_path("unsatzone_main")
                 uz_dir = uz_main_path.parent
+                sim_dir = self.config.get_path("simulation_main").parent
+
+                # unsatzone_subdir controls output directory nesting.
+                # Set output_dir to sim_dir so relative result paths
+                # resolve correctly from the simulation working dir.
+                uz_subdir = os.path.relpath(uz_dir, sim_dir)
+                if uz_subdir == ".":
+                    uz_subdir = ""
 
                 uz_config = UnsatZoneWriterConfig(
-                    output_dir=uz_dir,
-                    unsatzone_subdir="",
+                    output_dir=sim_dir,
+                    unsatzone_subdir=uz_subdir,
                     version=self.model.metadata.get("unsat_zone_version", "4.0"),
                     main_file=uz_main_path.name,
+                    budget_file=self.config.get_relative_path(
+                        "simulation_main", "results_uz_budget"
+                    ),
+                    zbudget_file=self.config.get_relative_path(
+                        "simulation_main", "results_uz_zbudget"
+                    ),
+                    final_results_file=self.config.get_relative_path(
+                        "simulation_main", "results_final_uz"
+                    ),
                 )
 
                 writer = UnsatZoneComponentWriter(self.model, uz_config)

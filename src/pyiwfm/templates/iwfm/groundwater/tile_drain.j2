@@ -38,9 +38,13 @@ C-------------------------------------------------------------------------------
 C*******************************************************************************
 C                  Tile Drain/Subsurface Irrigation Hydrograph Output
 C-------------------------------------------------------------------------------
-    {{ n_td_hydro | fortran_int(10) }}                         / NOUTHTD
+    {{ n_td_hydro | fortran_int(10) }}                         / NOUTTD
+{% if n_td_hydro > 0 %}
+    {{ td_hydro_volume_factor }}                         / FACTVLOU
+    {{ td_hydro_volume_unit | pad_right(30) }}           / UNITVLOU
     {{ td_output_file | pad_right(40) }} / TDOUTFL
 C-------------------------------------------------------------------------------
 {% for loc in td_hydro_locations %}
-    {{ loc }}
+    {{ loc.id | fortran_int(5) }}     {{ loc.id_type | fortran_int(1) }}      {{ loc.name }}
 {% endfor %}
+{% endif %}

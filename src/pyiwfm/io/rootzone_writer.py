@@ -283,13 +283,48 @@ class RootZoneComponentWriter(TemplateWriter):
         is_v411 = version_ge(ver, (4, 11))
         is_v412 = version_ge(ver, (4, 12))
 
-        # Build file paths - leave land use files blank for minimal setup
+        import os
+
+        # Build file paths
         rz_subdir = self.config.rootzone_subdir
         prefix = (rz_subdir + "\\") if rz_subdir else ""
         rf_file = f"{prefix}{self.config.return_flow_file}"
         ru_file = f"{prefix}{self.config.reuse_file}"
         ip_file = f"{prefix}{self.config.irig_period_file}"
         dest_file = f"{prefix}{self.config.surface_flow_dest_file}"
+
+        # Compute land use sub-file paths from source_files metadata.
+        # The reader stores the absolute paths; we compute relative paths
+        # from the original simulation dir so the written rootzone_main
+        # references the same relative paths as the original.
+        nonponded_file = ""
+        ponded_file = ""
+        urban_file = ""
+        native_riparian_file = ""
+        source_rz_main = self.model.source_files.get("rootzone_main")
+        if source_rz_main is not None:
+            source_sim_dir = Path(source_rz_main).parent.parent
+            for key, var_name in [
+                ("rootzone_nonponded", "nonponded"),
+                ("rootzone_ponded", "ponded"),
+                ("rootzone_urban", "urban"),
+                ("rootzone_native", "native_riparian"),
+            ]:
+                src_path = self.model.source_files.get(key)
+                if src_path is not None:
+                    try:
+                        rel = os.path.relpath(str(src_path), str(source_sim_dir))
+                        rel = str(Path(rel))  # OS-native separators
+                        if var_name == "nonponded":
+                            nonponded_file = rel
+                        elif var_name == "ponded":
+                            ponded_file = rel
+                        elif var_name == "urban":
+                            urban_file = rel
+                        elif var_name == "native_riparian":
+                            native_riparian_file = rel
+                    except ValueError:
+                        pass
 
         # Column header depends on version
         if is_v412:
@@ -310,10 +345,10 @@ class RootZoneComponentWriter(TemplateWriter):
             "is_v411": is_v411,
             "is_v412": is_v412,
             "gw_uptake": self.config.gw_uptake,
-            "nonponded_file": "",
-            "ponded_file": "",
-            "urban_file": "",
-            "native_riparian_file": "",
+            "nonponded_file": nonponded_file,
+            "ponded_file": ponded_file,
+            "urban_file": urban_file,
+            "native_riparian_file": native_riparian_file,
             "return_flow_file": rf_file,
             "reuse_file": ru_file,
             "irig_period_file": ip_file,
@@ -357,9 +392,19 @@ class RootZoneComponentWriter(TemplateWriter):
                     self.config.hydraulic_conductivity,
                     alt="hydraulic_conductivity",
                 )
+                # Reverse k_factor: reader multiplied raw K by k_factor,
+                # so divide to recover the original file value.
+                k_factor = self.config.k_factor
+                if k_factor and k_factor != 0 and k_factor != 1.0:
+                    k = k / k_factor
                 kp = _sp_val(sp, "k_ponded", self.config.k_ponded)
                 rhc = _sp_val(sp, "kunsat_method", self.config.rhc_method, alt="rhc_method")
                 cprise = _sp_val(sp, "capillary_rise", self.config.capillary_rise)
+                # Reverse cprise_factor: reader multiplied raw capillary
+                # rise by k_exdth_factor (FACTEXDTH).
+                cprise_factor = self.config.cprise_factor
+                if cprise_factor and cprise_factor != 0 and cprise_factor != 1.0:
+                    cprise = cprise / cprise_factor
                 irne = _sp_val(sp, "precip_column", 1)
                 frne = _sp_val(sp, "precip_factor", 1.0)
                 imsrc = _sp_val(sp, "generic_moisture_column", 0)

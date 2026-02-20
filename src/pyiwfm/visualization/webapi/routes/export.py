@@ -169,14 +169,27 @@ def export_hydrograph_csv(
         if reader is None or reader.n_timesteps == 0:
             raise HTTPException(status_code=404, detail="No GW hydrograph data available")
 
-        column_index = location_id - 1
-        if column_index < 0 or column_index >= reader.n_columns:
+        phys_locs = model_state.get_gw_physical_locations()
+        location_index = location_id - 1
+
+        if phys_locs:
+            if location_index < 0 or location_index >= len(phys_locs):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"GW hydrograph {location_id} out of range",
+                )
+            col_idx = phys_locs[location_index]["columns"][0][0]
+        else:
+            # Fallback: raw column index
+            col_idx = location_index
+
+        if col_idx < 0 or col_idx >= reader.n_columns:
             raise HTTPException(
                 status_code=404,
                 detail=f"GW hydrograph {location_id} out of range",
             )
 
-        times, values = reader.get_time_series(column_index)
+        times, values = reader.get_time_series(col_idx)
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["datetime", "head_ft"])

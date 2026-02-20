@@ -88,22 +88,26 @@ def model_with_full_gw():
     model = MagicMock()
     gw = MagicMock()
 
-    # Boundary conditions
-    bc1 = MagicMock()
-    bc1.bc_type = "specified_head"
-    bc1.nodes = [1, 2]
-    bc1.layer = 1
+    # Boundary conditions -- use SimpleNamespace so bc_type filtering works
+    bc1 = SimpleNamespace(
+        bc_type="specified_head",
+        nodes=[1, 2],
+        values=[100.0, 95.0],
+        layer=1,
+        ts_column=0,
+    )
     gw.boundary_conditions = [bc1]
 
-    # Wells
-    well1 = MagicMock()
-    well1.id = 1
-    well1.element = 2
-    well1.x = 100.0
-    well1.y = 200.0
-    well1.bottom_screen = -50.0
-    well1.top_screen = 0.0
-    well1.name = "Well_1"
+    # Wells -- use SimpleNamespace to support format strings
+    well1 = SimpleNamespace(
+        id=1,
+        element=2,
+        x=100.0,
+        y=200.0,
+        bottom_screen=-50.0,
+        top_screen=0.0,
+        name="Well_1",
+    )
     gw.wells = {1: well1}
     gw.element_pumping = {}
 
@@ -124,12 +128,28 @@ def model_with_full_gw():
     gw.si_elev_factor = 1.0
     gw.si_cond_factor = 1.0
     gw.si_time_unit = "1MON"
+    gw.sub_irrigations = []
+    gw.td_n_hydro = 0
+    gw.td_hydro_volume_factor = 1.0
+    gw.td_hydro_volume_unit = ""
+    gw.td_hydro_specs = []
+    gw.td_output_file_raw = ""
 
     # Subsidence
     sub1 = MagicMock()
     sub1.element = 1
     sub1.layer = 1
     gw.subsidence = [sub1]
+    gw.node_subsidence = []
+    gw.subsidence_config = None
+
+    # BC config -- set to None to avoid MagicMock format errors
+    gw.bc_config = None
+    gw.bc_ts_file = None
+    gw.n_bc_output_nodes = 0
+    gw.bc_output_specs = []
+    gw.bc_output_file_raw = ""
+    gw.gw_main_config = None
 
     # Aquifer parameters
     params = MagicMock()
@@ -142,12 +162,20 @@ def model_with_full_gw():
     # Initial heads
     gw.heads = np.ones((4, 1)) * 90.0
 
+    # Hydrograph / face flow / anomaly / return flow
+    gw.hydrograph_locations = []
+    gw.face_flow_specs = []
+    gw.kh_anomalies = []
+    gw.return_flow_destinations = {}
+
     model.groundwater = gw
     model.n_nodes = 4
     model.stratigraphy = MagicMock()
     model.stratigraphy.n_layers = 1
     model.stratigraphy.top_elev = np.ones((4, 1)) * 100.0
     model.stratigraphy.bottom_elev = np.ones((4, 1)) * 50.0
+    model.metadata = {}
+    model.source_files = {}
     return model
 
 

@@ -386,9 +386,16 @@ class TestGWMainFileWithAnomaly:
 
     def test_anomaly_stored_in_config(self, tmp_path: Path):
         """Anomaly data should be stored in config.kh_anomalies."""
-        # Minimal GW main file with version, file paths, output factors,
-        # hydrographs, face flow, aquifer params, and anomaly section.
-        # NOUTH must be >0 for reader to continue past hydrograph section.
+        # Minimal GW main file matching the reader's exact read order:
+        # version, BCFL, TDFL, PUMPFL, SUBSFL, OVRWRTFL,
+        # FACTLTOU, UNITLTOU, FACTVLOU, UNITVLOU, FACTVROU, UNITVROU,
+        # VELOUTFL, VFLOWOUTFL, GWALLOUTFL, HTPOUTFL, VTPOUTFL,
+        # GWBUDFL, ZBUDFL, FNGWFL, IHTPFLAG, KDEB,
+        # NOUTH, FACTXY, GWHYDOUTFL, [hydrograph data],
+        # NOUTF, FCHYDOUTFL, [face flow data],
+        # NGROUP, factors, time units, [node data],
+        # NEBK, FACT, TUNITH, [anomaly data],
+        # IFLAGRF, FACTHP, [initial heads]
         gw_content = """\
 C  GW Main File
 #4.0
@@ -430,6 +437,8 @@ C  ZBUDFL
 
 C  FNGWFL
 
+C  IHTPFLAG
+1
 C  KDEB
 0
 C  NOUTH
@@ -466,6 +475,8 @@ C  ---- ANOMALY ----
 1DAY
 1   1   50.0
 2   2   75.0
+C  ---- RETURN FLOW ----
+0
 C  ---- INITIAL HEADS ----
 1.0
 1  10.0

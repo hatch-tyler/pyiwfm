@@ -432,6 +432,9 @@ class TestGWComponentWriterWriteBcMain:
         bc3 = SimpleNamespace(bc_type="general_head", nodes=[10], layer=2)
         gw = MagicMock()
         gw.boundary_conditions = [bc1, bc2, bc3]
+        gw.n_bc_output_nodes = 0
+        gw.bc_output_specs = []
+        gw.bc_output_file_raw = ""
         model.groundwater = gw
         model.stratigraphy = MagicMock()
         model.stratigraphy.n_layers = 2
@@ -445,11 +448,12 @@ class TestGWComponentWriterWriteBcMain:
         path = writer.write_bc_main()
 
         assert path.exists()
-        # Verify template was called with correct context
+        # Verify template was called with correct context keys
         call_kwargs = mock_engine.render_template.call_args[1]
-        assert call_kwargs["n_spec_head"] == 1
-        assert call_kwargs["n_spec_flow"] == 1
-        assert call_kwargs["n_gen_head"] == 1
+        # write_bc_main now passes spec_head_bc_file/spec_flow_bc_file etc.
+        assert "spec_head_bc_file" in call_kwargs
+        assert "spec_flow_bc_file" in call_kwargs
+        assert "n_bc_output_nodes" in call_kwargs
 
 
 class TestGWComponentWriterWritePumpMain:
@@ -476,11 +480,13 @@ class TestGWComponentWriterWritePumpMain:
         path = writer.write_pump_main()
 
         assert path.exists()
+        # write_pump_main now passes well_spec_file/elem_pump_file paths
         call_kwargs = mock_engine.render_template.call_args[1]
-        assert call_kwargs["pump_flag"] == 1  # element pumping
+        assert call_kwargs["elem_pump_file"] != ""  # element pumping present
+        assert call_kwargs["well_spec_file"] == ""  # no wells
 
     def test_write_pump_main_with_wells_only(self, tmp_path: Path) -> None:
-        """write_pump_main() sets pump_flag=2 for wells-only."""
+        """write_pump_main() sets well_spec_file for wells-only."""
         from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
@@ -500,7 +506,8 @@ class TestGWComponentWriterWritePumpMain:
         writer.write_pump_main()
 
         call_kwargs = mock_engine.render_template.call_args[1]
-        assert call_kwargs["pump_flag"] == 2  # wells only
+        assert call_kwargs["well_spec_file"] != ""  # wells present
+        assert call_kwargs["elem_pump_file"] == ""  # no element pumping
 
 
 class TestGWComponentWriterWriteTileDrains:
@@ -622,7 +629,10 @@ class TestGWComponentWriterWriteAll:
 
         model = MagicMock()
         gw = MagicMock()
-        gw.boundary_conditions = [MagicMock()]
+        # Use a SimpleNamespace BC so bc_type attribute works for filtering
+        bc1 = SimpleNamespace(bc_type="specified_head", nodes=[1], values=[100.0],
+                              layer=1, ts_column=0)
+        gw.boundary_conditions = [bc1]
         gw.wells = {1: MagicMock()}
         gw.element_pumping = []
         gw.tile_drains = {1: MagicMock()}
@@ -641,7 +651,10 @@ class TestGWComponentWriterWriteAll:
         with (
             patch.object(writer, "write_main", return_value=tmp_path / "main.dat"),
             patch.object(writer, "write_bc_main", return_value=tmp_path / "bc.dat"),
+            patch.object(writer, "write_spec_head_bc", return_value=tmp_path / "shbc.dat"),
+            patch.object(writer, "write_bc_ts_data", return_value=None),
             patch.object(writer, "write_pump_main", return_value=tmp_path / "pump.dat"),
+            patch.object(writer, "write_well_specs", return_value=tmp_path / "ws.dat"),
             patch.object(writer, "write_tile_drains", return_value=tmp_path / "td.dat"),
             patch.object(writer, "write_subsidence", return_value=tmp_path / "sub.dat"),
         ):
@@ -712,48 +725,58 @@ class TestGWComponentWriterSpecBCFiles:
         from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
-        bc = SimpleNamespace(bc_type="specified_head", nodes=[1, 2, 3], layer=1)
+        bc = SimpleNamespace(
+            bc_type="specified_head", nodes=[1, 2, 3], values=[100.0, 95.0, 90.0],
+            layer=1, ts_column=0,
+        )
         gw = MagicMock()
         gw.boundary_conditions = [bc]
+        gw.bc_config = None  # Prevent MagicMock from being used as factor
         model.groundwater = gw
         model.stratigraphy = MagicMock()
         model.stratigraphy.n_layers = 2
         model.n_nodes = 10
 
         mock_engine = MagicMock()
-        mock_engine.render_template.return_value = "C SPEC HEAD BC\n"
 
         config = GWWriterConfig(output_dir=tmp_path)
         writer = GWComponentWriter(model, config, template_engine=mock_engine)
         path = writer.write_spec_head_bc()
 
         assert path.exists()
-        call_kwargs = mock_engine.render_template.call_args[1]
-        assert call_kwargs["n_nodes"] == 3
+        # write_spec_head_bc now writes directly (no template), check content
+        content = path.read_text()
+        assert "NHB" in content
+        assert "FACT" in content
 
     def test_write_spec_flow_bc(self, tmp_path: Path) -> None:
         """write_spec_flow_bc() creates specified flow BC file."""
         from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
-        bc = SimpleNamespace(bc_type="specified_flow", nodes=[5, 6], layer=1)
+        bc = SimpleNamespace(
+            bc_type="specified_flow", nodes=[5, 6], values=[-50.0, -60.0],
+            layer=1, ts_column=0,
+        )
         gw = MagicMock()
         gw.boundary_conditions = [bc]
+        gw.bc_config = None  # Prevent MagicMock from being used as factor
         model.groundwater = gw
         model.stratigraphy = MagicMock()
         model.stratigraphy.n_layers = 2
         model.n_nodes = 10
 
         mock_engine = MagicMock()
-        mock_engine.render_template.return_value = "C SPEC FLOW BC\n"
 
         config = GWWriterConfig(output_dir=tmp_path)
         writer = GWComponentWriter(model, config, template_engine=mock_engine)
         path = writer.write_spec_flow_bc()
 
         assert path.exists()
-        call_kwargs = mock_engine.render_template.call_args[1]
-        assert call_kwargs["n_nodes"] == 2
+        # write_spec_flow_bc now writes directly (no template), check content
+        content = path.read_text()
+        assert "NQB" in content
+        assert "FACT" in content
 
 
 class TestGWComponentWriterHydrographAndFaceFlow:

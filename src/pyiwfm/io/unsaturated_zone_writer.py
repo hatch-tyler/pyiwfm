@@ -192,21 +192,56 @@ class UnsatZoneComponentWriter(TemplateWriter):
                         }
                     )
 
-            # Check if all elements share the same initial moisture (uniform)
+            # Check if all elements share the same initial moisture (uniform).
+            # The reader stores IE=0 as key 0, but from_config() expands it
+            # to all elements.  Detect uniformity and collapse back to IE=0.
             if len(initial_conditions) == 1 and initial_conditions[0]["element_id"] == 0:
                 uniform_moisture = initial_conditions[0]["moisture"]
                 initial_conditions = []
+            elif len(initial_conditions) > 1:
+                first = initial_conditions[0]["moisture"]
+                all_same = all(ic["moisture"] == first for ic in initial_conditions[1:])
+                if all_same:
+                    uniform_moisture = first
+                    initial_conditions = []
+
+        # Convert absolute output file paths to relative from sim working dir.
+        # The reader resolves paths to absolute using the ORIGINAL model's
+        # simulation dir.  We compute relative paths from that original dir
+        # (via source_files) so the written file references match the original.
+        import os
 
         budget_file = self.config.budget_file
         zbudget_file = self.config.zbudget_file
         final_results_file = self.config.final_results_file
         if uz is not None:
-            if uz.budget_file:
-                budget_file = uz.budget_file
-            if uz.zbudget_file:
-                zbudget_file = uz.zbudget_file
-            if uz.final_results_file:
-                final_results_file = uz.final_results_file
+            # Determine the original simulation directory from source_files
+            source_uz_main = self.model.source_files.get("unsatzone_main")
+            if source_uz_main is not None:
+                # UnsatZone.dat lives directly under Simulation/
+                sim_dir = Path(source_uz_main).parent
+            else:
+                sim_dir = self.config.output_dir
+            for attr_name, default in [
+                ("budget_file", budget_file),
+                ("zbudget_file", zbudget_file),
+                ("final_results_file", final_results_file),
+            ]:
+                val = getattr(uz, attr_name, "")
+                if isinstance(val, Path):
+                    val = str(val)
+                if val and os.path.isabs(val):
+                    try:
+                        val = os.path.relpath(val, str(sim_dir))
+                        val = str(Path(val))  # OS-native separators
+                    except ValueError:
+                        pass
+                if attr_name == "budget_file":
+                    budget_file = val or default
+                elif attr_name == "zbudget_file":
+                    zbudget_file = val or default
+                elif attr_name == "final_results_file":
+                    final_results_file = val or default
 
         context = {
             "version": self.config.version,

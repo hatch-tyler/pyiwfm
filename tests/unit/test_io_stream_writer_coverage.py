@@ -271,13 +271,14 @@ class TestStreamWriteMain:
     def test_write_main_v40_bed_params(
         self, tmp_path: Path, model_with_full_streams: MagicMock, mock_engine: MagicMock
     ) -> None:
-        """v4.0 bed params include WETPR and IRGW columns."""
+        """v4.0 bed params include WETPR column (IRGW is v4.2+ only)."""
         config = StreamWriterConfig(output_dir=tmp_path, version="4.0")
         writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
         assert "WETPR" in content
-        assert "IRGW" in content
+        assert "CSTRM" in content
+        assert "DSTRM" in content
 
     def test_write_main_v50_bed_params(
         self, tmp_path: Path, model_with_full_streams: MagicMock, mock_engine: MagicMock
@@ -474,9 +475,10 @@ class TestStreamWriteMainRenderContext:
         writer = StreamComponentWriter(model_with_full_streams, config, template_engine=mock_engine)
         path = writer.write_main()
         content = path.read_text()
-        # Should contain bed params header for v4.0 (with WETPR)
+        # Should contain bed params header for v4.0 (with WETPR, CSTRM, DSTRM)
         assert "WETPR" in content
-        assert "IRGW" in content
+        assert "CSTRM" in content
+        assert "DSTRM" in content
 
     def test_write_main_renders_with_correct_template_v50(
         self, tmp_path: Path, model_with_full_streams: MagicMock, mock_engine: MagicMock

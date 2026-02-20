@@ -826,6 +826,18 @@ class TestResultsInfo:
     def test_with_gw_hydrographs(self):
         state, model = _state_with_model(with_groundwater=True)
 
+        # Populate hydrograph_locations so physical count is 3
+        locs = []
+        for i in range(3):
+            loc = MagicMock()
+            loc.x = float(i * 100)
+            loc.y = float(i * 100)
+            loc.name = f"Well-{i + 1}"
+            loc.layer = 1
+            loc.node_id = i + 1
+            locs.append(loc)
+        model.groundwater.hydrograph_locations = locs
+
         mock_gw_reader = MagicMock()
         mock_gw_reader.n_timesteps = 50
 

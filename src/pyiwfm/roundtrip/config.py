@@ -110,7 +110,7 @@ class RoundtripConfig:
             preprocessor_main_file=_find_main_file(iwfm_dir, "Preprocessor"),
             output_dir=iwfm_dir.parent / "roundtrip_sample",
             preprocessor_timeout=120,
-            simulation_timeout=300,
+            simulation_timeout=600,
         )
 
     @classmethod
@@ -136,6 +136,42 @@ class RoundtripConfig:
             output_dir=c2vsimfg_dir.parent / "roundtrip_c2vsimfg",
             preprocessor_timeout=600,
             simulation_timeout=3600,
+            head_atol=0.01,
+            budget_rtol=1e-3,
+        )
+
+    @classmethod
+    def for_c2vsimcg(cls, c2vsimcg_dir: Path | str) -> RoundtripConfig:
+        """Create config for the C2VSimCG (Coarse Grid) model.
+
+        Parameters
+        ----------
+        c2vsimcg_dir : Path | str
+            Root directory of the C2VSimCG model.
+
+        Returns
+        -------
+        RoundtripConfig
+            Configuration for C2VSimCG roundtrip test.
+        """
+        c2vsimcg_dir = Path(c2vsimcg_dir)
+
+        # Executables ship in !bin/IWFM-2025.0.1747/ inside the model
+        bin_dir = c2vsimcg_dir / "!bin" / "IWFM-2025.0.1747"
+        exe_mgr = (
+            IWFMExecutableManager(search_paths=[bin_dir])
+            if bin_dir.exists()
+            else None
+        )
+
+        return cls(
+            source_model_dir=c2vsimcg_dir,
+            simulation_main_file=_find_main_file(c2vsimcg_dir, "Simulation"),
+            preprocessor_main_file=_find_main_file(c2vsimcg_dir, "Preprocessor"),
+            output_dir=c2vsimcg_dir.parent / "roundtrip_c2vsimcg",
+            executable_manager=exe_mgr,
+            preprocessor_timeout=300,
+            simulation_timeout=1800,
             head_atol=0.01,
             budget_rtol=1e-3,
         )

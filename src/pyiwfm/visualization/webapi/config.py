@@ -120,6 +120,9 @@ class ModelState:
         self._diversion_ts_data = None
         self._node_id_to_idx = None
         self._sorted_elem_ids = None
+        # Clear cached physical location grouping
+        if hasattr(self, "_gw_phys_locs"):
+            del self._gw_phys_locs
 
         # SQLite cache
         if self._cache_loader is not None:
@@ -896,6 +899,56 @@ class ModelState:
     # Hydrograph locations
     # ------------------------------------------------------------------
 
+    def get_gw_physical_locations(self) -> list[dict]:
+        """Group GW hydrograph specs into unique physical locations.
+
+        IWFM stores one spec per (location, layer) pair, so C2VSimFG with
+        4 layers has 54,544 specs for 13,636 physical locations.  We group
+        by matching coordinates (for HYDTYP=0) or node_id (for HYDTYP=1).
+
+        Returns a list of dicts, one per physical location::
+
+            {
+                "loc": <first HydrographLocation in group>,
+                "node_id": int,
+                "name": str,          # display name (layer suffix stripped)
+                "columns": [(col_idx, layer), ...],
+            }
+
+        The ``columns`` list maps directly to hydrograph output file columns.
+        """
+        groups: dict[tuple, dict] = {}
+        order: list[tuple] = []
+
+        if self._model is not None and self._model.groundwater:
+            for idx, loc in enumerate(
+                self._model.groundwater.hydrograph_locations
+            ):
+                raw_nid = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
+                nid = int(raw_nid) if isinstance(raw_nid, (int, float)) else 0
+                # Group key: node_id when available, else exact (x, y)
+                key: tuple
+                if nid > 0:
+                    key = ("node", nid)
+                else:
+                    key = ("xy", loc.x, loc.y)
+
+                if key not in groups:
+                    # Strip trailing %layer_number from name if present
+                    raw_name = loc.name or ""
+                    if "%" in raw_name:
+                        raw_name = raw_name.rsplit("%", 1)[0].rstrip()
+                    groups[key] = {
+                        "loc": loc,
+                        "node_id": nid,
+                        "name": raw_name,
+                        "columns": [],
+                    }
+                    order.append(key)
+                groups[key]["columns"].append((idx, loc.layer))
+
+        return [groups[k] for k in order]
+
     def get_hydrograph_locations(self) -> dict[str, list[dict]]:
         """Get all hydrograph locations reprojected to WGS84."""
         result: dict[str, list[dict]] = {"gw": [], "stream": [], "subsidence": []}
@@ -903,22 +956,22 @@ class ModelState:
         if self._model is None:
             return result
 
-        # GW hydrograph locations — use 1-based index as ID
-        # (node_id is 0 for element-based HYDTYP=0 observations)
-        if self._model.groundwater:
-            for idx, loc in enumerate(self._model.groundwater.hydrograph_locations):
-                lng, lat = self.reproject_coords(loc.x, loc.y)
-                nid = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
-                result["gw"].append(
-                    {
-                        "id": idx + 1,  # 1-based hydrograph ID
-                        "lng": lng,
-                        "lat": lat,
-                        "name": loc.name or f"GW Hydrograph {idx + 1}",
-                        "layer": loc.layer,
-                        "node_id": nid,
-                    }
-                )
+        # GW hydrograph locations — one entry per physical location
+        phys_locs = self.get_gw_physical_locations()
+        for phys_idx, group in enumerate(phys_locs):
+            loc = group["loc"]
+            lng, lat = self.reproject_coords(loc.x, loc.y)
+            display_name = group["name"] or f"GW Hydrograph {phys_idx + 1}"
+            result["gw"].append(
+                {
+                    "id": phys_idx + 1,  # 1-based physical location ID
+                    "lng": lng,
+                    "lat": lat,
+                    "name": display_name,
+                    "layer": loc.layer,
+                    "node_id": group["node_id"],
+                }
+            )
 
         # Stream hydrograph locations — get coords from associated GW node
         stream_specs = self._model.metadata.get("stream_hydrograph_specs", [])
@@ -1154,7 +1207,7 @@ class ModelState:
                 }
 
         if self._model.groundwater:
-            info["n_gw_hydrographs"] = self._model.groundwater.n_hydrograph_locations
+            info["n_gw_hydrographs"] = len(self.get_gw_physical_locations())
 
         stream_specs = self._model.metadata.get("stream_hydrograph_specs", [])
         info["n_stream_hydrographs"] = len(stream_specs)

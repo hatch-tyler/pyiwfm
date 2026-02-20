@@ -403,6 +403,10 @@ class AppGW:
     # Time series file paths for lazy loading
     pumping_ts_file: Any = field(default=None, repr=False)
     bc_ts_file: Any = field(default=None, repr=False)
+    # Boundary node flow output (NOUTB section in BC_MAIN)
+    n_bc_output_nodes: int = 0
+    bc_output_file: str = ""
+    bc_output_specs: list[int] = field(default_factory=list)
     # Tile drain conversion factors (preserved for roundtrip fidelity)
     td_elev_factor: float = 1.0
     td_cond_factor: float = 1.0

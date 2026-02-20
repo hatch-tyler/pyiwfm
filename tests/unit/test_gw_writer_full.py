@@ -52,6 +52,19 @@ def mock_model_with_gw(mock_model):
     gw.subsidence = []
     gw.aquifer_params = None
     gw.heads = None
+    gw.gw_main_config = None  # No roundtrip config
+    gw.n_bc_output_nodes = 0
+    gw.bc_output_specs = []
+    gw.bc_output_file_raw = ""
+    gw.bc_ts_file = None
+    gw.bc_config = None
+    # Tile drain writer attributes
+    gw.td_n_hydro = 0
+    gw.td_hydro_volume_factor = 1.0
+    gw.td_hydro_volume_unit = ""
+    gw.td_hydro_specs = []
+    gw.td_output_file_raw = ""
+    gw.sub_irrigations = []
 
     mock_model.groundwater = gw
     return mock_model
@@ -71,16 +84,29 @@ def mock_model_full_gw(mock_model):
     gw.si_time_unit = "1MON"
 
     # Boundary conditions
-    bc1 = MagicMock()
-    bc1.bc_type = "specified_head"
-    bc1.id = 1
+    bc1 = SimpleNamespace(
+        bc_type="specified_head",
+        id=1,
+        nodes=[1],
+        values=[100.0],
+        layer=1,
+        ts_column=0,
+    )
     gw.boundary_conditions = [bc1]
+    gw.n_bc_output_nodes = 0
+    gw.bc_output_specs = []
+    gw.bc_output_file_raw = ""
+    gw.bc_ts_file = None
+    gw.bc_config = None
+    gw.gw_main_config = None
 
     # Wells
-    well1 = MagicMock()
-    well1.id = 1
+    well1 = SimpleNamespace(
+        id=1, element=1, x=100.0, y=200.0, name="Well_1",
+        bottom_screen=50.0, top_screen=80.0,
+    )
     gw.wells = {1: well1}
-    gw.element_pumping = {}
+    gw.element_pumping = []
 
     # Tile drains - use SimpleNamespace for Jinja2 template compatibility
     drain1 = SimpleNamespace(
@@ -96,6 +122,12 @@ def mock_model_full_gw(mock_model):
         dest_id=10,
     )
     gw.tile_drains = {1: drain1}
+    gw.td_n_hydro = 0
+    gw.td_hydro_volume_factor = 1.0
+    gw.td_hydro_volume_unit = ""
+    gw.td_hydro_specs = []
+    gw.td_output_file_raw = ""
+    gw.sub_irrigations = []
 
     # Subsidence
     sub1 = MagicMock()
@@ -358,8 +390,8 @@ class TestGWComponentWriterWriteBCMain:
         content = path.read_text()
 
         assert "GROUNDWATER BOUNDARY CONDITIONS MAIN FILE" in content
-        assert "NSHBC" in content
-        assert "1" in content  # One specified head BC
+        assert "SHBCFL" in content
+        assert "NOUTB" in content
 
     def test_write_bc_main_no_bcs(self, mock_model_with_gw, config):
         """Test writing BC main file with no boundary conditions."""
@@ -368,16 +400,19 @@ class TestGWComponentWriterWriteBCMain:
 
         content = path.read_text()
 
-        # Should have zero BCs
-        assert "0" in content
+        # Should have NOUTB
+        assert "NOUTB" in content
 
     def test_write_bc_main_multiple_types(self, mock_model_full_gw, config):
         """Test writing BC main file with multiple BC types."""
         # Add different BC types
-        bc_flow = MagicMock()
-        bc_flow.bc_type = "specified_flow"
-        bc_gen = MagicMock()
-        bc_gen.bc_type = "general_head"
+        bc_flow = SimpleNamespace(
+            bc_type="specified_flow", id=2, nodes=[2], values=[0.0], layer=1, ts_column=0
+        )
+        bc_gen = SimpleNamespace(
+            bc_type="general_head", id=3, nodes=[3], values=[50.0], layer=1,
+            ts_column=0, conductance=[0.1]
+        )
 
         mock_model_full_gw.groundwater.boundary_conditions.extend([bc_flow, bc_gen])
 
@@ -386,9 +421,9 @@ class TestGWComponentWriterWriteBCMain:
 
         content = path.read_text()
 
-        assert "NSHBC" in content
-        assert "NSFBC" in content
-        assert "NGHBC" in content
+        assert "SFBCFL" in content
+        assert "SHBCFL" in content
+        assert "GHBCFL" in content
 
 
 class TestGWComponentWriterWritePumpMain:
@@ -403,9 +438,8 @@ class TestGWComponentWriterWritePumpMain:
         content = path.read_text()
 
         assert "PUMPING COMPONENT MAIN FILE" in content
-        assert "NPUMP" in content
-        # NPUMP = 2 for well-based pumping
-        assert "2" in content
+        assert "WELLFL" in content
+        assert "PUMPFL" in content
 
     def test_write_pump_main_with_elem_pump(self, mock_model_full_gw, config):
         """Test writing pump main file with element pumping."""

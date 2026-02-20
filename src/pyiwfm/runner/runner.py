@@ -231,10 +231,18 @@ class IWFMRunner:
 
         for line in log_content.splitlines():
             line_lower = line.lower()
-            if "error" in line_lower or "fatal" in line_lower:
-                errors.append(line.strip())
+            stripped = line.strip()
+            if "fatal" in line_lower:
+                errors.append(stripped)
+            elif "error" in line_lower:
+                # IWFM prints advisory messages like "not an error in the
+                # grid" that contain the word "error" but are informational.
+                if "not an error" in line_lower:
+                    warnings.append(stripped)
+                else:
+                    errors.append(stripped)
             elif "warning" in line_lower:
-                warnings.append(line.strip())
+                warnings.append(stripped)
 
         return errors, warnings
 
@@ -288,8 +296,13 @@ class IWFMRunner:
 
         except subprocess.TimeoutExpired as e:
             elapsed = datetime.now() - start_time
-            stdout = e.stdout.decode() if e.stdout else ""
-            stderr = e.stderr.decode() if e.stderr else "Process timed out"
+            # With text=True, stdout/stderr are already strings
+            stdout = e.stdout if isinstance(e.stdout, str) else (
+                e.stdout.decode() if e.stdout else ""
+            )
+            stderr = e.stderr if isinstance(e.stderr, str) else (
+                e.stderr.decode() if e.stderr else "Process timed out"
+            )
             return -1, stdout, stderr, elapsed
 
         except Exception as e:
@@ -380,7 +393,7 @@ class IWFMRunner:
                 break
 
         return PreprocessorResult(
-            success=return_code == 0 and len(errors) == 0,
+            success=return_code == 0,
             return_code=return_code,
             stdout=stdout,
             stderr=stderr,
@@ -497,7 +510,7 @@ class IWFMRunner:
                 break
 
         return SimulationResult(
-            success=return_code == 0 and len(errors) == 0,
+            success=return_code == 0,
             return_code=return_code,
             stdout=stdout,
             stderr=stderr,

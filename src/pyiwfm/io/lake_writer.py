@@ -224,7 +224,7 @@ class LakeComponentWriter(TemplateWriter):
         for i, lake in enumerate(lake_list):
             conductivity = getattr(lake, "bed_conductivity", self.config.bed_conductivity)
             thickness = getattr(lake, "bed_thickness", self.config.bed_thickness)
-            ichlmax = getattr(lake, "max_elev_column", i + 1)
+            ichlmax = getattr(lake, "max_elev_column", 0) or (i + 1)
             icetlk = getattr(lake, "et_column", 7)
             icpcplk = getattr(lake, "precip_column", 2)
             name = getattr(lake, "name", f"Lake{lake.id}")

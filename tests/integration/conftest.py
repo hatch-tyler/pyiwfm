@@ -21,6 +21,9 @@ _DEFAULT_SAMPLE_MODEL = str(
     Path.home() / "OneDrive" / "Desktop" / "iwfm-2025.0.1747" / "samplemodel"
 )
 _DEFAULT_C2VSIMFG = str(Path.home() / "OneDrive" / "Desktop" / "c2vsimfg")
+_DEFAULT_C2VSIMCG = str(
+    Path.home() / "OneDrive" / "Desktop" / "c2vsimcg" / "C2VSimCG_v2025_WY1974-2015"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +54,19 @@ def c2vsimfg_path() -> Path:
     path = Path(os.environ.get("C2VSIMFG_DIR", _DEFAULT_C2VSIMFG))
     if not path.exists():
         pytest.skip(f"C2VSimFG model directory not found: {path}")
+    return path
+
+
+@pytest.fixture
+def c2vsimcg_path() -> Path:
+    """Return path to the C2VSimCG (Coarse Grid) model directory.
+
+    Reads from C2VSIMCG_DIR env var, falling back to default.
+    Skips the test if the directory does not exist.
+    """
+    path = Path(os.environ.get("C2VSIMCG_DIR", _DEFAULT_C2VSIMCG))
+    if not path.exists():
+        pytest.skip(f"C2VSimCG model directory not found: {path}")
     return path
 
 

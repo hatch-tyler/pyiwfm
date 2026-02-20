@@ -80,6 +80,7 @@ src/pyiwfm/
 │   ├── engine.py      # Hybrid Jinja2 + NumPy template engine
 │   ├── filters.py     # Custom Jinja2 filters (fortran_float, fortran_int, etc.)
 │   └── iwfm/          # Subdirs per component: groundwater, streams, lakes, rootzone, etc.
+├── roundtrip/         # Read→write→read verification pipeline (config, differ, script generator)
 ├── mesh_generation/   # Triangle and Gmsh wrappers
 ├── comparison/        # Model diffing and metrics
 └── cli/               # CLI entry points + _model_finder.py, _model_loader.py helpers

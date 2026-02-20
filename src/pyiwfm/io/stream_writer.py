@@ -415,11 +415,15 @@ C-------------------------------------------------------------------------------
                 pass
 
         # Column format depends on version:
-        # v4.2 (and v4.0): IR  WETPR  IRGW  CSTRM  DSTRM (5 columns)
+        # v4.0: IR  CSTRM  DSTRM  WETPR (4 columns)
+        # v4.2: IR  WETPR  IRGW  CSTRM  DSTRM (5 columns)
         # v5.0+: IR  CSTRM  DSTRM (3 columns, no WETPR/IRGW)
         is_v50_plus = version >= (5, 0)
+        is_v40 = version < (4, 1)
         if is_v50_plus:
             col_header = "C      IR    CSTRM   DSTRM"
+        elif is_v40:
+            col_header = "C      IR   CSTRM   DSTRM   WETPR"
         else:
             col_header = "C      IR      WETPR     IRGW   CSTRM   DSTRM"
 
@@ -470,6 +474,10 @@ C------------------------------------------------------------------------------
 
             if is_v50_plus:
                 content += f"{node_id:<8}   {cstrm:.3f}   {dstrm:.0f}\n"
+            elif is_v40:
+                content += (
+                    f"{node_id:<8}   {cstrm:.3f}   {dstrm:.0f}{wetpr:>7.0f}\n"
+                )
             else:
                 content += (
                     f"{node_id:<8}{wetpr:>7.0f}     {gw_node:>5d}   {cstrm:.3f}   {dstrm:.0f}\n"
@@ -907,7 +915,7 @@ C-------------------------------------------------------------------------------
                     for flow_val, spill_val in zip(
                         bp.rating_table_flows, bp.rating_table_spills, strict=False
                     ):
-                        content += f"                    {flow_val:<16.0f}{spill_val:.0f}\n"
+                        content += f"                    {flow_val}     {spill_val}\n"
 
             # Seepage/recharge zone section
             content += """C-------------------------------------------------------------------------------

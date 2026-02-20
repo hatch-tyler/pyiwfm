@@ -729,6 +729,7 @@ class IWFMModel:
                                             nodes=[sh_bc.node_id],
                                             values=[sh_bc.head_value],
                                             layer=sh_bc.layer,
+                                            ts_column=sh_bc.ts_column,
                                         )
                                     )
                                 for sf_bc in bc_config.specified_flow_bcs:
@@ -739,6 +740,7 @@ class IWFMModel:
                                             nodes=[sf_bc.node_id],
                                             values=[sf_bc.base_flow],
                                             layer=sf_bc.layer,
+                                            ts_column=sf_bc.ts_column,
                                         )
                                     )
                                 for gh_bc in bc_config.general_head_bcs:
@@ -767,9 +769,18 @@ class IWFMModel:
                                             max_flow_ts_column=cgh_bc.max_flow_ts_column,
                                         )
                                     )
+                                # Store BC config for roundtrip fidelity
+                                gw.bc_config = bc_config
                                 # Store BC time series file path
                                 if bc_config.ts_data_file:
                                     gw.bc_ts_file = bc_config.ts_data_file
+                                # Store NOUTB section for roundtrip fidelity
+                                if bc_config.n_bc_output_nodes > 0:
+                                    gw.n_bc_output_nodes = bc_config.n_bc_output_nodes
+                                    gw.bc_output_specs = list(bc_config.bc_output_specs)
+                                    gw.bc_output_file_raw = bc_config.bc_output_file_raw
+                                    if bc_config.bc_output_file:
+                                        gw.bc_output_file = str(bc_config.bc_output_file)
                             except Exception:
                                 pass
 
@@ -873,7 +884,9 @@ class IWFMModel:
                                 )
 
                                 for td in td_config.tile_drains:
-                                    dest_type = "stream" if td.dest_type == 2 else "outside"
+                                    # IWFM TYPDST: 0=outside, 1=stream node
+                                    is_stream = td.dest_type == 1
+                                    dest_type = "stream" if is_stream else "outside"
                                     gw.add_tile_drain(
                                         TileDrain(
                                             id=td.id,
@@ -882,7 +895,7 @@ class IWFMModel:
                                             conductance=td.conductance,
                                             destination_type=dest_type,
                                             destination_id=td.dest_id
-                                            if td.dest_type == 2
+                                            if is_stream
                                             else None,
                                         )
                                     )
@@ -903,6 +916,19 @@ class IWFMModel:
                                 gw.si_elev_factor = td_config.subirig_height_factor
                                 gw.si_cond_factor = td_config.subirig_conductance_factor
                                 gw.si_time_unit = td_config.subirig_time_unit
+                                # Preserve hydrograph output section
+                                gw.td_n_hydro = td_config.n_td_hydro
+                                gw.td_hydro_volume_factor = td_config.td_hydro_volume_factor
+                                gw.td_hydro_volume_unit = td_config.td_hydro_volume_unit
+                                gw.td_output_file_raw = td_config.td_output_file
+                                gw.td_hydro_specs = [
+                                    {
+                                        "id": s.id,
+                                        "id_type": s.id_type,
+                                        "name": s.name,
+                                    }
+                                    for s in td_config.td_hydro_specs
+                                ]
                             except Exception:
                                 pass
 
@@ -1037,6 +1063,9 @@ class IWFMModel:
                                 model.metadata["gw_initial_heads_shape"] = str(
                                     gw_config.initial_heads.shape
                                 )
+
+                        # Store full GW main config for roundtrip fidelity
+                        gw.gw_main_config = gw_config
 
                     except Exception:
                         # Fall back to treating file as wells file directly
@@ -1429,6 +1458,11 @@ class IWFMModel:
                             lake = Lake(
                                 id=lp.lake_id,
                                 name=lp.name,
+                                bed_conductivity=lp.conductance_coeff,
+                                bed_thickness=lp.depth_denom,
+                                max_elev_column=lp.max_elev_col,
+                                et_column=lp.et_col,
+                                precip_column=lp.precip_col,
                             )
                             lakes.add_lake(lake)
 
@@ -1535,6 +1569,19 @@ class IWFMModel:
                             model.metadata["rootzone_rz_budget_file"] = str(
                                 rz_config.rz_budget_file
                             )
+                        if rz_config.lwu_zone_budget_file:
+                            model.metadata["rootzone_lwu_zbudget_file"] = str(
+                                rz_config.lwu_zone_budget_file
+                            )
+                        if rz_config.rz_zone_budget_file:
+                            model.metadata["rootzone_rz_zbudget_file"] = str(
+                                rz_config.rz_zone_budget_file
+                            )
+
+                        # Store soil parameter conversion factors
+                        model.metadata["rootzone_k_factor"] = rz_config.k_factor
+                        model.metadata["rootzone_cprise_factor"] = rz_config.k_exdth_factor
+                        model.metadata["rootzone_k_time_unit"] = rz_config.k_time_unit
 
                         # Populate soil parameters from main-file table
                         for row in rz_config.element_soil_params:

@@ -227,7 +227,7 @@ def _write_gw_main(path: Path, version: str = "4.0") -> None:
     lines = [
         "C  Groundwater component main file\n",
         f"# {version}\n",
-        # File paths (6 fields)
+        # File paths (5 fields)
         "bc_file.dat  / BCFL\n",
         "tile_drain.dat  / TDFL\n",
         "pumping.dat  / PUMPFL\n",
@@ -240,7 +240,7 @@ def _write_gw_main(path: Path, version: str = "4.0") -> None:
         "TAF  / UNITVLOU\n",
         "1.0  / FACTVROU\n",
         "FT/DAY  / UNITVROU\n",
-        # Output files (7 optional)
+        # Output files (8 optional)
         "  / VELOUTFL\n",
         "  / VFLOWOUTFL\n",
         "  / GWALLOUTFL\n",
@@ -249,7 +249,8 @@ def _write_gw_main(path: Path, version: str = "4.0") -> None:
         "  / GWBUDFL\n",
         "  / ZBUDFL\n",
         "  / FNGWFL\n",
-        # Debug flag
+        # IHTPFLAG then KDEB
+        "1  / IHTPFLAG\n",
         "0  / KDEB\n",
         # Hydrographs
         "2  / NOUTH\n",
@@ -272,8 +273,12 @@ def _write_gw_main(path: Path, version: str = "4.0") -> None:
         "2  12.0  0.002  0.18  0.02  6.0\n",
         # End of aquifer params: comment line triggers end
         "C  End of aquifer parameters\n",
-        # Kh anomaly section
+        # Kh anomaly section (NEBK=0 still needs FACT and TUNITH)
         "0  / NEBK\n",
+        "1.0  / FACT\n",
+        "1DAY  / TUNITH\n",
+        # Return flow flag
+        "0  / IFLAGRF\n",
         # Initial heads section
         "1.0  / FACTHP\n",
         "1  50.0\n",
@@ -316,6 +321,7 @@ class TestGWMainFileReaderVersion:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0  / FACTXY\n"
@@ -388,6 +394,7 @@ class TestGWMainFileReaderHydrographs:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -478,6 +485,7 @@ class TestReadVersionEdgeCases:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -536,6 +544,7 @@ class TestReadFilePathsDetailed:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -575,6 +584,7 @@ class TestReadFilePathsDetailed:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -645,6 +655,7 @@ class TestHydrographXYCoords:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "2  / NOUTH\n"
             "2.0  / FACTXY\n"
@@ -713,6 +724,7 @@ class TestReadFaceFlowSpecs:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -767,6 +779,7 @@ class TestReadFaceFlowSpecs:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -814,6 +827,7 @@ class TestReadAquiferParamsParametricGrid:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -826,16 +840,24 @@ class TestReadAquiferParamsParametricGrid:
             "1DAY  / TUNITKH\n"
             "1DAY  / TUNITV\n"
             "1DAY  / TUNITL\n"
-            # NDP=3, NEP=1 (triangle)
-            "3  1  / NDP NEP\n"
+            # Parametric grid: node_range_str, NDP, NEP as separate lines
+            "1-3  / node range\n"
+            "3  / NDP\n"
+            "1  / NEP\n"
             # Element definition: ElemID Node1 Node2 Node3 (1-based)
             "1  1  2  3\n"
             # Node data: NodeID X Y Kh Ss Sy AquitardKv Kv (5 params, 1 layer)
             "1  0.0  0.0  10.0  0.001  0.15  0.01  5.0\n"
             "2  100.0  0.0  12.0  0.002  0.18  0.02  6.0\n"
             "3  50.0  100.0  11.0  0.0015  0.16  0.015  5.5\n"
-            # End of aquifer params (anomaly section)
+            # End of parametric node data (comment triggers end)
+            "C  End of aquifer params\n"
+            # Kh anomaly section (NEBK=0 still reads FACT and TUNITH)
             "0  / NEBK\n"
+            "1.0  / FACT\n"
+            "1DAY  / TUNITH\n"
+            # Return flow flag
+            "0  / IFLAGRF\n"
             # Initial heads
             "1.0  / FACTHP\n"
             "1  50.0\n"
@@ -895,6 +917,7 @@ class TestReadAquiferParamsMultiLayer:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -909,16 +932,20 @@ class TestReadAquiferParamsMultiLayer:
             "1DAY  / TUNITL\n"
             # Node 1 (layer 1): ID PKH PS PN PV PL
             "1  10.0  0.001  0.15  0.01  5.0\n"
-            # Node 1 (layer 2 — continuation, 5 fields only)
+            # Node 1 (layer 2 -- continuation, 5 fields only)
             "20.0  0.002  0.25  0.02  8.0\n"
             # Node 2 (layer 1)
             "2  12.0  0.003  0.18  0.03  6.0\n"
-            # Node 2 (layer 2 — continuation)
+            # Node 2 (layer 2 -- continuation)
             "22.0  0.004  0.28  0.04  9.0\n"
             # End marker
             "C  End of aquifer parameters\n"
-            # Kh anomaly
+            # Kh anomaly (NEBK=0 still reads FACT and TUNITH)
             "0  / NEBK\n"
+            "1.0  / FACT\n"
+            "1DAY  / TUNITH\n"
+            # Return flow flag
+            "0  / IFLAGRF\n"
             # Initial heads (2 nodes, 2 layers)
             "1.0  / FACTHP\n"
             "1  50.0  40.0\n"
@@ -966,6 +993,7 @@ class TestReadAquiferParamsMultiLayer:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -980,7 +1008,12 @@ class TestReadAquiferParamsMultiLayer:
             "1DAY\n"
             "1  10.0  0.001  0.15  0.01  5.0\n"
             "C  End\n"
+            # Kh anomaly (NEBK=0 still reads FACT and TUNITH)
             "0  / NEBK\n"
+            "1.0  / FACT\n"
+            "1DAY  / TUNITH\n"
+            # Return flow flag
+            "0  / IFLAGRF\n"
             "1.0  / FACTHP\n"
             "1  100.0\n"
         )
@@ -1031,6 +1064,7 @@ class TestReadKhAnomalies:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -1052,6 +1086,8 @@ class TestReadKhAnomalies:
             # IC  IEBK  BK[layer1]
             "1  5  0.5\n"
             "2  10  0.8\n"
+            # Return flow flag
+            "0  / IFLAGRF\n"
             # Initial heads
             "1.0  / FACTHP\n"
             "1  50.0\n"
@@ -1106,6 +1142,7 @@ class TestReadInitialHeadsFromMain:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -1120,8 +1157,12 @@ class TestReadInitialHeadsFromMain:
             "1DAY\n"
             "1  10.0  0.001  0.15  0.01  5.0\n"
             "C  End\n"
-            # Anomaly
+            # Anomaly (NEBK=0 still reads FACT and TUNITH)
             "0  / NEBK\n"
+            "1.0  / FACT\n"
+            "1DAY  / TUNITH\n"
+            # Return flow flag
+            "0  / IFLAGRF\n"
             # Initial heads with FACTHP = 0.3048 (feet to meters)
             "0.3048  / FACTHP\n"
             "1  100.0\n"
@@ -1157,6 +1198,7 @@ class TestReadInitialHeadsFromMain:
             "  / GWBUDFL\n"
             "  / ZBUDFL\n"
             "  / FNGWFL\n"
+            "1  / IHTPFLAG\n"
             "0  / KDEB\n"
             "0  / NOUTH\n"
             "1.0\n"
@@ -1173,7 +1215,12 @@ class TestReadInitialHeadsFromMain:
             "2  12.0  0.003  0.18  0.03  6.0\n"
             "22.0  0.004  0.28  0.04  9.0\n"
             "C  End\n"
+            # Kh anomaly (NEBK=0 still reads FACT and TUNITH)
             "0  / NEBK\n"
+            "1.0  / FACT\n"
+            "1DAY  / TUNITH\n"
+            # Return flow flag
+            "0  / IFLAGRF\n"
             "1.0  / FACTHP\n"
             "1  50.0  40.0\n"
             "2  55.0  45.0\n"

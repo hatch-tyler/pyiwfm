@@ -72,6 +72,21 @@ class SubIrrigationSpec:
 
 
 @dataclass
+class TileDrainHydroSpec:
+    """Tile drain / sub-irrigation hydrograph output specification.
+
+    Attributes:
+        id: Tile drain or sub-irrigation ID
+        id_type: 1 = tile drain, 2 = sub-irrigation
+        name: Hydrograph name
+    """
+
+    id: int
+    id_type: int = 1
+    name: str = ""
+
+
+@dataclass
 class TileDrainConfig:
     """Complete tile drain and sub-irrigation configuration.
 
@@ -88,6 +103,12 @@ class TileDrainConfig:
         subirig_conductance_factor: Conductance conversion factor
         subirig_time_unit: Time unit for sub-irrigation conductance
         sub_irrigations: List of sub-irrigation specifications
+
+        n_td_hydro: Number of hydrograph outputs
+        td_hydro_volume_factor: Volume conversion factor for output
+        td_hydro_volume_unit: Volume output unit
+        td_output_file: Output file path (raw string from file)
+        td_hydro_specs: List of hydrograph output specifications
     """
 
     version: str = ""
@@ -104,6 +125,13 @@ class TileDrainConfig:
     subirig_conductance_factor: float = 1.0
     subirig_time_unit: str = ""
     sub_irrigations: list[SubIrrigationSpec] = field(default_factory=list)
+
+    # Hydrograph output
+    n_td_hydro: int = 0
+    td_hydro_volume_factor: float = 1.0
+    td_hydro_volume_unit: str = ""
+    td_output_file: str = ""
+    td_hydro_specs: list[TileDrainHydroSpec] = field(default_factory=list)
 
 
 class TileDrainReader:
@@ -167,32 +195,68 @@ class TileDrainReader:
                     )
 
             # --- Sub-Irrigation Section ---
+            # IWFM always reads NSI, FACTHSI, FACTCDCSI, TUNITSI
+            # regardless of NSI value.
 
             # NSubIrig
             nsubirig_str = self._next_data_or_empty(f)
             config.n_sub_irrigation = int(nsubirig_str) if nsubirig_str else 0
 
-            if config.n_sub_irrigation > 0:
-                # FactH
-                config.subirig_height_factor = float(self._next_data_or_empty(f))
-                # FactCDC
-                config.subirig_conductance_factor = float(self._next_data_or_empty(f))
-                # TimeUnit
-                config.subirig_time_unit = self._next_data_or_empty(f)
+            # FactH (always present)
+            facth_str = self._next_data_or_empty(f)
+            if facth_str:
+                config.subirig_height_factor = float(facth_str)
+            # FactCDC (always present)
+            factcdc_str = self._next_data_or_empty(f)
+            if factcdc_str:
+                config.subirig_conductance_factor = float(factcdc_str)
+            # TimeUnit (always present)
+            tunit_str = self._next_data_or_empty(f)
+            if tunit_str:
+                config.subirig_time_unit = tunit_str
 
-                # Read NSubIrig rows: ID, GWNode, Elevation, Conductance
-                for _ in range(config.n_sub_irrigation):
+            # Read NSubIrig rows: ID, GWNode, Elevation, Conductance
+            for _ in range(config.n_sub_irrigation):
+                line = self._next_data_line(f)
+                parts = line.split()
+                if len(parts) < 4:
+                    continue
+
+                config.sub_irrigations.append(
+                    SubIrrigationSpec(
+                        id=int(parts[0]),
+                        gw_node=int(parts[1]),
+                        elevation=float(parts[2]) * config.subirig_height_factor,
+                        conductance=float(parts[3]) * config.subirig_conductance_factor,
+                    )
+                )
+
+            # --- Hydrograph Output Section ---
+            nouttd_str = self._next_data_or_empty(f)
+            if nouttd_str:
+                config.n_td_hydro = int(nouttd_str)
+
+            if config.n_td_hydro > 0:
+                # FACTVLOU
+                factvlou_str = self._next_data_or_empty(f)
+                if factvlou_str:
+                    config.td_hydro_volume_factor = float(factvlou_str)
+                # UNITVLOU
+                config.td_hydro_volume_unit = self._next_data_or_empty(f)
+                # TDOUTFL
+                config.td_output_file = self._next_data_or_empty(f)
+                # Read NOUTTD rows: ID, IDTYP, NAME
+                for _ in range(config.n_td_hydro):
                     line = self._next_data_line(f)
-                    parts = line.split()
-                    if len(parts) < 4:
+                    parts = line.split(maxsplit=2)
+                    if len(parts) < 2:
                         continue
-
-                    config.sub_irrigations.append(
-                        SubIrrigationSpec(
+                    name = parts[2].strip() if len(parts) > 2 else ""
+                    config.td_hydro_specs.append(
+                        TileDrainHydroSpec(
                             id=int(parts[0]),
-                            gw_node=int(parts[1]),
-                            elevation=float(parts[2]) * config.subirig_height_factor,
-                            conductance=float(parts[3]) * config.subirig_conductance_factor,
+                            id_type=int(parts[1]),
+                            name=name,
                         )
                     )
 

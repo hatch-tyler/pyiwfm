@@ -1,7 +1,7 @@
 """Unified roundtrip tests for IWFM models.
 
 Tests the full pipeline: read -> write -> run -> verify for both the
-IWFM Sample Model and C2VSimFG. Each test can be run independently.
+IWFM Sample Model and C2VSimCG. Each test can be run independently.
 """
 
 from __future__ import annotations
@@ -126,16 +126,16 @@ class TestRoundtripSampleModel:
 @pytest.mark.integration
 @pytest.mark.slow
 @pytest.mark.roundtrip
-class TestRoundtripC2VSimFG:
-    """Roundtrip tests for the C2VSimFG model."""
+class TestRoundtripC2VSimCG:
+    """Roundtrip tests for the C2VSimCG (Coarse Grid) model."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, c2vsimfg_path: Path, tmp_path: Path) -> None:
-        """Set up config for C2VSimFG tests."""
+    def setup(self, c2vsimcg_path: Path, tmp_path: Path) -> None:
+        """Set up config for C2VSimCG tests."""
         from pyiwfm.roundtrip.config import RoundtripConfig
 
-        self.config = RoundtripConfig.for_c2vsimfg(c2vsimfg_path)
-        self.config.output_dir = tmp_path / "roundtrip_c2vsimfg"
+        self.config = RoundtripConfig.for_c2vsimcg(c2vsimcg_path)
+        self.config.output_dir = tmp_path / "roundtrip_c2vsimcg"
 
     def test_load_model(self) -> None:
         """Model loads without errors."""
