@@ -101,9 +101,11 @@ Here is what the mesh looks like with subregions colored:
    m = build_tutorial_model()
    fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='gray',
                        fill_color='lightblue', alpha=0.3)
+   ax.set_aspect('auto')
    ax.set_title(f'Sample Model Mesh ({m.grid.n_nodes} nodes, {m.grid.n_elements} elements)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
+   plt.tight_layout()
    plt.show()
 
 Section 2: Define Stratigraphy
@@ -161,9 +163,11 @@ Visualize ground surface elevation:
    m = build_tutorial_model()
    fig, ax = plot_scalar_field(m.grid, m.gs_elev, field_type='node', cmap='terrain',
                                show_mesh=True, edge_color='white')
+   ax.set_aspect('auto')
    ax.set_title('Ground Surface Elevation (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
+   plt.tight_layout()
    plt.show()
 
 Visualize layer thickness:
@@ -178,9 +182,11 @@ Visualize layer thickness:
    m = build_tutorial_model()
    thickness = m.stratigraphy.top_elev[:, 0] - m.stratigraphy.bottom_elev[:, 0]
    fig, ax = plot_scalar_field(m.grid, thickness, field_type='node', cmap='YlOrRd')
+   ax.set_aspect('auto')
    ax.set_title('Layer 1 Thickness (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
+   plt.tight_layout()
    plt.show()
 
 Section 3: Groundwater Component
@@ -244,9 +250,11 @@ Visualize initial head distribution:
    m = build_tutorial_model()
    fig, ax = plot_scalar_field(m.grid, m.initial_heads[:, 0], field_type='node',
                                cmap='viridis', show_mesh=True, edge_color='white')
+   ax.set_aspect('auto')
    ax.set_title('Initial Head - Layer 1 (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
+   plt.tight_layout()
    plt.show()
 
 Section 4: Stream Component
@@ -302,9 +310,11 @@ Visualize the stream network overlaid on the mesh:
    m = build_tutorial_model()
    fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='lightgray', alpha=0.2)
    plot_streams(m.stream, ax=ax, show_nodes=True, line_width=2)
+   ax.set_aspect('auto')
    ax.set_title('Stream Network (3 Reaches)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
+   plt.tight_layout()
    plt.show()
 
 Section 5: Lake Component
@@ -352,9 +362,11 @@ Visualize lake elements highlighted on the mesh:
    m = build_tutorial_model()
    fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='lightgray', alpha=0.2)
    plot_lakes(m.lakes, m.grid, ax=ax)
+   ax.set_aspect('auto')
    ax.set_title('Lake Elements (NE Corner)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
+   plt.tight_layout()
    plt.show()
 
 Section 6: Root Zone Component
@@ -498,9 +510,11 @@ sample data to demonstrate what each plot looks like:
    m = build_tutorial_model()
    fig, ax = plot_scalar_field(m.grid, m.final_heads, field_type='node',
                                cmap='viridis', show_mesh=True, edge_color='white')
+   ax.set_aspect('auto')
    ax.set_title('Final Groundwater Head (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
+   plt.tight_layout()
    plt.show()
 
 **Head change (final minus initial):**
@@ -515,9 +529,11 @@ sample data to demonstrate what each plot looks like:
    m = build_tutorial_model()
    head_change = m.final_heads - m.initial_heads[:, 0]
    fig, ax = plot_scalar_field(m.grid, head_change, field_type='node', cmap='RdBu')
+   ax.set_aspect('auto')
    ax.set_title('Head Change: Final - Initial (ft)')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
+   plt.tight_layout()
    plt.show()
 
 **Head time series at selected nodes:**
