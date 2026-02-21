@@ -42,15 +42,40 @@ def _find_simulation_file(model_dir: Path) -> Path:
     candidates = [
         model_dir / "Simulation.in",
         model_dir / "Simulation" / "Simulation.in",
+        model_dir / "C2VSimCG.in",
+        model_dir / "Simulation" / "C2VSimCG.in",
     ]
-    # Also try glob for any *.in that contains "simulation" (case-insensitive)
     for c in candidates:
         if c.exists():
             return c
-    # Fallback: glob
+    # Fallback: glob for simulation or C2VSim main files
     for p in model_dir.rglob("*imulation*.in"):
         return p
-    raise FileNotFoundError(f"Could not find a Simulation.in file inside {model_dir}")
+    for p in model_dir.rglob("C2VSim*.in"):
+        return p
+    raise FileNotFoundError(f"Could not find a simulation .in file inside {model_dir}")
+
+
+def _find_preprocessor_file(model_dir: Path) -> Path | None:
+    """Locate the preprocessor main .in file near *model_dir*."""
+    candidates = [
+        model_dir / "Preprocessor" / "C2VSimCG_Preprocessor.in",
+        model_dir / "Preprocessor" / "Preprocessor.in",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    # Check sibling Preprocessor/ directory (if model_dir is Simulation/)
+    sibling = model_dir.parent / "Preprocessor"
+    if sibling.is_dir():
+        for p in sibling.glob("*reprocessor*.in"):
+            return p
+    # Check within model_dir itself
+    for p in model_dir.rglob("*reprocessor*.in"):
+        # Skip binary files
+        if p.suffix == ".in":
+            return p
+    return None
 
 
 def generate_mesh(model: IWFMModel, output_dir: Path) -> None:
@@ -271,9 +296,7 @@ def generate_budget_stacked(output_dir: Path) -> None:
 
     rng = np.random.default_rng(42)
     n_years = 10
-    times = np.arange(
-        np.datetime64("2005-01-01"), np.datetime64("2015-01-01"), np.timedelta64(1, "Y")
-    )
+    times = np.array([np.datetime64(f"{y}-01-01") for y in range(2005, 2015)])
 
     # Illustrative annual values (acre-feet) with realistic variability
     components = {
@@ -314,11 +337,24 @@ def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     sim_file = _find_simulation_file(model_dir)
+    pp_file = _find_preprocessor_file(model_dir)
     print(f"Loading C2VSimCG from: {sim_file}")
+    if pp_file:
+        print(f"Preprocessor file: {pp_file}")
 
-    from pyiwfm.io import load_complete_model
+    if pp_file:
+        from pyiwfm.io.model_loader import CompleteModelLoader
 
-    model = load_complete_model(sim_file)
+        loader = CompleteModelLoader(simulation_file=sim_file, preprocessor_file=pp_file)
+        result = loader.load()
+        if not result.success:
+            print(f"ERROR: Failed to load model: {result.errors}", file=sys.stderr)
+            sys.exit(1)
+        model = result.model
+    else:
+        from pyiwfm.io import load_complete_model
+
+        model = load_complete_model(sim_file)
     print(model.summary())
     print()
 

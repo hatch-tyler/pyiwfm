@@ -458,16 +458,32 @@ def load_complete_model(
     sim_config = sim_reader.read(simulation_file)
 
     # First load the preprocessor/mesh data
+    model: IWFMModel | None = None
     if sim_config.preprocessor_file and sim_config.preprocessor_file.exists():
         model = load_model_from_preprocessor(sim_config.preprocessor_file)
     else:
-        # Try to find preprocessor file in same directory
-        pp_candidates = list(base_dir.glob("*_pp.in")) + list(base_dir.glob("*preprocessor*.in"))
+        # Try to find preprocessor .in file in same or sibling directories
+        pp_candidates = (
+            list(base_dir.glob("*_pp.in"))
+            + list(base_dir.glob("*preprocessor*.in"))
+            + list(base_dir.glob("*Preprocessor*.in"))
+        )
+        # Also check sibling Preprocessor/ directory (common layout)
+        sibling_pp = base_dir.parent / "Preprocessor"
+        if sibling_pp.is_dir():
+            pp_candidates += list(sibling_pp.glob("*reprocessor*.in"))
         if pp_candidates:
             model = load_model_from_preprocessor(pp_candidates[0])
-        else:
-            # Create empty model
-            model = IWFMModel(name=sim_config.model_name)
+    # Fall back to binary preprocessor output if no ASCII preprocessor found
+    if model is None and sim_config.binary_preprocessor_file:
+        bin_path = _resolve_path(base_dir, str(sim_config.binary_preprocessor_file))
+        if bin_path.exists():
+            try:
+                model = IWFMModel.from_preprocessor_binary(bin_path)
+            except Exception:
+                pass
+    if model is None:
+        model = IWFMModel(name=sim_config.model_name)
 
     # Update model metadata with simulation settings
     model.metadata["simulation_file"] = str(simulation_file)

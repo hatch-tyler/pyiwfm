@@ -100,10 +100,7 @@ autodoc_typehints_description_target = "documented"
 
 # Suppress docutils formatting warnings from autodoc type rendering
 # (e.g., np.bool_ trailing underscore treated as RST reference marker)
-suppress_warnings = [
-    "docutils",
-    "image.not_readable",  # pre-generated tutorial figures may not exist yet
-]
+suppress_warnings = ["docutils"]
 
 # Intersphinx mapping
 intersphinx_mapping = {
