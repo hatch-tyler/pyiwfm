@@ -52,9 +52,10 @@ Plot a time series of groundwater heads:
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import functools
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -72,8 +73,37 @@ if TYPE_CHECKING:
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 
+# ---------------------------------------------------------------------------
+# Style paths and decorator
+# ---------------------------------------------------------------------------
 
-def _apply_tick_formatting(ax: Axes) -> None:
+_STYLES_DIR = Path(__file__).parent / "styles"
+SPATIAL_STYLE = str(_STYLES_DIR / "pyiwfm-spatial.mplstyle")
+CHART_STYLE = str(_STYLES_DIR / "pyiwfm-chart.mplstyle")
+
+_F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def _with_style(style_path: str) -> Callable[[_F], _F]:
+    """Decorator that wraps a plotting function in ``plt.style.context``."""
+
+    def decorator(func: _F) -> _F:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            with plt.style.context(style_path):
+                return func(*args, **kwargs)
+
+        return wrapper  # type: ignore[return-value]
+
+    return decorator
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _format_thousands(ax: Axes) -> None:
     """Apply thousands-separator formatting to both axes."""
     from matplotlib.ticker import FuncFormatter
 
@@ -82,9 +112,21 @@ def _apply_tick_formatting(ax: Axes) -> None:
 
     ax.xaxis.set_major_formatter(FuncFormatter(_thousands_fmt))
     ax.yaxis.set_major_formatter(FuncFormatter(_thousands_fmt))
-    ax.tick_params(axis="both", labelsize=9)
 
 
+def _rotate_date_labels(ax: Axes) -> None:
+    """Rotate date x-tick labels (replacement for fig.autofmt_xdate())."""
+    for label in ax.get_xticklabels():
+        label.set_rotation(30)
+        label.set_ha("right")
+
+
+# ---------------------------------------------------------------------------
+# Mesh / Spatial Plotting Functions
+# ---------------------------------------------------------------------------
+
+
+@_with_style(SPATIAL_STYLE)
 def plot_mesh(
     grid: AppGrid,
     ax: Axes | None = None,
@@ -172,14 +214,14 @@ def plot_mesh(
 
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X", fontsize=11)
-    ax.set_ylabel("Y", fontsize=11)
-    _apply_tick_formatting(ax)
-    fig.tight_layout()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    _format_thousands(ax)
 
     return fig, ax
 
 
+@_with_style(SPATIAL_STYLE)
 def plot_nodes(
     grid: AppGrid,
     ax: Axes | None = None,
@@ -228,17 +270,17 @@ def plot_nodes(
 
     if highlight_boundary and boundary_x:
         ax.scatter(boundary_x, boundary_y, s=marker_size, c=boundary_color, label="Boundary")
-        ax.legend(framealpha=0.9, edgecolor="lightgray")
+        ax.legend()
 
     ax.set_aspect("equal")
-    ax.set_xlabel("X", fontsize=11)
-    ax.set_ylabel("Y", fontsize=11)
-    _apply_tick_formatting(ax)
-    fig.tight_layout()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    _format_thousands(ax)
 
     return fig, ax
 
 
+@_with_style(SPATIAL_STYLE)
 def plot_elements(
     grid: AppGrid,
     ax: Axes | None = None,
@@ -324,7 +366,7 @@ def plot_elements(
                 )
                 for v in unique_vals
             ]
-            ax.legend(handles=legend_patches, loc="best", framealpha=0.9, edgecolor="lightgray")
+            ax.legend(handles=legend_patches, loc="best")
 
     elif color_by != "none":
         values = np.array(values_list)
@@ -356,10 +398,9 @@ def plot_elements(
     ax.add_collection(collection)
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X", fontsize=11)
-    ax.set_ylabel("Y", fontsize=11)
-    _apply_tick_formatting(ax)
-    fig.tight_layout()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    _format_thousands(ax)
 
     return fig, ax
 
@@ -473,6 +514,7 @@ def _subdivide_quads(
     )
 
 
+@_with_style(SPATIAL_STYLE)
 def plot_scalar_field(
     grid: AppGrid,
     values: NDArray[np.float64],
@@ -603,18 +645,17 @@ def plot_scalar_field(
         tcf = collection  # type: ignore[assignment]
 
     if show_colorbar:
-        cbar = fig.colorbar(tcf, ax=ax)
-        cbar.ax.tick_params(labelsize=9)
+        fig.colorbar(tcf, ax=ax)
 
     ax.set_aspect("equal")
-    ax.set_xlabel("X", fontsize=11)
-    ax.set_ylabel("Y", fontsize=11)
-    _apply_tick_formatting(ax)
-    fig.tight_layout()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    _format_thousands(ax)
 
     return fig, ax
 
 
+@_with_style(SPATIAL_STYLE)
 def plot_streams(
     streams: AppStream,
     ax: Axes | None = None,
@@ -667,14 +708,14 @@ def plot_streams(
         ax.scatter(x, y, s=node_size, c=node_color, zorder=5)
 
     ax.set_aspect("equal")
-    ax.set_xlabel("X", fontsize=11)
-    ax.set_ylabel("Y", fontsize=11)
-    _apply_tick_formatting(ax)
-    fig.tight_layout()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    _format_thousands(ax)
 
     return fig, ax
 
 
+@_with_style(SPATIAL_STYLE)
 def plot_lakes(
     lakes: AppLake,
     grid: AppGrid,
@@ -778,14 +819,14 @@ def plot_lakes(
 
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X", fontsize=11)
-    ax.set_ylabel("Y", fontsize=11)
-    _apply_tick_formatting(ax)
-    fig.tight_layout()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    _format_thousands(ax)
 
     return fig, ax
 
 
+@_with_style(SPATIAL_STYLE)
 def plot_boundary(
     grid: AppGrid,
     ax: Axes | None = None,
@@ -872,10 +913,9 @@ def plot_boundary(
 
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X", fontsize=11)
-    ax.set_ylabel("Y", fontsize=11)
-    _apply_tick_formatting(ax)
-    fig.tight_layout()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    _format_thousands(ax)
 
     return fig, ax
 
@@ -1037,6 +1077,7 @@ class MeshPlotter:
 # =============================================================================
 
 
+@_with_style(CHART_STYLE)
 def plot_timeseries(
     timeseries: TimeSeries | Sequence[TimeSeries],
     ax: Axes | None = None,
@@ -1146,42 +1187,29 @@ def plot_timeseries(
 
     # Formatting
     if title:
-        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+        ax.set_title(title)
 
-    ax.set_xlabel(xlabel, fontsize=11)
+    ax.set_xlabel(xlabel)
     if ylabel:
-        ax.set_ylabel(ylabel, fontsize=11)
+        ax.set_ylabel(ylabel)
     elif series_list and series_list[0].units:
-        ax.set_ylabel(series_list[0].units, fontsize=11)
+        ax.set_ylabel(series_list[0].units)
 
-    _has_legend = legend and len(series_list) > 1
-    if _has_legend:
-        ax.legend(
-            loc="upper left",
-            bbox_to_anchor=(1.02, 1),
-            borderaxespad=0,
-            framealpha=0.9,
-            edgecolor="lightgray",
-        )
+    if legend and len(series_list) > 1:
+        fig.legend(loc="outside upper right")
 
-    if grid:
-        ax.grid(True, alpha=0.3)
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=9)
+    if not grid:
+        ax.grid(False)
 
     # Date formatting
     if date_format:
         ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format))
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    if _has_legend:
-        fig.subplots_adjust(right=0.80)
+    _rotate_date_labels(ax)
 
     return fig, ax
 
 
+@_with_style(CHART_STYLE)
 def plot_timeseries_comparison(
     observed: TimeSeries,
     simulated: TimeSeries,
@@ -1300,24 +1328,13 @@ def plot_timeseries_comparison(
         except ImportError:
             pass
 
-    ax.legend(
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1),
-        borderaxespad=0,
-        framealpha=0.9,
-        edgecolor="lightgray",
-    )
-    ax.grid(True, alpha=0.3)
+    fig.legend(loc="outside upper right")
 
     if title:
-        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+        ax.set_title(title)
 
     if observed.units:
-        ax.set_ylabel(observed.units, fontsize=11)
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=9)
+        ax.set_ylabel(observed.units)
 
     # Residuals subplot
     if show_residuals:
@@ -1331,22 +1348,17 @@ def plot_timeseries_comparison(
 
         ax2.bar(obs_times, residuals, color="gray", alpha=0.7, width=2)
         ax2.axhline(y=0, color="black", linestyle="-", linewidth=0.5)
-        ax2.set_ylabel("Residual", fontsize=11)
-        ax2.set_xlabel("Date", fontsize=11)
-        ax2.grid(True, alpha=0.3)
-        ax2.spines["top"].set_visible(False)
-        ax2.spines["right"].set_visible(False)
-        ax2.tick_params(axis="both", labelsize=9)
+        ax2.set_ylabel("Residual")
+        ax2.set_xlabel("Date")
     else:
-        ax.set_xlabel("Date", fontsize=11)
+        ax.set_xlabel("Date")
 
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.80)
+    _rotate_date_labels(ax)
 
     return fig, ax
 
 
+@_with_style(CHART_STYLE)
 def plot_timeseries_collection(
     collection: TimeSeriesCollection,
     locations: Sequence[str] | None = None,
@@ -1399,6 +1411,7 @@ def plot_timeseries_collection(
 # =============================================================================
 
 
+@_with_style(CHART_STYLE)
 def plot_budget_bar(
     components: dict[str, float],
     ax: Axes | None = None,
@@ -1463,8 +1476,10 @@ def plot_budget_bar(
 
     if orientation == "vertical":
         bars = ax.bar(names, values, color=colors, edgecolor="black", linewidth=0.5)
-        ax.set_ylabel(f"Volume ({units})", fontsize=11)
+        ax.set_ylabel(f"Volume ({units})")
         ax.axhline(y=0, color="black", linewidth=0.8)
+        # Style enables grid on both axes; we only want y-axis grid
+        ax.xaxis.grid(False)
 
         if show_values:
             for bar, val in zip(bars, values, strict=False):
@@ -1483,8 +1498,10 @@ def plot_budget_bar(
         plt.xticks(rotation=45, ha="right")
     else:
         bars = ax.barh(names, values, color=colors, edgecolor="black", linewidth=0.5)
-        ax.set_xlabel(f"Volume ({units})", fontsize=11)
+        ax.set_xlabel(f"Volume ({units})")
         ax.axvline(x=0, color="black", linewidth=0.8)
+        # Style enables grid on both axes; we only want x-axis grid
+        ax.yaxis.grid(False)
 
         if show_values:
             for bar, val in zip(bars, values, strict=False):
@@ -1500,16 +1517,12 @@ def plot_budget_bar(
                     fontsize=9,
                 )
 
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-    ax.grid(True, alpha=0.3, axis="y" if orientation == "vertical" else "x")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=9)
-    fig.tight_layout()
+    ax.set_title(title)
 
     return fig, ax
 
 
+@_with_style(CHART_STYLE)
 def plot_budget_stacked(
     times: NDArray[np.datetime64],
     components: dict[str, NDArray[np.float64]],
@@ -1599,31 +1612,19 @@ def plot_budget_stacked(
         )
 
     ax.axhline(y=0, color="black", linewidth=1)
-    ax.set_xlabel("Date", fontsize=11)
-    ax.set_ylabel(f"Flow Rate ({units})", fontsize=11)
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-    ax.grid(True, alpha=0.3)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=9)
+    ax.set_xlabel("Date")
+    ax.set_ylabel(f"Flow Rate ({units})")
+    ax.set_title(title)
 
     if show_legend:
-        ax.legend(
-            loc="upper left",
-            bbox_to_anchor=(1.02, 1),
-            borderaxespad=0,
-            framealpha=0.9,
-            edgecolor="lightgray",
-        )
+        fig.legend(loc="outside upper right")
 
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    if show_legend:
-        fig.subplots_adjust(right=0.80)
+    _rotate_date_labels(ax)
 
     return fig, ax
 
 
+@_with_style(CHART_STYLE)
 def plot_budget_pie(
     components: dict[str, float],
     ax: Axes | None = None,
@@ -1704,12 +1705,12 @@ def plot_budget_pie(
             labels = [f"{k}\n({v:,.0f} {units})" for k, v in zip(labels, values, strict=False)]
 
         ax.pie(values, labels=labels, autopct="%1.1f%%", colors=colors, startangle=90)  # type: ignore[arg-type]
-        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+        ax.set_title(title)
 
-    fig.tight_layout()
     return fig, ax
 
 
+@_with_style(CHART_STYLE)
 def plot_water_balance(
     inflows: dict[str, float],
     outflows: dict[str, float],
@@ -1808,18 +1809,16 @@ def plot_water_balance(
     ax.set_yticks(y_pos)
     ax.set_yticklabels(categories)
     ax.axvline(x=0, color="black", linewidth=1)
-    ax.set_xlabel(f"Volume ({units})", fontsize=11)
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-    ax.grid(True, alpha=0.3, axis="x")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=9)
+    ax.set_xlabel(f"Volume ({units})")
+    ax.set_title(title)
+    # Style enables grid on both axes; we only want x-axis grid
+    ax.yaxis.grid(False)
 
     # Summary text
     summary = (
         f"Total In: {total_in:,.0f} {units}\n"
         f"Total Out: {total_out:,.0f} {units}\n"
-        f"ΔStorage: {storage_change:,.0f} {units}\n"
+        f"\u0394Storage: {storage_change:,.0f} {units}\n"
         f"Error: {balance_error:,.1f} {units} ({100 * balance_error / total_in:.2f}%)"
     )
     ax.text(
@@ -1834,10 +1833,10 @@ def plot_water_balance(
         bbox={"boxstyle": "round", "facecolor": "lightyellow", "alpha": 0.9},
     )
 
-    fig.tight_layout()
     return fig, ax
 
 
+@_with_style(CHART_STYLE)
 def plot_zbudget(
     zone_budgets: dict[int | str, dict[str, float]],
     ax: Axes | None = None,
@@ -1918,6 +1917,9 @@ def plot_zbudget(
                 color = "white" if abs(val) > np.max(np.abs(data)) * 0.5 else "black"
                 ax.text(j, i, f"{val:.0f}", ha="center", va="center", color=color, fontsize=8)
 
+        # No grid on heatmap
+        ax.grid(False)
+
     else:  # bar chart
         n_zones = len(zones)
         n_components = len(components)
@@ -1933,28 +1935,18 @@ def plot_zbudget(
 
         ax.set_xticks(x)
         ax.set_xticklabels(components, rotation=45, ha="right")
-        ax.set_ylabel(f"Volume ({units})", fontsize=11)
+        ax.set_ylabel(f"Volume ({units})")
         ax.axhline(y=0, color="black", linewidth=0.8)
-        ax.legend(
-            loc="upper left",
-            bbox_to_anchor=(1.02, 1),
-            borderaxespad=0,
-            framealpha=0.9,
-            edgecolor="lightgray",
-        )
-        ax.grid(True, alpha=0.3, axis="y")
+        fig.legend(loc="outside upper right")
+        # Style enables grid on both axes; we only want y-axis grid
+        ax.xaxis.grid(False)
 
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=9)
-    fig.tight_layout()
-    if plot_type == "bar":
-        fig.subplots_adjust(right=0.80)
+    ax.set_title(title)
 
     return fig, ax
 
 
+@_with_style(CHART_STYLE)
 def plot_budget_timeseries(
     times: NDArray[np.datetime64],
     budgets: dict[str, NDArray[np.float64]],
@@ -2024,25 +2016,13 @@ def plot_budget_timeseries(
         )
 
     ylabel = f"{'Cumulative ' if cumulative else ''}Volume ({units})"
-    ax.set_ylabel(ylabel, fontsize=11)
-    ax.set_xlabel("Date", fontsize=11)
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-    ax.legend(
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1),
-        borderaxespad=0,
-        framealpha=0.9,
-        edgecolor="lightgray",
-    )
-    ax.grid(True, alpha=0.3)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel("Date")
+    ax.set_title(title)
+    fig.legend(loc="outside upper right")
     ax.axhline(y=0, color="black", linewidth=0.5)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=9)
 
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.80)
+    _rotate_date_labels(ax)
 
     return fig, ax
 
@@ -2155,6 +2135,7 @@ class BudgetPlotter:
 # =============================================================================
 
 
+@_with_style(SPATIAL_STYLE)
 def plot_streams_colored(
     grid: AppGrid,
     streams: AppStream,
@@ -2245,14 +2226,14 @@ def plot_streams_colored(
 
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X", fontsize=11)
-    ax.set_ylabel("Y", fontsize=11)
-    _apply_tick_formatting(ax)
-    fig.tight_layout()
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    _format_thousands(ax)
 
     return fig, ax
 
 
+@_with_style(CHART_STYLE)
 def plot_timeseries_statistics(
     collection: TimeSeriesCollection,
     ax: Axes | None = None,
@@ -2338,21 +2319,13 @@ def plot_timeseries_statistics(
     if ylabel:
         ax.set_ylabel(ylabel)
     ax.set_xlabel("Date")
-    ax.legend(
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1),
-        borderaxespad=0,
-        framealpha=0.9,
-        edgecolor="lightgray",
-    )
-    ax.grid(True, alpha=0.3)
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.80)
+    fig.legend(loc="outside upper right")
+    _rotate_date_labels(ax)
 
     return fig, ax
 
 
+@_with_style(CHART_STYLE)
 def plot_dual_axis(
     ts1: TimeSeries,
     ts2: TimeSeries,
@@ -2409,6 +2382,8 @@ def plot_dual_axis(
     ax.tick_params(axis="y", labelcolor=color1)
 
     ax2 = ax.twinx()
+    # Chart style hides right spine; restore it for the twin axis
+    ax2.spines["right"].set_visible(True)
     ax2.plot(ts2.times, ts2.values, style2, color=color2, label=lbl2)
     ax2.set_ylabel(ylabel2 or str(getattr(ts2, "units", "")), color=color2)
     ax2.tick_params(axis="y", labelcolor=color2)
@@ -2416,28 +2391,22 @@ def plot_dual_axis(
     if title:
         ax.set_title(title)
     ax.set_xlabel("Date")
-    ax.grid(True, alpha=0.3)
 
     # Combined legend
     lines1, labels1 = ax.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax.legend(
+    fig.legend(
         lines1 + lines2,
         labels1 + labels2,
-        loc="upper left",
-        bbox_to_anchor=(1.12, 1),
-        borderaxespad=0,
-        framealpha=0.9,
-        edgecolor="lightgray",
+        loc="outside upper right",
     )
 
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.78)
+    _rotate_date_labels(ax)
 
     return fig, (ax, ax2)
 
 
+@_with_style(CHART_STYLE)
 def plot_streamflow_hydrograph(
     times: NDArray[np.datetime64],
     flows: NDArray[np.float64],
@@ -2507,23 +2476,11 @@ def plot_streamflow_hydrograph(
     if log_scale:
         ax.set_yscale("log")
 
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-    ax.set_xlabel("Date", fontsize=11)
-    ax.set_ylabel(f"{ylabel} ({units})", fontsize=11)
-    ax.legend(
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1),
-        borderaxespad=0,
-        framealpha=0.9,
-        edgecolor="lightgray",
-    )
-    ax.grid(True, alpha=0.3)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=9)
-    fig.autofmt_xdate()
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.80)
+    ax.set_title(title)
+    ax.set_xlabel("Date")
+    ax.set_ylabel(f"{ylabel} ({units})")
+    fig.legend(loc="outside upper right")
+    _rotate_date_labels(ax)
 
     return fig, ax
 
@@ -2533,6 +2490,7 @@ def plot_streamflow_hydrograph(
 # =============================================================================
 
 
+@_with_style(CHART_STYLE)
 def plot_cross_section(
     cross_section: CrossSection,
     ax: Axes | None = None,
@@ -2674,27 +2632,16 @@ def plot_cross_section(
         sv[~valid] = np.nan
         ax.plot(dist, sv, "b--", linewidth=2, label=scalar_name)
 
-    ax.set_xlabel("Distance", fontsize=11)
-    ax.set_ylabel("Elevation", fontsize=11)
+    ax.set_xlabel("Distance")
+    ax.set_ylabel("Elevation")
     if title:
-        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-    ax.legend(
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1),
-        borderaxespad=0,
-        framealpha=0.9,
-        edgecolor="lightgray",
-    )
-    ax.grid(True, alpha=0.3)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=9)
-    fig.tight_layout()
-    fig.subplots_adjust(right=0.80)
+        ax.set_title(title)
+    fig.legend(loc="outside upper right")
 
     return fig, ax
 
 
+@_with_style(SPATIAL_STYLE)
 def plot_cross_section_location(
     grid: AppGrid,
     cross_section: CrossSection,
@@ -2767,5 +2714,4 @@ def plot_cross_section_location(
             zorder=11,
         )
 
-    fig.tight_layout()
     return fig, ax

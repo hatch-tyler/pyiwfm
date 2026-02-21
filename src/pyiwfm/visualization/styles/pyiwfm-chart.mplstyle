@@ -1,0 +1,17 @@
+# pyiwfm chart/timeseries plot style
+figure.constrained_layout.use: True
+figure.figsize: 12, 6
+axes.labelsize: 11
+axes.titlesize: 14
+axes.titleweight: bold
+axes.titlepad: 12
+axes.spines.top: False
+axes.spines.right: False
+xtick.labelsize: 9
+ytick.labelsize: 9
+legend.framealpha: 0.9
+legend.edgecolor: lightgray
+legend.fontsize: 9
+axes.grid: True
+axes.grid.axis: both
+grid.alpha: 0.3
