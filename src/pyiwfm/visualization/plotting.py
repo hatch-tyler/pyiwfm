@@ -368,12 +368,14 @@ def _subdivide_quads(
         xi_flat = xi.ravel()
         eta_flat = eta.ravel()
         # Shape function matrix: (n*n, 4)
-        shape_funcs = 0.25 * np.column_stack([
-            (1 - xi_flat) * (1 - eta_flat),
-            (1 + xi_flat) * (1 - eta_flat),
-            (1 + xi_flat) * (1 + eta_flat),
-            (1 - xi_flat) * (1 + eta_flat),
-        ])
+        shape_funcs = 0.25 * np.column_stack(
+            [
+                (1 - xi_flat) * (1 - eta_flat),
+                (1 + xi_flat) * (1 - eta_flat),
+                (1 + xi_flat) * (1 + eta_flat),
+                (1 - xi_flat) * (1 + eta_flat),
+            ]
+        )
 
         # Precompute triangle template for the n x n structured grid
         row, col = np.mgrid[: n - 1, : n - 1]
@@ -496,7 +498,11 @@ def plot_scalar_field(
         if has_quads and n_subdiv > 1:
             # Bilinear FE subdivision for quads
             sub_x, sub_y, sub_v, sub_tri = _subdivide_quads(
-                elem_conn, x, y, values, n_subdiv,
+                elem_conn,
+                x,
+                y,
+                values,
+                n_subdiv,
             )
             triang = Triangulation(sub_x, sub_y, sub_tri)
             tcf = ax.tripcolor(triang, sub_v, cmap=cmap, norm=norm, shading="gouraud")
