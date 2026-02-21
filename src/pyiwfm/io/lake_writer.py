@@ -227,7 +227,7 @@ class LakeComponentWriter(TemplateWriter):
             ichlmax = getattr(lake, "max_elev_column", 0) or (i + 1)
             icetlk = getattr(lake, "et_column", 7)
             icpcplk = getattr(lake, "precip_column", 2)
-            name = getattr(lake, "name", f"Lake{lake.id}")
+            name = getattr(lake, "name", "") or f"Lake{lake.id}"
             initial_elev = getattr(lake, "initial_elevation", 280.0)
 
             entry = {

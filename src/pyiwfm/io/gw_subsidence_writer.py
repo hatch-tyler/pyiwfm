@@ -51,14 +51,17 @@ def write_subsidence_main(config: SubsidenceConfig, filepath: Path | str) -> Pat
         if config.version:
             f.write(f"#{config.version}\n")
 
-        # IC file
-        _write_value(f, str(config.ic_file or ""), "Initial conditions file")
+        # IC file (use raw path for roundtrip fidelity)
+        ic_str = config._raw_ic_file or str(config.ic_file or "")
+        _write_value(f, ic_str, "Initial conditions file")
 
         # Tecplot output file
-        _write_value(f, str(config.tecplot_file or ""), "Tecplot output file")
+        tec_str = config._raw_tecplot_file or str(config.tecplot_file or "")
+        _write_value(f, tec_str, "Tecplot output file")
 
         # Final subsidence output file
-        _write_value(f, str(config.final_subs_file or ""), "Final subsidence output file")
+        final_str = config._raw_final_subs_file or str(config.final_subs_file or "")
+        _write_value(f, final_str, "Final subsidence output file")
 
         # Output conversion factor
         _write_value(f, config.output_factor, "Output conversion factor")
@@ -74,24 +77,32 @@ def write_subsidence_main(config: SubsidenceConfig, filepath: Path | str) -> Pat
             _write_value(f, config.hydrograph_coord_factor, "FACTXY")
 
             # SUBHYDOUTFL (output file path)
-            _write_value(
-                f,
-                str(config.hydrograph_output_file or ""),
-                "SUBHYDOUTFL",
+            hyd_str = config._raw_hydrograph_output_file or str(
+                config.hydrograph_output_file or ""
             )
+            _write_value(f, hyd_str, "SUBHYDOUTFL")
 
-            # Hydrograph specs: ID HYDTYP ILYR X Y [/ NAME]
+            # Hydrograph specs: ID HYDTYP ILYR X Y [/ NAME] or ID HYDTYP ILYR IOUTS [NAME]
             for spec in config.hydrograph_specs:
-                # Reverse the coordinate factor applied during reading
-                factor = config.hydrograph_coord_factor
-                x = spec.x / factor if factor != 0.0 else spec.x
-                y = spec.y / factor if factor != 0.0 else spec.y
-                name_part = f"  / {spec.name}" if spec.name else ""
-                f.write(
-                    f"     {spec.id:>6d}  {spec.hydtyp:>3d}  "
-                    f"{spec.layer:>3d}  {x:>15.4f}  {y:>15.4f}"
-                    f"{name_part}\n"
-                )
+                name_part = f"     {spec.name}" if spec.name else ""
+                if spec.hydtyp == 0:
+                    # X-Y coordinate format: reverse FACTXY
+                    factor = config.hydrograph_coord_factor
+                    x = spec.x / factor if factor != 0.0 else spec.x
+                    y = spec.y / factor if factor != 0.0 else spec.y
+                    f.write(
+                        f"    {spec.id:>4d}       {spec.hydtyp}         "
+                        f"{spec.layer}         {x:.1f}    {y:.1f}"
+                        f"            {name_part}\n"
+                    )
+                else:
+                    # Node number format: x holds node ID
+                    node_id = int(spec.x)
+                    f.write(
+                        f"    {spec.id:>4d}       {spec.hydtyp}         "
+                        f"{spec.layer}                                  "
+                        f"{node_id}     {name_part}\n"
+                    )
 
         # v5.0: interbed discretization thickness
         if is_v50:
@@ -105,9 +116,11 @@ def write_subsidence_main(config: SubsidenceConfig, filepath: Path | str) -> Pat
             factors_str = "  ".join(f"{cf:>12.6f}" for cf in config.conversion_factors)
             _write_value(f, factors_str, "Conversion factors")
 
-        # Write direct parameter data (only for NGroup == 0)
+        # Write parameter data
         if config.n_parametric_grids == 0 and config.node_params:
             _write_subsidence_params(f, config, is_v50)
+        elif config.n_parametric_grids > 0 and config.parametric_grids:
+            _write_parametric_grids(f, config)
 
     return filepath
 
@@ -162,6 +175,54 @@ def _write_subsidence_params(f: TextIO, config: SubsidenceConfig, is_v50: bool) 
                 line += f"  {kv:>12.6f}  {neq:>8.1f}"
 
             f.write(line + "\n")
+
+
+def _write_parametric_grids(f: TextIO, config: SubsidenceConfig) -> None:
+    """Write parametric grid sections for subsidence parameters.
+
+    Each grid group writes: node range string, NDP, NEP,
+    element definitions (if NEP > 0), and node data with
+    continuation rows per layer.
+    """
+    factors = config.conversion_factors
+    fx = factors[0] if len(factors) > 0 else 1.0
+    param_factors = [factors[i] if i < len(factors) else 1.0 for i in range(1, 6)]
+
+    for grid in config.parametric_grids:
+        # Node range string
+        f.write(f"   {grid.node_range_str}\n")
+
+        # NDP, NEP
+        _write_value(f, grid.n_nodes, "NDP")
+        _write_value(f, grid.n_elements, "NEP")
+
+        # Element definitions (if NEP > 0)
+        for elem in grid.elements:
+            parts = "  ".join(f"{v + 1:>6d}" for v in elem)
+            f.write(f"     {parts}\n")
+
+        # Node data: first line has ID X Y P1..P5, continuation lines have P1..P5
+        n_layers = grid.node_values.shape[1] if grid.node_values.ndim == 3 else 1
+        for i in range(grid.n_nodes):
+            for layer_idx in range(n_layers):
+                # Reverse conversion factors
+                vals = []
+                for p in range(5):
+                    raw = grid.node_values[i, layer_idx, p] / param_factors[p]
+                    vals.append(raw)
+
+                if layer_idx == 0:
+                    # First layer: node ID, coordinates, then params
+                    px = grid.node_coords[i, 0] / fx if fx != 0.0 else grid.node_coords[i, 0]
+                    py = grid.node_coords[i, 1] / fx if fx != 0.0 else grid.node_coords[i, 1]
+                    line = f"    {i + 1:>4d}      {px:>10.1f}       {py:>10.1f}"
+                    for v in vals:
+                        line += f"         {v:.1f}"
+                    f.write(line + "\n")
+                else:
+                    # Continuation line: params only
+                    parts_str = "  ".join(f"{v:>12.1f}" for v in vals)
+                    f.write(f"                                           {parts_str}\n")
 
 
 def write_subsidence_ic(config: SubsidenceConfig, filepath: Path | str) -> Path:

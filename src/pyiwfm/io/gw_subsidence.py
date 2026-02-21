@@ -89,6 +89,7 @@ class ParametricSubsidenceData:
     """Raw parametric grid data for subsidence parameters.
 
     Attributes:
+        node_range_str: Original node range string (e.g. ``"1-441"``).
         n_nodes: Number of parametric grid nodes.
         n_elements: Number of parametric grid elements.
         elements: Element vertex index tuples (0-based into node arrays).
@@ -98,6 +99,7 @@ class ParametricSubsidenceData:
             PreCompactHead.
     """
 
+    node_range_str: str
     n_nodes: int
     n_elements: int
     elements: list[tuple[int, ...]]
@@ -144,6 +146,12 @@ class SubsidenceConfig:
     hydrograph_coord_factor: float = 1.0
     hydrograph_output_file: Path | None = None
     hydrograph_specs: list[SubsidenceHydrographSpec] = field(default_factory=list)
+
+    # Raw path strings for roundtrip fidelity
+    _raw_ic_file: str = ""
+    _raw_tecplot_file: str = ""
+    _raw_final_subs_file: str = ""
+    _raw_hydrograph_output_file: str = ""
 
     parametric_grids: list[ParametricSubsidenceData] = field(default_factory=list)
 
@@ -201,16 +209,19 @@ class SubsidenceReader:
             # IC file
             ic_path = _next_data_or_empty(f)
             if ic_path:
+                config._raw_ic_file = ic_path
                 config.ic_file = _resolve_path_f(base_dir, ic_path)
 
             # Tecplot output file
             tec_path = _next_data_or_empty(f)
             if tec_path:
+                config._raw_tecplot_file = tec_path
                 config.tecplot_file = _resolve_path_f(base_dir, tec_path)
 
             # Final subsidence output file
             final_path = _next_data_or_empty(f)
             if final_path:
+                config._raw_final_subs_file = final_path
                 config.final_subs_file = _resolve_path_f(base_dir, final_path)
 
             # Output conversion factor
@@ -241,6 +252,7 @@ class SubsidenceReader:
                 # SUBHYDOUTFL (output file path)
                 hydout_path = _next_data_or_empty(f)
                 if hydout_path:
+                    config._raw_hydrograph_output_file = hydout_path
                     config.hydrograph_output_file = _resolve_path_f(base_dir, hydout_path)
 
                 # Read NOUTS rows:
@@ -507,6 +519,7 @@ class SubsidenceReader:
 
             grids.append(
                 ParametricSubsidenceData(
+                    node_range_str=node_range_str,
                     n_nodes=node_count,
                     n_elements=nep,
                     elements=elements,

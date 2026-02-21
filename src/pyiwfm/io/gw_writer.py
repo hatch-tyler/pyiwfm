@@ -836,9 +836,20 @@ class GWComponentWriter(TemplateWriter):
         self._ensure_dir(output_path)
 
         gw = self.model.groundwater
+        subs_config = getattr(gw, "subsidence_config", None) if gw else None
+
+        from pyiwfm.io.gw_subsidence import SubsidenceConfig
+
+        if isinstance(subs_config, SubsidenceConfig):
+            from pyiwfm.io.gw_subsidence_writer import write_subsidence_main
+
+            result = write_subsidence_main(subs_config, output_path)
+            logger.info(f"Wrote subsidence file: {output_path}")
+            return result
+
+        # Fallback: template-based output for programmatic models
         subsidence = gw.subsidence if gw else []
         node_subsidence = gw.node_subsidence if gw else []
-        subs_config = getattr(gw, "subsidence_config", None) if gw else None
 
         generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -848,10 +859,8 @@ class GWComponentWriter(TemplateWriter):
             "subsidence_data": subsidence,
             "n_node_subsidence": len(node_subsidence),
             "node_subsidence": node_subsidence,
-            "subs_version": getattr(subs_config, "version", "") if subs_config else "",
-            "n_hydrograph_outputs": getattr(subs_config, "n_hydrograph_outputs", 0)
-            if subs_config
-            else 0,
+            "subs_version": "",
+            "n_hydrograph_outputs": 0,
         }
 
         content = self._engine.render_template("groundwater/subsidence.j2", **context)
