@@ -77,9 +77,7 @@ def write_subsidence_main(config: SubsidenceConfig, filepath: Path | str) -> Pat
             _write_value(f, config.hydrograph_coord_factor, "FACTXY")
 
             # SUBHYDOUTFL (output file path)
-            hyd_str = config._raw_hydrograph_output_file or str(
-                config.hydrograph_output_file or ""
-            )
+            hyd_str = config._raw_hydrograph_output_file or str(config.hydrograph_output_file or "")
             _write_value(f, hyd_str, "SUBHYDOUTFL")
 
             # Hydrograph specs: ID HYDTYP ILYR X Y [/ NAME] or ID HYDTYP ILYR IOUTS [NAME]
