@@ -1,8 +1,19 @@
 Tutorial: Reading an Existing IWFM Model
 =========================================
 
-This tutorial demonstrates how to load existing IWFM models with pyiwfm,
-inspect their components, read simulation results, and create visualizations.
+This tutorial demonstrates how to load an existing IWFM model with pyiwfm,
+inspect its components, and create visualizations.  All examples use the
+**C2VSimCG** (California Central Valley Simulation -- Coarse Grid) model, a
+real-world IWFM model maintained by the California Department of Water
+Resources.
+
+.. note::
+
+   The figures in this tutorial were pre-generated from C2VSimCG and checked
+   into the repository so the documentation builds without requiring access
+   to the model files.  To regenerate them, run::
+
+       python docs/scripts/generate_tutorial_figures.py /path/to/C2VSimCG
 
 Learning Objectives
 -------------------
@@ -22,9 +33,9 @@ Overview
 
 pyiwfm provides three primary entry points for loading IWFM models:
 
-- **``load_complete_model()``** — simplest, one-line loading
-- **``CompleteModelLoader``** — more control, detailed error diagnostics
-- **``IWFMModel.from_*()`` classmethods** — object-oriented API
+- **``load_complete_model()``** -- simplest, one-line loading
+- **``CompleteModelLoader``** -- more control, detailed error diagnostics
+- **``IWFMModel.from_*()`` classmethods** -- object-oriented API
 
 Choose based on your needs: quick exploration, production workflows with
 error handling, or integration into larger Python applications.
@@ -38,8 +49,7 @@ The fastest way to load a model is the one-liner ``load_complete_model()``:
 
    from pyiwfm.io import load_complete_model
 
-   # Load from simulation main input file
-   model = load_complete_model("Simulation/Simulation.in")
+   model = load_complete_model("C2VSimCG/Simulation/Simulation.in")
 
    # Print summary
    print(model.summary())
@@ -48,19 +58,38 @@ This reads the simulation main file, follows file references to the
 preprocessor and all component files, and returns a fully populated
 ``IWFMModel`` object.
 
-**Expected output:**
+**Expected output (C2VSimCG):**
 
 .. code-block:: text
 
-   IWFM Model Summary
-   ==================
-   Nodes:         32537
-   Elements:      31517
-   Layers:        4
-   Groundwater:   Yes
-   Streams:       Yes
-   Lakes:         Yes
-   Root Zone:     Yes
+   IWFM Model: C2VSimCG
+   =====================
+
+   Mesh & Stratigraphy:
+     Nodes: 1393
+     Elements: 1392
+     Layers: 4
+     Subregions: 21
+
+   Groundwater Component:
+     Wells: ...
+     Hydrograph Locations: ...
+     Boundary Conditions: ...
+     Tile Drains: ...
+     Aquifer Parameters: Loaded
+
+   Stream Component:
+     Stream Nodes: ...
+     Reaches: ...
+     Diversions: ...
+     Bypasses: ...
+
+   Lake Component:
+     Lakes: ...
+     Lake Elements: ...
+
+   Root Zone Component:
+     Crop Types: ...
 
 Inspecting the Model
 --------------------
@@ -70,11 +99,11 @@ Once loaded, access all model components through attributes:
 .. code-block:: python
 
    # Mesh geometry
-   print(f"Nodes:    {model.n_nodes}")
-   print(f"Elements: {model.n_elements}")
+   print(f"Nodes:    {model.n_nodes}")       # 1393
+   print(f"Elements: {model.n_elements}")     # 1392
 
    # Stratigraphy
-   print(f"Layers:   {model.n_layers}")
+   print(f"Layers:   {model.n_layers}")       # 4
 
    # Check which components are loaded
    components = {
@@ -89,25 +118,153 @@ Once loaded, access all model components through attributes:
        status = "Loaded" if loaded else "Not present"
        print(f"  {name}: {status}")
 
-Visualize the mesh immediately after loading. Here we use a sample mesh to
-demonstrate what the plot looks like:
+Visualize the mesh immediately after loading:
 
-.. plot::
-   :include-source:
+.. code-block:: python
 
-   import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh
    from pyiwfm.visualization.plotting import plot_mesh
 
-   # In practice: plot_mesh(model.mesh, ...)
-   mesh = create_sample_mesh(nx=15, ny=12, n_subregions=4)
+   fig, ax = plot_mesh(model.mesh, show_edges=True, edge_color='gray',
+                       fill_color='lightblue', alpha=0.3, figsize=(10, 10))
+   ax.set_title(f'C2VSimCG Mesh ({model.n_nodes} nodes, {model.n_elements} elements)')
+   ax.set_xlabel('Easting (ft)')
+   ax.set_ylabel('Northing (ft)')
 
-   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='gray',
-                       fill_color='lightblue', alpha=0.3)
-   ax.set_title(f'Loaded Model Mesh ({mesh.n_nodes} nodes, {mesh.n_elements} elements)')
-   ax.set_xlabel('X (feet)')
-   ax.set_ylabel('Y (feet)')
-   plt.show()
+.. image:: /_static/tutorials/reading_models/mesh.png
+   :alt: C2VSimCG finite element mesh
+   :width: 100%
+
+Color elements by subregion to see how the Central Valley is partitioned:
+
+.. code-block:: python
+
+   from pyiwfm.visualization.plotting import plot_elements
+
+   fig, ax = plot_elements(model.mesh, color_by='subregion',
+                           cmap='Set3', alpha=0.7, figsize=(10, 10))
+   ax.set_title(f'C2VSimCG Subregions ({model.mesh.n_subregions} subregions)')
+
+.. image:: /_static/tutorials/reading_models/subregions.png
+   :alt: C2VSimCG elements colored by subregion
+   :width: 100%
+
+Stream Network
+--------------
+
+Access the stream component to inspect reaches, stream nodes, diversions,
+and bypasses:
+
+.. code-block:: python
+
+   streams = model.streams
+   print(f"Stream Nodes: {streams.n_nodes}")
+   print(f"Reaches:      {streams.n_reaches}")
+   print(f"Diversions:   {streams.n_diversions}")
+   print(f"Bypasses:     {streams.n_bypasses}")
+
+Overlay the stream network on the mesh:
+
+.. code-block:: python
+
+   from pyiwfm.visualization.plotting import plot_mesh, plot_streams
+
+   fig, ax = plot_mesh(model.mesh, show_edges=True, edge_color='lightgray',
+                       fill_color='white', alpha=0.15, figsize=(10, 10))
+   plot_streams(model.streams, ax=ax, line_color='blue', line_width=1.5)
+   ax.set_title('C2VSimCG Stream Network')
+
+.. image:: /_static/tutorials/reading_models/streams.png
+   :alt: C2VSimCG stream network overlaid on mesh
+   :width: 100%
+
+Lakes
+-----
+
+Access the lake component:
+
+.. code-block:: python
+
+   lakes = model.lakes
+   print(f"Number of lakes: {lakes.n_lakes}")
+   print(f"Lake elements:   {lakes.n_lake_elements}")
+
+Visualize lake boundaries on the mesh:
+
+.. code-block:: python
+
+   from pyiwfm.visualization.plotting import plot_lakes, plot_mesh
+
+   fig, ax = plot_mesh(model.mesh, show_edges=True, edge_color='lightgray',
+                       fill_color='white', alpha=0.15, figsize=(10, 10))
+   plot_lakes(model.lakes, model.mesh, ax=ax, fill_color='cyan',
+              edge_color='blue', alpha=0.5)
+   ax.set_title('C2VSimCG Lakes')
+
+.. image:: /_static/tutorials/reading_models/lakes.png
+   :alt: C2VSimCG lake boundaries on mesh
+   :width: 100%
+
+Stratigraphy and Ground Surface
+-------------------------------
+
+The stratigraphy contains ground surface elevation and layer top/bottom
+elevations at every node:
+
+.. code-block:: python
+
+   strat = model.stratigraphy
+   print(f"Layers:          {strat.n_layers}")
+   print(f"Nodes:           {strat.n_nodes}")
+   print(f"GS elev range:   {strat.gs_elev.min():.0f} - {strat.gs_elev.max():.0f} ft")
+
+Plot the ground surface elevation as a scalar field:
+
+.. code-block:: python
+
+   from pyiwfm.visualization.plotting import plot_scalar_field
+
+   fig, ax = plot_scalar_field(model.mesh, strat.gs_elev,
+                               field_type='node', cmap='terrain',
+                               show_mesh=False, figsize=(10, 10))
+   ax.set_title('C2VSimCG Ground Surface Elevation (ft)')
+
+.. image:: /_static/tutorials/reading_models/ground_surface.png
+   :alt: C2VSimCG ground surface elevation
+   :width: 100%
+
+Compute and plot Layer 1 thickness:
+
+.. code-block:: python
+
+   thickness = strat.get_layer_thickness(0)  # Layer 1 (0-indexed)
+   fig, ax = plot_scalar_field(model.mesh, thickness,
+                               field_type='node', cmap='YlOrRd',
+                               show_mesh=False, figsize=(10, 10))
+   ax.set_title('C2VSimCG Layer 1 Thickness (ft)')
+
+.. image:: /_static/tutorials/reading_models/layer_thickness.png
+   :alt: C2VSimCG Layer 1 thickness
+   :width: 100%
+
+Extract and plot a vertical cross-section that cuts east-west through the
+center of the model domain:
+
+.. code-block:: python
+
+   from pyiwfm.core.cross_section import CrossSectionExtractor
+   from pyiwfm.visualization.plotting import plot_cross_section
+
+   extractor = CrossSectionExtractor(model.mesh, model.stratigraphy)
+   xs = extractor.extract(
+       start=(x_min, y_mid),   # western edge, midpoint latitude
+       end=(x_max, y_mid),     # eastern edge
+       n_samples=200,
+   )
+   fig, ax = plot_cross_section(xs, title='C2VSimCG East-West Cross-Section')
+
+.. image:: /_static/tutorials/reading_models/cross_section.png
+   :alt: C2VSimCG east-west stratigraphic cross-section
+   :width: 100%
 
 Loading with Error Handling
 ---------------------------
@@ -120,8 +277,8 @@ diagnostics via ``ModelLoadResult``:
    from pyiwfm.io import CompleteModelLoader
 
    loader = CompleteModelLoader(
-       simulation_file="Simulation/Simulation.in",
-       preprocessor_file="Preprocessor/Preprocessor.in",
+       simulation_file="C2VSimCG/Simulation/Simulation.in",
+       preprocessor_file="C2VSimCG/Preprocessor/Preprocessor.in",
    )
    result = loader.load()
 
@@ -161,8 +318,8 @@ This is useful when you only need specific parts of a model:
    from pyiwfm.io import read_nodes, read_elements, read_stratigraphy
 
    # Load just the mesh
-   nodes = read_nodes("Preprocessor/Nodal.dat")
-   elements = read_elements("Preprocessor/Element.dat")
+   nodes = read_nodes("C2VSimCG/Preprocessor/Nodal.dat")
+   elements = read_elements("C2VSimCG/Preprocessor/Element.dat")
 
    from pyiwfm.core.mesh import AppGrid
    grid = AppGrid(nodes=nodes, elements=elements)
@@ -171,7 +328,7 @@ This is useful when you only need specific parts of a model:
    print(f"Loaded mesh: {grid.n_nodes} nodes, {grid.n_elements} elements")
 
    # Load stratigraphy separately
-   stratigraphy = read_stratigraphy("Preprocessor/Stratigraphy.dat")
+   stratigraphy = read_stratigraphy("C2VSimCG/Preprocessor/Stratigraphy.dat")
    print(f"Stratigraphy: {stratigraphy.n_layers} layers")
 
 Or load just the preprocessor portion (mesh + stratigraphy + stream/lake geometry):
@@ -180,38 +337,9 @@ Or load just the preprocessor portion (mesh + stratigraphy + stream/lake geometr
 
    from pyiwfm.core.model import IWFMModel
 
-   model = IWFMModel.from_preprocessor("Preprocessor/Preprocessor.in")
+   model = IWFMModel.from_preprocessor("C2VSimCG/Preprocessor/Preprocessor.in")
    print(f"Loaded mesh and stratigraphy only")
    print(f"Nodes: {model.n_nodes}, Layers: {model.n_layers}")
-
-Visualize the loaded mesh with a stream network overlay:
-
-.. plot::
-   :include-source:
-
-   import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh, create_sample_stream_network
-   from pyiwfm.visualization.plotting import plot_mesh
-
-   # In practice: plot_mesh(model.mesh, ...) + plot_streams(model.streams, ...)
-   mesh = create_sample_mesh(nx=15, ny=12, n_subregions=4)
-   stream_nodes, reaches = create_sample_stream_network(mesh)
-
-   fig, ax = plot_mesh(mesh, show_edges=True, edge_color='lightgray', alpha=0.2)
-
-   # Overlay stream reaches
-   for from_idx, to_idx in reaches:
-       x1, y1 = stream_nodes[from_idx]
-       x2, y2 = stream_nodes[to_idx]
-       ax.plot([x1, x2], [y1, y2], 'b-', linewidth=2, zorder=3)
-   sx, sy = zip(*stream_nodes)
-   ax.scatter(sx, sy, c='blue', s=40, zorder=4, label='Stream Nodes')
-
-   ax.set_title('Loaded Model with Streams')
-   ax.set_xlabel('X (feet)')
-   ax.set_ylabel('Y (feet)')
-   ax.legend()
-   plt.show()
 
 Reading Simulation Results
 --------------------------
@@ -225,7 +353,7 @@ After running an IWFM simulation, load results for visualization:
    from pyiwfm.visualization.webapi.hydrograph_reader import read_hydrograph_file
 
    # Read head hydrograph output
-   times, heads = read_hydrograph_file("Results/GW_Heads.out")
+   times, heads = read_hydrograph_file("C2VSimCG/Results/GW_Heads.out")
    print(f"Head data: {len(times)} timesteps")
 
 **Budget data:**
@@ -234,49 +362,56 @@ After running an IWFM simulation, load results for visualization:
 
    from pyiwfm.io import BudgetReader
 
-   reader = BudgetReader("Results/GW_Budget.hdf")
+   reader = BudgetReader("C2VSimCG/Results/GW_Budget.hdf")
    budget_data = reader.read()
    print(f"Budget components: {list(budget_data.keys())}")
 
-Visualize head distribution at a single timestep:
+The following figures show what C2VSimCG-scale budget plots look like
+(illustrative values -- actual values depend on your simulation results):
 
-.. plot::
-   :include-source:
+**Budget bar chart:**
 
-   import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh, create_sample_scalar_field
-   from pyiwfm.visualization.plotting import plot_scalar_field
+.. code-block:: python
 
-   # In practice: plot_scalar_field(model.mesh, heads[-1, :], ...)
-   mesh = create_sample_mesh(nx=15, ny=12, n_subregions=4)
-   head = create_sample_scalar_field(mesh, field_type='head')
+   from pyiwfm.visualization.plotting import plot_budget_bar
 
-   fig, ax = plot_scalar_field(mesh, head, field_type='node', cmap='viridis',
-                               show_mesh=True, edge_color='white')
-   ax.set_title('Groundwater Head (Final Timestep)')
-   ax.set_xlabel('X (feet)')
-   ax.set_ylabel('Y (feet)')
-   plt.show()
+   budget_components = {
+       'Deep Percolation': 5_800_000,
+       'Stream Seepage': 2_400_000,
+       'Subsurface Inflow': 800_000,
+       'Pumping': -7_500_000,
+       'Outflow to Streams': -1_200_000,
+       'Subsurface Outflow': -300_000,
+   }
+   fig, ax = plot_budget_bar(budget_components,
+                              title='C2VSimCG Groundwater Budget',
+                              units='AF/year')
 
-Plot head time series at selected nodes:
+.. image:: /_static/tutorials/reading_models/budget_bar.png
+   :alt: C2VSimCG groundwater budget bar chart
+   :width: 100%
 
-.. plot::
-   :include-source:
+**Budget stacked over time:**
 
-   import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_timeseries
-   from pyiwfm.visualization.plotting import plot_timeseries
+.. code-block:: python
 
-   # In practice: create TimeSeries from heads[:, node_id] arrays
-   series_list = [
-       create_sample_timeseries(name="Node 100", n_years=10, trend=-0.3, noise_level=0.05),
-       create_sample_timeseries(name="Node 500", n_years=10, trend=-0.6, noise_level=0.08),
-       create_sample_timeseries(name="Node 1000", n_years=10, trend=-0.4, noise_level=0.06),
-   ]
+   import numpy as np
+   from pyiwfm.visualization.plotting import plot_budget_stacked
 
-   fig, ax = plot_timeseries(series_list, title='Head at Selected Nodes',
-                              ylabel='Head (ft)')
-   plt.show()
+   times = np.arange('2005-01-01', '2015-01-01', dtype='datetime64[Y]')
+   components = {
+       'Deep Percolation': 5_800_000 + np.random.normal(0, 400_000, 10),
+       'Stream Seepage': 2_400_000 + np.random.normal(0, 200_000, 10),
+       'Pumping': -(7_500_000 + np.arange(10) * 50_000),
+       'Outflow to Streams': -(1_200_000 + np.random.normal(0, 100_000, 10)),
+   }
+   fig, ax = plot_budget_stacked(times, components,
+                                  title='C2VSimCG GW Budget Over Time',
+                                  units='AF/year')
+
+.. image:: /_static/tutorials/reading_models/budget_stacked.png
+   :alt: C2VSimCG groundwater budget stacked over time
+   :width: 100%
 
 Comment-Preserving Load
 -----------------------
@@ -289,7 +424,7 @@ comments intact, use the comment-preserving workflow:
    from pyiwfm.io import load_model_with_comments
 
    # Load model AND comment metadata
-   model, comments = load_model_with_comments("Simulation/Simulation.in")
+   model, comments = load_model_with_comments("C2VSimCG/Simulation/Simulation.in")
 
    # Inspect preserved comments
    for file_key, metadata in comments.items():
@@ -306,94 +441,6 @@ comments intact, use the comment-preserving workflow:
 
 This ensures that user comments, header blocks, and inline descriptions
 from the original files are retained in the output.
-
-Visualizing the Loaded Model
------------------------------
-
-Quick visualization gallery using pyiwfm helpers. These examples use
-sample data to show what each plot looks like:
-
-**Mesh with element IDs:**
-
-.. plot::
-   :include-source:
-
-   import matplotlib.pyplot as plt
-   from pyiwfm.sample_models import create_sample_mesh
-   from pyiwfm.visualization.plotting import plot_mesh
-
-   mesh = create_sample_mesh(nx=6, ny=6, n_subregions=2)
-   fig, ax = plot_mesh(mesh, show_element_ids=True, fill_color='lightyellow', alpha=0.5)
-   ax.set_title('Mesh with Element IDs')
-   ax.set_xlabel('X (feet)')
-   ax.set_ylabel('Y (feet)')
-   plt.show()
-
-**Layer thickness as scalar field:**
-
-.. plot::
-   :include-source:
-
-   import matplotlib.pyplot as plt
-   import numpy as np
-   from pyiwfm.sample_models import create_sample_mesh, create_sample_stratigraphy
-   from pyiwfm.visualization.plotting import plot_scalar_field
-
-   mesh = create_sample_mesh(nx=15, ny=12, n_subregions=4)
-   strat = create_sample_stratigraphy(mesh, n_layers=3, surface_base=100.0,
-                                       layer_thickness=50.0)
-
-   thickness = strat.top_elev[:, 0] - strat.bottom_elev[:, 0]
-   fig, ax = plot_scalar_field(mesh, thickness, field_type='node', cmap='YlOrRd')
-   ax.set_title('Layer 1 Thickness (ft)')
-   ax.set_xlabel('X (feet)')
-   ax.set_ylabel('Y (feet)')
-   plt.show()
-
-**Budget bar chart:**
-
-.. plot::
-   :include-source:
-
-   import matplotlib.pyplot as plt
-   from pyiwfm.visualization.plotting import plot_budget_bar
-
-   budget_components = {
-       'Recharge': 15000, 'Pumping': -18500,
-       'Stream Seepage': 8500, 'Baseflow': -7200,
-       'Subsurface Inflow': 5200, 'GW ET': -3100,
-   }
-   fig, ax = plot_budget_bar(budget_components, title='GW Budget Summary',
-                              units='AF/year')
-   plt.show()
-
-**Budget stacked over time:**
-
-.. plot::
-   :include-source:
-
-   import matplotlib.pyplot as plt
-   import numpy as np
-   from pyiwfm.visualization.plotting import plot_budget_stacked
-
-   np.random.seed(42)
-   n_years = 10
-   times = np.arange('2010-01-01', '2020-01-01', dtype='datetime64[Y]')
-   components = {
-       'Recharge': 15000 + np.random.normal(0, 1000, n_years),
-       'Stream Seepage': 8500 + np.random.normal(0, 500, n_years),
-       'Pumping': -(18500 + np.arange(n_years) * 200 + np.random.normal(0, 500, n_years)),
-       'Baseflow': -(7200 + np.random.normal(0, 400, n_years)),
-   }
-   fig, ax = plot_budget_stacked(times, components,
-                                  title='GW Budget Over Time', units='AF/year')
-   plt.show()
-
-For interactive visualization, launch the web viewer from the command line:
-
-.. code-block:: bash
-
-   pyiwfm viewer --model-dir /path/to/model/
 
 Exporting the Loaded Model
 --------------------------
@@ -435,6 +482,12 @@ Export to VTK for 3D visualization in ParaView:
    vtk_exporter.export_vtu("mesh_with_heads.vtu", mode="3d",
                             node_scalars={"head": head_values})
 
+For interactive visualization, launch the web viewer from the command line:
+
+.. code-block:: bash
+
+   pyiwfm viewer --model-dir C2VSimCG/
+
 Complete Script
 ---------------
 
@@ -442,12 +495,14 @@ Here is a complete example combining all the steps above:
 
 .. code-block:: python
 
-   """Load an existing IWFM model, inspect it, and create visualizations."""
+   """Load C2VSimCG, inspect it, and create visualizations."""
 
    from pathlib import Path
    from pyiwfm.io import CompleteModelLoader
+   from pyiwfm.core.cross_section import CrossSectionExtractor
    from pyiwfm.visualization.plotting import (
-       plot_mesh, plot_scalar_field, plot_streams,
+       plot_mesh, plot_elements, plot_scalar_field,
+       plot_streams, plot_lakes, plot_cross_section,
        plot_budget_bar,
    )
    from pyiwfm.visualization import GISExporter
@@ -455,8 +510,8 @@ Here is a complete example combining all the steps above:
 
    # --- Load the model ---
    loader = CompleteModelLoader(
-       simulation_file="Simulation/Simulation.in",
-       preprocessor_file="Preprocessor/Preprocessor.in",
+       simulation_file="C2VSimCG/Simulation/Simulation.in",
+       preprocessor_file="C2VSimCG/Preprocessor/Preprocessor.in",
    )
    result = loader.load()
 
@@ -471,26 +526,57 @@ Here is a complete example combining all the steps above:
    for w in result.warnings:
        print(f"Warning: {w}")
 
-   # --- Visualize the mesh ---
+   # --- Output directory ---
    output = Path("output_plots")
    output.mkdir(exist_ok=True)
 
+   # --- Mesh ---
    fig, ax = plot_mesh(model.mesh, show_edges=True, edge_color='gray', alpha=0.3)
-   ax.set_title(f'Model Mesh ({model.n_nodes} nodes)')
+   ax.set_title(f'C2VSimCG Mesh ({model.n_nodes} nodes)')
    fig.savefig(output / "mesh.png", dpi=150)
 
-   # --- Plot layer thickness ---
-   thickness = model.stratigraphy.top_elev[:, 0] - model.stratigraphy.bottom_elev[:, 0]
+   # --- Subregions ---
+   fig, ax = plot_elements(model.mesh, color_by='subregion', cmap='Set3')
+   ax.set_title(f'Subregions ({model.mesh.n_subregions})')
+   fig.savefig(output / "subregions.png", dpi=150)
+
+   # --- Ground surface elevation ---
+   fig, ax = plot_scalar_field(model.mesh, model.stratigraphy.gs_elev,
+                               cmap='terrain', show_mesh=False)
+   ax.set_title('Ground Surface Elevation (ft)')
+   fig.savefig(output / "ground_surface.png", dpi=150)
+
+   # --- Layer 1 thickness ---
+   thickness = model.stratigraphy.get_layer_thickness(0)
    fig, ax = plot_scalar_field(model.mesh, thickness, cmap='YlOrRd')
    ax.set_title('Layer 1 Thickness (ft)')
    fig.savefig(output / "layer1_thickness.png", dpi=150)
 
-   # --- Plot streams ---
+   # --- Streams ---
    if model.streams:
        fig, ax = plot_mesh(model.mesh, edge_color='lightgray', alpha=0.15)
-       plot_streams(model.streams, ax=ax, line_width=2)
+       plot_streams(model.streams, ax=ax, line_width=1.5)
        ax.set_title('Stream Network')
        fig.savefig(output / "streams.png", dpi=150)
+
+   # --- Lakes ---
+   if model.lakes:
+       fig, ax = plot_mesh(model.mesh, edge_color='lightgray', alpha=0.15)
+       plot_lakes(model.lakes, model.mesh, ax=ax)
+       ax.set_title('Lakes')
+       fig.savefig(output / "lakes.png", dpi=150)
+
+   # --- Cross-section ---
+   all_x = [n.x for n in model.mesh.nodes.values()]
+   all_y = [n.y for n in model.mesh.nodes.values()]
+   extractor = CrossSectionExtractor(model.mesh, model.stratigraphy)
+   xs = extractor.extract(
+       start=(min(all_x), (min(all_y) + max(all_y)) / 2),
+       end=(max(all_x), (min(all_y) + max(all_y)) / 2),
+       n_samples=200,
+   )
+   fig, ax = plot_cross_section(xs, title='East-West Cross-Section')
+   fig.savefig(output / "cross_section.png", dpi=150)
 
    # --- Export to GIS ---
    exporter = GISExporter(grid=model.mesh, crs="EPSG:26910")
@@ -504,4 +590,4 @@ Next Steps
 - See :doc:`building_sample_model` for constructing a model from scratch
 - See :doc:`visualization` for advanced plotting techniques
 - See :doc:`/user_guide/io` for all supported file formats
-- Launch the web viewer with ``pyiwfm viewer --model-dir /path/to/model/``
+- Launch the web viewer with ``pyiwfm viewer --model-dir C2VSimCG/``

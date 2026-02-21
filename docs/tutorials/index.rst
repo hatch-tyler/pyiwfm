@@ -17,10 +17,11 @@ Overview
 
 These tutorials walk you through complete workflows using pyiwfm:
 
-**Reading an Existing Model**
-    Load an existing IWFM model, inspect its components, read simulation
-    results, and create visualizations. Start here if you already have a
-    model and want to work with it in Python.
+**Reading an Existing Model (C2VSimCG)**
+    Load C2VSimCG (California Central Valley Simulation -- Coarse Grid),
+    inspect its mesh, streams, lakes, stratigraphy, and create
+    visualizations. Start here if you already have an IWFM model and
+    want to work with it in Python.
 
 **Building the Sample Model from Scratch**
     Build the official IWFM sample model programmatically -- mesh,
