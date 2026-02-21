@@ -12,6 +12,7 @@ from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
 from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.visualization.plotting import (
+    _subdivide_quads,
     # Budget plotting
     BudgetPlotter,
     MeshPlotter,
@@ -931,6 +932,70 @@ class TestPlotScalarFieldEdgeCases:
         fig2, ax2 = plot_scalar_field(simple_grid, values, ax=ax)
         assert fig2 is fig
         plt.close(fig)
+
+    def test_plot_node_scalars_with_subdiv(self, simple_grid: AppGrid) -> None:
+        """Test plotting node scalars with bilinear FE subdivision."""
+        values = np.arange(9, dtype=float) * 10
+        fig, ax = plot_scalar_field(simple_grid, values, field_type="node", n_subdiv=4)
+        assert fig is not None
+        plt.close(fig)
+
+    def test_plot_node_scalars_subdiv_1(self, simple_grid: AppGrid) -> None:
+        """Test n_subdiv=1 falls back to legacy diagonal-split path."""
+        values = np.arange(9, dtype=float) * 10
+        fig, ax = plot_scalar_field(simple_grid, values, field_type="node", n_subdiv=1)
+        assert fig is not None
+        plt.close(fig)
+
+    def test_plot_cell_values_ignores_subdiv(self, simple_grid: AppGrid) -> None:
+        """Test that n_subdiv is ignored for cell-valued fields."""
+        values = np.array([10.0, 20.0, 15.0, 25.0])
+        fig, ax = plot_scalar_field(simple_grid, values, field_type="cell", n_subdiv=4)
+        assert fig is not None
+        plt.close(fig)
+
+
+class TestSubdivideQuads:
+    """Tests for _subdivide_quads helper function."""
+
+    def test_triangle_passthrough(self) -> None:
+        """Triangle elements pass through unchanged."""
+        x = np.array([0.0, 1.0, 0.5])
+        y = np.array([0.0, 0.0, 1.0])
+        values = np.array([1.0, 2.0, 3.0])
+        elem_conn = [[0, 1, 2]]
+
+        sx, sy, sv, stri = _subdivide_quads(elem_conn, x, y, values, n=4)
+        assert len(sx) == 3
+        assert stri.shape == (1, 3)
+        np.testing.assert_array_almost_equal(sv, [1.0, 2.0, 3.0])
+
+    def test_quad_subdivision_count(self) -> None:
+        """n=4 gives 16 points and 18 triangles per quad."""
+        x = np.array([0.0, 1.0, 1.0, 0.0])
+        y = np.array([0.0, 0.0, 1.0, 1.0])
+        values = np.array([1.0, 2.0, 3.0, 4.0])
+        elem_conn = [[0, 1, 2, 3]]
+
+        sx, sy, sv, stri = _subdivide_quads(elem_conn, x, y, values, n=4)
+        assert len(sx) == 16  # 4 x 4 = 16 points
+        assert stri.shape == (18, 3)  # 2 * (4-1)^2 = 18 triangles
+
+    def test_quad_corner_values_preserved(self) -> None:
+        """Corner values of subdivided quad match original node values."""
+        x = np.array([0.0, 2.0, 2.0, 0.0])
+        y = np.array([0.0, 0.0, 2.0, 2.0])
+        values = np.array([10.0, 20.0, 30.0, 40.0])
+        elem_conn = [[0, 1, 2, 3]]
+
+        sx, sy, sv, stri = _subdivide_quads(elem_conn, x, y, values, n=4)
+        # The first point in the grid is at (-1,-1) → node 0
+        # Find corner points
+        corners = {(0.0, 0.0): 10.0, (2.0, 0.0): 20.0, (2.0, 2.0): 30.0, (0.0, 2.0): 40.0}
+        for i in range(len(sx)):
+            key = (round(sx[i], 6), round(sy[i], 6))
+            if key in corners:
+                np.testing.assert_almost_equal(sv[i], corners[key])
 
 
 class TestPlotStreamsEdgeCases:

@@ -102,11 +102,10 @@ Here is what the mesh looks like with subregions colored:
 
    import matplotlib.pyplot as plt
    from pyiwfm.sample_models import build_tutorial_model
-   from pyiwfm.visualization.plotting import plot_mesh
+   from pyiwfm.visualization.plotting import plot_elements
 
    m = build_tutorial_model()
-   fig, ax = plot_mesh(m.grid, show_edges=True, edge_color='gray',
-                       fill_color='lightblue', alpha=0.3)
+   fig, ax = plot_elements(m.grid, color_by='subregion', cmap='Set2')
 
    ax.set_title(f'Sample Model Mesh ({m.grid.n_nodes} nodes, {m.grid.n_elements} elements)')
    ax.set_xlabel('X (feet)')
@@ -171,8 +170,8 @@ Visualize ground surface elevation:
    from pyiwfm.visualization.plotting import plot_scalar_field
 
    m = build_tutorial_model()
-   fig, ax = plot_scalar_field(m.grid, m.gs_elev, field_type='node', cmap='gist_earth',
-                               show_mesh=True, edge_color='white')
+   fig, ax = plot_scalar_field(m.grid, m.gs_elev, field_type='node', cmap='YlOrBr_r',
+                               show_mesh=True, edge_color='gray')
 
    ax.set_title('Ground Surface Elevation (ft)')
    ax.set_xlabel('X (feet)')
@@ -917,7 +916,7 @@ Here is the complete script combining all steps:
    ax.set_title('Sample Model Mesh')
    fig.savefig(output_dir / "mesh.png", dpi=150)
 
-   fig, ax = plot_scalar_field(grid, gs_elev, cmap='terrain')
+   fig, ax = plot_scalar_field(grid, gs_elev, cmap='YlOrBr_r')
    ax.set_title('Ground Surface Elevation (ft)')
    fig.savefig(output_dir / "ground_surface.png", dpi=150)
 

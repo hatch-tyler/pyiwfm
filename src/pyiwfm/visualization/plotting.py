@@ -315,6 +315,113 @@ def plot_elements(
     return fig, ax
 
 
+def _subdivide_quads(
+    elem_conn: list[list[int]],
+    x: NDArray[np.float64],
+    y: NDArray[np.float64],
+    values: NDArray[np.float64],
+    n: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.int64]]:
+    """
+    Subdivide quad elements using bilinear FE shape functions.
+
+    Each quad is subdivided into an n x n grid of points using bilinear
+    interpolation, then triangulated. Triangle elements pass through
+    unchanged. Fully vectorized — no Python loop over elements.
+
+    Parameters
+    ----------
+    elem_conn : list of list of int
+        Element connectivity (each inner list has 3 or 4 vertex indices).
+    x, y : ndarray
+        Node coordinates indexed by the vertex indices in elem_conn.
+    values : ndarray
+        Scalar values at each node.
+    n : int
+        Subdivision level (n x n points per quad, must be >= 2).
+
+    Returns
+    -------
+    sub_x, sub_y, sub_values : ndarray
+        Coordinates and values at the subdivided points.
+    sub_triangles : ndarray of shape (n_tri, 3)
+        Triangle connectivity into the sub_x/sub_y arrays.
+    """
+    # Separate triangles from quads
+    tri_conn = [v for v in elem_conn if len(v) == 3]
+    quad_conn = [v for v in elem_conn if len(v) == 4]
+
+    all_x: list[NDArray[np.float64]] = []
+    all_y: list[NDArray[np.float64]] = []
+    all_v: list[NDArray[np.float64]] = []
+    all_tri: list[NDArray[np.int64]] = []
+    offset = 0
+
+    # --- Process quads ---
+    if quad_conn:
+        quad_arr = np.array(quad_conn)  # (n_quads, 4)
+        n_quads = quad_arr.shape[0]
+
+        # Precompute reference grid and bilinear shape functions
+        xi_1d = np.linspace(-1, 1, n)
+        xi, eta = np.meshgrid(xi_1d, xi_1d)
+        xi_flat = xi.ravel()
+        eta_flat = eta.ravel()
+        # Shape function matrix: (n*n, 4)
+        shape_funcs = 0.25 * np.column_stack([
+            (1 - xi_flat) * (1 - eta_flat),
+            (1 + xi_flat) * (1 - eta_flat),
+            (1 + xi_flat) * (1 + eta_flat),
+            (1 - xi_flat) * (1 + eta_flat),
+        ])
+
+        # Precompute triangle template for the n x n structured grid
+        row, col = np.mgrid[: n - 1, : n - 1]
+        i0 = (row * n + col).ravel()
+        i1 = i0 + 1
+        i2 = i0 + n
+        i3 = i2 + 1
+        tri_template = np.column_stack([i0, i1, i3, i0, i3, i2]).reshape(-1, 3)
+
+        # Batch map all quads via matrix multiply
+        vx_all = x[quad_arr]  # (n_quads, 4)
+        vy_all = y[quad_arr]
+        vv_all = values[quad_arr]
+
+        sub_qx = (shape_funcs @ vx_all.T).T  # (n_quads, n*n)
+        sub_qy = (shape_funcs @ vy_all.T).T
+        sub_qv = (shape_funcs @ vv_all.T).T
+
+        # Build triangle indices with vectorized offsets
+        n_pts = n * n
+        offsets = np.arange(n_quads, dtype=np.int64) * n_pts + offset
+        quad_tris = offsets[:, None, None] + tri_template[None, :, :]
+
+        all_x.append(sub_qx.ravel())
+        all_y.append(sub_qy.ravel())
+        all_v.append(sub_qv.ravel())
+        all_tri.append(quad_tris.reshape(-1, 3))
+        offset += n_quads * n_pts
+
+    # --- Process triangles (pass through) ---
+    if tri_conn:
+        tri_arr = np.array(tri_conn)  # (n_tris, 3)
+        all_x.append(x[tri_arr].ravel())
+        all_y.append(y[tri_arr].ravel())
+        all_v.append(values[tri_arr].ravel())
+
+        n_tris = tri_arr.shape[0]
+        tri_indices = np.arange(n_tris * 3, dtype=np.int64).reshape(n_tris, 3) + offset
+        all_tri.append(tri_indices)
+
+    return (
+        np.concatenate(all_x),
+        np.concatenate(all_y),
+        np.concatenate(all_v),
+        np.concatenate(all_tri).astype(np.int64),
+    )
+
+
 def plot_scalar_field(
     grid: AppGrid,
     values: NDArray[np.float64],
@@ -327,6 +434,7 @@ def plot_scalar_field(
     show_mesh: bool = True,
     edge_color: str = "gray",
     edge_width: float = 0.3,
+    n_subdiv: int = 4,
     figsize: tuple[float, float] = (10, 8),
 ) -> tuple[Figure, Axes]:
     """
@@ -344,6 +452,8 @@ def plot_scalar_field(
         show_mesh: Show mesh edges
         edge_color: Color for mesh edges
         edge_width: Width of mesh edges
+        n_subdiv: Subdivision level for bilinear quad interpolation (>=2 enables
+            FE subdivision; 1 uses legacy diagonal-split triangulation)
         figsize: Figure size in inches
 
     Returns:
@@ -375,23 +485,34 @@ def plot_scalar_field(
         x = np.array([grid.nodes[nid].x for nid in sorted_node_ids])
         y = np.array([grid.nodes[nid].y for nid in sorted_node_ids])
 
-        # Build triangles from elements (and element connectivity for mesh overlay)
-        triangles_list: list[list[int]] = []
+        # Build element connectivity
         elem_conn: list[list[int]] = []
         for elem in grid.iter_elements():
             verts = [node_id_to_idx[vid] for vid in elem.vertices]
             elem_conn.append(verts)
-            if len(verts) == 3:
-                triangles_list.append(verts)
-            else:  # Quad - split into 2 triangles
-                triangles_list.append([verts[0], verts[1], verts[2]])
-                triangles_list.append([verts[0], verts[2], verts[3]])
 
-        triangles = np.array(triangles_list)
-        triang = Triangulation(x, y, triangles)
+        has_quads = any(len(v) == 4 for v in elem_conn)
 
-        # Plot using tripcolor
-        tcf = ax.tripcolor(triang, values, cmap=cmap, norm=norm, shading="gouraud")
+        if has_quads and n_subdiv > 1:
+            # Bilinear FE subdivision for quads
+            sub_x, sub_y, sub_v, sub_tri = _subdivide_quads(
+                elem_conn, x, y, values, n_subdiv,
+            )
+            triang = Triangulation(sub_x, sub_y, sub_tri)
+            tcf = ax.tripcolor(triang, sub_v, cmap=cmap, norm=norm, shading="gouraud")
+        else:
+            # Legacy 2-triangle diagonal split
+            triangles_list: list[list[int]] = []
+            for verts in elem_conn:
+                if len(verts) == 3:
+                    triangles_list.append(verts)
+                else:
+                    triangles_list.append([verts[0], verts[1], verts[2]])
+                    triangles_list.append([verts[0], verts[2], verts[3]])
+
+            triangles = np.array(triangles_list)
+            triang = Triangulation(x, y, triangles)
+            tcf = ax.tripcolor(triang, values, cmap=cmap, norm=norm, shading="gouraud")
 
         if show_mesh:
             node_xy = np.column_stack([x, y])
