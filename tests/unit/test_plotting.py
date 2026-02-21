@@ -12,22 +12,19 @@ from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
 from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 from pyiwfm.visualization.plotting import (
-    _subdivide_quads,
-    # Budget plotting
     BudgetPlotter,
     MeshPlotter,
+    _subdivide_quads,
     plot_boundary,
     plot_budget_bar,
     plot_budget_pie,
     plot_budget_stacked,
     plot_budget_timeseries,
     plot_elements,
-    # Mesh plotting
     plot_mesh,
     plot_nodes,
     plot_scalar_field,
     plot_streams,
-    # Time series plotting
     plot_timeseries,
     plot_timeseries_collection,
     plot_timeseries_comparison,
