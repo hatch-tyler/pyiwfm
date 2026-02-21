@@ -118,7 +118,7 @@ def _rotate_date_labels(ax: Axes) -> None:
     """Rotate date x-tick labels (replacement for fig.autofmt_xdate())."""
     for label in ax.get_xticklabels():
         label.set_rotation(30)
-        label.set_ha("right")
+        label.set_horizontalalignment("right")
 
 
 # ---------------------------------------------------------------------------
@@ -270,7 +270,7 @@ def plot_nodes(
 
     if highlight_boundary and boundary_x:
         ax.scatter(boundary_x, boundary_y, s=marker_size, c=boundary_color, label="Boundary")
-        fig.legend(loc="outside upper right")
+        fig.legend(loc="outside right upper")
 
     ax.set_aspect("equal")
     ax.set_xlabel("X")
@@ -366,7 +366,7 @@ def plot_elements(
                 )
                 for v in unique_vals
             ]
-            fig.legend(handles=legend_patches, loc="outside upper right")
+            fig.legend(handles=legend_patches, loc="outside right upper")
 
     elif color_by != "none":
         values = np.array(values_list)
