@@ -171,7 +171,7 @@ Visualize ground surface elevation:
    from pyiwfm.visualization.plotting import plot_scalar_field
 
    m = build_tutorial_model()
-   fig, ax = plot_scalar_field(m.grid, m.gs_elev, field_type='node', cmap='terrain',
+   fig, ax = plot_scalar_field(m.grid, m.gs_elev, field_type='node', cmap='gist_earth',
                                show_mesh=True, edge_color='white')
 
    ax.set_title('Ground Surface Elevation (ft)')

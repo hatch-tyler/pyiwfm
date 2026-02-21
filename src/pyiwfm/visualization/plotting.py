@@ -375,10 +375,12 @@ def plot_scalar_field(
         x = np.array([grid.nodes[nid].x for nid in sorted_node_ids])
         y = np.array([grid.nodes[nid].y for nid in sorted_node_ids])
 
-        # Build triangles from elements
+        # Build triangles from elements (and element connectivity for mesh overlay)
         triangles_list: list[list[int]] = []
+        elem_conn: list[list[int]] = []
         for elem in grid.iter_elements():
             verts = [node_id_to_idx[vid] for vid in elem.vertices]
+            elem_conn.append(verts)
             if len(verts) == 3:
                 triangles_list.append(verts)
             else:  # Quad - split into 2 triangles
@@ -392,7 +394,15 @@ def plot_scalar_field(
         tcf = ax.tripcolor(triang, values, cmap=cmap, norm=norm, shading="gouraud")
 
         if show_mesh:
-            ax.triplot(triang, color=edge_color, linewidth=edge_width)
+            node_xy = np.column_stack([x, y])
+            mesh_polys = node_xy[np.array(elem_conn)]
+            mesh_collection = PolyCollection(
+                mesh_polys,
+                edgecolors=edge_color,
+                facecolors="none",
+                linewidths=edge_width,
+            )
+            ax.add_collection(mesh_collection)
 
     else:  # cell values
         # Build element polygons
