@@ -270,7 +270,7 @@ def plot_nodes(
 
     if highlight_boundary and boundary_x:
         ax.scatter(boundary_x, boundary_y, s=marker_size, c=boundary_color, label="Boundary")
-        ax.legend()
+        fig.legend(loc="outside upper right")
 
     ax.set_aspect("equal")
     ax.set_xlabel("X")
@@ -366,7 +366,7 @@ def plot_elements(
                 )
                 for v in unique_vals
             ]
-            ax.legend(handles=legend_patches, loc="best")
+            fig.legend(handles=legend_patches, loc="outside upper right")
 
     elif color_by != "none":
         values = np.array(values_list)
