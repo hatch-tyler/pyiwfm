@@ -279,7 +279,38 @@ def plot_elements(
             values_list.append(0.0)
 
     # Create polygon collection
-    if color_by != "none":
+    if color_by == "subregion":
+        # Discrete coloring with legend for categorical subregion values
+        from matplotlib.patches import Patch
+
+        values = np.array(values_list)
+        unique_vals = np.unique(values)
+        colormap = plt.get_cmap(cmap)
+        n_unique = max(len(unique_vals), 1)
+        val_to_color = {v: colormap(i / max(n_unique - 1, 1)) for i, v in enumerate(unique_vals)}
+        face_colors = [val_to_color[v] for v in values]
+
+        collection = PolyCollection(
+            polygons,
+            facecolors=face_colors,
+            edgecolors=edge_color,
+            linewidths=edge_width,
+            alpha=alpha,
+        )
+
+        if show_colorbar:
+            legend_patches = [
+                Patch(
+                    facecolor=val_to_color[v],
+                    edgecolor=edge_color,
+                    alpha=alpha,
+                    label=f"Subregion {int(v)}",
+                )
+                for v in unique_vals
+            ]
+            ax.legend(handles=legend_patches, loc="best")
+
+    elif color_by != "none":
         values = np.array(values_list)
         norm = mcolors.Normalize(vmin=values.min(), vmax=values.max())
         colormap = plt.get_cmap(cmap)
