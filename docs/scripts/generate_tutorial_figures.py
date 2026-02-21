@@ -107,7 +107,7 @@ def generate_subregions(model: IWFMModel, output_dir: Path) -> None:
     fig, ax = plot_elements(
         model.mesh,
         color_by="subregion",
-        cmap="Set3",
+        cmap="tab20",
         alpha=0.7,
         figsize=(10, 10),
     )
@@ -119,6 +119,17 @@ def generate_subregions(model: IWFMModel, output_dir: Path) -> None:
     print("  Saved subregions.png")
 
 
+def _fix_stream_coords(model: IWFMModel) -> None:
+    """Resolve stream node x,y from associated GW nodes when they are (0,0)."""
+    assert model.mesh is not None and model.streams is not None
+    for node in model.streams.nodes.values():
+        if node.x == 0 and node.y == 0 and node.gw_node is not None:
+            gw = model.mesh.nodes.get(node.gw_node)
+            if gw is not None:
+                node.x = gw.x
+                node.y = gw.y
+
+
 def generate_streams(model: IWFMModel, output_dir: Path) -> None:
     """streams.png -- stream network overlaid on mesh."""
     from pyiwfm.visualization.plotting import plot_mesh, plot_streams
@@ -128,6 +139,8 @@ def generate_streams(model: IWFMModel, output_dir: Path) -> None:
         return
 
     assert model.mesh is not None
+    _fix_stream_coords(model)
+
     fig, ax = plot_mesh(
         model.mesh,
         show_edges=True,
