@@ -73,6 +73,18 @@ if TYPE_CHECKING:
     from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
 
 
+def _apply_tick_formatting(ax: Axes) -> None:
+    """Apply thousands-separator formatting to both axes."""
+    from matplotlib.ticker import FuncFormatter
+
+    def _thousands_fmt(x: float, pos: int) -> str:
+        return f"{x:,.0f}"
+
+    ax.xaxis.set_major_formatter(FuncFormatter(_thousands_fmt))
+    ax.yaxis.set_major_formatter(FuncFormatter(_thousands_fmt))
+    ax.tick_params(axis="both", labelsize=9)
+
+
 def plot_mesh(
     grid: AppGrid,
     ax: Axes | None = None,
@@ -160,8 +172,10 @@ def plot_mesh(
 
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
+    ax.set_xlabel("X", fontsize=11)
+    ax.set_ylabel("Y", fontsize=11)
+    _apply_tick_formatting(ax)
+    fig.tight_layout()
 
     return fig, ax
 
@@ -214,11 +228,13 @@ def plot_nodes(
 
     if highlight_boundary and boundary_x:
         ax.scatter(boundary_x, boundary_y, s=marker_size, c=boundary_color, label="Boundary")
-        ax.legend()
+        ax.legend(framealpha=0.9, edgecolor="lightgray")
 
     ax.set_aspect("equal")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
+    ax.set_xlabel("X", fontsize=11)
+    ax.set_ylabel("Y", fontsize=11)
+    _apply_tick_formatting(ax)
+    fig.tight_layout()
 
     return fig, ax
 
@@ -308,7 +324,7 @@ def plot_elements(
                 )
                 for v in unique_vals
             ]
-            ax.legend(handles=legend_patches, loc="best")
+            ax.legend(handles=legend_patches, loc="best", framealpha=0.9, edgecolor="lightgray")
 
     elif color_by != "none":
         values = np.array(values_list)
@@ -327,7 +343,7 @@ def plot_elements(
 
         if show_colorbar:
             cbar = fig.colorbar(collection, ax=ax)
-            cbar.set_label(color_by.capitalize())
+            cbar.set_label(color_by.capitalize(), fontsize=10)
     else:
         collection = PolyCollection(
             polygons,
@@ -340,8 +356,10 @@ def plot_elements(
     ax.add_collection(collection)
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
+    ax.set_xlabel("X", fontsize=11)
+    ax.set_ylabel("Y", fontsize=11)
+    _apply_tick_formatting(ax)
+    fig.tight_layout()
 
     return fig, ax
 
@@ -585,11 +603,14 @@ def plot_scalar_field(
         tcf = collection  # type: ignore[assignment]
 
     if show_colorbar:
-        fig.colorbar(tcf, ax=ax)
+        cbar = fig.colorbar(tcf, ax=ax)
+        cbar.ax.tick_params(labelsize=9)
 
     ax.set_aspect("equal")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
+    ax.set_xlabel("X", fontsize=11)
+    ax.set_ylabel("Y", fontsize=11)
+    _apply_tick_formatting(ax)
+    fig.tight_layout()
 
     return fig, ax
 
@@ -646,8 +667,10 @@ def plot_streams(
         ax.scatter(x, y, s=node_size, c=node_color, zorder=5)
 
     ax.set_aspect("equal")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
+    ax.set_xlabel("X", fontsize=11)
+    ax.set_ylabel("Y", fontsize=11)
+    _apply_tick_formatting(ax)
+    fig.tight_layout()
 
     return fig, ax
 
@@ -755,8 +778,10 @@ def plot_lakes(
 
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
+    ax.set_xlabel("X", fontsize=11)
+    ax.set_ylabel("Y", fontsize=11)
+    _apply_tick_formatting(ax)
+    fig.tight_layout()
 
     return fig, ax
 
@@ -847,8 +872,10 @@ def plot_boundary(
 
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
+    ax.set_xlabel("X", fontsize=11)
+    ax.set_ylabel("Y", fontsize=11)
+    _apply_tick_formatting(ax)
+    fig.tight_layout()
 
     return fig, ax
 
@@ -1119,24 +1146,38 @@ def plot_timeseries(
 
     # Formatting
     if title:
-        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
 
-    ax.set_xlabel(xlabel)
+    ax.set_xlabel(xlabel, fontsize=11)
     if ylabel:
-        ax.set_ylabel(ylabel)
+        ax.set_ylabel(ylabel, fontsize=11)
     elif series_list and series_list[0].units:
-        ax.set_ylabel(series_list[0].units)
+        ax.set_ylabel(series_list[0].units, fontsize=11)
 
-    if legend and len(series_list) > 1:
-        ax.legend(loc="best", framealpha=0.9)
+    _has_legend = legend and len(series_list) > 1
+    if _has_legend:
+        ax.legend(
+            loc="upper left",
+            bbox_to_anchor=(1.02, 1),
+            borderaxespad=0,
+            framealpha=0.9,
+            edgecolor="lightgray",
+        )
 
     if grid:
         ax.grid(True, alpha=0.3)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=9)
 
     # Date formatting
     if date_format:
         ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format))
     fig.autofmt_xdate()
+    fig.tight_layout()
+    if _has_legend:
+        fig.subplots_adjust(right=0.80)
 
     return fig, ax
 
@@ -1259,14 +1300,24 @@ def plot_timeseries_comparison(
         except ImportError:
             pass
 
-    ax.legend(loc="upper right")
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1),
+        borderaxespad=0,
+        framealpha=0.9,
+        edgecolor="lightgray",
+    )
     ax.grid(True, alpha=0.3)
 
     if title:
-        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
 
     if observed.units:
-        ax.set_ylabel(observed.units)
+        ax.set_ylabel(observed.units, fontsize=11)
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=9)
 
     # Residuals subplot
     if show_residuals:
@@ -1280,14 +1331,18 @@ def plot_timeseries_comparison(
 
         ax2.bar(obs_times, residuals, color="gray", alpha=0.7, width=2)
         ax2.axhline(y=0, color="black", linestyle="-", linewidth=0.5)
-        ax2.set_ylabel("Residual")
-        ax2.set_xlabel("Date")
+        ax2.set_ylabel("Residual", fontsize=11)
+        ax2.set_xlabel("Date", fontsize=11)
         ax2.grid(True, alpha=0.3)
+        ax2.spines["top"].set_visible(False)
+        ax2.spines["right"].set_visible(False)
+        ax2.tick_params(axis="both", labelsize=9)
     else:
-        ax.set_xlabel("Date")
+        ax.set_xlabel("Date", fontsize=11)
 
     fig.autofmt_xdate()
     fig.tight_layout()
+    fig.subplots_adjust(right=0.80)
 
     return fig, ax
 
@@ -1408,7 +1463,7 @@ def plot_budget_bar(
 
     if orientation == "vertical":
         bars = ax.bar(names, values, color=colors, edgecolor="black", linewidth=0.5)
-        ax.set_ylabel(f"Volume ({units})")
+        ax.set_ylabel(f"Volume ({units})", fontsize=11)
         ax.axhline(y=0, color="black", linewidth=0.8)
 
         if show_values:
@@ -1428,7 +1483,7 @@ def plot_budget_bar(
         plt.xticks(rotation=45, ha="right")
     else:
         bars = ax.barh(names, values, color=colors, edgecolor="black", linewidth=0.5)
-        ax.set_xlabel(f"Volume ({units})")
+        ax.set_xlabel(f"Volume ({units})", fontsize=11)
         ax.axvline(x=0, color="black", linewidth=0.8)
 
         if show_values:
@@ -1445,8 +1500,11 @@ def plot_budget_bar(
                     fontsize=9,
                 )
 
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
     ax.grid(True, alpha=0.3, axis="y" if orientation == "vertical" else "x")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=9)
     fig.tight_layout()
 
     return fig, ax
@@ -1541,16 +1599,27 @@ def plot_budget_stacked(
         )
 
     ax.axhline(y=0, color="black", linewidth=1)
-    ax.set_xlabel("Date")
-    ax.set_ylabel(f"Flow Rate ({units})")
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_xlabel("Date", fontsize=11)
+    ax.set_ylabel(f"Flow Rate ({units})", fontsize=11)
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
     ax.grid(True, alpha=0.3)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=9)
 
     if show_legend:
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), framealpha=0.9)
-        fig.subplots_adjust(right=0.8)
+        ax.legend(
+            loc="upper left",
+            bbox_to_anchor=(1.02, 1),
+            borderaxespad=0,
+            framealpha=0.9,
+            edgecolor="lightgray",
+        )
 
     fig.autofmt_xdate()
+    fig.tight_layout()
+    if show_legend:
+        fig.subplots_adjust(right=0.80)
 
     return fig, ax
 
@@ -1618,7 +1687,7 @@ def plot_budget_pie(
 
         make_pie(ax1, inflows, "Inflows")
         make_pie(ax2, outflows, "Outflows")
-        fig.suptitle(title, fontsize=12, fontweight="bold")
+        fig.suptitle(title, fontsize=14, fontweight="bold")
         ax = ax1  # Use first axes as the returned Axes
     else:
         if ax is None:
@@ -1635,7 +1704,7 @@ def plot_budget_pie(
             labels = [f"{k}\n({v:,.0f} {units})" for k, v in zip(labels, values, strict=False)]
 
         ax.pie(values, labels=labels, autopct="%1.1f%%", colors=colors, startangle=90)  # type: ignore[arg-type]
-        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
 
     fig.tight_layout()
     return fig, ax
@@ -1739,9 +1808,12 @@ def plot_water_balance(
     ax.set_yticks(y_pos)
     ax.set_yticklabels(categories)
     ax.axvline(x=0, color="black", linewidth=1)
-    ax.set_xlabel(f"Volume ({units})")
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_xlabel(f"Volume ({units})", fontsize=11)
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
     ax.grid(True, alpha=0.3, axis="x")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=9)
 
     # Summary text
     summary = (
@@ -1861,13 +1933,24 @@ def plot_zbudget(
 
         ax.set_xticks(x)
         ax.set_xticklabels(components, rotation=45, ha="right")
-        ax.set_ylabel(f"Volume ({units})")
+        ax.set_ylabel(f"Volume ({units})", fontsize=11)
         ax.axhline(y=0, color="black", linewidth=0.8)
-        ax.legend(loc="best")
+        ax.legend(
+            loc="upper left",
+            bbox_to_anchor=(1.02, 1),
+            borderaxespad=0,
+            framealpha=0.9,
+            edgecolor="lightgray",
+        )
         ax.grid(True, alpha=0.3, axis="y")
 
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=9)
     fig.tight_layout()
+    if plot_type == "bar":
+        fig.subplots_adjust(right=0.80)
 
     return fig, ax
 
@@ -1941,15 +2024,25 @@ def plot_budget_timeseries(
         )
 
     ylabel = f"{'Cumulative ' if cumulative else ''}Volume ({units})"
-    ax.set_ylabel(ylabel)
-    ax.set_xlabel("Date")
-    ax.set_title(title, fontsize=12, fontweight="bold")
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1))
+    ax.set_ylabel(ylabel, fontsize=11)
+    ax.set_xlabel("Date", fontsize=11)
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1),
+        borderaxespad=0,
+        framealpha=0.9,
+        edgecolor="lightgray",
+    )
     ax.grid(True, alpha=0.3)
     ax.axhline(y=0, color="black", linewidth=0.5)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=9)
 
     fig.autofmt_xdate()
     fig.tight_layout()
+    fig.subplots_adjust(right=0.80)
 
     return fig, ax
 
@@ -2152,8 +2245,10 @@ def plot_streams_colored(
 
     ax.autoscale_view()
     ax.set_aspect("equal")
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
+    ax.set_xlabel("X", fontsize=11)
+    ax.set_ylabel("Y", fontsize=11)
+    _apply_tick_formatting(ax)
+    fig.tight_layout()
 
     return fig, ax
 
@@ -2243,10 +2338,17 @@ def plot_timeseries_statistics(
     if ylabel:
         ax.set_ylabel(ylabel)
     ax.set_xlabel("Date")
-    ax.legend()
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1),
+        borderaxespad=0,
+        framealpha=0.9,
+        edgecolor="lightgray",
+    )
     ax.grid(True, alpha=0.3)
     fig.autofmt_xdate()
     fig.tight_layout()
+    fig.subplots_adjust(right=0.80)
 
     return fig, ax
 
@@ -2319,10 +2421,19 @@ def plot_dual_axis(
     # Combined legend
     lines1, labels1 = ax.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax.legend(lines1 + lines2, labels1 + labels2, loc="best")
+    ax.legend(
+        lines1 + lines2,
+        labels1 + labels2,
+        loc="upper left",
+        bbox_to_anchor=(1.12, 1),
+        borderaxespad=0,
+        framealpha=0.9,
+        edgecolor="lightgray",
+    )
 
     fig.autofmt_xdate()
     fig.tight_layout()
+    fig.subplots_adjust(right=0.78)
 
     return fig, (ax, ax2)
 
@@ -2396,13 +2507,23 @@ def plot_streamflow_hydrograph(
     if log_scale:
         ax.set_yscale("log")
 
-    ax.set_title(title)
-    ax.set_xlabel("Date")
-    ax.set_ylabel(f"{ylabel} ({units})")
-    ax.legend()
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+    ax.set_xlabel("Date", fontsize=11)
+    ax.set_ylabel(f"{ylabel} ({units})", fontsize=11)
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1),
+        borderaxespad=0,
+        framealpha=0.9,
+        edgecolor="lightgray",
+    )
     ax.grid(True, alpha=0.3)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=9)
     fig.autofmt_xdate()
     fig.tight_layout()
+    fig.subplots_adjust(right=0.80)
 
     return fig, ax
 
@@ -2553,12 +2674,23 @@ def plot_cross_section(
         sv[~valid] = np.nan
         ax.plot(dist, sv, "b--", linewidth=2, label=scalar_name)
 
-    ax.set_xlabel("Distance")
-    ax.set_ylabel("Elevation")
+    ax.set_xlabel("Distance", fontsize=11)
+    ax.set_ylabel("Elevation", fontsize=11)
     if title:
-        ax.set_title(title)
-    ax.legend(loc="upper right")
+        ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1),
+        borderaxespad=0,
+        framealpha=0.9,
+        edgecolor="lightgray",
+    )
     ax.grid(True, alpha=0.3)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.tick_params(axis="both", labelsize=9)
+    fig.tight_layout()
+    fig.subplots_adjust(right=0.80)
 
     return fig, ax
 
@@ -2635,4 +2767,5 @@ def plot_cross_section_location(
             zorder=11,
         )
 
+    fig.tight_layout()
     return fig, ax
