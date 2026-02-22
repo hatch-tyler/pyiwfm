@@ -16,6 +16,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm.core.base_component import BaseComponent
 from pyiwfm.core.exceptions import ComponentError
 
 
@@ -406,7 +407,7 @@ class Bypass:
 
 
 @dataclass
-class AppStream:
+class AppStream(BaseComponent):
     """
     Stream network application class.
 
@@ -461,6 +462,11 @@ class AppStream:
     # Connectivity caches
     _downstream_map: dict[int, int | None] = field(default_factory=dict, repr=False)
     _upstream_map: dict[int, int | None] = field(default_factory=dict, repr=False)
+
+    @property
+    def n_items(self) -> int:
+        """Return number of stream nodes (primary entities)."""
+        return len(self.nodes)
 
     @property
     def n_nodes(self) -> int:

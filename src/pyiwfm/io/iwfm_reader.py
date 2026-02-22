@@ -11,7 +11,7 @@ defining its own copy.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TextIO
+from typing import Literal, TextIO, overload
 
 from pyiwfm.core.exceptions import FileFormatError
 
@@ -163,13 +163,43 @@ def parse_float(value: str, context: str = "", line_number: int | None = None) -
         raise FileFormatError(msg, line_number=line_number) from exc
 
 
-def resolve_path(base_dir: Path, filepath: str) -> Path:
+@overload
+def resolve_path(base_dir: Path, filepath: str) -> Path: ...
+
+
+@overload
+def resolve_path(base_dir: Path, filepath: str, *, allow_empty: Literal[False]) -> Path: ...
+
+
+@overload
+def resolve_path(base_dir: Path, filepath: str, *, allow_empty: Literal[True]) -> Path | None: ...
+
+
+@overload
+def resolve_path(base_dir: Path, filepath: str, *, allow_empty: bool) -> Path | None: ...
+
+
+def resolve_path(base_dir: Path, filepath: str, *, allow_empty: bool = False) -> Path | None:
     """Resolve a file path relative to *base_dir*.
 
     IWFM paths can be absolute or relative (relative to the main
     input file's directory).
+
+    Parameters
+    ----------
+    base_dir : Path
+        Directory to resolve relative paths against.
+    filepath : str
+        Raw file path string from an IWFM input file.
+    allow_empty : bool
+        If ``True``, return ``None`` for blank/empty *filepath*
+        instead of creating a ``Path("")``.  Useful for optional
+        file paths in root-zone and other sub-files.
     """
-    path = Path(filepath.strip())
+    stripped = filepath.strip()
+    if allow_empty and not stripped:
+        return None
+    path = Path(stripped)
     if path.is_absolute():
         return path
     return base_dir / path

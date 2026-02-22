@@ -15,6 +15,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm.core.base_component import BaseComponent
 from pyiwfm.core.exceptions import ComponentError
 
 
@@ -362,7 +363,7 @@ class HydrographLocation:
 
 
 @dataclass
-class AppGW:
+class AppGW(BaseComponent):
     """
     Groundwater application component.
 
@@ -424,6 +425,11 @@ class AppGW:
     td_hydro_volume_unit: str = ""
     td_output_file_raw: str = ""
     td_hydro_specs: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def n_items(self) -> int:
+        """Return number of wells (primary entities)."""
+        return len(self.wells)
 
     @property
     def n_wells(self) -> int:

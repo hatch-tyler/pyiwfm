@@ -507,3 +507,59 @@ def get_cache_status() -> dict:
         "path": str(loader.cache_path),
         "stats": loader.get_stats(),
     }
+
+
+@router.post("/compare")
+def compare_models(body: dict) -> dict:
+    """Compare the loaded model mesh with another model.
+
+    Accepts a JSON body with ``path`` pointing to the second model's
+    preprocessor or simulation main file.  Returns a summary of mesh
+    and stratigraphy differences using the comparison module.
+
+    Request body:
+        {"path": "/path/to/other/model/Preprocessor.in"}
+    """
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    other_path = body.get("path")
+    if not other_path:
+        raise HTTPException(status_code=400, detail="Missing 'path' in request body")
+
+    from pathlib import Path
+
+    other_path = Path(other_path)
+    if not other_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model path not found: {other_path}",
+        )
+
+    try:
+        from pyiwfm.comparison import ModelDiffer
+        from pyiwfm.core.model import IWFMModel
+
+        other = IWFMModel.from_preprocessor(other_path)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load comparison model: {e}",
+        ) from e
+
+    model = model_state.model
+    if model is None or model.grid is None:
+        raise HTTPException(status_code=404, detail="No mesh/grid loaded")
+
+    try:
+        differ = ModelDiffer()
+        diff = differ.diff(
+            model.grid,
+            other.grid,
+            model.stratigraphy,
+            other.stratigraphy,
+        )
+        return diff.to_dict()
+    except Exception as e:
+        logger.exception("Model comparison failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e

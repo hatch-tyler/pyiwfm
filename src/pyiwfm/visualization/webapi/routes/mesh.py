@@ -169,9 +169,8 @@ def get_head_map(
     if grid is None:
         raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
-    # Build node_id -> index mapping
-    sorted_node_ids = sorted(grid.nodes.keys())
-    node_id_to_idx = {nid: i for i, nid in enumerate(sorted_node_ids)}
+    # Use cached node_id -> index mapping
+    node_id_to_idx = model_state.get_node_id_to_idx()
 
     # Get the base GeoJSON and add head values
     geojson = model_state.get_mesh_geojson(layer=layer)
@@ -401,8 +400,7 @@ def get_property_map(
     vmax = float(np.max(valid)) if len(valid) > 0 else 1.0
 
     features = []
-    sorted_elem_ids = sorted(grid.elements.keys())
-    elem_id_to_idx = {eid: i for i, eid in enumerate(sorted_elem_ids)}
+    elem_id_to_idx = model_state.get_elem_id_to_idx()
 
     for feat in geojson["features"]:
         elem_id = feat["properties"]["element_id"]
@@ -480,9 +478,8 @@ def get_element_detail(
     # Area
     area = elem.area
 
-    # Build node-index lookup
-    sorted_node_ids = sorted(grid.nodes.keys())
-    node_id_to_idx = {nid: i for i, nid in enumerate(sorted_node_ids)}
+    # Use cached node-index lookup
+    node_id_to_idx = model_state.get_node_id_to_idx()
 
     # Per-layer aquifer properties
     layer_properties: list[dict] = []

@@ -17,6 +17,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm.core.base_component import BaseComponent
 from pyiwfm.core.exceptions import ComponentError
 
 
@@ -135,7 +136,7 @@ class ElementLandUse:
 
 
 @dataclass
-class RootZone:
+class RootZone(BaseComponent):
     """
     Root zone application component.
 
@@ -177,6 +178,11 @@ class RootZone:
         default_factory=dict, repr=False
     )
     surface_flow_dest_nvrv: dict[int, tuple[int, int]] = field(default_factory=dict, repr=False)
+
+    @property
+    def n_items(self) -> int:
+        """Return number of elements (primary entities)."""
+        return self.n_elements
 
     @property
     def n_crop_types(self) -> int:

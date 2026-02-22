@@ -247,6 +247,10 @@ def _reset_model_state():
     model_state._budget_readers = {}
     model_state._observations = {}
     model_state._results_dir = None
+    model_state._node_id_to_idx = None
+    model_state._sorted_elem_ids = None
+    model_state._elem_id_to_idx = None
+    model_state._hydrograph_locations_cache = None
     # Restore any monkey-patched methods back to the class originals
     for attr in (
         "get_budget_reader",

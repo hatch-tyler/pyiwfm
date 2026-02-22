@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any
 from numpy.typing import NDArray
 
 from pyiwfm.io.writer_base import TemplateWriter
+from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
@@ -36,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class GWWriterConfig:
+class GWWriterConfig(BaseComponentWriterConfig):
     """
     Configuration for groundwater component file writing.
 
@@ -50,9 +51,13 @@ class GWWriterConfig:
         IWFM groundwater component version
     """
 
-    output_dir: Path
     gw_subdir: str = "GW"
-    version: str = "4.0"
+
+    def _get_subdir(self) -> str:
+        return self.gw_subdir
+
+    def _get_main_file(self) -> str:
+        return self.main_file
 
     # File names
     main_file: str = "GW_MAIN.dat"
@@ -92,12 +97,7 @@ class GWWriterConfig:
     @property
     def gw_dir(self) -> Path:
         """Get the groundwater subdirectory path."""
-        return self.output_dir / self.gw_subdir
-
-    @property
-    def main_path(self) -> Path:
-        """Get the main file path."""
-        return self.gw_dir / self.main_file
+        return self.component_dir
 
     @property
     def bc_main_path(self) -> Path:

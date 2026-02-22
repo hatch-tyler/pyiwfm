@@ -862,12 +862,17 @@ def get_drawdown(
     reference_timestep: int = Query(
         default=0, ge=0, description="Reference timestep (default: first)"
     ),
+    offset: int = Query(default=0, ge=0, description="Skip first N timesteps"),
+    limit: int = Query(default=0, ge=0, description="Max timesteps to return (0=all)"),
+    skip: int = Query(default=1, ge=1, description="Return every Nth timestep (for animation)"),
 ) -> dict:
     """
-    Get drawdown (head change relative to reference timestep) for all timesteps.
+    Get drawdown (head change relative to reference timestep).
 
     Returns per-timestep arrays of drawdown values (negative = decline).
     Used for drawdown animation.
+
+    Supports pagination via offset/limit and frame skipping via skip.
     """
     loader = model_state.get_head_loader()
     if loader is None:
@@ -891,9 +896,14 @@ def get_drawdown(
 
     ref_values = ref_frame[:, layer_idx]
 
-    # Compute drawdown for all timesteps
+    # Build list of timestep indices to process
+    all_indices = list(range(offset, loader.n_frames, skip))
+    if limit > 0:
+        all_indices = all_indices[:limit]
+
+    # Compute drawdown for selected timesteps
     timesteps: list[dict] = []
-    for ts in range(loader.n_frames):
+    for ts in all_indices:
         frame = loader.get_frame(ts)
         vals = frame[:, layer_idx]
         diff = vals - ref_values
@@ -921,6 +931,7 @@ def get_drawdown(
     return {
         "layer": layer,
         "reference_timestep": reference_timestep,
+        "n_total_timesteps": loader.n_frames,
         "n_timesteps": len(timesteps),
         "timesteps": timesteps,
     }
@@ -1019,4 +1030,78 @@ def get_heads_by_element(
         "values": elem_heads,
         "min": round(lo, 3),
         "max": round(hi, 3),
+    }
+
+
+@router.get("/statistics")
+def get_head_statistics(
+    layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
+    max_frames: int = Query(default=0, ge=0, description="Max frames to sample (0=all)"),
+) -> dict:
+    """Get time-aggregated statistics for head values.
+
+    Computes min, max, mean, and standard deviation across all (or sampled)
+    timesteps for each node. Useful for quick model summary without
+    downloading all timesteps.
+    """
+    loader = model_state.get_head_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No head data available")
+
+    import numpy as np
+
+    layer_idx = layer - 1
+    n_frames = loader.n_frames
+    if n_frames == 0:
+        raise HTTPException(status_code=404, detail="No timesteps available")
+
+    # Determine which frames to sample
+    if max_frames > 0 and max_frames < n_frames:
+        indices = np.linspace(0, n_frames - 1, max_frames, dtype=int).tolist()
+    else:
+        indices = list(range(n_frames))
+
+    # Collect values: stack all sampled frames
+    first = loader.get_frame(indices[0])
+    if layer_idx >= first.shape[1]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Layer {layer} out of range [1, {first.shape[1]}]",
+        )
+
+    n_nodes = first.shape[0]
+    stack = np.empty((len(indices), n_nodes), dtype=np.float64)
+
+    for i, ts in enumerate(indices):
+        frame = loader.get_frame(ts)
+        stack[i] = frame[:, layer_idx]
+
+    # Mask dry cells (< -9000)
+    masked = np.ma.masked_less(stack, -9000)
+
+    node_min = np.ma.min(masked, axis=0).filled(np.nan)
+    node_max = np.ma.max(masked, axis=0).filled(np.nan)
+    node_mean = np.ma.mean(masked, axis=0).filled(np.nan)
+    node_std = np.ma.std(masked, axis=0).filled(np.nan)
+
+    # Global stats
+    all_valid = masked.compressed()
+
+    return {
+        "layer": layer,
+        "n_nodes": int(n_nodes),
+        "n_frames_sampled": len(indices),
+        "n_total_frames": n_frames,
+        "global": {
+            "min": round(float(np.min(all_valid)), 3) if len(all_valid) > 0 else None,
+            "max": round(float(np.max(all_valid)), 3) if len(all_valid) > 0 else None,
+            "mean": round(float(np.mean(all_valid)), 3) if len(all_valid) > 0 else None,
+            "std": round(float(np.std(all_valid)), 3) if len(all_valid) > 0 else None,
+        },
+        "per_node": {
+            "min": [round(float(v), 3) if not np.isnan(v) else None for v in node_min],
+            "max": [round(float(v), 3) if not np.isnan(v) else None for v in node_max],
+            "mean": [round(float(v), 3) if not np.isnan(v) else None for v in node_mean],
+            "std": [round(float(v), 3) if not np.isnan(v) else None for v in node_std],
+        },
     }

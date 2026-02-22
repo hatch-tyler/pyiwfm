@@ -18,14 +18,18 @@ pip install -e ".[all]"       # All optional dependencies
 
 ### Testing
 ```bash
-pytest tests/                          # Run all tests
-pytest tests/ --cov=pyiwfm             # With coverage
+pytest tests/unit/                     # Run unit tests (what CI runs on every push)
 pytest tests/unit/test_mesh.py -v      # Single test file
+pytest tests/ --cov=pyiwfm             # With coverage
 pytest tests/ -m slow                  # Run slow-marked tests
-pytest tests/ -m integration           # Run integration tests
+pytest tests/ -m integration           # Run integration tests (need model data, see below)
 pytest tests/ -m roundtrip             # Run roundtrip read→write→read tests
 pytest tests/ -m property              # Run property-based (Hypothesis) tests
 ```
+
+Integration tests require model data via environment variables:
+- `IWFM_SAMPLE_MODEL` — path to IWFM Sample Model dir (auto-downloads from CNRA if unset)
+- `C2VSIMCG_DIR` — path to C2VSimCG model dir (required for C2VSimCG-specific tests)
 
 ### Code Quality
 ```bash
@@ -103,6 +107,7 @@ The `io/` module handles 50+ IWFM file formats. Key patterns:
 - `load_complete_model()` / `save_complete_model()` for full model I/O (in `io/preprocessor.py`)
 - `CompleteModelLoader` / `CompleteModelWriter` for advanced loading (in `io/model_loader.py` / `io/model_writer.py`)
 - Each component (groundwater, streams, lakes, rootzone, etc.) has dedicated reader and writer modules
+- `io/__init__.py` uses PEP 562 `__getattr__` for lazy submodule access; add new public classes/functions to its `__all__` and import blocks
 - `head_all_converter` is intentionally NOT in `io/__init__.py`; import directly: `from pyiwfm.io.head_all_converter import convert_headall_to_hdf`
 
 ### Web Viewer Architecture
@@ -133,6 +138,7 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - `make_simple_grid()` — creates a 2x2 quad AppGrid (9 nodes, 4 elements) for unit tests
 - `make_simple_stratigraphy()` — creates uniform-layer Stratigraphy for unit tests
 - `fixtures_path` / `small_model_path` — paths to test fixture data in `tests/fixtures/`
+- `mock_model_dir` — temp directory with Simulation/ and Preprocessor/ subdirs
 - Integration tests (roundtrip, preprocessor/simulation runs) live in `tests/integration/`
 
 ### PEST++ Integration
@@ -141,6 +147,16 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - Parameter bounds and groups
 - Observation management
 - Ensemble methods (prior/posterior)
+
+## CI Pipeline
+
+CI runs on every push/PR to `master` (see `.github/workflows/ci.yml`):
+1. **Lint** — `ruff check` and `ruff format --check` (Python 3.12)
+2. **Typecheck** — `mypy src/pyiwfm/` (Python 3.12)
+3. **Test** — `pytest tests/unit/` on Ubuntu/Windows × Python 3.10–3.13; coverage on 3.12/Ubuntu
+4. **Integration** — scheduled/manual only; runs `pytest tests/integration/` with `.[all,dev]`
+
+All lint, typecheck, and unit test jobs must pass before merge. Run `ruff check src/ tests/ && ruff format --check src/ tests/ && mypy src/pyiwfm/ && pytest tests/unit/` locally to verify before pushing.
 
 ## Code Style
 

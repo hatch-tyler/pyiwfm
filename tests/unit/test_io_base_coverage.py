@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.base import (
     BaseReader,
     BaseWriter,
@@ -83,7 +84,7 @@ class TestReadFortranRecordEOFData:
 
         reader = _ConcreteBinaryReader(test_file)
         with open(test_file, "rb") as f:
-            with pytest.raises(EOFError, match="record data"):
+            with pytest.raises(FileFormatError, match="Incomplete record"):
                 reader._read_fortran_record(f)
 
 
@@ -100,7 +101,7 @@ class TestReadFortranRecordMarkerMismatch:
 
         reader = _ConcreteBinaryReader(test_file)
         with open(test_file, "rb") as f:
-            with pytest.raises(ValueError, match="marker mismatch"):
+            with pytest.raises(FileFormatError, match="marker mismatch"):
                 reader._read_fortran_record(f)
 
 

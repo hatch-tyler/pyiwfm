@@ -60,6 +60,10 @@ class ModelState:
         # Cached grid index maps (populated lazily, cleared on set_model)
         self._node_id_to_idx: dict[int, int] | None = None
         self._sorted_elem_ids: list[int] | None = None
+        self._elem_id_to_idx: dict[int, int] | None = None
+
+        # Cached hydrograph locations (reprojected to WGS84)
+        self._hydrograph_locations_cache: dict[str, list[dict]] | None = None
 
         # Results-related state
         self._crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
@@ -120,6 +124,8 @@ class ModelState:
         self._diversion_ts_data = None
         self._node_id_to_idx = None
         self._sorted_elem_ids = None
+        self._elem_id_to_idx = None
+        self._hydrograph_locations_cache = None
         # Clear cached physical location grouping
         if hasattr(self, "_gw_phys_locs"):
             del self._gw_phys_locs
@@ -948,7 +954,10 @@ class ModelState:
         return [groups[k] for k in order]
 
     def get_hydrograph_locations(self) -> dict[str, list[dict]]:
-        """Get all hydrograph locations reprojected to WGS84."""
+        """Get all hydrograph locations reprojected to WGS84 (cached)."""
+        if self._hydrograph_locations_cache is not None:
+            return self._hydrograph_locations_cache
+
         result: dict[str, list[dict]] = {"gw": [], "stream": [], "subsidence": []}
 
         if self._model is None:
@@ -1036,6 +1045,7 @@ class ModelState:
                         }
                     )
 
+        self._hydrograph_locations_cache = result
         return result
 
     # ------------------------------------------------------------------
@@ -1170,6 +1180,13 @@ class ModelState:
                 return []
             self._sorted_elem_ids = sorted(self._model.grid.elements.keys())
         return self._sorted_elem_ids
+
+    def get_elem_id_to_idx(self) -> dict[int, int]:
+        """Get cached elem_id -> array index mapping."""
+        if self._elem_id_to_idx is None:
+            sorted_ids = self.get_sorted_elem_ids()
+            self._elem_id_to_idx = {eid: i for i, eid in enumerate(sorted_ids)}
+        return self._elem_id_to_idx
 
     # ------------------------------------------------------------------
     # Results info

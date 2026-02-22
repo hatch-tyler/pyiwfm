@@ -19,6 +19,9 @@ from typing import TextIO
 from pyiwfm.io.iwfm_reader import (
     LineBuffer as _LineBuffer,
 )
+from pyiwfm.io.iwfm_reader import (
+    resolve_path as _resolve_path_canonical,
+)
 from pyiwfm.io.iwfm_writer import (
     ensure_parent_dir as _ensure_parent_dir,
 )
@@ -230,13 +233,12 @@ class _V4xReaderBase:
 
     @staticmethod
     def _resolve_path(base_dir: Path | None, raw: str) -> Path | None:
-        raw = raw.strip()
-        if not raw:
-            return None
-        p = Path(raw)
-        if p.is_absolute() or base_dir is None:
-            return p
-        return base_dir / p
+        if base_dir is None:
+            stripped = raw.strip()
+            if not stripped:
+                return None
+            return Path(stripped)
+        return _resolve_path_canonical(base_dir, raw, allow_empty=True)
 
     def _read_element_table(self, buf: _LineBuffer, n_values: int) -> list[ElementCropRow]:
         """Read *n_elements* rows each with *element_id + n_values* cols.

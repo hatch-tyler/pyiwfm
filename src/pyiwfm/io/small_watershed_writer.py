@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pyiwfm.io.writer_base import TemplateWriter
+from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class SmallWatershedWriterConfig:
+class SmallWatershedWriterConfig(BaseComponentWriterConfig):
     """Configuration for small watershed component file writing.
 
     Attributes:
@@ -37,9 +38,7 @@ class SmallWatershedWriterConfig:
         final_results_file: Final results output file path
     """
 
-    output_dir: Path
     swshed_subdir: str = "SmallWatershed"
-    version: str = "4.0"
 
     # File names
     main_file: str = "SmallWatershed_MAIN.dat"
@@ -48,17 +47,16 @@ class SmallWatershedWriterConfig:
     budget_file: str = "../Results/SWShedBud.hdf"
     final_results_file: str = "../Results/FinalSWShed.out"
 
+    def _get_subdir(self) -> str:
+        return self.swshed_subdir
+
+    def _get_main_file(self) -> str:
+        return self.main_file
+
     @property
     def swshed_dir(self) -> Path:
         """Get the small watershed subdirectory path."""
-        if self.swshed_subdir:
-            return self.output_dir / self.swshed_subdir
-        return self.output_dir
-
-    @property
-    def main_path(self) -> Path:
-        """Get the main file path."""
-        return self.swshed_dir / self.main_file
+        return self.component_dir
 
 
 class SmallWatershedComponentWriter(TemplateWriter):

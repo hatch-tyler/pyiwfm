@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm.core.base_component import BaseComponent
 from pyiwfm.core.exceptions import ComponentError
 
 
@@ -195,7 +196,7 @@ class Lake:
 
 
 @dataclass
-class AppLake:
+class AppLake(BaseComponent):
     """
     Lake application component.
 
@@ -212,6 +213,11 @@ class AppLake:
     lakes: dict[int, Lake] = field(default_factory=dict)
     lake_elements: list[LakeElement] = field(default_factory=list)
     current_elevations: dict[int, float] = field(default_factory=dict)
+
+    @property
+    def n_items(self) -> int:
+        """Return number of lakes (primary entities)."""
+        return len(self.lakes)
 
     @property
     def n_lakes(self) -> int:

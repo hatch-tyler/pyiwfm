@@ -12,6 +12,13 @@ from __future__ import annotations
 
 __version__ = "0.1.0"
 
+from pyiwfm.components.groundwater import AppGW
+from pyiwfm.components.lake import AppLake
+from pyiwfm.components.rootzone import RootZone
+from pyiwfm.components.small_watershed import AppSmallWatershed
+from pyiwfm.components.stream import AppStream
+from pyiwfm.components.unsaturated_zone import AppUnsatZone
+from pyiwfm.core.base_component import BaseComponent
 from pyiwfm.core.exceptions import (
     IWFMIOError,
     MeshError,
@@ -66,6 +73,14 @@ __all__ = [
     "Stratigraphy",
     # Model
     "IWFMModel",
+    # Components
+    "BaseComponent",
+    "AppGW",
+    "AppStream",
+    "AppLake",
+    "RootZone",
+    "AppSmallWatershed",
+    "AppUnsatZone",
     # Exceptions
     "PyIWFMError",
     "MeshError",

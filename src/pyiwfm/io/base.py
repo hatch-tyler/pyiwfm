@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO
 
+from pyiwfm.io.binary import read_fortran_record as _read_fortran_record
 from pyiwfm.io.iwfm_writer import ensure_parent_dir
 
 if TYPE_CHECKING:
@@ -193,40 +194,11 @@ class BinaryReader(BaseReader):
         return "binary"
 
     def _read_fortran_record(self, f: BinaryIO) -> bytes:
+        """Read a Fortran unformatted record.
+
+        Delegates to :func:`pyiwfm.io.binary.read_fortran_record`.
         """
-        Read a Fortran unformatted record.
-
-        Fortran unformatted files have record markers (4-byte integers)
-        at the start and end of each record indicating the record length.
-
-        Args:
-            f: Binary file object
-
-        Returns:
-            Record data as bytes
-        """
-        import struct
-
-        # Read leading record marker
-        marker_data = f.read(self.RECORD_MARKER_SIZE)
-        if len(marker_data) < self.RECORD_MARKER_SIZE:
-            raise EOFError("Unexpected end of file reading record marker")
-
-        record_length = struct.unpack(f"{self.endian}i", marker_data)[0]
-
-        # Read record data
-        data = f.read(record_length)
-        if len(data) < record_length:
-            raise EOFError("Unexpected end of file reading record data")
-
-        # Read trailing record marker
-        trailing_marker = f.read(self.RECORD_MARKER_SIZE)
-        trailing_length = struct.unpack(f"{self.endian}i", trailing_marker)[0]
-
-        if trailing_length != record_length:
-            raise ValueError(f"Record marker mismatch: {record_length} != {trailing_length}")
-
-        return data
+        return _read_fortran_record(f, self.endian)
 
 
 class BinaryWriter(BaseWriter):

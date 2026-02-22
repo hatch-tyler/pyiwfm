@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 from numpy.typing import NDArray
 
 from pyiwfm.io.writer_base import TemplateWriter
+from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class RootZoneWriterConfig:
+class RootZoneWriterConfig(BaseComponentWriterConfig):
     """
     Configuration for root zone component file writing.
 
@@ -44,9 +45,14 @@ class RootZoneWriterConfig:
         IWFM root zone component version
     """
 
-    output_dir: Path
     rootzone_subdir: str = "RootZone"
     version: str = "4.12"
+
+    def _get_subdir(self) -> str:
+        return self.rootzone_subdir
+
+    def _get_main_file(self) -> str:
+        return self.main_file
 
     # File names
     main_file: str = "RootZone_MAIN.dat"
@@ -88,12 +94,7 @@ class RootZoneWriterConfig:
     @property
     def rootzone_dir(self) -> Path:
         """Get the root zone subdirectory path."""
-        return self.output_dir / self.rootzone_subdir
-
-    @property
-    def main_path(self) -> Path:
-        """Get the main file path."""
-        return self.rootzone_dir / self.main_file
+        return self.component_dir
 
 
 def _sp_val(obj: object, attr: str, default: float | int, alt: str | None = None) -> float | int:

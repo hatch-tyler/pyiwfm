@@ -12,6 +12,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from pyiwfm.core.base_component import BaseComponent
 from pyiwfm.core.exceptions import ComponentError
 
 if TYPE_CHECKING:
@@ -101,7 +102,7 @@ class WatershedUnit:
 
 
 @dataclass
-class AppSmallWatershed:
+class AppSmallWatershed(BaseComponent):
     """Small Watershed application component.
 
     This class manages all small watersheds in the model domain including
@@ -152,6 +153,11 @@ class AppSmallWatershed:
     # Output files
     budget_output_file: str = ""
     final_results_file: str = ""
+
+    @property
+    def n_items(self) -> int:
+        """Return number of watersheds (primary entities)."""
+        return len(self.watersheds)
 
     @property
     def n_watersheds(self) -> int:

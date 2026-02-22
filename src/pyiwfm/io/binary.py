@@ -22,6 +22,45 @@ from pyiwfm.core.mesh import AppGrid
 from pyiwfm.core.stratigraphy import Stratigraphy
 
 
+def read_fortran_record(f: BinaryIO, endian: str = "<") -> bytes:
+    """Read a single Fortran unformatted record from an open file.
+
+    Fortran unformatted sequential files bracket each record with
+    4-byte integer markers that encode the record length in bytes.
+
+    Parameters
+    ----------
+    f : BinaryIO
+        An open binary file object.
+    endian : str
+        Byte order (``'<'`` = little-endian, ``'>'`` = big-endian).
+
+    Returns
+    -------
+    bytes
+        The raw record data (without markers).
+    """
+    marker_data = f.read(4)
+    if len(marker_data) < 4:
+        raise EOFError("Unexpected end of file reading record marker")
+
+    record_length = struct.unpack(f"{endian}i", marker_data)[0]
+
+    data = f.read(record_length)
+    if len(data) < record_length:
+        raise FileFormatError(f"Incomplete record: expected {record_length} bytes, got {len(data)}")
+
+    trailing_marker = f.read(4)
+    if len(trailing_marker) < 4:
+        raise EOFError("Unexpected end of file reading trailing record marker")
+    trailing_length = struct.unpack(f"{endian}i", trailing_marker)[0]
+
+    if trailing_length != record_length:
+        raise FileFormatError(f"Record marker mismatch: {record_length} != {trailing_length}")
+
+    return data
+
+
 class FortranBinaryReader:
     """
     Reader for Fortran unformatted binary files.
@@ -63,29 +102,7 @@ class FortranBinaryReader:
         """
         if self._file is None:
             raise RuntimeError("File not open")
-
-        # Read leading record marker (4 bytes)
-        marker_data = self._file.read(4)
-        if len(marker_data) < 4:
-            raise EOFError("End of file reached")
-
-        record_length = struct.unpack(f"{self.endian}i", marker_data)[0]
-
-        # Read record data
-        data = self._file.read(record_length)
-        if len(data) < record_length:
-            raise FileFormatError(
-                f"Incomplete record: expected {record_length} bytes, got {len(data)}"
-            )
-
-        # Read trailing record marker
-        trailing_marker = self._file.read(4)
-        trailing_length = struct.unpack(f"{self.endian}i", trailing_marker)[0]
-
-        if trailing_length != record_length:
-            raise FileFormatError(f"Record marker mismatch: {record_length} != {trailing_length}")
-
-        return data
+        return read_fortran_record(self._file, self.endian)
 
     def read_int(self) -> int:
         """Read a single integer record."""

@@ -16,6 +16,7 @@ from typing import Any
 
 import pytest
 
+from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.base import (
     BaseReader,
     BaseWriter,
@@ -313,7 +314,7 @@ class TestBinaryReader:
 
         reader = ConcreteBinaryReader(test_file)
 
-        with pytest.raises(EOFError, match="record data"):
+        with pytest.raises(FileFormatError, match="Incomplete record"):
             reader.read()
 
     def test_read_fortran_record_marker_mismatch(self, tmp_path: Path) -> None:
@@ -329,7 +330,7 @@ class TestBinaryReader:
 
         reader = ConcreteBinaryReader(test_file)
 
-        with pytest.raises(ValueError, match="marker mismatch"):
+        with pytest.raises(FileFormatError, match="marker mismatch"):
             reader.read()
 
 

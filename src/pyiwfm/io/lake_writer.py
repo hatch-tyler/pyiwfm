@@ -19,7 +19,9 @@ from typing import TYPE_CHECKING, Any
 
 from numpy.typing import NDArray
 
+from pyiwfm.io.iwfm_reader import parse_version as _parse_version
 from pyiwfm.io.writer_base import TemplateWriter
+from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
@@ -29,14 +31,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _parse_lake_version(version_str: str) -> tuple[int, int]:
-    """Parse version string like '4.0' or '5.0' into a tuple."""
-    parts = version_str.split(".")
-    return (int(parts[0]), int(parts[1]) if len(parts) > 1 else 0)
-
-
 @dataclass
-class LakeWriterConfig:
+class LakeWriterConfig(BaseComponentWriterConfig):
     """
     Configuration for lake component file writing.
 
@@ -50,9 +46,13 @@ class LakeWriterConfig:
         IWFM lake component version
     """
 
-    output_dir: Path
     lake_subdir: str = "Lake"
-    version: str = "4.0"
+
+    def _get_subdir(self) -> str:
+        return self.lake_subdir
+
+    def _get_main_file(self) -> str:
+        return self.main_file
 
     # File names
     main_file: str = "Lake_MAIN.dat"
@@ -79,12 +79,7 @@ class LakeWriterConfig:
     @property
     def lake_dir(self) -> Path:
         """Get the lake subdirectory path."""
-        return self.output_dir / self.lake_subdir
-
-    @property
-    def main_path(self) -> Path:
-        """Get the main file path."""
-        return self.lake_dir / self.main_file
+        return self.component_dir
 
 
 class LakeComponentWriter(TemplateWriter):
@@ -217,7 +212,7 @@ class LakeComponentWriter(TemplateWriter):
         )
 
         generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        version = _parse_lake_version(self.config.version)
+        version = _parse_version(self.config.version)
 
         # Build lake data for template
         lake_data = []

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pyiwfm.io.writer_base import TemplateWriter
+from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class UnsatZoneWriterConfig:
+class UnsatZoneWriterConfig(BaseComponentWriterConfig):
     """Configuration for unsaturated zone component file writing.
 
     Attributes:
@@ -38,9 +39,7 @@ class UnsatZoneWriterConfig:
         final_results_file: Final results output file path
     """
 
-    output_dir: Path
     unsatzone_subdir: str = "UnsatZone"
-    version: str = "4.0"
 
     # File names
     main_file: str = "UnsatZone_MAIN.dat"
@@ -50,17 +49,16 @@ class UnsatZoneWriterConfig:
     zbudget_file: str = "../Results/UZZBud.hdf"
     final_results_file: str = "../Results/FinalUZ.out"
 
+    def _get_subdir(self) -> str:
+        return self.unsatzone_subdir
+
+    def _get_main_file(self) -> str:
+        return self.main_file
+
     @property
     def unsatzone_dir(self) -> Path:
         """Get the unsaturated zone subdirectory path."""
-        if self.unsatzone_subdir:
-            return self.output_dir / self.unsatzone_subdir
-        return self.output_dir
-
-    @property
-    def main_path(self) -> Path:
-        """Get the main file path."""
-        return self.unsatzone_dir / self.main_file
+        return self.component_dir
 
 
 class UnsatZoneComponentWriter(TemplateWriter):

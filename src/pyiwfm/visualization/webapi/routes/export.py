@@ -1,5 +1,5 @@
 """
-Data export API routes: CSV, GeoJSON downloads.
+Data export API routes: CSV, GeoJSON, GeoPackage, and plot downloads.
 """
 
 from __future__ import annotations
@@ -7,11 +7,15 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
+import tempfile
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
 from pyiwfm.visualization.webapi.config import model_state
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
@@ -234,3 +238,183 @@ def export_hydrograph_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@router.get("/geopackage")
+def export_geopackage(
+    include_streams: bool = Query(default=True, description="Include stream reaches"),
+    include_subregions: bool = Query(default=True, description="Include subregion polygons"),
+    include_boundary: bool = Query(default=True, description="Include model boundary"),
+) -> Response:
+    """Export the model mesh as a GeoPackage file.
+
+    Creates a multi-layer GeoPackage containing nodes, elements,
+    and optionally streams, subregions, and boundary polygon.
+    """
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    model = model_state.model
+    if model is None or model.grid is None:
+        raise HTTPException(status_code=404, detail="No mesh/grid loaded")
+
+    try:
+        from pyiwfm.visualization.gis_export import GISExporter
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail="GIS export requires geopandas: pip install geopandas",
+        ) from e
+
+    exporter = GISExporter(
+        grid=model.grid,
+        stratigraphy=model.stratigraphy,
+        streams=model.streams,
+        crs=model_state._crs,
+    )
+
+    with tempfile.NamedTemporaryFile(suffix=".gpkg", delete=False) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        exporter.export_geopackage(
+            tmp_path,
+            include_streams=include_streams,
+            include_subregions=include_subregions,
+            include_boundary=include_boundary,
+        )
+
+        from pathlib import Path
+
+        data = Path(tmp_path).read_bytes()
+
+        model_name = model.name or "model"
+        safe_name = model_name.replace(" ", "_").replace("/", "_")
+        filename = f"{safe_name}.gpkg"
+
+        return Response(
+            content=data,
+            media_type="application/geopackage+sqlite3",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.exception("GeoPackage export failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        import os
+
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+
+@router.get("/plot/{plot_type}")
+def export_plot(
+    plot_type: str,
+    format: str = Query(default="png", description="Image format: png or svg"),
+    layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
+    timestep: int = Query(default=0, ge=0, description="Timestep index"),
+    width: float = Query(default=10.0, gt=0, description="Figure width in inches"),
+    height: float = Query(default=8.0, gt=0, description="Figure height in inches"),
+    dpi: int = Query(default=150, ge=72, le=600, description="DPI for PNG output"),
+) -> Response:
+    """Generate publication-quality matplotlib figures.
+
+    Supported plot types:
+    - mesh: Model mesh with elements and nodes
+    - heads: Head contour map for a timestep/layer
+    - streams: Stream network colored by reach
+    - elements: Elements colored by subregion
+    """
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    model = model_state.model
+    if model is None or model.grid is None:
+        raise HTTPException(status_code=404, detail="No mesh/grid loaded")
+
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        from pyiwfm.visualization.plotting import (
+            plot_elements,
+            plot_mesh,
+            plot_scalar_field,
+            plot_streams,
+        )
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Plot generation requires matplotlib: pip install matplotlib",
+        ) from e
+
+    try:
+        fig = None
+        if plot_type == "mesh":
+            fig, _ax = plot_mesh(model.grid, figsize=(width, height))
+        elif plot_type == "elements":
+            fig, _ax = plot_elements(model.grid, figsize=(width, height))
+        elif plot_type == "streams":
+            if model.streams is None:
+                raise HTTPException(status_code=404, detail="No stream network loaded")
+            fig, _ax = plot_streams(model.grid, model.streams, figsize=(width, height))
+        elif plot_type == "heads":
+            loader = model_state.get_head_loader()
+            if loader is None:
+                raise HTTPException(status_code=404, detail="No head data available")
+            if timestep >= loader.n_frames:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Timestep {timestep} out of range [0, {loader.n_frames})",
+                )
+            import numpy as np
+
+            frame = loader.get_frame(timestep)
+            layer_idx = layer - 1
+            if layer_idx >= frame.shape[1]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Layer {layer} out of range [1, {frame.shape[1]}]",
+                )
+            values = frame[:, layer_idx]
+            # Mask dry cells
+            values = np.where(values < -9000, np.nan, values)
+            fig, _ax = plot_scalar_field(
+                model.grid,
+                values,
+                figsize=(width, height),
+                title=f"Head - Layer {layer}, Timestep {timestep}",
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown plot type: {plot_type}. Supported: mesh, elements, streams, heads",
+            )
+
+        buf = io.BytesIO()
+        if format == "svg":
+            fig.savefig(buf, format="svg", bbox_inches="tight")
+            media_type = "image/svg+xml"
+            ext = "svg"
+        else:
+            fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
+            media_type = "image/png"
+            ext = "png"
+        plt.close(fig)
+        buf.seek(0)
+
+        filename = f"{plot_type}_layer{layer}_ts{timestep}.{ext}"
+        return Response(
+            content=buf.getvalue(),
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Plot generation failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e

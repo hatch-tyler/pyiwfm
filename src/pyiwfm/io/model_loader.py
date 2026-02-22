@@ -20,6 +20,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from pyiwfm.io.iwfm_reader import resolve_path as _resolve_path_base
+
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
     from pyiwfm.io.comment_extractor import CommentExtractor
@@ -220,10 +222,7 @@ class CompleteModelLoader:
 
     def _resolve_path(self, filepath: Path | str) -> Path:
         """Resolve a file path relative to the base directory."""
-        path = Path(filepath)
-        if path.is_absolute():
-            return path
-        return self.base_dir / path
+        return _resolve_path_base(self.base_dir, str(filepath))
 
 
 def load_complete_model(

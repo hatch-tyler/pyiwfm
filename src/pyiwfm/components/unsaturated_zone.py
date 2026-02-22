@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm.core.base_component import BaseComponent
 from pyiwfm.core.exceptions import ComponentError
 
 if TYPE_CHECKING:
@@ -64,7 +65,7 @@ class UnsatZoneElement:
 
 
 @dataclass
-class AppUnsatZone:
+class AppUnsatZone(BaseComponent):
     """Unsaturated Zone application component.
 
     This class manages the vadose zone modeling parameters for all elements.
@@ -103,6 +104,11 @@ class AppUnsatZone:
     budget_file: str = ""
     zbudget_file: str = ""
     final_results_file: str = ""
+
+    @property
+    def n_items(self) -> int:
+        """Return number of elements (primary entities)."""
+        return len(self.elements)
 
     @property
     def n_elements(self) -> int:

@@ -22,6 +22,7 @@ from numpy.typing import NDArray
 
 from pyiwfm.io.streams import parse_stream_version
 from pyiwfm.io.writer_base import TemplateWriter
+from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class StreamWriterConfig:
+class StreamWriterConfig(BaseComponentWriterConfig):
     """
     Configuration for stream component file writing.
 
@@ -46,9 +47,13 @@ class StreamWriterConfig:
         IWFM stream component version
     """
 
-    output_dir: Path
     stream_subdir: str = "Stream"
-    version: str = "4.0"
+
+    def _get_subdir(self) -> str:
+        return self.stream_subdir
+
+    def _get_main_file(self) -> str:
+        return self.main_file
 
     # File names
     main_file: str = "Stream_MAIN.dat"
@@ -92,12 +97,7 @@ class StreamWriterConfig:
     @property
     def stream_dir(self) -> Path:
         """Get the stream subdirectory path."""
-        return self.output_dir / self.stream_subdir
-
-    @property
-    def main_path(self) -> Path:
-        """Get the main file path."""
-        return self.stream_dir / self.main_file
+        return self.component_dir
 
 
 class StreamComponentWriter(TemplateWriter):
