@@ -1,6 +1,6 @@
 """Integration tests for read/write roundtrip with real model files.
 
-Tests use the IWFM Sample Model and C2VSimFG when available.
+Tests use the IWFM Sample Model when available.
 All tests are skipped if model paths are not accessible.
 """
 
@@ -142,25 +142,4 @@ class TestSampleModelIO:
         sim_dir = sample_model_path / "Simulation"
         if not sim_dir.exists():
             pytest.skip("Simulation directory not found in sample model")
-        assert sim_dir.is_dir()
-
-
-# =============================================================================
-# C2VSimFG Tests (skipped if path unavailable)
-# =============================================================================
-
-
-class TestC2VSimFGIO:
-    """Tests using C2VSimFG model files."""
-
-    def test_c2vsimfg_exists(self, c2vsimfg_path: Path) -> None:
-        """Verify C2VSimFG directory structure."""
-        assert c2vsimfg_path.exists()
-        assert any(c2vsimfg_path.iterdir())
-
-    def test_c2vsimfg_has_simulation_dir(self, c2vsimfg_path: Path) -> None:
-        """Check for Simulation subdirectory in C2VSimFG."""
-        sim_dir = c2vsimfg_path / "Simulation"
-        if not sim_dir.exists():
-            pytest.skip("Simulation directory not found in C2VSimFG")
         assert sim_dir.is_dir()

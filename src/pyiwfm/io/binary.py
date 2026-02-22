@@ -403,8 +403,7 @@ class StreamAccessBinaryReader:
         data = self._file.read(n)
         if len(data) < n:
             raise EOFError(
-                f"Expected {n} bytes at offset {self._file.tell() - len(data)}, "
-                f"got {len(data)}"
+                f"Expected {n} bytes at offset {self._file.tell() - len(data)}, got {len(data)}"
             )
         return data
 

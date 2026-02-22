@@ -381,9 +381,7 @@ def _binary_data_to_model(
                 gw_node = int(gw_conn.gw_nodes[sn_id - 1])
                 if gw_node <= 0:
                     gw_node = None
-            stream.add_node(
-                StrmNode(id=sn_id, x=0.0, y=0.0, gw_node=gw_node)
-            )
+            stream.add_node(StrmNode(id=sn_id, x=0.0, y=0.0, gw_node=gw_node))
 
         sd3 = data.streams
         for i in range(sd3.n_reaches):

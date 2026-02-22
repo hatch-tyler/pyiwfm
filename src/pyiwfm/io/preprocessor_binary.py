@@ -232,9 +232,7 @@ class PreprocessorBinaryReader:
 
     # -- Section 1: AppGrid ------------------------------------------------
 
-    def _read_grid_data(
-        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
-    ) -> None:
+    def _read_grid_data(self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData) -> None:
         # 5 dimension ints
         data.n_nodes = f.read_int()
         data.n_elements = f.read_int()
@@ -324,9 +322,7 @@ class PreprocessorBinaryReader:
             integral_rot_del_shp_i_del_shp_j=rot_shp,
         )
 
-    def _read_app_faces(
-        self, f: StreamAccessBinaryReader, n_faces: int
-    ) -> AppFaceData:
+    def _read_app_faces(self, f: StreamAccessBinaryReader, n_faces: int) -> AppFaceData:
         if n_faces == 0:
             return AppFaceData(
                 nodes=np.array([], dtype=np.int32).reshape(0, 2),
@@ -340,9 +336,7 @@ class PreprocessorBinaryReader:
         boundary = f.read_logicals(n_faces)
         lengths = f.read_doubles(n_faces)
 
-        return AppFaceData(
-            nodes=nodes, elements=elements, boundary=boundary, lengths=lengths
-        )
+        return AppFaceData(nodes=nodes, elements=elements, boundary=boundary, lengths=lengths)
 
     def _read_subregion(self, f: StreamAccessBinaryReader) -> SubregionData:
         sub_id = f.read_int()
@@ -373,9 +367,7 @@ class PreprocessorBinaryReader:
 
     # -- Section 2: Stratigraphy -------------------------------------------
 
-    def _read_stratigraphy(
-        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
-    ) -> None:
+    def _read_stratigraphy(self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData) -> None:
         n_layers = f.read_int()
         n = data.n_nodes
 
@@ -460,9 +452,7 @@ class PreprocessorBinaryReader:
         n_lakes = f.read_int()
 
         if n_lakes == 0:
-            data.lake_gw_connector = LakeGWConnectorData(
-                n_lakes=0, lake_elements=[], lake_nodes=[]
-            )
+            data.lake_gw_connector = LakeGWConnectorData(n_lakes=0, lake_elements=[], lake_nodes=[])
             return
 
         lake_elements: list[NDArray[np.int32]] = []
@@ -482,9 +472,7 @@ class PreprocessorBinaryReader:
 
     # -- Section 6: AppLake (version-prefixed) -----------------------------
 
-    def _read_lake_data(
-        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
-    ) -> None:
+    def _read_lake_data(self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData) -> None:
         version = f.read_int()
 
         if version == 0:
@@ -523,9 +511,7 @@ class PreprocessorBinaryReader:
 
     # -- Section 7: AppStream (version-prefixed) ---------------------------
 
-    def _read_stream_data(
-        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
-    ) -> None:
+    def _read_stream_data(self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData) -> None:
         version = f.read_int()
 
         if version == 0:
@@ -577,9 +563,7 @@ class PreprocessorBinaryReader:
 
     # -- Section 8: Matrix (optional) --------------------------------------
 
-    def _read_matrix_data(
-        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
-    ) -> None:
+    def _read_matrix_data(self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData) -> None:
         try:
             data.matrix_n_equations = f.read_int()
             if data.matrix_n_equations > 0 and not f.at_eof():
@@ -592,9 +576,7 @@ class PreprocessorBinaryReader:
             pass
 
 
-def read_preprocessor_binary(
-    filepath: Path | str, endian: str = "<"
-) -> PreprocessorBinaryData:
+def read_preprocessor_binary(filepath: Path | str, endian: str = "<") -> PreprocessorBinaryData:
     """Convenience function to read preprocessor binary file.
 
     Args:

@@ -802,7 +802,6 @@ from unittest.mock import patch  # noqa: E402
 
 from pyiwfm.io.preprocessor import save_complete_model  # noqa: E402
 
-
 # =============================================================================
 # save_complete_model Tests
 # =============================================================================

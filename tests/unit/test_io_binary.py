@@ -254,9 +254,9 @@ class TestStreamAccessBinaryReader:
         """Test reading mixed types in sequence (no record markers)."""
         filepath = tmp_path / "test.bin"
         with open(filepath, "wb") as f:
-            f.write(struct.pack("<i", 5))       # int
-            f.write(struct.pack("<d", 2.718))    # double
-            f.write(struct.pack("<3i", 1, 2, 3)) # 3 ints
+            f.write(struct.pack("<i", 5))  # int
+            f.write(struct.pack("<d", 2.718))  # double
+            f.write(struct.pack("<3i", 1, 2, 3))  # 3 ints
         with StreamAccessBinaryReader(filepath) as reader:
             assert reader.read_int() == 5
             assert reader.read_double() == pytest.approx(2.718)
@@ -298,6 +298,7 @@ class TestBinaryEndianness:
 
         assert n == 12345
         np.testing.assert_allclose(arr, [1.5, 2.5, 3.5])
+
 
 # =============================================================================
 # Additional coverage tests
@@ -468,5 +469,3 @@ class TestFortranBinaryWriterEdgeCases:
         with FortranBinaryWriter(filepath) as writer:
             writer.write_int(1)
         assert filepath.exists()
-
-

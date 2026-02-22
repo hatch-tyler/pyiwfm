@@ -29,6 +29,7 @@ def sim_main(small_model_path: Path) -> Path:
 
 # ---- guard: skip all tests if fixture files weren't generated ----
 
+
 @pytest.fixture(autouse=True)
 def _require_fixtures(small_model_path: Path) -> None:
     pp = small_model_path / "Preprocessor" / "Preprocessor.in"
@@ -112,9 +113,7 @@ class TestElementReader:
         """South half (rows 0-9) = subregion 1, north half = subregion 2."""
         from pyiwfm.io.ascii import read_elements
 
-        elements, _, _ = read_elements(
-            small_model_path / "Preprocessor" / "Elements.dat"
-        )
+        elements, _, _ = read_elements(small_model_path / "Preprocessor" / "Elements.dat")
         # Element 1 is in first row → subregion 1
         assert elements[1].subregion == 1
         # Element 201 is in row 10 → subregion 2
@@ -124,9 +123,7 @@ class TestElementReader:
         """First element should be a quad with 4 vertices."""
         from pyiwfm.io.ascii import read_elements
 
-        elements, _, _ = read_elements(
-            small_model_path / "Preprocessor" / "Elements.dat"
-        )
+        elements, _, _ = read_elements(small_model_path / "Preprocessor" / "Elements.dat")
         verts = elements[1].vertices
         assert len(verts) == 4
         # First element in a 21-col grid: (1, 2, 23, 22)
@@ -143,9 +140,7 @@ class TestStratigraphyReader:
         """Read stratigraphy.dat and verify 2 layers, 441 nodes."""
         from pyiwfm.io.ascii import read_stratigraphy
 
-        strat = read_stratigraphy(
-            small_model_path / "Preprocessor" / "Stratigraphy.dat"
-        )
+        strat = read_stratigraphy(small_model_path / "Preprocessor" / "Stratigraphy.dat")
 
         assert strat.n_layers == 2
         assert strat.n_nodes == 441
@@ -157,9 +152,7 @@ class TestStratigraphyReader:
         """Most nodes have gs_elev=500, lake-bed nodes are lower."""
         from pyiwfm.io.ascii import read_stratigraphy
 
-        strat = read_stratigraphy(
-            small_model_path / "Preprocessor" / "Stratigraphy.dat"
-        )
+        strat = read_stratigraphy(small_model_path / "Preprocessor" / "Stratigraphy.dat")
 
         # Node 1 (non-lake) should be 500
         assert strat.gs_elev[0] == pytest.approx(500.0)
@@ -196,9 +189,7 @@ class TestStreamMainReader:
         """Read Stream_MAIN.dat and verify file references."""
         from pyiwfm.io.streams import read_stream_main_file
 
-        stream_file = (
-            small_model_path / "Simulation" / "Stream" / "Stream_MAIN.dat"
-        )
+        stream_file = small_model_path / "Simulation" / "Stream" / "Stream_MAIN.dat"
         config = read_stream_main_file(stream_file)
 
         assert config.version == "4.0"
@@ -238,9 +229,7 @@ class TestRootZoneMainReader:
         """Read RootZone_MAIN.dat and verify version and sub-file paths."""
         from pyiwfm.io.rootzone import read_rootzone_main_file
 
-        rz_file = (
-            small_model_path / "Simulation" / "RootZone" / "RootZone_MAIN.dat"
-        )
+        rz_file = small_model_path / "Simulation" / "RootZone" / "RootZone_MAIN.dat"
         config = read_rootzone_main_file(rz_file)
 
         assert config.version == "4.12"

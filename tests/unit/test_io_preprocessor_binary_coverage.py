@@ -215,8 +215,8 @@ class TestReadGridData:
             np.array([0.0, 1.0, 2.0]),  # y
             # node/elem doubles calls with n=0 get empty arrays
         ]
-        f.read_doubles.side_effect = (
-            lambda n: doubles_queue.pop(0) if doubles_queue else np.array([], dtype=np.float64)
+        f.read_doubles.side_effect = lambda n: (
+            doubles_queue.pop(0) if doubles_queue else np.array([], dtype=np.float64)
         )
 
         ints_queue: list[np.ndarray] = [
@@ -224,8 +224,8 @@ class TestReadGridData:
             np.array([1, 2, 3, 1, 2, 3, 4], dtype=np.int32),  # vertex
             # node/elem ints calls with n=0 get empty arrays
         ]
-        f.read_ints.side_effect = (
-            lambda n: ints_queue.pop(0) if ints_queue else np.array([], dtype=np.int32)
+        f.read_ints.side_effect = lambda n: (
+            ints_queue.pop(0) if ints_queue else np.array([], dtype=np.int32)
         )
 
         reader = PreprocessorBinaryReader()
