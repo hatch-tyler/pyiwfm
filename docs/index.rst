@@ -91,14 +91,17 @@ For optional dependencies:
 
 .. code-block:: bash
 
-    # GIS support
-    pip install pyiwfm[gis]
-
-    # Mesh generation
+    # Mesh generation (triangle, gmsh)
     pip install pyiwfm[mesh]
 
-    # Visualization
+    # VTK 3D export
     pip install pyiwfm[viz]
+
+    # Web viewer (FastAPI + vtk.js + deck.gl)
+    pip install pyiwfm[webapi]
+
+    # PEST++ integration (scipy)
+    pip install pyiwfm[pest]
 
     # All optional dependencies
     pip install pyiwfm[all]

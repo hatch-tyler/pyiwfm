@@ -17,29 +17,19 @@ Install pyiwfm using pip:
 
 This installs the core package with required dependencies:
 
-- numpy >= 1.21
-- pandas >= 1.3
-- h5py >= 3.0
+- numpy >= 1.23
+- pandas >= 2.0
+- h5py >= 3.7
 - jinja2 >= 3.0
+- matplotlib >= 3.8
+- geopandas >= 1.0
+- shapely >= 2.0
+- pyogrio >= 0.7
 
 Optional Dependencies
 ---------------------
 
 pyiwfm has several optional dependency groups for additional functionality:
-
-GIS Support
-~~~~~~~~~~~
-
-For exporting to GIS formats (GeoPackage, Shapefile, GeoJSON):
-
-.. code-block:: bash
-
-    pip install pyiwfm[gis]
-
-This installs:
-
-- geopandas >= 0.10
-- shapely >= 2.0
 
 Mesh Generation
 ~~~~~~~~~~~~~~~
@@ -55,10 +45,10 @@ This installs:
 - triangle >= 20220202 (triangular meshes)
 - gmsh >= 4.11 (triangular, quadrilateral, or mixed meshes)
 
-Visualization
+VTK 3D Export
 ~~~~~~~~~~~~~
 
-For 3D visualization and plotting:
+For 3D visualization export (ParaView):
 
 .. code-block:: bash
 
@@ -66,8 +56,39 @@ For 3D visualization and plotting:
 
 This installs:
 
-- vtk >= 9.0 (3D export for ParaView)
-- matplotlib >= 3.5 (2D plotting)
+- vtk >= 9.0
+
+Web Viewer
+~~~~~~~~~~
+
+For the interactive web viewer (FastAPI + React + vtk.js + deck.gl):
+
+.. code-block:: bash
+
+    pip install pyiwfm[webapi]
+
+This installs:
+
+- fastapi >= 0.104
+- uvicorn >= 0.24
+- pydantic >= 2.0
+- pyvista >= 0.43
+- vtk >= 9.0
+- pyproj >= 3.4
+- python-multipart >= 0.0.6
+
+PEST++ Integration
+~~~~~~~~~~~~~~~~~~
+
+For parameter estimation workflows:
+
+.. code-block:: bash
+
+    pip install pyiwfm[pest]
+
+This installs:
+
+- scipy >= 1.7
 
 All Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -85,16 +106,16 @@ For development, clone the repository and install in editable mode:
 
 .. code-block:: bash
 
-    git clone https://github.com/CADWRDeltaModeling/pyiwfm.git
+    git clone https://github.com/hatch-tyler/pyiwfm.git
     cd pyiwfm
     pip install -e ".[dev]"
 
-The ``[dev]`` extra includes testing and documentation tools:
+The ``[dev]`` extra includes testing and linting tools:
 
-- pytest
-- pytest-cov
-- sphinx
-- pydata-sphinx-theme
+- pytest, pytest-cov, hypothesis
+- mypy
+- ruff, pre-commit
+- httpx
 
 Verifying Installation
 ----------------------
