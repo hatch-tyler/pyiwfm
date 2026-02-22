@@ -80,7 +80,7 @@ export function ResultsMapView() {
     modelInfo, resultsInfo, properties,
     headTimestep, headLayer,
     selectedLocation, selectedHydrograph,
-    showGWLocations, showStreamLocations, showSubsidenceLocations,
+    showGWLocations, showStreamLocations, showSubsidenceLocations, showTileDrainLocations,
     showSubregions, showStreamsOnMap, showWells, showNodes,
     showLakes, showBoundaryConditions,
     showSmallWatersheds, showDiversions,
@@ -119,7 +119,8 @@ export function ResultsMapView() {
     gw: HydrographLocation[];
     stream: HydrographLocation[];
     subsidence: HydrographLocation[];
-  }>({ gw: [], stream: [], subsidence: [] });
+    tile_drain: HydrographLocation[];
+  }>({ gw: [], stream: [], subsidence: [], tile_drain: [] });
   const [loading, setLoading] = useState(true);
   const [viewState, setViewState] = useState<ViewState>({
     longitude: -121.5, latitude: 37.5, zoom: 7, pitch: 0, bearing: 0,
@@ -914,6 +915,26 @@ export function ResultsMapView() {
       }));
     }
 
+    // Tile drain location markers
+    if (showTileDrainLocations && locations.tile_drain.length > 0) {
+      result.push(new ScatterplotLayer({
+        id: 'tile-drain-locations',
+        data: locations.tile_drain,
+        getPosition: (d: HydrographLocation) => [d.lng, d.lat],
+        getRadius: 500,
+        getFillColor: [139, 69, 19, 180] as [number, number, number, number],
+        getLineColor: [255, 255, 255, 255],
+        lineWidthMinPixels: 1,
+        stroked: true,
+        pickable: true,
+        radiusMinPixels: 4,
+        radiusMaxPixels: 12,
+        onClick: (info: PickingInfo<HydrographLocation>) => {
+          if (info.object) handleLocationClick(info.object, 'tile_drain');
+        },
+      }));
+    }
+
     // 9. Small watershed markers + arc arrows to destination stream nodes
     if (showSmallWatersheds && watershedData && watershedData.watersheds.length > 0) {
       // Watershed marker at first GW routing node
@@ -1115,7 +1136,7 @@ export function ResultsMapView() {
     watershedData, showSmallWatersheds, selectedWatershedId, selectedWatershedDetail,
     handleWatershedClick,
     diversionData, showDiversions, selectedDiversionId, diversionDetail, handleDiversionClick,
-    locations, showGWLocations, showStreamLocations, showSubsidenceLocations,
+    locations, showGWLocations, showStreamLocations, showSubsidenceLocations, showTileDrainLocations,
     selectedLocation, handleLocationClick, handleElementClick,
     handleReachClick,
     compareMode, comparedLocationIds, addComparedLocationId,

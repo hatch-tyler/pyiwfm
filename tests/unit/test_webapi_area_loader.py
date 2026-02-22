@@ -21,13 +21,11 @@ import h5py
 import numpy as np
 import pytest
 
-pytest.importorskip("fastapi", reason="fastapi not installed")
-
-from pyiwfm.visualization.webapi.area_loader import (  # noqa: E402
+from pyiwfm.io.area_loader import (
     AreaDataManager,
     LazyAreaDataLoader,
-    _iwfm_date_to_iso,
 )
+from pyiwfm.io.budget import iwfm_date_to_iso as _iwfm_date_to_iso
 
 # =====================================================================
 # Helpers: create test HDF5 area files

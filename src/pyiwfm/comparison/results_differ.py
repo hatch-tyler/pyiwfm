@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import h5py
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -264,12 +265,6 @@ class ResultsDiffer:
         if baseline_hdf is None or written_hdf is None:
             return None
 
-        try:
-            import h5py
-        except ImportError:
-            logger.warning("h5py not available; skipping HDF5 head comparison")
-            return None
-
         result = HeadComparison()
         all_diffs: list[float] = []
 
@@ -419,12 +414,6 @@ class ResultsDiffer:
         list[BudgetComparison]
             Per-file comparison results.
         """
-        try:
-            import h5py
-        except ImportError:
-            logger.warning("h5py not available; skipping budget comparison")
-            return []
-
         results: list[BudgetComparison] = []
 
         # Find budget HDF5 files
@@ -582,8 +571,6 @@ class ResultsDiffer:
     @staticmethod
     def _list_datasets(group: Any, prefix: str = "") -> list[str]:
         """Recursively list HDF5 dataset paths."""
-        import h5py
-
         datasets: list[str] = []
         for key in group.keys():
             item = group[key]

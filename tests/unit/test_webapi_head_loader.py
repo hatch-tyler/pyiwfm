@@ -11,7 +11,7 @@ import h5py
 import numpy as np
 import pytest
 
-from pyiwfm.visualization.webapi.head_loader import LazyHeadDataLoader
+from pyiwfm.io.head_loader import LazyHeadDataLoader
 
 # ---------------------------------------------------------------------------
 # Helpers -- real HDF5 fixtures

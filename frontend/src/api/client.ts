@@ -311,6 +311,7 @@ export interface HydrographLocations {
   gw: HydrographLocation[];
   stream: HydrographLocation[];
   subsidence: HydrographLocation[];
+  tile_drain: HydrographLocation[];
 }
 
 export interface HydrographData {

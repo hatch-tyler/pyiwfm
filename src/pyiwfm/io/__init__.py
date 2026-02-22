@@ -544,6 +544,8 @@ except ImportError:
     _dss_exports = []
 
 # Budget Reader (h5py is a required dependency)
+# Data loaders (moved from visualization.webapi — pure I/O, no web deps)
+from pyiwfm.io.area_loader import AreaDataManager, LazyAreaDataLoader
 from pyiwfm.io.budget import (
     BUDGET_DATA_TYPES,
     ASCIIOutputInfo,
@@ -552,9 +554,15 @@ from pyiwfm.io.budget import (
     LocationData,
     TimeStepInfo,
     excel_julian_to_datetime,
+    iwfm_date_to_iso,
     julian_to_datetime,
     parse_iwfm_datetime,
 )
+from pyiwfm.io.cache_builder import SqliteCacheBuilder, is_cache_stale
+from pyiwfm.io.cache_loader import SqliteCacheLoader
+from pyiwfm.io.head_loader import LazyHeadDataLoader
+from pyiwfm.io.hydrograph_loader import LazyHydrographDataLoader
+from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
 
 # ZBudget Reader (h5py is a required dependency)
 from pyiwfm.io.zbudget import (
@@ -918,6 +926,7 @@ __all__ = [
     "LocationData",
     "BUDGET_DATA_TYPES",
     "parse_iwfm_datetime",
+    "iwfm_date_to_iso",
     "julian_to_datetime",
     "excel_julian_to_datetime",
     # ZBudget Reader
@@ -925,6 +934,15 @@ __all__ = [
     "ZBudgetHeader",
     "ZoneInfo",
     "ZBUDGET_DATA_TYPES",
+    # Data loaders (moved from visualization.webapi)
+    "IWFMHydrographReader",
+    "LazyHydrographDataLoader",
+    "LazyHeadDataLoader",
+    "LazyAreaDataLoader",
+    "AreaDataManager",
+    "SqliteCacheBuilder",
+    "SqliteCacheLoader",
+    "is_cache_stale",
 ]
 
 

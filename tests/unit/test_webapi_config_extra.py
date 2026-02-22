@@ -836,7 +836,7 @@ class TestSubsidenceReader:
         mock_reader.n_timesteps = 20
 
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             return_value=mock_reader,
         ):
             result = state.get_subsidence_reader()
@@ -859,7 +859,7 @@ class TestSubsidenceReader:
         mock_reader.n_timesteps = 20
 
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             return_value=mock_reader,
         ):
             result = state.get_subsidence_reader()
@@ -877,7 +877,7 @@ class TestSubsidenceReader:
         model.groundwater.subsidence_config = subs_config
 
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             side_effect=RuntimeError("bad file"),
         ):
             result = state.get_subsidence_reader()
@@ -928,7 +928,7 @@ class TestSubsidenceReader:
         mock_reader.n_timesteps = 10
 
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             return_value=mock_reader,
         ):
             result = state.get_subsidence_reader()
@@ -945,7 +945,7 @@ class TestSubsidenceReader:
         subs_file.write_text("fake data")
 
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             side_effect=RuntimeError("corrupt"),
         ):
             result = state.get_subsidence_reader()
@@ -1021,7 +1021,7 @@ class TestAreaManager:
         mock_mgr_cls = MagicMock(return_value=mock_mgr)
 
         with patch(
-            "pyiwfm.visualization.webapi.area_loader.AreaDataManager",
+            "pyiwfm.io.area_loader.AreaDataManager",
             mock_mgr_cls,
         ):
             result = state.get_area_manager()
@@ -1045,7 +1045,7 @@ class TestAreaManager:
         mock_mgr_cls = MagicMock(return_value=mock_mgr)
 
         with patch(
-            "pyiwfm.visualization.webapi.area_loader.AreaDataManager",
+            "pyiwfm.io.area_loader.AreaDataManager",
             mock_mgr_cls,
         ):
             result = state.get_area_manager()
@@ -1066,7 +1066,7 @@ class TestAreaManager:
         mock_mgr_cls = MagicMock(side_effect=RuntimeError("area fail"))
 
         with patch(
-            "pyiwfm.visualization.webapi.area_loader.AreaDataManager",
+            "pyiwfm.io.area_loader.AreaDataManager",
             mock_mgr_cls,
         ):
             result = state.get_area_manager()
@@ -1098,7 +1098,7 @@ class TestHeadLoaderBranches:
 
         with (
             patch(
-                "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+                "pyiwfm.io.head_loader.LazyHeadDataLoader",
                 return_value=mock_loader,
             ),
             patch(
@@ -1133,7 +1133,7 @@ class TestHeadLoaderBranches:
         mock_loader.n_frames = 5
 
         with patch(
-            "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.head_loader.LazyHeadDataLoader",
             return_value=mock_loader,
         ):
             result = state.get_head_loader()
@@ -1162,7 +1162,7 @@ class TestHeadLoaderBranches:
 
         with (
             patch(
-                "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+                "pyiwfm.io.head_loader.LazyHeadDataLoader",
                 return_value=mock_loader,
             ),
             patch(
@@ -1186,7 +1186,7 @@ class TestHeadLoaderBranches:
         mock_loader.n_frames = 2
 
         with patch(
-            "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.head_loader.LazyHeadDataLoader",
             return_value=mock_loader,
         ):
             result = state.get_head_loader()
@@ -1207,7 +1207,7 @@ class TestHeadLoaderBranches:
 
         with (
             patch(
-                "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+                "pyiwfm.io.head_loader.LazyHeadDataLoader",
                 return_value=mock_loader,
             ),
             patch(
@@ -1497,7 +1497,7 @@ class TestStreamHydrographReaderCaching:
         mock_reader.n_timesteps = 50
 
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             return_value=mock_reader,
         ) as mock_cls:
             first = state.get_stream_hydrograph_reader()

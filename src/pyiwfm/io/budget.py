@@ -155,6 +155,24 @@ def parse_iwfm_datetime(date_str: str) -> datetime | None:
     return None
 
 
+def iwfm_date_to_iso(date_str: str) -> str:
+    """Convert IWFM date string to ISO ``YYYY-MM-DD`` format.
+
+    Parameters
+    ----------
+    date_str : str
+        IWFM datetime string (e.g. ``"10/01/1921_24:00"``).
+
+    Returns
+    -------
+    str
+        ISO date string (e.g. ``"1921-10-02"``), or the original
+        string unchanged if parsing fails.
+    """
+    dt = parse_iwfm_datetime(date_str)
+    return dt.strftime("%Y-%m-%d") if dt else date_str
+
+
 def julian_to_datetime(julian_day: float) -> datetime:
     """Convert Julian day to Python datetime.
 

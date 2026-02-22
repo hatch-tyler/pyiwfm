@@ -407,7 +407,7 @@ class TestHeadLoader:
         mock_loader = MagicMock()
         mock_loader.n_frames = 10
         with patch(
-            "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.head_loader.LazyHeadDataLoader",
             return_value=mock_loader,
         ):
             result = state.get_head_loader()
@@ -425,7 +425,7 @@ class TestHeadLoader:
         # shape must match model's n_layers to avoid triggering re-conversion
         mock_loader.shape = (100, 2)
         with patch(
-            "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.head_loader.LazyHeadDataLoader",
             return_value=mock_loader,
         ) as mock_cls:
             first = state.get_head_loader()
@@ -441,7 +441,7 @@ class TestHeadLoader:
         model.metadata["gw_head_all_file"] = str(head_file)
 
         with patch(
-            "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.head_loader.LazyHeadDataLoader",
             side_effect=RuntimeError("corrupt file"),
         ):
             result = state.get_head_loader()
@@ -475,7 +475,7 @@ class TestGWHydrographReader:
         mock_reader.n_columns = 5
         mock_reader.n_timesteps = 100
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             return_value=mock_reader,
         ):
             result = state.get_gw_hydrograph_reader()
@@ -492,7 +492,7 @@ class TestGWHydrographReader:
         mock_reader.n_columns = 5
         mock_reader.n_timesteps = 100
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             return_value=mock_reader,
         ) as mock_cls:
             first = state.get_gw_hydrograph_reader()
@@ -523,7 +523,7 @@ class TestStreamHydrographReader:
         mock_reader.n_columns = 10
         mock_reader.n_timesteps = 50
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             return_value=mock_reader,
         ):
             result = state.get_stream_hydrograph_reader()
@@ -1135,7 +1135,7 @@ class TestHeadLoaderRelativePath:
         mock_loader = MagicMock()
         mock_loader.n_frames = 5
         with patch(
-            "pyiwfm.visualization.webapi.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.head_loader.LazyHeadDataLoader",
             return_value=mock_loader,
         ):
             result = state.get_head_loader()
@@ -1157,7 +1157,7 @@ class TestGWHydrographRelativePathAndException:
         mock_reader.n_columns = 3
         mock_reader.n_timesteps = 20
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             return_value=mock_reader,
         ):
             result = state.get_gw_hydrograph_reader()
@@ -1171,7 +1171,7 @@ class TestGWHydrographRelativePathAndException:
         model.metadata["gw_hydrograph_file"] = str(hydro_file)
 
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             side_effect=RuntimeError("parse error"),
         ):
             result = state.get_gw_hydrograph_reader()
@@ -1193,7 +1193,7 @@ class TestStreamHydrographRelativePathAndException:
         mock_reader.n_columns = 8
         mock_reader.n_timesteps = 40
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             return_value=mock_reader,
         ):
             result = state.get_stream_hydrograph_reader()
@@ -1207,7 +1207,7 @@ class TestStreamHydrographRelativePathAndException:
         model.metadata["stream_hydrograph_file"] = str(stream_file)
 
         with patch(
-            "pyiwfm.visualization.webapi.hydrograph_reader.IWFMHydrographReader",
+            "pyiwfm.io.hydrograph_reader.IWFMHydrographReader",
             side_effect=RuntimeError("stream parse error"),
         ):
             result = state.get_stream_hydrograph_reader()
@@ -1222,7 +1222,7 @@ class TestHydrographLocations:
         """Line 500: early return when _model is None."""
         state = ModelState()
         result = state.get_hydrograph_locations()
-        assert result == {"gw": [], "stream": [], "subsidence": []}
+        assert result == {"gw": [], "stream": [], "subsidence": [], "tile_drain": []}
 
     def test_gw_hydrograph_locations(self):
         """GW locations use 1-based index from hydrograph_locations list."""

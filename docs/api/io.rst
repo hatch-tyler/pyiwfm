@@ -581,6 +581,74 @@ DSS Time Series
    :undoc-members:
    :show-inheritance:
 
+Data Loaders
+-------------
+
+These modules provide lazy, cached access to IWFM output data (heads,
+hydrographs, land-use areas).  They were moved from ``visualization.webapi``
+so that CLI tools, notebooks, and scripts can use them without importing the
+web viewer.
+
+Head Data Loader
+~~~~~~~~~~~~~~~~
+
+Lazy HDF5 reader for time-varying groundwater head data.
+
+.. automodule:: pyiwfm.io.head_loader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Hydrograph Reader
+~~~~~~~~~~~~~~~~~
+
+Parser for IWFM ``.out`` text hydrograph files.
+
+.. automodule:: pyiwfm.io.hydrograph_reader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Hydrograph Loader
+~~~~~~~~~~~~~~~~~
+
+Lazy HDF5-backed hydrograph loader (same interface as ``IWFMHydrographReader``).
+
+.. automodule:: pyiwfm.io.hydrograph_loader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Area Data Loader
+~~~~~~~~~~~~~~~~
+
+Lazy HDF5 reader for land-use area data and multi-type area manager.
+
+.. automodule:: pyiwfm.io.area_loader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+SQLite Cache Builder
+~~~~~~~~~~~~~~~~~~~~
+
+Pre-computes aggregates from HDF5/text loaders into a single SQLite database.
+
+.. automodule:: pyiwfm.io.cache_builder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+SQLite Cache Loader
+~~~~~~~~~~~~~~~~~~~
+
+Read-only access to the viewer SQLite cache.
+
+.. automodule:: pyiwfm.io.cache_loader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Zone File I/O
 -------------
 

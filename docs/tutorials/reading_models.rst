@@ -350,7 +350,7 @@ After running an IWFM simulation, load results for visualization:
 
 .. code-block:: python
 
-   from pyiwfm.visualization.webapi.hydrograph_reader import read_hydrograph_file
+   from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
 
    # Read head hydrograph output
    times, heads = read_hydrograph_file("C2VSimCG/Results/GW_Heads.out")

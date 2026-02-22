@@ -159,7 +159,7 @@ def export_budget_csv(
 
 @router.get("/hydrograph-csv")
 def export_hydrograph_csv(
-    type: str = Query(..., description="Type: gw, stream"),
+    type: str = Query(..., description="Type: gw, stream, subsidence, tile_drain"),
     location_id: int = Query(..., description="Location/node ID"),
 ) -> Response:
     """
@@ -227,10 +227,59 @@ def export_hydrograph_csv(
             writer.writerow([t, round(v, 3)])
 
         filename = f"hydrograph_stream_{location_id}.csv"
+
+    elif type == "subsidence":
+        reader = model_state.get_subsidence_reader()
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="No subsidence hydrograph data available",
+            )
+
+        col_idx = location_id - 1
+        if col_idx < 0 or col_idx >= reader.n_columns:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Subsidence location {location_id} out of range",
+            )
+
+        times, values = reader.get_time_series(col_idx)
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["datetime", "subsidence_ft"])
+        for t, v in zip(times, values, strict=False):
+            writer.writerow([t, round(v, 3)])
+
+        filename = f"hydrograph_subsidence_{location_id}.csv"
+
+    elif type == "tile_drain":
+        reader = model_state.get_tile_drain_reader()
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="No tile drain hydrograph data available",
+            )
+
+        col_idx = location_id - 1
+        if col_idx < 0 or col_idx >= reader.n_columns:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Tile drain location {location_id} out of range",
+            )
+
+        times, values = reader.get_time_series(col_idx)
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["datetime", "flow_volume"])
+        for t, v in zip(times, values, strict=False):
+            writer.writerow([t, round(v, 3)])
+
+        filename = f"hydrograph_tile_drain_{location_id}.csv"
+
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown type: {type}. Use: gw, stream",
+            detail=f"Unknown type: {type}. Use: gw, stream, subsidence, tile_drain",
         )
 
     return Response(
@@ -258,13 +307,7 @@ def export_geopackage(
     if model is None or model.grid is None:
         raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
-    try:
-        from pyiwfm.visualization.gis_export import GISExporter
-    except ImportError as e:
-        raise HTTPException(
-            status_code=500,
-            detail="GIS export requires geopandas: pip install geopandas",
-        ) from e
+    from pyiwfm.visualization.gis_export import GISExporter
 
     exporter = GISExporter(
         grid=model.grid,
@@ -334,23 +377,17 @@ def export_plot(
     if model is None or model.grid is None:
         raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
-    try:
-        import matplotlib
+    import matplotlib
 
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
 
-        from pyiwfm.visualization.plotting import (
-            plot_elements,
-            plot_mesh,
-            plot_scalar_field,
-            plot_streams,
-        )
-    except ImportError as e:
-        raise HTTPException(
-            status_code=500,
-            detail="Plot generation requires matplotlib: pip install matplotlib",
-        ) from e
+    from pyiwfm.visualization.plotting import (
+        plot_elements,
+        plot_mesh,
+        plot_scalar_field,
+        plot_streams,
+    )
 
     try:
         fig = None

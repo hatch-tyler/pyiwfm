@@ -7,7 +7,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.visualization.webapi.hydrograph_reader import IWFMHydrographReader
+from pyiwfm.io.budget import parse_iwfm_datetime
+from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -247,28 +248,32 @@ class TestFindColumnByNodeId:
 
 
 # ---------------------------------------------------------------------------
-# _parse_iwfm_datetime (static method)
+# parse_iwfm_datetime (canonical helper from pyiwfm.io.budget)
 # ---------------------------------------------------------------------------
 
 
 class TestParseIwfmDatetime:
-    """Tests for the static datetime parser."""
+    """Tests for the canonical datetime parser used by IWFMHydrographReader."""
 
     def test_normal_format(self) -> None:
-        result = IWFMHydrographReader._parse_iwfm_datetime("03/15/2020_14:30")
-        assert result == "2020-03-15T14:30:00"
+        result = parse_iwfm_datetime("03/15/2020_14:30")
+        assert result is not None
+        assert result.isoformat() == "2020-03-15T14:30:00"
 
     def test_24_00_end_of_day(self) -> None:
-        result = IWFMHydrographReader._parse_iwfm_datetime("01/31/2020_24:00")
-        assert result == "2020-02-01T00:00:00"
+        result = parse_iwfm_datetime("01/31/2020_24:00")
+        assert result is not None
+        assert result.isoformat() == "2020-02-01T00:00:00"
 
     def test_invalid_format_returns_none(self) -> None:
-        assert IWFMHydrographReader._parse_iwfm_datetime("not-a-date") is None
+        assert parse_iwfm_datetime("not-a-date") is None
 
     def test_midnight(self) -> None:
-        result = IWFMHydrographReader._parse_iwfm_datetime("06/01/2015_00:00")
-        assert result == "2015-06-01T00:00:00"
+        result = parse_iwfm_datetime("06/01/2015_00:00")
+        assert result is not None
+        assert result.isoformat() == "2015-06-01T00:00:00"
 
     def test_end_of_year(self) -> None:
-        result = IWFMHydrographReader._parse_iwfm_datetime("12/31/2020_24:00")
-        assert result == "2021-01-01T00:00:00"
+        result = parse_iwfm_datetime("12/31/2020_24:00")
+        assert result is not None
+        assert result.isoformat() == "2021-01-01T00:00:00"

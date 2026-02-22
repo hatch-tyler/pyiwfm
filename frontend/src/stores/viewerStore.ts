@@ -51,11 +51,12 @@ export interface ViewerState {
   headTimestep: number;
   headTimes: string[];
   headLayer: number;
-  selectedLocation: { id: number; type: 'gw' | 'stream' | 'subsidence' } | null;
+  selectedLocation: { id: number; type: 'gw' | 'stream' | 'subsidence' | 'tile_drain' } | null;
   selectedHydrograph: HydrographData | null;
   showGWLocations: boolean;
   showStreamLocations: boolean;
   showSubsidenceLocations: boolean;
+  showTileDrainLocations: boolean;
   isAnimating: boolean;
 
   // === Head global range (for fixed animation color scale) ===
@@ -164,11 +165,12 @@ export interface ViewerState {
   setHeadTimestep: (ts: number) => void;
   setHeadTimes: (times: string[]) => void;
   setHeadLayer: (layer: number) => void;
-  setSelectedLocation: (loc: { id: number; type: 'gw' | 'stream' | 'subsidence' } | null) => void;
+  setSelectedLocation: (loc: { id: number; type: 'gw' | 'stream' | 'subsidence' | 'tile_drain' } | null) => void;
   setSelectedHydrograph: (data: HydrographData | null) => void;
   setShowGWLocations: (show: boolean) => void;
   setShowStreamLocations: (show: boolean) => void;
   setShowSubsidenceLocations: (show: boolean) => void;
+  setShowTileDrainLocations: (show: boolean) => void;
   setIsAnimating: (a: boolean) => void;
 
   // Head global range
@@ -294,6 +296,7 @@ export const useViewerStore = create<ViewerState>((set) => ({
   showGWLocations: true,
   showStreamLocations: true,
   showSubsidenceLocations: true,
+  showTileDrainLocations: true,
   isAnimating: false,
 
   // Head global range
@@ -419,6 +422,7 @@ export const useViewerStore = create<ViewerState>((set) => ({
   setShowGWLocations: (show) => set({ showGWLocations: show }),
   setShowStreamLocations: (show) => set({ showStreamLocations: show }),
   setShowSubsidenceLocations: (show) => set({ showSubsidenceLocations: show }),
+  setShowTileDrainLocations: (show) => set({ showTileDrainLocations: show }),
   setIsAnimating: (a) => set({ isAnimating: a }),
 
   // Head global range

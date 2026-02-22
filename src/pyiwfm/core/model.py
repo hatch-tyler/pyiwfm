@@ -700,6 +700,13 @@ class IWFMModel:
                                 gw.td_hydro_volume_factor = td_config.td_hydro_volume_factor
                                 gw.td_hydro_volume_unit = td_config.td_hydro_volume_unit
                                 gw.td_output_file_raw = td_config.td_output_file
+                                if td_config.td_output_file:
+                                    model.metadata["tile_drain_hydrograph_file"] = str(
+                                        td_config.td_output_file
+                                    )
+                                model.metadata["tile_drain_n_hydrograph_outputs"] = (
+                                    td_config.n_td_hydro
+                                )
                                 gw.td_hydro_specs = [
                                     {
                                         "id": s.id,

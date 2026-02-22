@@ -74,10 +74,12 @@ src/pyiwfm/
 ├── core/              # Mesh, Stratigraphy, TimeSeries, IWFMModel, BaseComponent ABC, model_factory
 ├── components/        # Groundwater, Stream, Lake, RootZone, SmallWatershed, UnsaturatedZone (all inherit BaseComponent)
 ├── io/                # 50+ file type readers/writers (ASCII, binary, HDF5, HEC-DSS), writer_config_base
+│                      # Also: head_loader, hydrograph_reader, hydrograph_loader, area_loader,
+│                      # cache_builder, cache_loader (generic data loaders, no web deps)
 ├── runner/            # IWFMRunner (subprocess execution), PEST++ integration, Scenario manager
 ├── visualization/
 │   ├── webapi/        # FastAPI viewer: config.py, server.py, routes/, services/, static/
-│   │                  # Also contains head_loader, hydrograph_reader, slicing, properties
+│   │                  # Also contains slicing, properties (re-export shims for moved loaders)
 │   ├── vtk_export.py  # VTKExporter (2D/3D mesh, PyVista)
 │   └── ...            # Matplotlib plots, GIS export
 ├── templates/         # Jinja2 templates for IWFM file generation
@@ -119,8 +121,7 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - `config.py` — `ModelState` singleton that holds the loaded `IWFMModel` and provides lazy getters for head data, budget data, stream reach boundaries, etc. Caches `node_id_to_idx`, `elem_id_to_idx`, and hydrograph locations for performance.
 - `server.py` — FastAPI app creation with CRS configuration and static file serving
 - `routes/` — 13 route modules: model (+ comparison), mesh, results (+ drawdown pagination, statistics), groundwater, streams, lakes, rootzone, small_watersheds, budgets, export (+ GeoPackage, matplotlib plots), observations, slices, properties
-- `head_loader.py` — `LazyHeadDataLoader` reads HDF5 head results on demand
-- `hydrograph_reader.py` — Parses IWFM `.out` text hydrograph files
+- Data loaders (`head_loader`, `hydrograph_reader`, `hydrograph_loader`, `area_loader`, `cache_builder`, `cache_loader`) now live in `io/`; backward-compat shims remain in `webapi/`
 - Coordinate reprojection: server-side via `pyproj` (model CRS → WGS84), `--crs` CLI flag
 
 **Frontend** (`frontend/`):

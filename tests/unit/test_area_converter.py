@@ -258,7 +258,7 @@ class TestLazyAreaDataLoader:
         return convert_area_to_hdf(src, label="nonponded")
 
     def test_metadata(self, hdf_file):
-        from pyiwfm.visualization.webapi.area_loader import LazyAreaDataLoader
+        from pyiwfm.io.area_loader import LazyAreaDataLoader
 
         loader = LazyAreaDataLoader(hdf_file, dataset="nonponded")
         assert loader.n_frames == 10
@@ -268,7 +268,7 @@ class TestLazyAreaDataLoader:
         assert len(loader.element_ids) == 4
 
     def test_get_frame(self, hdf_file):
-        from pyiwfm.visualization.webapi.area_loader import LazyAreaDataLoader
+        from pyiwfm.io.area_loader import LazyAreaDataLoader
 
         loader = LazyAreaDataLoader(hdf_file, dataset="nonponded")
         frame = loader.get_frame(0)
@@ -276,7 +276,7 @@ class TestLazyAreaDataLoader:
         assert frame.dtype == np.float64
 
     def test_get_frame_caching(self, hdf_file):
-        from pyiwfm.visualization.webapi.area_loader import LazyAreaDataLoader
+        from pyiwfm.io.area_loader import LazyAreaDataLoader
 
         loader = LazyAreaDataLoader(hdf_file, dataset="nonponded", cache_size=3)
         f0 = loader.get_frame(0)
@@ -284,21 +284,21 @@ class TestLazyAreaDataLoader:
         assert np.array_equal(f0, f0_again)
 
     def test_get_frame_out_of_range(self, hdf_file):
-        from pyiwfm.visualization.webapi.area_loader import LazyAreaDataLoader
+        from pyiwfm.io.area_loader import LazyAreaDataLoader
 
         loader = LazyAreaDataLoader(hdf_file, dataset="nonponded")
         with pytest.raises(IndexError):
             loader.get_frame(999)
 
     def test_get_element_timeseries(self, hdf_file):
-        from pyiwfm.visualization.webapi.area_loader import LazyAreaDataLoader
+        from pyiwfm.io.area_loader import LazyAreaDataLoader
 
         loader = LazyAreaDataLoader(hdf_file, dataset="nonponded")
         ts = loader.get_element_timeseries(0)
         assert ts.shape == (10, 3)
 
     def test_get_layer_range(self, hdf_file):
-        from pyiwfm.visualization.webapi.area_loader import LazyAreaDataLoader
+        from pyiwfm.io.area_loader import LazyAreaDataLoader
 
         loader = LazyAreaDataLoader(hdf_file, dataset="nonponded")
         lo, hi, n = loader.get_layer_range(col=-1, max_frames=5)
@@ -307,7 +307,7 @@ class TestLazyAreaDataLoader:
         assert n <= 5
 
     def test_cache_eviction(self, hdf_file):
-        from pyiwfm.visualization.webapi.area_loader import LazyAreaDataLoader
+        from pyiwfm.io.area_loader import LazyAreaDataLoader
 
         loader = LazyAreaDataLoader(hdf_file, dataset="nonponded", cache_size=3)
         for i in range(5):
@@ -324,7 +324,7 @@ class TestLazyAreaDataLoader:
 class TestAreaDataManager:
     def test_load_from_rootzone(self, tmp_path):
         from pyiwfm.components.rootzone import RootZone
-        from pyiwfm.visualization.webapi.area_loader import AreaDataManager
+        from pyiwfm.io.area_loader import AreaDataManager
 
         np_file = tmp_path / "np_area.dat"
         _write_area_file(np_file, n_elements=3, n_crops=2, n_timesteps=3)
@@ -347,7 +347,7 @@ class TestAreaDataManager:
 
     def test_get_snapshot(self, tmp_path):
         from pyiwfm.components.rootzone import RootZone
-        from pyiwfm.visualization.webapi.area_loader import AreaDataManager
+        from pyiwfm.io.area_loader import AreaDataManager
 
         np_file = tmp_path / "np_area.dat"
         _write_area_file(np_file, n_elements=2, n_crops=1, n_timesteps=2)
@@ -368,7 +368,7 @@ class TestAreaDataManager:
 
     def test_get_element_timeseries(self, tmp_path):
         from pyiwfm.components.rootzone import RootZone
-        from pyiwfm.visualization.webapi.area_loader import AreaDataManager
+        from pyiwfm.io.area_loader import AreaDataManager
 
         np_file = tmp_path / "np_area.dat"
         _write_area_file(np_file, n_elements=2, n_crops=2, n_timesteps=5)
@@ -387,7 +387,7 @@ class TestAreaDataManager:
 
     def test_get_dates(self, tmp_path):
         from pyiwfm.components.rootzone import RootZone
-        from pyiwfm.visualization.webapi.area_loader import AreaDataManager
+        from pyiwfm.io.area_loader import AreaDataManager
 
         np_file = tmp_path / "np_area.dat"
         _write_area_file(np_file, n_elements=2, n_crops=1, n_timesteps=3)

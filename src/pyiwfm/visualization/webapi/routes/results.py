@@ -184,7 +184,7 @@ def get_hydrograph_locations() -> dict:
 
 @router.get("/hydrograph")
 def get_hydrograph(
-    type: str = Query(description="Type: gw, stream, or subsidence"),
+    type: str = Query(description="Type: gw, stream, subsidence, or tile_drain"),
     location_id: int = Query(description="Location/node ID"),
 ) -> dict:
     """Get hydrograph time series for a specific location.
@@ -420,10 +420,59 @@ def get_hydrograph(
             "units": "ft",
         }
 
+    elif type == "tile_drain":
+        reader = model_state.get_tile_drain_reader()
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="No tile drain hydrograph data available",
+            )
+
+        # location_id matches the tile drain/sub-irrigation ID from td_hydro_specs
+        td_col_idx: int | None = None
+
+        td_specs: list[dict] = []
+        if model and model.groundwater:
+            td_specs = getattr(model.groundwater, "td_hydro_specs", [])
+
+        # Match by spec ID
+        for i, spec in enumerate(td_specs):
+            if spec["id"] == location_id:
+                td_col_idx = i
+                break
+
+        # Fallback: try as 1-based column index
+        if td_col_idx is None:
+            candidate = location_id - 1
+            if 0 <= candidate < reader.n_columns:
+                td_col_idx = candidate
+
+        if td_col_idx is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Tile drain location {location_id} not found in hydrograph data",
+            )
+
+        times, td_values = reader.get_time_series(td_col_idx)
+
+        name = f"Tile Drain {location_id}"
+        if td_col_idx < len(td_specs):
+            spec = td_specs[td_col_idx]
+            name = spec.get("name") or name
+
+        return {
+            "location_id": location_id,
+            "name": name,
+            "type": "tile_drain",
+            "times": times,
+            "values": _sanitize_values(td_values),
+            "units": "ft³",
+        }
+
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown hydrograph type: {type}. Use: gw, stream, subsidence",
+            detail=(f"Unknown hydrograph type: {type}. Use: gw, stream, subsidence, tile_drain"),
         )
 
 

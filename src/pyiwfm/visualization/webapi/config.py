@@ -12,11 +12,11 @@ from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
+    from pyiwfm.io.area_loader import AreaDataManager
     from pyiwfm.io.budget import BudgetReader
-    from pyiwfm.visualization.webapi.area_loader import AreaDataManager
-    from pyiwfm.visualization.webapi.cache_loader import SqliteCacheLoader
-    from pyiwfm.visualization.webapi.head_loader import LazyHeadDataLoader
-    from pyiwfm.visualization.webapi.hydrograph_reader import IWFMHydrographReader
+    from pyiwfm.io.cache_loader import SqliteCacheLoader
+    from pyiwfm.io.head_loader import LazyHeadDataLoader
+    from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,7 @@ class ModelState:
         self._gw_hydrograph_reader: IWFMHydrographReader | None = None
         self._stream_hydrograph_reader: IWFMHydrographReader | None = None
         self._subsidence_reader: IWFMHydrographReader | None = None
+        self._tile_drain_reader: IWFMHydrographReader | None = None
         self._budget_readers: dict[str, BudgetReader] = {}
         self._results_dir: Path | None = None
         self._area_manager: AreaDataManager | None = None
@@ -117,6 +118,7 @@ class ModelState:
         self._gw_hydrograph_reader = None
         self._stream_hydrograph_reader = None
         self._subsidence_reader = None
+        self._tile_drain_reader = None
         self._budget_readers = {}
         self._area_manager = None
         self._observations = {}
@@ -627,7 +629,7 @@ class ModelState:
         n_layers = self._get_n_gw_layers()
 
         try:
-            from pyiwfm.visualization.webapi.head_loader import LazyHeadDataLoader
+            from pyiwfm.io.head_loader import LazyHeadDataLoader
 
             suffix = head_path.suffix.lower()
             if suffix in (".hdf", ".h5", ".he5", ".hdf5"):
@@ -676,7 +678,7 @@ class ModelState:
         with the correct ``n_layers``, overwriting the bad HDF.  Falls back
         to the existing file if no text source is found.
         """
-        from pyiwfm.visualization.webapi.head_loader import LazyHeadDataLoader
+        from pyiwfm.io.head_loader import LazyHeadDataLoader
 
         # Look for companion text file
         text_candidates = [
@@ -727,7 +729,7 @@ class ModelState:
             return None
 
         try:
-            from pyiwfm.visualization.webapi.area_loader import AreaDataManager
+            from pyiwfm.io.area_loader import AreaDataManager
 
             mgr = AreaDataManager()
             cache_dir = self._results_dir or Path(".")
@@ -756,7 +758,7 @@ class ModelState:
 
         if suffix in (".hdf", ".h5", ".he5", ".hdf5"):
             try:
-                from pyiwfm.visualization.webapi.hydrograph_loader import (
+                from pyiwfm.io.hydrograph_loader import (
                     LazyHydrographDataLoader,
                 )
 
@@ -783,7 +785,7 @@ class ModelState:
 
                     convert_hydrograph_to_hdf(path, hdf_cache)
 
-                from pyiwfm.visualization.webapi.hydrograph_loader import (
+                from pyiwfm.io.hydrograph_loader import (
                     LazyHydrographDataLoader,
                 )
 
@@ -805,7 +807,7 @@ class ModelState:
 
             # Fallback: load text file directly
             try:
-                from pyiwfm.visualization.webapi.hydrograph_reader import (
+                from pyiwfm.io.hydrograph_reader import (
                     IWFMHydrographReader,
                 )
 
@@ -901,6 +903,37 @@ class ModelState:
 
         return None
 
+    def get_tile_drain_reader(self) -> IWFMHydrographReader | None:
+        """Get or create the tile drain hydrograph reader from the output file."""
+        if self._tile_drain_reader is not None:
+            return self._tile_drain_reader
+
+        if self._model is None:
+            return None
+
+        # Check td_output_file_raw on the groundwater component
+        if self._model.groundwater:
+            output_file = getattr(self._model.groundwater, "td_output_file_raw", "")
+            if output_file:
+                p = Path(output_file)
+                if not p.is_absolute() and self._results_dir:
+                    p = self._results_dir / p
+                if p.exists():
+                    self._tile_drain_reader = self._get_or_convert_hydrograph(p)
+                    if self._tile_drain_reader is not None:
+                        return self._tile_drain_reader
+
+        # Fallback: scan model directory for *TileDrain*.out
+        if self._results_dir:
+            for pattern in ("*TileDrain*.out", "*tile_drain*.out", "*tiledrain*.out"):
+                matches = list(self._results_dir.glob(pattern))
+                if matches:
+                    self._tile_drain_reader = self._get_or_convert_hydrograph(matches[0])
+                    if self._tile_drain_reader is not None:
+                        return self._tile_drain_reader
+
+        return None
+
     # ------------------------------------------------------------------
     # Hydrograph locations
     # ------------------------------------------------------------------
@@ -958,7 +991,12 @@ class ModelState:
         if self._hydrograph_locations_cache is not None:
             return self._hydrograph_locations_cache
 
-        result: dict[str, list[dict]] = {"gw": [], "stream": [], "subsidence": []}
+        result: dict[str, list[dict]] = {
+            "gw": [],
+            "stream": [],
+            "subsidence": [],
+            "tile_drain": [],
+        }
 
         if self._model is None:
             return result
@@ -1042,6 +1080,56 @@ class ModelState:
                             "name": spec.name or f"Subsidence Obs {spec.id}",
                             "layer": spec.layer,
                             "node_id": sub_node_id,
+                        }
+                    )
+
+        # Tile drain hydrograph locations — get coords from element centroid
+        if self._model.groundwater:
+            td_specs = getattr(self._model.groundwater, "td_hydro_specs", [])
+            if td_specs:
+                grid = self._model.grid
+                for spec in td_specs:
+                    td_id = spec["id"]
+                    td_id_type = spec.get("id_type", 1)
+                    # Look up the TileDrain or SubIrrigation to get its element/node
+                    td_obj: Any = None
+                    if td_id_type == 1:
+                        td_obj = self._model.groundwater.tile_drains.get(td_id)
+                    elif td_id_type == 2:
+                        # Sub-irrigation — find by ID in sub_irrigations list
+                        for si in self._model.groundwater.sub_irrigations:
+                            if si.id == td_id:
+                                td_obj = si
+                                break
+
+                    if td_obj is None or grid is None:
+                        continue
+
+                    # TileDrain has `element` (actually gw_node); SubIrrigation has `gw_node`
+                    node_id = getattr(td_obj, "element", 0) or getattr(td_obj, "gw_node", 0)
+                    if not node_id:
+                        continue
+
+                    gw_node = grid.nodes.get(node_id)
+                    if gw_node is None:
+                        continue
+
+                    x, y = gw_node.x, gw_node.y
+                    if x == 0.0 and y == 0.0:
+                        continue
+
+                    try:
+                        lng, lat = self.reproject_coords(x, y)
+                    except Exception:
+                        continue
+
+                    result["tile_drain"].append(
+                        {
+                            "id": td_id,
+                            "lng": lng,
+                            "lat": lat,
+                            "name": spec.get("name", f"Tile Drain {td_id}"),
+                            "node_id": node_id,
                         }
                     )
 
@@ -1285,7 +1373,7 @@ class ModelState:
             return
 
         try:
-            from pyiwfm.visualization.webapi.cache_builder import (
+            from pyiwfm.io.cache_builder import (
                 SqliteCacheBuilder,
                 is_cache_stale,
             )
@@ -1301,11 +1389,12 @@ class ModelState:
                     gw_hydrograph_reader=self.get_gw_hydrograph_reader(),
                     stream_hydrograph_reader=self.get_stream_hydrograph_reader(),
                     subsidence_reader=self.get_subsidence_reader(),
+                    tile_drain_reader=self.get_tile_drain_reader(),
                 )
                 self._rebuild_cache = False
                 logger.info("SQLite cache build complete.")
 
-            from pyiwfm.visualization.webapi.cache_loader import (
+            from pyiwfm.io.cache_loader import (
                 SqliteCacheLoader,
             )
 
@@ -1335,7 +1424,7 @@ class ModelState:
             return None
 
         try:
-            from pyiwfm.visualization.webapi.cache_loader import (
+            from pyiwfm.io.cache_loader import (
                 SqliteCacheLoader,
             )
 

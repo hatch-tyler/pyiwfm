@@ -70,8 +70,9 @@ Head Data Loader
 ~~~~~~~~~~~~~~~~
 
 Lazy HDF5 head results reader with per-frame caching.
+(Moved to :mod:`pyiwfm.io.head_loader`; see :doc:`io` for full docs.)
 
-.. automodule:: pyiwfm.visualization.webapi.head_loader
+.. automodule:: pyiwfm.io.head_loader
    :members:
    :undoc-members:
    :show-inheritance:
@@ -80,8 +81,9 @@ Hydrograph Reader
 ~~~~~~~~~~~~~~~~~
 
 Parser for IWFM ``.out`` text hydrograph files.
+(Moved to :mod:`pyiwfm.io.hydrograph_reader`; see :doc:`io` for full docs.)
 
-.. automodule:: pyiwfm.visualization.webapi.hydrograph_reader
+.. automodule:: pyiwfm.io.hydrograph_reader
    :members:
    :undoc-members:
    :show-inheritance:
