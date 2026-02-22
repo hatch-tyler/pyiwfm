@@ -71,9 +71,9 @@ See `DOCKER.md` for full configuration (env vars: PORT, TITLE, MODE, MODEL_PATH)
 ### Source Layout
 ```
 src/pyiwfm/
-├── core/              # Mesh (Node, Element, AppGrid), Stratigraphy, TimeSeries, IWFMModel
-├── components/        # Groundwater, Stream, Lake, RootZone, SmallWatershed, UnsaturatedZone
-├── io/                # 50+ file type readers/writers (ASCII, binary, HDF5, HEC-DSS)
+├── core/              # Mesh, Stratigraphy, TimeSeries, IWFMModel, BaseComponent ABC, model_factory
+├── components/        # Groundwater, Stream, Lake, RootZone, SmallWatershed, UnsaturatedZone (all inherit BaseComponent)
+├── io/                # 50+ file type readers/writers (ASCII, binary, HDF5, HEC-DSS), writer_config_base
 ├── runner/            # IWFMRunner (subprocess execution), PEST++ integration, Scenario manager
 ├── visualization/
 │   ├── webapi/        # FastAPI viewer: config.py, server.py, routes/, services/, static/
@@ -94,8 +94,10 @@ frontend/              # React + TypeScript + vtk.js + deck.gl (builds to webapi
 
 ### Key Classes
 - **AppGrid**: Main mesh container with nodes, elements, faces, subregions (mirrors IWFM's Class_AppGrid)
-- **IWFMModel**: Orchestrates all components (grid, stratigraphy, groundwater, streams, lakes, rootzone, small watersheds, unsaturated zone)
+- **IWFMModel**: Orchestrates all components (grid, stratigraphy, groundwater, streams, lakes, rootzone, small watersheds, unsaturated zone). Construction helpers live in `core/model_factory.py`.
+- **BaseComponent**: ABC in `core/base_component.py` — all 6 component classes inherit from it (`validate()`, `n_items`)
 - **BaseReader/BaseWriter**: Abstract I/O classes in `io/base.py` and `io/writer_base.py`
+- **BaseComponentWriterConfig**: Shared config base in `io/writer_config_base.py` — inherited by all 6 component writer configs
 - **CommentAwareReader/CommentAwareWriter**: Extended base classes for roundtrip comment preservation
 
 ### I/O System
@@ -114,9 +116,9 @@ The `io/` module handles 50+ IWFM file formats. Key patterns:
 The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D Mesh (vtk.js), Results Map (deck.gl + MapLibre), and Budgets (Plotly).
 
 **Backend** (`visualization/webapi/`):
-- `config.py` — `ModelState` singleton that holds the loaded `IWFMModel` and provides lazy getters for head data, budget data, stream reach boundaries, etc.
+- `config.py` — `ModelState` singleton that holds the loaded `IWFMModel` and provides lazy getters for head data, budget data, stream reach boundaries, etc. Caches `node_id_to_idx`, `elem_id_to_idx`, and hydrograph locations for performance.
 - `server.py` — FastAPI app creation with CRS configuration and static file serving
-- `routes/` — 13 route modules: model, mesh, results, groundwater, streams, lakes, rootzone, small_watersheds, budgets, export, observations, slices, properties
+- `routes/` — 13 route modules: model (+ comparison), mesh, results (+ drawdown pagination, statistics), groundwater, streams, lakes, rootzone, small_watersheds, budgets, export (+ GeoPackage, matplotlib plots), observations, slices, properties
 - `head_loader.py` — `LazyHeadDataLoader` reads HDF5 head results on demand
 - `hydrograph_reader.py` — Parses IWFM `.out` text hydrograph files
 - Coordinate reprojection: server-side via `pyproj` (model CRS → WGS84), `--crs` CLI flag

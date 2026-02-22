@@ -38,6 +38,19 @@ The time series module provides classes for working with temporal data.
    :show-inheritance:
 
 
+Base Component
+--------------
+
+Abstract base class that all model components (groundwater, streams, lakes,
+root zone, small watersheds, unsaturated zone) inherit from, providing a
+consistent interface for validation and item counting.
+
+.. automodule:: pyiwfm.core.base_component
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
 Model Module
 ------------
 
@@ -60,6 +73,21 @@ model components.
 - ``model.to_binary(output_file)`` - Save mesh/stratigraphy to binary
 
 .. automodule:: pyiwfm.core.model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Model Factory
+-------------
+
+Helper functions extracted from ``IWFMModel`` for model construction:
+reach building from node reach IDs, stream node coordinate resolution,
+parametric grid application, KH anomaly application, subsidence parameters,
+and binary-to-model conversion. ``IWFMModel`` classmethods delegate to
+these functions.
+
+.. automodule:: pyiwfm.core.model_factory
    :members:
    :undoc-members:
    :show-inheritance:

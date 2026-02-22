@@ -74,6 +74,53 @@ Added
 - ``CompleteModelWriter``: Dedicated writers replace passthrough file copy for both packages
 - Full roundtrip support for small watershed and unsaturated zone files
 
+**BaseComponent ABC** (``pyiwfm.core.base_component``)
+
+- ``BaseComponent``: Abstract base class with ``validate()`` and ``n_items`` interface
+- All 6 components (AppGW, AppStream, AppLake, RootZone, AppSmallWatershed,
+  AppUnsatZone) inherit from ``BaseComponent``
+
+**Model Factory Extraction** (``pyiwfm.core.model_factory``)
+
+- Extracted 6 helper functions (~420 lines) from ``IWFMModel`` to reduce
+  the God Object pattern
+- Public functions: ``build_reaches_from_node_reach_ids``,
+  ``apply_kh_anomalies``, ``apply_parametric_grids``,
+  ``apply_parametric_subsidence``, ``binary_data_to_model``,
+  ``resolve_stream_node_coordinates``
+- ``IWFMModel`` classmethods delegate to factory functions (backward compatible)
+
+**Writer Config Consolidation** (``pyiwfm.io.writer_config_base``)
+
+- ``BaseComponentWriterConfig``: Shared base dataclass for all 6 component
+  writer configs (common fields: output_dir, version, length/volume
+  factors/units, subdir)
+
+**I/O Reader Deduplication**
+
+- Consolidated ``_resolve_path()`` and ``_parse_version()`` duplicates across
+  readers to use canonical implementations from ``iwfm_reader.py``
+- Consolidated Fortran binary record I/O between ``base.py`` and ``binary.py``
+
+**Web Viewer Performance Improvements**
+
+- Cached ``node_id_to_idx`` and ``elem_id_to_idx`` mappings in ``ModelState``
+  instead of rebuilding per request
+- Cached hydrograph location data (GW and stream) in ``ModelState``
+- Drawdown endpoint now supports pagination: ``offset``, ``limit``, ``skip``
+  parameters for frame-by-frame animation playback
+
+**New Web Viewer API Endpoints**
+
+- ``GET /api/export/geopackage``: Download multi-layer GeoPackage (nodes,
+  elements, streams, subregions, boundary) via ``GISExporter``
+- ``GET /api/export/plot/{plot_type}``: Generate publication-quality matplotlib
+  figures (mesh, elements, streams, heads) as PNG or SVG
+- ``POST /api/model/compare``: Load a second model and compare meshes/stratigraphy
+  via ``ModelDiffer``
+- ``GET /api/results/statistics``: Time-aggregated head statistics
+  (min, max, mean, std per node across all timesteps)
+
 **FastAPI Web Viewer Enhancements** (2026-02)
 
 - Results Map tab with deck.gl + MapLibre GL for head contour visualization
@@ -85,11 +132,19 @@ Added
 - Budget units populated from column type codes
 - CRS default corrected to proj string for C2VSimFG
 
+**Component Exports**
+
+- Top-level ``pyiwfm`` package now exports AppGW, AppStream, AppLake, RootZone,
+  AppSmallWatershed, AppUnsatZone for convenient ``from pyiwfm import AppGW``
+
 **Documentation**
 
 - Added ~30 missing module entries to API docs (``docs/api/io.rst``)
 - Added Small Watershed and Unsaturated Zone to component docs
 - Reorganized I/O docs into logical sections (Core, GW, Stream, Lake, RZ, Supplemental, etc.)
+- Added BaseComponent and model_factory to core API docs
+- Added writer_config_base to I/O API docs
+- Added API routes summary to visualization docs
 
 [0.2.0] - 2025-XX-XX
 --------------------

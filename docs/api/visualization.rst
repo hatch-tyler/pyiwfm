@@ -105,3 +105,16 @@ Cross-section slice plane computation.
    :members:
    :undoc-members:
    :show-inheritance:
+
+API Routes
+~~~~~~~~~~
+
+The web viewer backend exposes a REST API under ``/api/``. Key route groups:
+
+- **Model** (``/api/model``): Load model info, compare with a second model
+- **Mesh** (``/api/mesh``): GeoJSON mesh, element details, node lookups
+- **Results** (``/api/results``): Head values, drawdown with pagination (``offset``/``limit``/``skip``), head statistics (min/max/mean/std across timesteps)
+- **Budgets** (``/api/budgets``): Water budget time series by type and location
+- **Export** (``/api/export``): CSV downloads (heads, budgets, hydrographs), GeoJSON mesh, GeoPackage (multi-layer), and matplotlib plot generation (PNG/SVG for mesh, elements, streams, heads)
+- **Observations** (``/api/observations``): Upload observed data for hydrograph comparison
+- **Groundwater, Streams, Lakes, Root Zone** (``/api/groundwater``, ``/api/streams``, etc.): Component-specific endpoints

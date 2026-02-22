@@ -47,12 +47,13 @@ Features
 - **Read/Write IWFM Files**: Support for ASCII, binary, HDF5, and HEC-DSS formats
 - **Mesh Generation**: Create finite element meshes using Triangle or Gmsh
 - **GIS Export**: Export to GeoPackage, Shapefile, and GeoJSON formats
-- **Interactive Web Viewer**: Browser-based visualization with FastAPI, React, vtk.js, and deck.gl
+- **Interactive Web Viewer**: Browser-based visualization with FastAPI, React, vtk.js, and deck.gl — includes data export (CSV, GeoPackage, matplotlib plots), model comparison, drawdown animation, and head statistics
 - **PEST++ Calibration**: Complete interface for parameter estimation with PEST++
 - **Ensemble Methods**: Prior/posterior ensemble generation for pestpp-ies
 - **Subprocess Runner**: Run IWFM executables and manage scenarios
-- **Plotting**: Matplotlib-based visualization of meshes and scalar fields
-- **Model Comparison**: Compare models with metrics and generate reports
+- **Plotting**: Matplotlib-based visualization of meshes and scalar fields, including server-side plot generation via the web API
+- **Model Comparison**: Compare models with metrics and generate reports, accessible via web viewer endpoint
+- **Consistent Component Interface**: BaseComponent ABC provides ``validate()`` and ``n_items`` across all 6 model components
 
 Quick Example
 -------------

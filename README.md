@@ -88,8 +88,13 @@ pyiwfm viewer --model-dir /path/to/model --crs "+proj=utm +zone=10 +datum=NAD83 
 The viewer provides four tabs:
 - **Overview**: Model summary and metadata
 - **3D Mesh**: Interactive vtk.js 3D rendering with layer visibility, cross-section slicing, stream network overlay, and z-exaggeration
-- **Results Map**: deck.gl + MapLibre map showing head contours, hydrograph locations, and observation upload/comparison
+- **Results Map**: deck.gl + MapLibre map showing head contours, drawdown with pagination/animation support, hydrograph locations, head statistics, and observation upload/comparison
 - **Budgets**: Plotly charts of water budget time series with location/column selection
+
+Additional API endpoints:
+- **Data Export**: CSV (heads, budgets, hydrographs), GeoJSON mesh, GeoPackage (multi-layer), and publication-quality matplotlib plots (PNG/SVG)
+- **Model Comparison**: Load a second model and compare meshes/stratigraphy via the `ModelDiffer` engine
+- **Head Statistics**: Time-aggregated min/max/mean/std per node across all timesteps
 
 The frontend is pre-built into `src/pyiwfm/visualization/webapi/static/`. To rebuild from source:
 
@@ -100,21 +105,25 @@ cd frontend && npm install && npm run build
 ## Features
 
 - **Core Data Structures**: Node, Element, Face, AppGrid, Stratigraphy, TimeSeries
+- **BaseComponent ABC**: Common interface (`validate()`, `n_items`) for all model components (groundwater, streams, lakes, root zone, small watersheds, unsaturated zone)
 - **Complete Model I/O**: Full roundtrip support for reading and writing IWFM models
   - ASCII files (nodes, elements, stratigraphy, time series)
   - Binary files (Fortran unformatted)
   - HDF5 files (efficient large model storage)
   - HEC-DSS 7 files (time series with optional library support)
-- **Component Writers**: Write complete IWFM input files
+- **Component Writers**: Write complete IWFM input files with shared `BaseComponentWriterConfig`
   - Groundwater: wells, pumping, boundary conditions, aquifer parameters
   - Streams: nodes, reaches, diversions, bypasses, rating curves
   - Lakes: definitions, elements, rating curves, outflows
   - Root Zone: crop types, soil parameters, land use
+  - Small Watersheds: watershed units, root zone/aquifer parameters
+  - Unsaturated Zone: element layers, soil moisture
   - Simulation: main control file
 - **PreProcessor Integration**: Load/save complete models from IWFM file structure
+- **Model Factory**: Extracted construction helpers (reach building, coordinate resolution, parametric grids, binary loading) into `pyiwfm.core.model_factory`
 - **Mesh Generation**: Triangle and Gmsh wrappers
-- **Visualization**: GIS export, VTK 3D export, interactive web viewer with budget charts, head maps, and hydrograph comparison
-- **Model Comparison**: Diff and comparison metrics
+- **Visualization**: GIS export (GeoPackage download), VTK 3D export, matplotlib plot generation (PNG/SVG), interactive web viewer with budget charts, head maps, hydrograph comparison, drawdown animation, and head statistics
+- **Model Comparison**: Diff and comparison metrics, including web viewer comparison endpoint
 
 ## License
 

@@ -71,6 +71,19 @@ Configuration dataclasses for the model writer system.
    :undoc-members:
    :show-inheritance:
 
+Writer Configuration Base
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Shared base dataclass (``BaseComponentWriterConfig``) for all component writer
+configs (groundwater, streams, lakes, root zone, small watersheds, unsaturated
+zone). Provides common fields: ``output_dir``, ``version``, ``length_factor``,
+``length_unit``, ``volume_factor``, ``volume_unit``, ``subdir``.
+
+.. automodule:: pyiwfm.io.writer_config_base
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 PreProcessor I/O
 ----------------
 

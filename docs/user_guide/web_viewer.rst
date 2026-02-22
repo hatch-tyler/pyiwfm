@@ -97,7 +97,9 @@ Results Map
 - Head values displayed as color-coded elements
 - Timestep and layer selection
 - Head difference (change) between two timesteps
-- Hydrograph locations displayed as markers
+- Drawdown computation with pagination (``offset``, ``limit``, ``skip``) for animation playback
+- Head statistics (min/max/mean/std per node across all timesteps)
+- Hydrograph locations displayed as markers (cached for fast response)
 - Click a hydrograph marker to view time series chart
 - Upload observed data (CSV) for comparison overlay
 - Stream network overlay on map
@@ -142,13 +144,41 @@ reference system:
 
 For C2VSimFG models, the CRS defaults to UTM Zone 10N, NAD83, US survey feet.
 
+Data Export
+~~~~~~~~~~~
+
+The viewer provides several data export endpoints:
+
+- **CSV**: Heads per node, budget time series, GW/stream hydrographs
+- **GeoJSON**: Mesh elements as downloadable GeoJSON
+- **GeoPackage**: Multi-layer GeoPackage with nodes, elements, streams,
+  subregions, and model boundary via ``GISExporter``
+- **Plots**: Publication-quality matplotlib figures (mesh, elements, streams,
+  heads) as PNG or SVG with configurable size and DPI
+
+Model Comparison
+~~~~~~~~~~~~~~~~
+
+Load a second IWFM model and compare it with the currently loaded model:
+
+.. code-block:: bash
+
+    curl -X POST "http://localhost:8080/api/model/compare" \
+         -H "Content-Type: application/json" \
+         -d '{"preprocessor_file": "/path/to/other/Preprocessor.in"}'
+
+Returns mesh and stratigraphy differences computed by ``ModelDiffer``.
+
 Performance
 -----------
 
 The viewer includes optimizations for large models:
 
 - **Lazy loading**: Head data loaded on demand from HDF5
-- **Caching**: Property arrays and reprojected coordinates computed once
+- **Caching**: Node/element ID-to-index mappings, reprojected coordinates,
+  and hydrograph locations computed once and cached in ``ModelState``
+- **Drawdown pagination**: ``offset``/``limit``/``skip`` parameters for
+  efficient frame-by-frame animation without loading all timesteps at once
 - **Vectorized computation**: NumPy-based operations for sub-100ms response
 - **Pre-built frontend**: Static React SPA served directly by FastAPI
 

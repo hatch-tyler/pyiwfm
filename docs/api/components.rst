@@ -2,6 +2,9 @@ Component Modules
 =================
 
 The component modules represent the major hydrologic components of an IWFM model.
+All components inherit from :class:`~pyiwfm.core.base_component.BaseComponent`,
+which provides a consistent interface with ``validate()`` and ``n_items``
+methods.
 
 Groundwater Module
 ------------------
