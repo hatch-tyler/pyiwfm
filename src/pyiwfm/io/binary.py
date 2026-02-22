@@ -441,14 +441,16 @@ class StreamAccessBinaryReader:
         if n <= 0:
             return np.array([], dtype=np.int32)
         data = self._read_bytes(4 * n)
-        return np.frombuffer(data, dtype=f"{self.endian}i4", count=n).copy()
+        arr: NDArray[np.int32] = np.frombuffer(data, dtype=f"{self.endian}i4", count=n).copy()
+        return arr
 
     def read_doubles(self, n: int) -> NDArray[np.float64]:
         """Read *n* consecutive 8-byte floats."""
         if n <= 0:
             return np.array([], dtype=np.float64)
         data = self._read_bytes(8 * n)
-        return np.frombuffer(data, dtype=f"{self.endian}f8", count=n).copy()
+        arr: NDArray[np.float64] = np.frombuffer(data, dtype=f"{self.endian}f8", count=n).copy()
+        return arr
 
     # -- logical -----------------------------------------------------------
     def read_logical(self) -> bool:

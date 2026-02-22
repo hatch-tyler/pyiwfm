@@ -361,7 +361,7 @@ def export_plot(
         elif plot_type == "streams":
             if model.streams is None:
                 raise HTTPException(status_code=404, detail="No stream network loaded")
-            fig, _ax = plot_streams(model.grid, model.streams, figsize=(width, height))
+            fig, _ax = plot_streams(model.streams, figsize=(width, height))
         elif plot_type == "heads":
             loader = model_state.get_head_loader()
             if loader is None:
@@ -387,8 +387,8 @@ def export_plot(
                 model.grid,
                 values,
                 figsize=(width, height),
-                title=f"Head - Layer {layer}, Timestep {timestep}",
             )
+            _ax.set_title(f"Head - Layer {layer}, Timestep {timestep}")
         else:
             raise HTTPException(
                 status_code=400,
