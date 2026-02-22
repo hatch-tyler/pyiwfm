@@ -8,22 +8,25 @@ Python package for reading, writing, visualizing, and comparing IWFM (Integrated
 ## Installation
 
 ```bash
-# Basic installation
+# Basic installation (includes matplotlib, geopandas, shapely, h5py)
 pip install -e .
 
-# With GIS support
-pip install -e ".[gis]"
-
-# With mesh generation
+# With mesh generation (triangle, gmsh)
 pip install -e ".[mesh]"
+
+# With VTK 3D export
+pip install -e ".[viz]"
 
 # With web viewer (FastAPI + React + vtk.js + deck.gl)
 pip install -e ".[webapi]"
 
+# With PEST++ integration (scipy)
+pip install -e ".[pest]"
+
 # With all optional dependencies
 pip install -e ".[all]"
 
-# Development installation
+# Development installation (pytest, mypy, ruff)
 pip install -e ".[dev]"
 ```
 
