@@ -193,13 +193,13 @@ class TestExportGeoPackage:
     """Tests for export_geopackage()."""
 
     def test_creates_file(self, tmp_path: Path) -> None:
-        exporter = _make_exporter()
+        exporter = _make_exporter(crs="EPSG:4326")
         output = tmp_path / "model.gpkg"
         exporter.export_geopackage(output)
         assert output.exists()
 
     def test_with_all_layers(self, tmp_path: Path) -> None:
-        exporter = _make_exporter(with_streams=True)
+        exporter = _make_exporter(with_streams=True, crs="EPSG:4326")
         output = tmp_path / "model.gpkg"
         exporter.export_geopackage(
             output,
@@ -219,13 +219,13 @@ class TestExportGeoJSON:
     """Tests for export_geojson()."""
 
     def test_nodes_layer(self, tmp_path: Path) -> None:
-        exporter = _make_exporter()
+        exporter = _make_exporter(crs="EPSG:4326")
         output = tmp_path / "nodes.geojson"
         exporter.export_geojson(output, layer="nodes")
         assert output.exists()
 
     def test_elements_layer(self, tmp_path: Path) -> None:
-        exporter = _make_exporter()
+        exporter = _make_exporter(crs="EPSG:4326")
         output = tmp_path / "elements.geojson"
         exporter.export_geojson(output, layer="elements")
         assert output.exists()

@@ -1,5 +1,8 @@
 # pyiwfm
 
+![CI](https://github.com/hatch-tyler/pyiwfm/actions/workflows/ci.yml/badge.svg)
+[![codecov](https://codecov.io/gh/hatch-tyler/pyiwfm/graph/badge.svg)](https://codecov.io/gh/hatch-tyler/pyiwfm)
+
 Python package for reading, writing, visualizing, and comparing IWFM (Integrated Water Flow Model) models.
 
 ## Installation
