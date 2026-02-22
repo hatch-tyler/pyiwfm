@@ -11,7 +11,6 @@ from pyiwfm.core.model import IWFMModel
 from pyiwfm.core.stratigraphy import Stratigraphy
 from pyiwfm.io.preprocessor import (
     PreProcessorConfig,
-    load_model_from_preprocessor,
     read_preprocessor_main,
     read_subregions_file,
     save_model_to_preprocessor,
@@ -201,7 +200,7 @@ stratigraphy.dat                         / STRATIGRAPHY_FILE
         )
 
         # Load model
-        model = load_model_from_preprocessor(main_file)
+        model = IWFMModel.from_preprocessor(main_file)
 
         assert model.name == "Test Model"
         assert model.n_nodes == 9
@@ -248,7 +247,7 @@ class TestSaveModelToPreProcessor:
 
         # Reload and verify
         main_file = output_dir / "Roundtrip Test_pp.in"
-        model_back = load_model_from_preprocessor(main_file)
+        model_back = IWFMModel.from_preprocessor(main_file)
 
         assert model_back.n_nodes == model.n_nodes
         assert model_back.n_elements == model.n_elements
@@ -707,7 +706,7 @@ class TestWriteSubregionsFile:
 
 
 class TestLoadModelFromPreProcessorExtended:
-    """Extended tests for load_model_from_preprocessor error handling."""
+    """Extended tests for IWFMModel.from_preprocessor error handling."""
 
     def test_missing_nodes_file_raises(self, tmp_path: Path) -> None:
         """Error raised when nodes file not specified in config."""
@@ -719,7 +718,7 @@ elements.dat                             / ELEMENTS_FILE
 """
         )
         with pytest.raises(FileFormatError, match="Nodes file not specified"):
-            load_model_from_preprocessor(main_file)
+            IWFMModel.from_preprocessor(main_file)
 
     def test_missing_elements_file_raises(self, tmp_path: Path) -> None:
         """Error raised when elements file not specified in config."""
@@ -740,7 +739,7 @@ nodes.dat                                / NODES_FILE
 """
         )
         with pytest.raises(FileFormatError, match="Elements file not specified"):
-            load_model_from_preprocessor(main_file)
+            IWFMModel.from_preprocessor(main_file)
 
     def test_load_without_stratigraphy(self, tmp_path: Path) -> None:
         """Model loads successfully without stratigraphy file."""
@@ -773,7 +772,7 @@ elements.dat                             / ELEMENTS_FILE
 """
         )
 
-        model = load_model_from_preprocessor(main_file)
+        model = IWFMModel.from_preprocessor(main_file)
         assert model.name == "No Strat Model"
         assert model.n_nodes == 4
         assert model.n_elements == 1
@@ -820,7 +819,7 @@ subregions.dat                           / SUBREGIONS_FILE
 """
         )
 
-        model = load_model_from_preprocessor(main_file)
+        model = IWFMModel.from_preprocessor(main_file)
         assert model.mesh is not None
         assert model.mesh.n_subregions == 1
 
@@ -865,7 +864,7 @@ elements.dat                             / ELEMENTS_FILE
 """
         )
 
-        model = load_model_from_preprocessor(main_file)
+        model = IWFMModel.from_preprocessor(main_file)
         assert model.name == "MyModel"
 
     def test_first_data_line_consumed_as_name_without_desc(self, tmp_path: Path) -> None:

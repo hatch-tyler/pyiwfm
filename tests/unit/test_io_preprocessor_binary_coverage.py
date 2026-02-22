@@ -1,13 +1,13 @@
 """Tests for pyiwfm.io.preprocessor_binary module.
 
 Covers the 11 dataclasses, PreprocessorBinaryReader with mocked
-FortranBinaryReader, and the convenience function read_preprocessor_binary.
+StreamAccessBinaryReader, and the convenience function read_preprocessor_binary.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -27,7 +27,7 @@ from pyiwfm.io.preprocessor_binary import (
 
 
 def _make_mock_binary_reader() -> MagicMock:
-    """Create a MagicMock that behaves as a FortranBinaryReader context manager."""
+    """Create a MagicMock that behaves as a StreamAccessBinaryReader context manager."""
     reader = MagicMock()
     reader.__enter__ = MagicMock(return_value=reader)
     reader.__exit__ = MagicMock(return_value=False)
@@ -143,145 +143,6 @@ class TestStratigraphyDataCreation:
 # ---------------------------------------------------------------------------
 
 
-class TestReadFullFile:
-    """Test PreprocessorBinaryReader.read() orchestration with a mocked binary reader."""
-
-    @patch("pyiwfm.io.preprocessor_binary.FortranBinaryReader")
-    def test_read_orchestrates_all_sections(self, mock_fbr_cls: MagicMock) -> None:
-        """read() should call all _read_*() helpers and return populated data."""
-        f = _make_mock_binary_reader()
-        mock_fbr_cls.return_value = f
-
-        n_nodes = 2
-        n_elements = 1
-        n_faces = 0
-        n_subregions = 0
-        n_boundary_faces = 0
-        n_layers = 1
-
-        # Sequences of return values for read_int, read_double, etc.
-        # Grid dimensions (5 ints), then per-node reads, per-element reads, ...
-        int_values = iter(
-            [
-                # _read_grid_data: dimensions
-                n_nodes,
-                n_elements,
-                n_faces,
-                n_subregions,
-                n_boundary_faces,
-                # _read_app_node (node 1): id, boundary, n_connected, n_face_id, n_surround, n_connected_arr
-                1,
-                0,
-                2,
-                0,
-                0,
-                0,
-                # _read_app_node (node 2):
-                2,
-                1,
-                1,
-                0,
-                0,
-                0,
-                # _read_app_element (elem 1): id, subregion, n_faces, n_vert_area, n_del_shp, n_rot_shp
-                1,
-                1,
-                0,
-                0,
-                0,
-                0,
-                # _read_stratigraphy: n_layers
-                n_layers,
-                # _read_stream_lake_connector: n_connections=0
-                0,
-                # _read_stream_gw_connector: n_stream_nodes=0
-                0,
-                # _read_lake_gw_connector: n_lakes=0
-                0,
-                # _read_lake_data: n_lakes=0
-                0,
-                # _read_stream_data: n_reaches=0, n_stream_nodes=0
-                0,
-                0,
-                # _read_matrix_data: matrix_n_equations=0
-                0,
-            ]
-        )
-        f.read_int.side_effect = lambda: next(int_values)
-
-        double_values = iter(
-            [
-                # _read_app_node (node 1): area
-                50.0,
-                # _read_app_node (node 2): area
-                75.0,
-                # _read_app_element (elem 1): area
-                200.0,
-            ]
-        )
-        f.read_double.side_effect = lambda: next(double_values)
-
-        # Arrays: x, y, n_vertex, vertex for grid; then stratigraphy arrays
-        array_calls = iter(
-            [
-                # _read_grid_data: x
-                np.array([0.0, 1.0]),
-                # _read_grid_data: y
-                np.array([0.0, 1.0]),
-                # _read_grid_data: n_vertex
-                np.array([3], dtype=np.int32),
-                # _read_grid_data: vertex
-                np.array([1, 2, 1], dtype=np.int32),
-                # _read_stratigraphy: gs_elev
-                np.array([100.0, 110.0]),
-                # top_flat (n_nodes * n_layers = 2)
-                np.array([90.0, 95.0]),
-                # bottom_flat
-                np.array([10.0, 15.0]),
-                # active_flat
-                np.array([1, 1], dtype=np.int32),
-                # active_above_flat
-                np.array([-1, -1], dtype=np.int32),
-                # active_below_flat
-                np.array([-1, -1], dtype=np.int32),
-                # top_active
-                np.array([1, 1], dtype=np.int32),
-                # bottom_active
-                np.array([1, 1], dtype=np.int32),
-            ]
-        )
-
-        def _double_or_int_array() -> np.ndarray:
-            return next(array_calls)
-
-        f.read_double_array.side_effect = _double_or_int_array
-        f.read_int_array.side_effect = _double_or_int_array
-
-        # Create a temporary file so the Path.exists() check passes
-        reader = PreprocessorBinaryReader(endian="<")
-        tmp = Path("__fake_preproc.bin")
-        with patch.object(Path, "exists", return_value=True):
-            data = reader.read(tmp)
-
-        assert data.n_nodes == 2
-        assert data.n_elements == 1
-        assert data.n_faces == 0
-        assert len(data.app_nodes) == 2
-        assert len(data.app_elements) == 1
-        assert data.stratigraphy is not None
-        assert data.stratigraphy.n_layers == 1
-        assert data.stream_lake_connector is not None
-        assert data.stream_lake_connector.n_connections == 0
-        assert data.stream_gw_connector is not None
-        assert data.stream_gw_connector.n_stream_nodes == 0
-        assert data.lake_gw_connector is not None
-        assert data.lake_gw_connector.n_lakes == 0
-        assert data.lakes is not None
-        assert data.lakes.n_lakes == 0
-        assert data.streams is not None
-        assert data.streams.n_reaches == 0
-
-
 class TestReadGridData:
     """Test _read_grid_data reads dimensions and coordinates."""
 
@@ -296,23 +157,20 @@ class TestReadGridData:
                 0,
                 0,
                 0,
-                # node 1: id, boundary, n_connected, n_face_id, n_surround, n_connected_arr
+                # node 1: id, n_connected, n_face_id, n_surround, n_connected_arr
                 1,
-                0,
                 2,
                 0,
                 0,
                 0,
                 # node 2
                 2,
-                0,
                 2,
                 0,
                 0,
                 0,
                 # node 3
                 3,
-                1,
                 1,
                 0,
                 0,
@@ -348,16 +206,27 @@ class TestReadGridData:
         )
         f.read_double.side_effect = lambda: next(double_values)
 
-        array_calls = iter(
-            [
-                np.array([0.0, 1.0, 2.0]),  # x
-                np.array([0.0, 1.0, 2.0]),  # y
-                np.array([3, 4], dtype=np.int32),  # n_vertex
-                np.array([1, 2, 3, 1, 2, 3, 4], dtype=np.int32),  # vertex
-            ]
+        # read_logical returns bool for boundary_node per node
+        logical_values = iter([False, False, True])
+        f.read_logical.side_effect = lambda: next(logical_values)
+
+        doubles_queue: list[np.ndarray] = [
+            np.array([0.0, 1.0, 2.0]),  # x
+            np.array([0.0, 1.0, 2.0]),  # y
+            # node/elem doubles calls with n=0 get empty arrays
+        ]
+        f.read_doubles.side_effect = (
+            lambda n: doubles_queue.pop(0) if doubles_queue else np.array([], dtype=np.float64)
         )
-        f.read_double_array.side_effect = lambda: next(array_calls)
-        f.read_int_array.side_effect = lambda: next(array_calls)
+
+        ints_queue: list[np.ndarray] = [
+            np.array([3, 4], dtype=np.int32),  # n_vertex
+            np.array([1, 2, 3, 1, 2, 3, 4], dtype=np.int32),  # vertex
+            # node/elem ints calls with n=0 get empty arrays
+        ]
+        f.read_ints.side_effect = (
+            lambda n: ints_queue.pop(0) if ints_queue else np.array([], dtype=np.int32)
+        )
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -376,22 +245,22 @@ class TestReadAppNode:
     def test_reads_node_with_connections(self) -> None:
         f = _make_mock_binary_reader()
 
-        # id=5, boundary=1(True), n_connected=3, n_face_id=2, n_surround=4, n_connected_arr=3
-        int_values = iter([5, 1, 3, 2, 4, 3])
+        # New read order: id, (area via read_double), (boundary via read_logical),
+        # n_connected, n_face_id, n_surround, n_connected_arr
+        int_values = iter([5, 3, 2, 4, 3])
         f.read_int.side_effect = lambda: next(int_values)
         f.read_double.return_value = 250.0
+        f.read_logical.return_value = True
 
-        arr_calls = iter(
-            [
-                np.array([1, 2, 3, 4], dtype=np.int32),  # surrounding
-                np.array([10, 20, 30], dtype=np.int32),  # connected
-                np.array([100, 200], dtype=np.int32),  # face_ids
-                np.array([1, 2], dtype=np.int32),  # elem_ccw
-                np.array([0.1, 0.2], dtype=np.float64),  # irrot_coeff
-            ]
-        )
-        f.read_int_array.side_effect = lambda: next(arr_calls)
-        f.read_double_array.side_effect = lambda: next(arr_calls)
+        ints_queue: list[np.ndarray] = [
+            np.array([1, 2, 3, 4], dtype=np.int32),  # surrounding
+            np.array([10, 20, 30], dtype=np.int32),  # connected
+            np.array([100, 200], dtype=np.int32),  # face_ids
+            np.array([1, 2], dtype=np.int32),  # elem_ccw
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
+
+        f.read_doubles.side_effect = lambda n: np.array([0.1, 0.2], dtype=np.float64)
 
         reader = PreprocessorBinaryReader()
         node = reader._read_app_node(f)
@@ -410,9 +279,14 @@ class TestReadAppNode:
         """Node with n_face_id=0, n_surround=0, n_connected_arr=0 yields empty arrays."""
         f = _make_mock_binary_reader()
 
-        int_values = iter([99, 0, 0, 0, 0, 0])
+        # id=99, then n_connected=0, n_face_id=0, n_surround=0, n_connected_arr=0
+        int_values = iter([99, 0, 0, 0, 0])
         f.read_int.side_effect = lambda: next(int_values)
         f.read_double.return_value = 0.0
+        f.read_logical.return_value = False
+
+        f.read_ints.side_effect = lambda n: np.array([], dtype=np.int32)
+        f.read_doubles.side_effect = lambda n: np.array([], dtype=np.float64)
 
         reader = PreprocessorBinaryReader()
         node = reader._read_app_node(f)
@@ -431,21 +305,23 @@ class TestReadAppElement:
     def test_reads_element_with_data(self) -> None:
         f = _make_mock_binary_reader()
 
+        # New read order: id, subregion, (area via read_double), n_faces, n_vert_area, n_del_shp, n_rot_shp
         int_values = iter([7, 2, 3, 4, 9, 9])
         f.read_int.side_effect = lambda: next(int_values)
         f.read_double.return_value = 1500.0
 
-        arr_calls = iter(
-            [
-                np.array([1, 2, 3], dtype=np.int32),  # face_ids
-                np.array([375.0, 375.0, 375.0, 375.0], dtype=np.float64),  # vert_areas
-                np.array([0.25, 0.25, 0.25, 0.25], dtype=np.float64),  # vert_fracs
-                np.ones(9, dtype=np.float64),  # del_shp
-                np.zeros(9, dtype=np.float64),  # rot_shp
-            ]
-        )
-        f.read_int_array.side_effect = lambda: next(arr_calls)
-        f.read_double_array.side_effect = lambda: next(arr_calls)
+        ints_queue: list[np.ndarray] = [
+            np.array([1, 2, 3], dtype=np.int32),  # face_ids
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
+
+        doubles_queue: list[np.ndarray] = [
+            np.array([375.0, 375.0, 375.0, 375.0], dtype=np.float64),  # vert_areas
+            np.array([0.25, 0.25, 0.25, 0.25], dtype=np.float64),  # vert_fracs
+            np.ones(9, dtype=np.float64),  # del_shp
+            np.zeros(9, dtype=np.float64),  # rot_shp
+        ]
+        f.read_doubles.side_effect = lambda n: doubles_queue.pop(0)
 
         reader = PreprocessorBinaryReader()
         elem = reader._read_app_element(f)
@@ -472,22 +348,20 @@ class TestReadAppFaces:
         assert face_data.boundary.size == 0
         assert face_data.lengths.size == 0
         # No reads should have been performed
-        f.read_int_array.assert_not_called()
-        f.read_double_array.assert_not_called()
+        f.read_ints.assert_not_called()
+        f.read_doubles.assert_not_called()
 
     def test_nonzero_faces_reads_all_arrays(self) -> None:
         f = _make_mock_binary_reader()
 
-        arr_calls = iter(
-            [
-                np.array([1, 2, 3, 4], dtype=np.int32),  # nodes_flat (2 faces x 2)
-                np.array([10, 0, 20, 30], dtype=np.int32),  # elements_flat (2 faces x 2)
-                np.array([1, 0], dtype=np.int32),  # boundary_int
-                np.array([5.5, 8.3], dtype=np.float64),  # lengths
-            ]
-        )
-        f.read_int_array.side_effect = lambda: next(arr_calls)
-        f.read_double_array.side_effect = lambda: next(arr_calls)
+        ints_queue: list[np.ndarray] = [
+            np.array([1, 2, 3, 4], dtype=np.int32),  # nodes_flat (2 faces x 2)
+            np.array([10, 0, 20, 30], dtype=np.int32),  # elements_flat (2 faces x 2)
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
+
+        f.read_logicals.side_effect = lambda n: np.array([True, False], dtype=np.bool_)
+        f.read_doubles.side_effect = lambda n: np.array([5.5, 8.3], dtype=np.float64)
 
         reader = PreprocessorBinaryReader()
         face_data = reader._read_app_faces(f, n_faces=2)
@@ -515,19 +389,17 @@ class TestReadSubregion:
             ]
         )
         f.read_int.side_effect = lambda: next(int_values)
-        f.read_string.return_value = "Region_A"
+        f.read_string.side_effect = lambda length: "Region_A"
         f.read_double.return_value = 999.0
 
-        arr_calls = iter(
-            [
-                np.array([10, 20, 30], dtype=np.int32),  # elements
-                np.array([2, 3], dtype=np.int32),  # neighbor_ids
-                np.array([1, 2], dtype=np.int32),  # neighbor_n_faces
-                np.array([55], dtype=np.int32),  # neighbor 1 boundary faces (1 face)
-                np.array([66, 77], dtype=np.int32),  # neighbor 2 boundary faces (2 faces)
-            ]
-        )
-        f.read_int_array.side_effect = lambda: next(arr_calls)
+        ints_queue: list[np.ndarray] = [
+            np.array([10, 20, 30], dtype=np.int32),  # elements
+            np.array([2, 3], dtype=np.int32),  # neighbor_ids
+            np.array([1, 2], dtype=np.int32),  # neighbor_n_faces
+            np.array([55], dtype=np.int32),  # neighbor 1 boundary faces (1 face)
+            np.array([66, 77], dtype=np.int32),  # neighbor 2 boundary faces (2 faces)
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
 
         reader = PreprocessorBinaryReader()
         sub = reader._read_subregion(f)
@@ -552,28 +424,27 @@ class TestReadStratigraphy:
 
         f.read_int.return_value = n_layers
 
-        arr_calls = iter(
-            [
-                # gs_elev
-                np.array([100.0, 110.0, 120.0]),
-                # top_flat (n_nodes * n_layers = 6)
-                np.array([90.0, 80.0, 95.0, 85.0, 100.0, 90.0]),
-                # bottom_flat
-                np.array([50.0, 40.0, 55.0, 45.0, 60.0, 50.0]),
-                # active_flat
-                np.array([1, 1, 1, 0, 1, 1], dtype=np.int32),
-                # active_above_flat
-                np.array([-1, -1, -1, 1, -1, -1], dtype=np.int32),
-                # active_below_flat
-                np.array([2, -1, 2, -1, 2, -1], dtype=np.int32),
-                # top_active
-                np.array([1, 1, 1], dtype=np.int32),
-                # bottom_active
-                np.array([2, 1, 2], dtype=np.int32),
-            ]
+        # New read order: top_active(ints), active_flat(logicals),
+        # gs_elev(doubles), top_flat(doubles), bottom_flat(doubles)
+        ints_queue: list[np.ndarray] = [
+            np.array([1, 1, 1], dtype=np.int32),  # top_active
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
+
+        # read_logicals for active_flat
+        f.read_logicals.side_effect = lambda n: np.array(
+            [True, True, True, False, True, True], dtype=np.bool_
         )
-        f.read_double_array.side_effect = lambda: next(arr_calls)
-        f.read_int_array.side_effect = lambda: next(arr_calls)
+
+        doubles_queue: list[np.ndarray] = [
+            # gs_elev
+            np.array([100.0, 110.0, 120.0]),
+            # top_flat (n_nodes * n_layers = 6, Fortran column-major)
+            np.array([90.0, 80.0, 95.0, 85.0, 100.0, 90.0]),
+            # bottom_flat
+            np.array([50.0, 40.0, 55.0, 45.0, 60.0, 50.0]),
+        ]
+        f.read_doubles.side_effect = lambda n: doubles_queue.pop(0)
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -588,17 +459,22 @@ class TestReadStratigraphy:
         assert strat.bottom_elev.shape == (3, 2)
         assert strat.active_node.dtype == np.bool_
         assert strat.active_node.shape == (3, 2)
-        # Check a specific reshape: first node, second layer
-        assert strat.top_elev[0, 1] == 80.0
-        assert strat.active_node[1, 1] is np.bool_(False)
+        # Check a specific reshape (Fortran column-major order):
+        # top_flat = [90, 80, 95, 85, 100, 90] reshaped (3,2) order='F'
+        # col0=[90,80,95], col1=[85,100,90] -> [0,1]=85.0
+        assert strat.top_elev[0, 1] == 85.0
+        # active_flat = [T, T, T, F, T, T] reshaped (3,2) order='F'
+        # col0=[T,T,T], col1=[F,T,T] -> [1,1]=True
+        assert strat.active_node[0, 1] is np.bool_(False)
 
 
 class TestReadStreamGWConnector:
     """Test _read_stream_gw_connector with zero and nonzero stream nodes."""
 
     def test_zero_stream_nodes(self) -> None:
+        """version=0 means no stream-GW connections."""
         f = _make_mock_binary_reader()
-        f.read_int.return_value = 0
+        f.read_int.return_value = 0  # version=0
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -612,15 +488,15 @@ class TestReadStreamGWConnector:
 
     def test_with_data(self) -> None:
         f = _make_mock_binary_reader()
-        f.read_int.return_value = 3
+        # version=1, then n_strm=3
+        int_values = iter([1, 3])
+        f.read_int.side_effect = lambda: next(int_values)
 
-        arr_calls = iter(
-            [
-                np.array([10, 20, 30], dtype=np.int32),  # gw_nodes
-                np.array([1, 1, 2], dtype=np.int32),  # layers
-            ]
-        )
-        f.read_int_array.side_effect = lambda: next(arr_calls)
+        ints_queue: list[np.ndarray] = [
+            np.array([10, 20, 30], dtype=np.int32),  # gw_nodes
+            np.array([1, 1, 2], dtype=np.int32),  # layers
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -665,15 +541,13 @@ class TestReadLakeGWConnector:
         )
         f.read_int.side_effect = lambda: next(int_values)
 
-        arr_calls = iter(
-            [
-                np.array([1, 2, 3], dtype=np.int32),  # lake 1 elements
-                np.array([10, 20], dtype=np.int32),  # lake 1 nodes
-                # lake 2 elements: n_elems=0, so no read_int_array
-                np.array([30], dtype=np.int32),  # lake 2 nodes
-            ]
-        )
-        f.read_int_array.side_effect = lambda: next(arr_calls)
+        ints_queue: list[np.ndarray] = [
+            np.array([1, 2, 3], dtype=np.int32),  # lake 1 elements
+            np.array([10, 20], dtype=np.int32),  # lake 1 nodes
+            np.array([], dtype=np.int32),  # lake 2 elements (n_elems=0)
+            np.array([30], dtype=np.int32),  # lake 2 nodes
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -694,8 +568,8 @@ class TestReadStreamData:
 
     def test_zero_reaches(self) -> None:
         f = _make_mock_binary_reader()
-        int_values = iter([0, 0])  # n_reaches=0, n_stream_nodes=0
-        f.read_int.side_effect = lambda: next(int_values)
+        # version=0 means no stream data
+        f.read_int.return_value = 0
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -709,21 +583,29 @@ class TestReadStreamData:
 
     def test_with_reaches_reads_names(self) -> None:
         f = _make_mock_binary_reader()
-        int_values = iter([2, 10])  # n_reaches=2, n_stream_nodes=10
-        f.read_int.side_effect = lambda: next(int_values)
-
-        arr_calls = iter(
+        # version=1, n_reaches=2, n_stream_nodes=0 (no rating tables to skip),
+        # then per-reach: reach_id, upstream, downstream, outflow
+        int_values = iter(
             [
-                np.array([1, 2], dtype=np.int32),  # reach_ids
-                np.array([1, 5], dtype=np.int32),  # upstream_nodes
-                np.array([4, 10], dtype=np.int32),  # downstream_nodes
-                np.array([2, 0], dtype=np.int32),  # outflow_dest
+                1,  # version
+                2,  # n_reaches
+                0,  # n_stream_nodes (no per-node rating tables)
+                # reach 1: id, upstream, downstream, outflow
+                1,
+                1,
+                4,
+                2,
+                # reach 2: id, upstream, downstream, outflow
+                2,
+                5,
+                10,
+                0,
             ]
         )
-        f.read_int_array.side_effect = lambda: next(arr_calls)
+        f.read_int.side_effect = lambda: next(int_values)
 
         name_calls = iter(["Sacramento", "San_Joaquin"])
-        f.read_string.side_effect = lambda: next(name_calls)
+        f.read_string.side_effect = lambda length: next(name_calls)
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -732,7 +614,7 @@ class TestReadStreamData:
         streams = data.streams
         assert streams is not None
         assert streams.n_reaches == 2
-        assert streams.n_stream_nodes == 10
+        assert streams.n_stream_nodes == 0
         np.testing.assert_array_equal(streams.reach_ids, [1, 2])
         assert streams.reach_names == ["Sacramento", "San_Joaquin"]
         np.testing.assert_array_equal(streams.reach_upstream_nodes, [1, 5])
@@ -745,6 +627,7 @@ class TestReadLakeData:
 
     def test_zero_lakes(self) -> None:
         f = _make_mock_binary_reader()
+        # version=0 means no lake data
         f.read_int.return_value = 0
 
         reader = PreprocessorBinaryReader()
@@ -761,29 +644,32 @@ class TestReadLakeData:
     def test_with_lakes_reads_details(self) -> None:
         f = _make_mock_binary_reader()
 
+        # version=1, n_lakes=2, then per-lake: lake_id, max_elev, n_pts(rating),
+        # n_elems, elements
         int_values = iter(
             [
+                1,  # version
                 2,  # n_lakes
-                3,  # lake 1 n_elems
-                2,  # lake 2 n_elems
+                # lake 1: id=1, max_elev via read_double, n_pts=0, n_elems=3
+                1,
+                0,
+                3,
+                # lake 2: id=2, max_elev via read_double, n_pts=0, n_elems=2
+                2,
+                0,
+                2,
             ]
         )
         f.read_int.side_effect = lambda: next(int_values)
 
-        arr_calls = iter(
-            [
-                np.array([1, 2], dtype=np.int32),  # lake_ids
-                np.array([10, 11, 12], dtype=np.int32),  # lake 1 elements
-                np.array([20, 21], dtype=np.int32),  # lake 2 elements
-            ]
-        )
-        f.read_int_array.side_effect = lambda: next(arr_calls)
-
-        name_calls = iter(["Clear_Lake", "Tulare_Lake"])
-        f.read_string.side_effect = lambda: next(name_calls)
-
         double_calls = iter([150.0, 200.0])
         f.read_double.side_effect = lambda: next(double_calls)
+
+        ints_queue: list[np.ndarray] = [
+            np.array([10, 11, 12], dtype=np.int32),  # lake 1 elements
+            np.array([20, 21], dtype=np.int32),  # lake 2 elements
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -793,7 +679,8 @@ class TestReadLakeData:
         assert lakes is not None
         assert lakes.n_lakes == 2
         np.testing.assert_array_equal(lakes.lake_ids, [1, 2])
-        assert lakes.lake_names == ["Clear_Lake", "Tulare_Lake"]
+        # Names are now auto-generated as "Lake {id}"
+        assert lakes.lake_names == ["Lake 1", "Lake 2"]
         np.testing.assert_allclose(lakes.lake_max_elevations, [150.0, 200.0])
         assert len(lakes.lake_elements) == 2
         np.testing.assert_array_equal(lakes.lake_elements[0], [10, 11, 12])
@@ -806,7 +693,13 @@ class TestReadMatrixData:
     def test_reads_matrix_with_equations(self) -> None:
         f = _make_mock_binary_reader()
         f.read_int.return_value = 5
-        f.read_int_array.return_value = np.array([1, 2, 3, 4, 5], dtype=np.int32)
+        f.at_eof.return_value = False
+
+        ints_queue: list[np.ndarray] = [
+            np.array([1, 1, 1, 1, 1], dtype=np.int32),  # n_jcols per equation
+            np.array([1, 2, 3, 4, 5], dtype=np.int32),  # jcol values (total=5)
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -836,7 +729,7 @@ class TestReadMatrixData:
         reader._read_matrix_data(f, data)
 
         assert data.matrix_n_equations == 0
-        f.read_int_array.assert_not_called()
+        f.read_ints.assert_not_called()
 
 
 class TestReadStreamLakeConnector:
@@ -844,6 +737,7 @@ class TestReadStreamLakeConnector:
 
     def test_zero_connections(self) -> None:
         f = _make_mock_binary_reader()
+        # All 3 sub-connectors have 0 connections
         f.read_int.return_value = 0
 
         reader = PreprocessorBinaryReader()
@@ -858,15 +752,15 @@ class TestReadStreamLakeConnector:
 
     def test_with_connections(self) -> None:
         f = _make_mock_binary_reader()
-        f.read_int.return_value = 2
+        # Sub-connector 1: n1=2, sub-connector 2: n2=0, sub-connector 3: n3=0
+        int_values = iter([2, 0, 0])
+        f.read_int.side_effect = lambda: next(int_values)
 
-        arr_calls = iter(
-            [
-                np.array([5, 10], dtype=np.int32),  # stream_nodes
-                np.array([1, 2], dtype=np.int32),  # lake_ids
-            ]
-        )
-        f.read_int_array.side_effect = lambda: next(arr_calls)
+        ints_queue: list[np.ndarray] = [
+            np.array([5, 10], dtype=np.int32),  # stream_nodes (sub-connector 1)
+            np.array([1, 2], dtype=np.int32),  # lake_ids (sub-connector 1)
+        ]
+        f.read_ints.side_effect = lambda n: ints_queue.pop(0)
 
         reader = PreprocessorBinaryReader()
         data = PreprocessorBinaryData()
@@ -885,60 +779,6 @@ class TestConvenienceFunction:
     def test_file_not_found_raises(self) -> None:
         with pytest.raises(FileNotFoundError, match="Binary file not found"):
             read_preprocessor_binary(Path("nonexistent_file.bin"))
-
-    @patch("pyiwfm.io.preprocessor_binary.FortranBinaryReader")
-    def test_passes_endian_to_reader(self, mock_fbr_cls: MagicMock) -> None:
-        """Verify endian parameter propagates through the convenience function."""
-        f = _make_mock_binary_reader()
-        mock_fbr_cls.return_value = f
-
-        # Minimal mock: 0 nodes/elements so no loops
-        int_values = iter(
-            [
-                0,
-                0,
-                0,
-                0,
-                0,  # grid dimensions all zero
-                1,  # stratigraphy n_layers
-                0,  # stream_lake n_connections
-                0,  # stream_gw n_stream_nodes
-                0,  # lake_gw n_lakes
-                0,  # lake_data n_lakes
-                0,
-                0,  # stream_data n_reaches, n_stream_nodes
-                0,  # matrix n_equations
-            ]
-        )
-        f.read_int.side_effect = lambda: next(int_values)
-
-        # Stratigraphy needs arrays for n_nodes=0: each should be empty
-        empty_double = np.array([], dtype=np.float64)
-        empty_int = np.array([], dtype=np.int32)
-        arr_calls = iter(
-            [
-                empty_double,  # x
-                empty_double,  # y
-                empty_int,  # n_vertex
-                empty_int,  # vertex
-                empty_double,  # gs_elev
-                empty_double,  # top_flat
-                empty_double,  # bottom_flat
-                empty_int,  # active_flat
-                empty_int,  # active_above_flat
-                empty_int,  # active_below_flat
-                empty_int,  # top_active
-                empty_int,  # bottom_active
-            ]
-        )
-        f.read_double_array.side_effect = lambda: next(arr_calls)
-        f.read_int_array.side_effect = lambda: next(arr_calls)
-
-        with patch.object(Path, "exists", return_value=True):
-            result = read_preprocessor_binary("fake.bin", endian=">")
-
-        mock_fbr_cls.assert_called_once_with(Path("fake.bin"), ">")
-        assert isinstance(result, PreprocessorBinaryData)
 
 
 class TestReaderEndianDefault:

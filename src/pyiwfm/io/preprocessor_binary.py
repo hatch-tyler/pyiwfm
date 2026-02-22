@@ -2,7 +2,8 @@
 PreProcessor Binary File Reader for IWFM.
 
 This module reads the binary output file produced by the IWFM PreProcessor.
-The binary file contains pre-processed mesh, stratigraphy, and component data
+The binary file uses ``ACCESS='STREAM'`` (raw bytes, no Fortran record
+markers) and contains pre-processed mesh, stratigraphy, and component data
 that enables faster simulation startup.
 """
 
@@ -14,7 +15,11 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.io.binary import FortranBinaryReader
+from pyiwfm.io.binary import StreamAccessBinaryReader
+
+# Fixed-length string sizes used by IWFM binary output
+_SUBREGION_NAME_LEN = 50
+_REACH_NAME_LEN = 30
 
 
 @dataclass
@@ -182,120 +187,103 @@ class PreprocessorBinaryData:
 
 
 class PreprocessorBinaryReader:
+    """Reader for IWFM PreProcessor binary output files.
+
+    The preprocessor binary uses ``ACCESS='STREAM'`` (raw bytes, no Fortran
+    record markers).  All arrays are written with explicit lengths that must
+    be derived from dimension counts read earlier in the file.
+
+    Section read order (matching IWFM Fortran ``WritePreprocessedData``):
+
+    1. AppGrid — dimensions, coordinates, connectivity, per-node/element
+       data, face data, boundary faces, subregions
+    2. Stratigraphy — NLayers, TopActiveLayer, ActiveNode, GSElev,
+       TopElev, BottomElev  (2-D arrays in Fortran column-major order)
+    3. StrmLakeConnector — 3 sub-connectors (stream→lake, lake→stream,
+       lake→lake), each with count + source/dest arrays
+    4. StrmGWConnector — version int, then gw_node/layer arrays
+    5. LakeGWConnector — per-lake element/node arrays
+    6. AppLake — version int, per-lake data with rating tables
+    7. AppStream — version int, per-node rating tables, per-reach metadata
+    8. Matrix — sparse structure (optional)
     """
-    Reader for IWFM PreProcessor binary output files.
 
-    The preprocessor binary file contains all pre-computed data needed by the
-    simulation, including mesh geometry, stratigraphy, component connectors,
-    and sparse matrix structure.
-    """
-
-    def __init__(self, endian: str = "<"):
-        """
-        Initialize the reader.
-
-        Args:
-            endian: Byte order ('<' = little-endian, '>' = big-endian)
-        """
+    def __init__(self, endian: str = "<") -> None:
         self.endian = endian
 
     def read(self, filepath: Path | str) -> PreprocessorBinaryData:
-        """
-        Read preprocessor binary file.
-
-        Args:
-            filepath: Path to the binary file
-
-        Returns:
-            PreprocessorBinaryData with all preprocessed data
-        """
         filepath = Path(filepath)
         if not filepath.exists():
             raise FileNotFoundError(f"Binary file not found: {filepath}")
 
         data = PreprocessorBinaryData()
 
-        with FortranBinaryReader(filepath, self.endian) as f:
-            # Read grid data
+        with StreamAccessBinaryReader(filepath, self.endian) as f:
             self._read_grid_data(f, data)
-
-            # Read stratigraphy
             self._read_stratigraphy(f, data)
-
-            # Read stream-lake connector
             self._read_stream_lake_connector(f, data)
-
-            # Read stream-GW connector
             self._read_stream_gw_connector(f, data)
-
-            # Read lake-GW connector
             self._read_lake_gw_connector(f, data)
-
-            # Read lake data
             self._read_lake_data(f, data)
-
-            # Read stream data
             self._read_stream_data(f, data)
-
-            # Read matrix data
             self._read_matrix_data(f, data)
 
         return data
 
-    def _read_grid_data(self, f: FortranBinaryReader, data: PreprocessorBinaryData) -> None:
-        """Read grid dimensions and geometry."""
-        # Grid dimensions
+    # -- Section 1: AppGrid ------------------------------------------------
+
+    def _read_grid_data(
+        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
+    ) -> None:
+        # 5 dimension ints
         data.n_nodes = f.read_int()
         data.n_elements = f.read_int()
         data.n_faces = f.read_int()
         data.n_subregions = f.read_int()
         data.n_boundary_faces = f.read_int()
 
-        # Node coordinates
-        data.x = f.read_double_array()
-        data.y = f.read_double_array()
+        # Coordinates
+        data.x = f.read_doubles(data.n_nodes)
+        data.y = f.read_doubles(data.n_nodes)
 
-        # Element connectivity
-        data.n_vertex = f.read_int_array()  # Number of vertices per element
-        data.vertex = f.read_int_array()  # Flattened vertex indices
+        # Element connectivity: NVertex(NElements), Vertex(MaxNV, NElements)
+        data.n_vertex = f.read_ints(data.n_elements)
+        max_nv = int(data.n_vertex.max()) if data.n_elements > 0 else 4
+        data.vertex = f.read_ints(max_nv * data.n_elements)
 
-        # Read app node data
+        # Per-node app data
         for _ in range(data.n_nodes):
-            node_data = self._read_app_node(f)
-            data.app_nodes.append(node_data)
+            data.app_nodes.append(self._read_app_node(f))
 
-        # Read app element data
+        # Per-element app data
         for _ in range(data.n_elements):
-            elem_data = self._read_app_element(f)
-            data.app_elements.append(elem_data)
+            data.app_elements.append(self._read_app_element(f))
 
-        # Read app face data
+        # Face data
         data.app_faces = self._read_app_faces(f, data.n_faces)
 
-        # Read boundary face list
+        # Boundary face list
         if data.n_boundary_faces > 0:
-            data.boundary_face_list = f.read_int_array()
+            data.boundary_face_list = f.read_ints(data.n_boundary_faces)
 
-        # Read subregion data
+        # Subregion data
         for _ in range(data.n_subregions):
-            sub_data = self._read_subregion(f)
-            data.subregions.append(sub_data)
+            data.subregions.append(self._read_subregion(f))
 
-    def _read_app_node(self, f: FortranBinaryReader) -> AppNodeData:
-        """Read single app node record."""
+    def _read_app_node(self, f: StreamAccessBinaryReader) -> AppNodeData:
         node_id = f.read_int()
         area = f.read_double()
-        boundary_node = f.read_int() != 0
+        boundary_node = f.read_logical()
         n_connected = f.read_int()
         n_face_id = f.read_int()
         n_surround = f.read_int()
         n_connected_arr = f.read_int()
 
-        surrounding = f.read_int_array() if n_surround > 0 else np.array([], dtype=np.int32)
-        connected = f.read_int_array() if n_connected_arr > 0 else np.array([], dtype=np.int32)
-        face_ids = f.read_int_array() if n_face_id > 0 else np.array([], dtype=np.int32)
-        elem_ccw = f.read_int_array() if n_face_id > 0 else np.array([], dtype=np.int32)
-        irrot_coeff = f.read_double_array() if n_face_id > 0 else np.array([], dtype=np.float64)
+        surrounding = f.read_ints(n_surround)
+        connected = f.read_ints(n_connected_arr)
+        face_ids = f.read_ints(n_face_id)
+        elem_ccw = f.read_ints(n_face_id)
+        irrot_coeff = f.read_doubles(n_face_id)
 
         return AppNodeData(
             id=node_id,
@@ -310,8 +298,7 @@ class PreprocessorBinaryReader:
             irrotational_coeff=irrot_coeff,
         )
 
-    def _read_app_element(self, f: FortranBinaryReader) -> AppElementData:
-        """Read single app element record."""
+    def _read_app_element(self, f: StreamAccessBinaryReader) -> AppElementData:
         elem_id = f.read_int()
         subregion = f.read_int()
         area = f.read_double()
@@ -320,11 +307,11 @@ class PreprocessorBinaryReader:
         n_del_shp = f.read_int()
         n_rot_shp = f.read_int()
 
-        face_ids = f.read_int_array() if n_faces > 0 else np.array([], dtype=np.int32)
-        vert_areas = f.read_double_array() if n_vert_area > 0 else np.array([], dtype=np.float64)
-        vert_fracs = f.read_double_array() if n_vert_area > 0 else np.array([], dtype=np.float64)
-        del_shp = f.read_double_array() if n_del_shp > 0 else np.array([], dtype=np.float64)
-        rot_shp = f.read_double_array() if n_rot_shp > 0 else np.array([], dtype=np.float64)
+        face_ids = f.read_ints(n_faces)
+        vert_areas = f.read_doubles(n_vert_area)
+        vert_fracs = f.read_doubles(n_vert_area)
+        del_shp = f.read_doubles(n_del_shp)
+        rot_shp = f.read_doubles(n_rot_shp)
 
         return AppElementData(
             id=elem_id,
@@ -337,8 +324,9 @@ class PreprocessorBinaryReader:
             integral_rot_del_shp_i_del_shp_j=rot_shp,
         )
 
-    def _read_app_faces(self, f: FortranBinaryReader, n_faces: int) -> AppFaceData:
-        """Read app face data."""
+    def _read_app_faces(
+        self, f: StreamAccessBinaryReader, n_faces: int
+    ) -> AppFaceData:
         if n_faces == 0:
             return AppFaceData(
                 nodes=np.array([], dtype=np.int32).reshape(0, 2),
@@ -347,49 +335,29 @@ class PreprocessorBinaryReader:
                 lengths=np.array([], dtype=np.float64),
             )
 
-        # Read face node pairs
-        nodes_flat = f.read_int_array()
-        nodes = nodes_flat.reshape((n_faces, 2))
-
-        # Read face element pairs (elements on each side)
-        elements_flat = f.read_int_array()
-        elements = elements_flat.reshape((n_faces, 2))
-
-        # Read boundary flags
-        boundary_int = f.read_int_array()
-        boundary = boundary_int.astype(np.bool_)
-
-        # Read face lengths
-        lengths = f.read_double_array()
+        nodes = f.read_ints(2 * n_faces).reshape((n_faces, 2))
+        elements = f.read_ints(2 * n_faces).reshape((n_faces, 2))
+        boundary = f.read_logicals(n_faces)
+        lengths = f.read_doubles(n_faces)
 
         return AppFaceData(
-            nodes=nodes,
-            elements=elements,
-            boundary=boundary,
-            lengths=lengths,
+            nodes=nodes, elements=elements, boundary=boundary, lengths=lengths
         )
 
-    def _read_subregion(self, f: FortranBinaryReader) -> SubregionData:
-        """Read single subregion record."""
+    def _read_subregion(self, f: StreamAccessBinaryReader) -> SubregionData:
         sub_id = f.read_int()
-        name = f.read_string()
+        name = f.read_string(_SUBREGION_NAME_LEN)
         n_elements = f.read_int()
         n_neighbors = f.read_int()
         area = f.read_double()
 
-        elements = f.read_int_array() if n_elements > 0 else np.array([], dtype=np.int32)
-        neighbor_ids = f.read_int_array() if n_neighbors > 0 else np.array([], dtype=np.int32)
-        neighbor_n_faces = f.read_int_array() if n_neighbors > 0 else np.array([], dtype=np.int32)
+        region_elements = f.read_ints(n_elements)
+        neighbor_ids = f.read_ints(n_neighbors)
+        neighbor_n_faces = f.read_ints(n_neighbors)
 
-        # Read boundary faces for each neighbor
         neighbor_faces: list[NDArray[np.int32]] = []
-        if n_neighbors > 0:
-            for n_faces in neighbor_n_faces:
-                if n_faces > 0:
-                    faces = f.read_int_array()
-                    neighbor_faces.append(faces)
-                else:
-                    neighbor_faces.append(np.array([], dtype=np.int32))
+        for nf in neighbor_n_faces:
+            neighbor_faces.append(f.read_ints(int(nf)))
 
         return SubregionData(
             id=sub_id,
@@ -397,70 +365,78 @@ class PreprocessorBinaryReader:
             n_elements=n_elements,
             n_neighbor_regions=n_neighbors,
             area=area,
-            region_elements=elements,
+            region_elements=region_elements,
             neighbor_region_ids=neighbor_ids,
             neighbor_n_boundary_faces=neighbor_n_faces,
             neighbor_boundary_faces=neighbor_faces,
         )
 
-    def _read_stratigraphy(self, f: FortranBinaryReader, data: PreprocessorBinaryData) -> None:
-        """Read stratigraphy data."""
+    # -- Section 2: Stratigraphy -------------------------------------------
+
+    def _read_stratigraphy(
+        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
+    ) -> None:
         n_layers = f.read_int()
-        n_nodes = data.n_nodes
+        n = data.n_nodes
 
-        gs_elev = f.read_double_array()
-        top_flat = f.read_double_array()
-        bottom_flat = f.read_double_array()
-        active_flat = f.read_int_array()
+        # Fortran write order: NLayers, TopActiveLayer, ActiveNode,
+        #   GSElev, TopElev, BottomElev
+        # 2-D arrays stored column-major (Fortran order).
+        top_active = f.read_ints(n)
+        active_flat = f.read_logicals(n * n_layers)
+        gs_elev = f.read_doubles(n)
+        top_flat = f.read_doubles(n * n_layers)
+        bottom_flat = f.read_doubles(n * n_layers)
 
-        # Additional computed data
-        active_above_flat = f.read_int_array()
-        active_below_flat = f.read_int_array()
-        top_active = f.read_int_array()
-        bottom_active = f.read_int_array()
+        active_2d = active_flat.reshape((n, n_layers), order="F")
 
         data.stratigraphy = StratigraphyData(
             n_layers=n_layers,
             ground_surface_elev=gs_elev,
-            top_elev=top_flat.reshape((n_nodes, n_layers)),
-            bottom_elev=bottom_flat.reshape((n_nodes, n_layers)),
-            active_node=active_flat.reshape((n_nodes, n_layers)).astype(np.bool_),
-            active_layer_above=active_above_flat.reshape((n_nodes, n_layers)),
-            active_layer_below=active_below_flat.reshape((n_nodes, n_layers)),
+            top_elev=top_flat.reshape((n, n_layers), order="F"),
+            bottom_elev=bottom_flat.reshape((n, n_layers), order="F"),
+            active_node=active_2d,
+            # Derived arrays — not stored in binary; fill with zeros.
+            active_layer_above=np.zeros((n, n_layers), dtype=np.int32),
+            active_layer_below=np.zeros((n, n_layers), dtype=np.int32),
             top_active_layer=top_active,
-            bottom_active_layer=bottom_active,
+            bottom_active_layer=np.zeros(n, dtype=np.int32),
         )
+
+    # -- Section 3: StrmLakeConnector (3 sub-connectors) -------------------
 
     def _read_stream_lake_connector(
-        self, f: FortranBinaryReader, data: PreprocessorBinaryData
+        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
     ) -> None:
-        """Read stream-lake connector data."""
-        n_connections = f.read_int()
-
-        if n_connections == 0:
-            data.stream_lake_connector = StreamLakeConnectorData(
-                n_connections=0,
-                stream_nodes=np.array([], dtype=np.int32),
-                lake_ids=np.array([], dtype=np.int32),
-            )
-            return
-
-        stream_nodes = f.read_int_array()
-        lake_ids = f.read_int_array()
+        # Sub-connector 1: Stream inflow → Lake
+        n1 = f.read_int()
+        strm_nodes = f.read_ints(n1) if n1 > 0 else np.array([], dtype=np.int32)
+        lake_ids = f.read_ints(n1) if n1 > 0 else np.array([], dtype=np.int32)
 
         data.stream_lake_connector = StreamLakeConnectorData(
-            n_connections=n_connections,
-            stream_nodes=stream_nodes,
-            lake_ids=lake_ids,
+            n_connections=n1, stream_nodes=strm_nodes, lake_ids=lake_ids
         )
 
-    def _read_stream_gw_connector(
-        self, f: FortranBinaryReader, data: PreprocessorBinaryData
-    ) -> None:
-        """Read stream-GW connector data."""
-        n_stream_nodes = f.read_int()
+        # Sub-connector 2: Lake outflow → Stream (read & discard)
+        n2 = f.read_int()
+        if n2 > 0:
+            f.read_ints(n2)  # lake IDs
+            f.read_ints(n2)  # stream nodes
 
-        if n_stream_nodes == 0:
+        # Sub-connector 3: Lake outflow → Lake (read & discard)
+        n3 = f.read_int()
+        if n3 > 0:
+            f.read_ints(n3)  # source lake IDs
+            f.read_ints(n3)  # dest lake IDs
+
+    # -- Section 4: StrmGWConnector ----------------------------------------
+
+    def _read_stream_gw_connector(
+        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
+    ) -> None:
+        version = f.read_int()
+
+        if version == 0:
             data.stream_gw_connector = StreamGWConnectorData(
                 n_stream_nodes=0,
                 gw_nodes=np.array([], dtype=np.int32),
@@ -468,24 +444,24 @@ class PreprocessorBinaryReader:
             )
             return
 
-        gw_nodes = f.read_int_array()
-        layers = f.read_int_array()
+        n_strm = f.read_int()
+        gw_nodes = f.read_ints(n_strm)
+        layers = f.read_ints(n_strm)
 
         data.stream_gw_connector = StreamGWConnectorData(
-            n_stream_nodes=n_stream_nodes,
-            gw_nodes=gw_nodes,
-            layers=layers,
+            n_stream_nodes=n_strm, gw_nodes=gw_nodes, layers=layers
         )
 
-    def _read_lake_gw_connector(self, f: FortranBinaryReader, data: PreprocessorBinaryData) -> None:
-        """Read lake-GW connector data."""
+    # -- Section 5: LakeGWConnector ----------------------------------------
+
+    def _read_lake_gw_connector(
+        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
+    ) -> None:
         n_lakes = f.read_int()
 
         if n_lakes == 0:
             data.lake_gw_connector = LakeGWConnectorData(
-                n_lakes=0,
-                lake_elements=[],
-                lake_nodes=[],
+                n_lakes=0, lake_elements=[], lake_nodes=[]
             )
             return
 
@@ -493,13 +469,10 @@ class PreprocessorBinaryReader:
         lake_nodes: list[NDArray[np.int32]] = []
 
         for _ in range(n_lakes):
-            n_elems = f.read_int()
-            elements = f.read_int_array() if n_elems > 0 else np.array([], dtype=np.int32)
-            lake_elements.append(elements)
-
-            n_nodes_lake = f.read_int()
-            nodes = f.read_int_array() if n_nodes_lake > 0 else np.array([], dtype=np.int32)
-            lake_nodes.append(nodes)
+            ne = f.read_int()
+            lake_elements.append(f.read_ints(ne))
+            nn = f.read_int()
+            lake_nodes.append(f.read_ints(nn))
 
         data.lake_gw_connector = LakeGWConnectorData(
             n_lakes=n_lakes,
@@ -507,11 +480,14 @@ class PreprocessorBinaryReader:
             lake_nodes=lake_nodes,
         )
 
-    def _read_lake_data(self, f: FortranBinaryReader, data: PreprocessorBinaryData) -> None:
-        """Read lake component data."""
-        n_lakes = f.read_int()
+    # -- Section 6: AppLake (version-prefixed) -----------------------------
 
-        if n_lakes == 0:
+    def _read_lake_data(
+        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
+    ) -> None:
+        version = f.read_int()
+
+        if version == 0:
             data.lakes = LakeData(
                 n_lakes=0,
                 lake_ids=np.array([], dtype=np.int32),
@@ -521,34 +497,38 @@ class PreprocessorBinaryReader:
             )
             return
 
-        lake_ids = f.read_int_array()
-        lake_names: list[str] = []
-        lake_max_elev: list[float] = []
+        n_lakes = f.read_int()
+        lake_ids = np.zeros(n_lakes, dtype=np.int32)
+        lake_max_elev = np.zeros(n_lakes, dtype=np.float64)
         lake_elements: list[NDArray[np.int32]] = []
 
-        for _ in range(n_lakes):
-            name = f.read_string()
-            lake_names.append(name)
-            max_elev = f.read_double()
-            lake_max_elev.append(max_elev)
-            n_elems = f.read_int()
-            elements = f.read_int_array() if n_elems > 0 else np.array([], dtype=np.int32)
-            lake_elements.append(elements)
+        for i in range(n_lakes):
+            lake_ids[i] = f.read_int()
+            lake_max_elev[i] = f.read_double()
+            # PairedData rating table
+            n_pts = f.read_int()
+            if n_pts > 0:
+                f.read_doubles(n_pts)  # elevation points (skip)
+                f.read_doubles(n_pts)  # outflow points (skip)
+            ne = f.read_int()
+            lake_elements.append(f.read_ints(ne) if ne > 0 else np.array([], dtype=np.int32))
 
         data.lakes = LakeData(
             n_lakes=n_lakes,
             lake_ids=lake_ids,
-            lake_names=lake_names,
-            lake_max_elevations=np.array(lake_max_elev),
+            lake_names=[f"Lake {int(lake_ids[i])}" for i in range(n_lakes)],
+            lake_max_elevations=lake_max_elev,
             lake_elements=lake_elements,
         )
 
-    def _read_stream_data(self, f: FortranBinaryReader, data: PreprocessorBinaryData) -> None:
-        """Read stream component data."""
-        n_reaches = f.read_int()
-        n_stream_nodes = f.read_int()
+    # -- Section 7: AppStream (version-prefixed) ---------------------------
 
-        if n_reaches == 0:
+    def _read_stream_data(
+        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
+    ) -> None:
+        version = f.read_int()
+
+        if version == 0:
             data.streams = StreamData(
                 n_reaches=0,
                 n_stream_nodes=0,
@@ -560,40 +540,62 @@ class PreprocessorBinaryReader:
             )
             return
 
-        reach_ids = f.read_int_array()
-        reach_names: list[str] = []
-        upstream_nodes = f.read_int_array()
-        downstream_nodes = f.read_int_array()
-        outflow_dest = f.read_int_array()
+        n_reaches = f.read_int()
+        n_strm_nodes = f.read_int()
 
-        for _ in range(n_reaches):
-            name = f.read_string()
-            reach_names.append(name)
+        # Per-stream-node: ID + rating table
+        for _ in range(n_strm_nodes):
+            _node_id = f.read_int()
+            n_pts = f.read_int()
+            if n_pts > 0:
+                f.read_doubles(n_pts)  # stage points (skip)
+                f.read_doubles(n_pts)  # flow points (skip)
+
+        # Per-reach metadata
+        reach_ids = np.zeros(n_reaches, dtype=np.int32)
+        reach_names: list[str] = []
+        upstream = np.zeros(n_reaches, dtype=np.int32)
+        downstream = np.zeros(n_reaches, dtype=np.int32)
+        outflow = np.zeros(n_reaches, dtype=np.int32)
+
+        for i in range(n_reaches):
+            reach_ids[i] = f.read_int()
+            reach_names.append(f.read_string(_REACH_NAME_LEN))
+            upstream[i] = f.read_int()
+            downstream[i] = f.read_int()
+            outflow[i] = f.read_int()
 
         data.streams = StreamData(
             n_reaches=n_reaches,
-            n_stream_nodes=n_stream_nodes,
+            n_stream_nodes=n_strm_nodes,
             reach_ids=reach_ids,
             reach_names=reach_names,
-            reach_upstream_nodes=upstream_nodes,
-            reach_downstream_nodes=downstream_nodes,
-            reach_outflow_dest=outflow_dest,
+            reach_upstream_nodes=upstream,
+            reach_downstream_nodes=downstream,
+            reach_outflow_dest=outflow,
         )
 
-    def _read_matrix_data(self, f: FortranBinaryReader, data: PreprocessorBinaryData) -> None:
-        """Read sparse matrix structure data."""
+    # -- Section 8: Matrix (optional) --------------------------------------
+
+    def _read_matrix_data(
+        self, f: StreamAccessBinaryReader, data: PreprocessorBinaryData
+    ) -> None:
         try:
             data.matrix_n_equations = f.read_int()
-            if data.matrix_n_equations > 0:
-                data.matrix_connectivity = f.read_int_array()
+            if data.matrix_n_equations > 0 and not f.at_eof():
+                # Connectivity: NJCOLs(NEquations) then JCOL values
+                n_jcols = f.read_ints(data.matrix_n_equations)
+                total = int(n_jcols.sum())
+                if total > 0 and not f.at_eof():
+                    data.matrix_connectivity = f.read_ints(total)
         except EOFError:
-            # Matrix data may not be present in all binary files
             pass
 
 
-def read_preprocessor_binary(filepath: Path | str, endian: str = "<") -> PreprocessorBinaryData:
-    """
-    Convenience function to read preprocessor binary file.
+def read_preprocessor_binary(
+    filepath: Path | str, endian: str = "<"
+) -> PreprocessorBinaryData:
+    """Convenience function to read preprocessor binary file.
 
     Args:
         filepath: Path to the binary file

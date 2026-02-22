@@ -123,26 +123,16 @@ Binary Files
 
 Binary files are faster for large datasets but not human-readable.
 
-Reading Binary Mesh Files
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Reading Native IWFM Binary Files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-    from pyiwfm.io import read_binary_mesh
+    from pyiwfm.core.model import IWFMModel
 
-    # Read mesh from Fortran binary file
-    grid = read_binary_mesh("model.bin")
-    print(f"Read mesh: {grid.n_nodes} nodes, {grid.n_elements} elements")
-
-Writing Binary Mesh Files
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from pyiwfm.io import write_binary_mesh
-
-    # Write mesh to Fortran binary file
-    write_binary_mesh("output/model.bin", grid)
+    # Load model from IWFM PreProcessor binary output (ACCESS='STREAM' format)
+    model = IWFMModel.from_preprocessor_binary("PreprocessorOut.bin")
+    print(f"Read mesh: {model.n_nodes} nodes, {model.n_elements} elements")
 
 HDF5 Files
 ----------
@@ -463,10 +453,11 @@ Loading Models from PreProcessor Files
 
 .. code-block:: python
 
-    from pyiwfm.io import load_model_from_preprocessor, load_complete_model
+    from pyiwfm.core.model import IWFMModel
+    from pyiwfm.io import load_complete_model
 
     # Load just mesh and stratigraphy from preprocessor
-    model = load_model_from_preprocessor("Preprocessor/Preprocessor.in")
+    model = IWFMModel.from_preprocessor("Preprocessor/Preprocessor.in")
 
     # Load complete model including all components
     model = load_complete_model("Simulation/Simulation.in")

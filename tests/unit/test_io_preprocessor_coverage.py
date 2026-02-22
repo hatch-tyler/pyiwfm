@@ -505,7 +505,6 @@ from pyiwfm.io.preprocessor import (  # noqa: E402
     _is_comment_line,
     _resolve_path,
     _strip_comment,
-    load_model_from_preprocessor,
     read_preprocessor_main,
     read_subregions_file,
     save_model_to_preprocessor,
@@ -689,20 +688,24 @@ class TestReadSubregionsFile:
 
 
 class TestLoadModelFromPreprocessor:
-    """Tests for load_model_from_preprocessor()."""
+    """Tests for IWFMModel.from_preprocessor()."""
 
     def test_load_missing_nodes_file(self, tmp_path: Path) -> None:
         """Missing nodes file ref raises FileFormatError."""
+        from pyiwfm.core.model import IWFMModel
+
         pp_file = tmp_path / "test_pp.in"
         pp_file.write_text(
             "Model                           / MODEL_NAME\n"
             "elements.dat                    / ELEMENTS_FILE\n"
         )
         with pytest.raises(FileFormatError, match="Nodes file not specified"):
-            load_model_from_preprocessor(pp_file)
+            IWFMModel.from_preprocessor(pp_file)
 
     def test_load_missing_elements_file(self, tmp_path: Path) -> None:
         """Missing elements file ref raises FileFormatError."""
+        from pyiwfm.core.model import IWFMModel
+
         pp_file = tmp_path / "test_pp.in"
         pp_file.write_text(
             "Model                           / MODEL_NAME\n"
@@ -719,7 +722,7 @@ class TestLoadModelFromPreprocessor:
             "     3   1000.0   1000.0\n"
         )
         with pytest.raises(FileFormatError, match="Elements file not specified"):
-            load_model_from_preprocessor(pp_file)
+            IWFMModel.from_preprocessor(pp_file)
 
 
 class TestWritePreprocessorMain:
@@ -794,294 +797,10 @@ class TestSaveModelToPreprocessor:
         assert config.elements_file is None
 
 
-# =============================================================================
-# load_complete_model Tests
-# =============================================================================
-
 import sys  # noqa: E402
-from datetime import datetime  # noqa: E402
 from unittest.mock import patch  # noqa: E402
 
-from pyiwfm.io.preprocessor import load_complete_model, save_complete_model  # noqa: E402
-
-
-def _make_sim_config(
-    tmp_path: Path,
-    *,
-    preprocessor_file: Path | None = None,
-    groundwater_file: str | None = None,
-    streams_file: str | None = None,
-    lakes_file: str | None = None,
-    rootzone_file: str | None = None,
-    model_name: str = "TestModel",
-) -> MagicMock:
-    """Create a mock SimulationConfig for testing load_complete_model."""
-    cfg = MagicMock()
-    cfg.model_name = model_name
-    cfg.preprocessor_file = preprocessor_file
-    cfg.groundwater_file = groundwater_file
-    cfg.streams_file = streams_file
-    cfg.lakes_file = lakes_file
-    cfg.rootzone_file = rootzone_file
-    cfg.start_date = datetime(2000, 1, 1)
-    cfg.end_date = datetime(2000, 12, 31)
-    cfg.time_step_length = 1
-    cfg.time_step_unit = MagicMock()
-    cfg.time_step_unit.value = "DAY"
-    return cfg
-
-
-class TestLoadCompleteModelGroundwater:
-    """Tests for load_complete_model groundwater loading (lines 526-544)."""
-
-    @patch("pyiwfm.io.preprocessor.load_model_from_preprocessor")
-    def test_gw_component_loaded(self, mock_load_pp, tmp_path):
-        """When sim_config.groundwater_file is set and file exists, GW is loaded."""
-        sim_file = tmp_path / "simulation.in"
-        sim_file.write_text("dummy")
-
-        # Create the GW file so .exists() returns True
-        gw_path = tmp_path / "groundwater.dat"
-        gw_path.write_text("dummy gw data")
-
-        # Mock model returned by preprocessor loader
-        mock_model = MagicMock()
-        mock_model.metadata = {}
-        mock_model.mesh.n_nodes = 10
-        mock_model.mesh.n_elements = 5
-        mock_model.n_layers = 2
-        mock_load_pp.return_value = mock_model
-
-        sim_config = _make_sim_config(
-            tmp_path,
-            groundwater_file=str(gw_path),
-        )
-        # Make the preprocessor file "exist"
-        pp_file = tmp_path / "pp.in"
-        pp_file.write_text("dummy pp")
-        sim_config.preprocessor_file = pp_file
-
-        mock_gw_reader = MagicMock()
-        mock_gw_reader.read_wells.return_value = {1: MagicMock(), 2: MagicMock()}
-        mock_gw_component = MagicMock()
-
-        with (
-            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
-            patch("pyiwfm.io.groundwater.GroundwaterReader", return_value=mock_gw_reader),
-            patch("pyiwfm.io.streams.StreamReader"),
-            patch("pyiwfm.io.lakes.LakeReader"),
-            patch("pyiwfm.io.rootzone.RootZoneReader"),
-            patch("pyiwfm.components.groundwater.AppGW", return_value=mock_gw_component),
-        ):
-            mock_sim_reader_cls.return_value.read.return_value = sim_config
-            load_complete_model(sim_file)
-
-        mock_gw_reader.read_wells.assert_called_once()
-        assert mock_model.groundwater == mock_gw_component
-
-    @patch("pyiwfm.io.preprocessor.load_model_from_preprocessor")
-    def test_gw_load_error_stored_in_metadata(self, mock_load_pp, tmp_path):
-        """When GW loading raises Exception, error is stored in metadata."""
-        sim_file = tmp_path / "simulation.in"
-        sim_file.write_text("dummy")
-
-        gw_path = tmp_path / "groundwater.dat"
-        gw_path.write_text("dummy gw data")
-
-        mock_model = MagicMock()
-        mock_model.metadata = {}
-        mock_load_pp.return_value = mock_model
-
-        sim_config = _make_sim_config(
-            tmp_path,
-            groundwater_file=str(gw_path),
-        )
-        pp_file = tmp_path / "pp.in"
-        pp_file.write_text("dummy pp")
-        sim_config.preprocessor_file = pp_file
-
-        # Make GW reader raise an exception
-        mock_gw_reader = MagicMock()
-        mock_gw_reader.read_wells.side_effect = Exception("GW read failed")
-
-        with (
-            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
-            patch("pyiwfm.io.groundwater.GroundwaterReader", return_value=mock_gw_reader),
-            patch("pyiwfm.io.streams.StreamReader"),
-            patch("pyiwfm.io.lakes.LakeReader"),
-            patch("pyiwfm.io.rootzone.RootZoneReader"),
-        ):
-            mock_sim_reader_cls.return_value.read.return_value = sim_config
-            load_complete_model(sim_file)
-
-        assert "groundwater_load_error" in mock_model.metadata
-        assert "GW read failed" in mock_model.metadata["groundwater_load_error"]
-
-
-class TestLoadCompleteModelStreams:
-    """Tests for load_complete_model stream loading (lines 548-561)."""
-
-    @patch("pyiwfm.io.preprocessor.load_model_from_preprocessor")
-    def test_stream_component_loaded(self, mock_load_pp, tmp_path):
-        """When sim_config.streams_file is set and file exists, streams are loaded."""
-        sim_file = tmp_path / "simulation.in"
-        sim_file.write_text("dummy")
-
-        stream_path = tmp_path / "streams.dat"
-        stream_path.write_text("dummy stream data")
-
-        mock_model = MagicMock()
-        mock_model.metadata = {}
-        mock_load_pp.return_value = mock_model
-
-        sim_config = _make_sim_config(
-            tmp_path,
-            streams_file=str(stream_path),
-        )
-        pp_file = tmp_path / "pp.in"
-        pp_file.write_text("dummy pp")
-        sim_config.preprocessor_file = pp_file
-
-        mock_stream_reader = MagicMock()
-        mock_stream_reader.read_stream_nodes.return_value = {1: MagicMock()}
-        mock_stream_component = MagicMock()
-
-        with (
-            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
-            patch("pyiwfm.io.groundwater.GroundwaterReader"),
-            patch("pyiwfm.io.streams.StreamReader", return_value=mock_stream_reader),
-            patch("pyiwfm.io.lakes.LakeReader"),
-            patch("pyiwfm.io.rootzone.RootZoneReader"),
-            patch("pyiwfm.components.stream.AppStream", return_value=mock_stream_component),
-        ):
-            mock_sim_reader_cls.return_value.read.return_value = sim_config
-            load_complete_model(sim_file)
-
-        mock_stream_reader.read_stream_nodes.assert_called_once()
-        assert mock_model.streams == mock_stream_component
-
-
-class TestLoadCompleteModelLakes:
-    """Tests for load_complete_model lake loading (lines 565-578)."""
-
-    @patch("pyiwfm.io.preprocessor.load_model_from_preprocessor")
-    def test_lake_component_loaded(self, mock_load_pp, tmp_path):
-        """When sim_config.lakes_file is set and file exists, lakes are loaded."""
-        sim_file = tmp_path / "simulation.in"
-        sim_file.write_text("dummy")
-
-        lake_path = tmp_path / "lakes.dat"
-        lake_path.write_text("dummy lake data")
-
-        mock_model = MagicMock()
-        mock_model.metadata = {}
-        mock_load_pp.return_value = mock_model
-
-        sim_config = _make_sim_config(
-            tmp_path,
-            lakes_file=str(lake_path),
-        )
-        pp_file = tmp_path / "pp.in"
-        pp_file.write_text("dummy pp")
-        sim_config.preprocessor_file = pp_file
-
-        mock_lake_reader = MagicMock()
-        mock_lake_reader.read_lake_definitions.return_value = {1: MagicMock()}
-        mock_lake_component = MagicMock()
-
-        with (
-            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
-            patch("pyiwfm.io.groundwater.GroundwaterReader"),
-            patch("pyiwfm.io.streams.StreamReader"),
-            patch("pyiwfm.io.lakes.LakeReader", return_value=mock_lake_reader),
-            patch("pyiwfm.io.rootzone.RootZoneReader"),
-            patch("pyiwfm.components.lake.AppLake", return_value=mock_lake_component),
-        ):
-            mock_sim_reader_cls.return_value.read.return_value = sim_config
-            load_complete_model(sim_file)
-
-        mock_lake_reader.read_lake_definitions.assert_called_once()
-        assert mock_model.lakes == mock_lake_component
-
-
-class TestLoadCompleteModelRootZone:
-    """Tests for load_complete_model rootzone loading (lines 582-596)."""
-
-    @patch("pyiwfm.io.preprocessor.load_model_from_preprocessor")
-    def test_rootzone_component_loaded(self, mock_load_pp, tmp_path):
-        """When sim_config.rootzone_file is set and file exists, rootzone is loaded."""
-        sim_file = tmp_path / "simulation.in"
-        sim_file.write_text("dummy")
-
-        rz_path = tmp_path / "rootzone.dat"
-        rz_path.write_text("dummy rootzone data")
-
-        mock_model = MagicMock()
-        mock_model.metadata = {}
-        mock_model.mesh.n_elements = 10
-        mock_load_pp.return_value = mock_model
-
-        sim_config = _make_sim_config(
-            tmp_path,
-            rootzone_file=str(rz_path),
-        )
-        pp_file = tmp_path / "pp.in"
-        pp_file.write_text("dummy pp")
-        sim_config.preprocessor_file = pp_file
-
-        mock_rz_reader = MagicMock()
-        mock_rz_reader.read_crop_types.return_value = {1: MagicMock(), 2: MagicMock()}
-        mock_rz_component = MagicMock()
-
-        with (
-            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
-            patch("pyiwfm.io.groundwater.GroundwaterReader"),
-            patch("pyiwfm.io.streams.StreamReader"),
-            patch("pyiwfm.io.lakes.LakeReader"),
-            patch("pyiwfm.io.rootzone.RootZoneReader", return_value=mock_rz_reader),
-            patch("pyiwfm.components.rootzone.RootZone", return_value=mock_rz_component),
-        ):
-            mock_sim_reader_cls.return_value.read.return_value = sim_config
-            load_complete_model(sim_file)
-
-        mock_rz_reader.read_crop_types.assert_called_once()
-        assert mock_model.rootzone == mock_rz_component
-
-
-class TestLoadCompleteModelPPCandidates:
-    """Tests for load_complete_model pp_candidates branch (line 512)."""
-
-    @patch("pyiwfm.io.preprocessor.load_model_from_preprocessor")
-    def test_pp_candidates_glob_path(self, mock_load_pp, tmp_path):
-        """When preprocessor_file is not set, find pp candidates by glob."""
-        sim_file = tmp_path / "simulation.in"
-        sim_file.write_text("dummy")
-
-        # Create a file matching the *_pp.in glob pattern
-        pp_candidate = tmp_path / "model_pp.in"
-        pp_candidate.write_text("dummy pp")
-
-        mock_model = MagicMock()
-        mock_model.metadata = {}
-        mock_load_pp.return_value = mock_model
-
-        sim_config = _make_sim_config(tmp_path)
-        # No preprocessor_file set
-        sim_config.preprocessor_file = None
-
-        with (
-            patch("pyiwfm.io.simulation.SimulationReader") as mock_sim_reader_cls,
-            patch("pyiwfm.io.groundwater.GroundwaterReader"),
-            patch("pyiwfm.io.streams.StreamReader"),
-            patch("pyiwfm.io.lakes.LakeReader"),
-            patch("pyiwfm.io.rootzone.RootZoneReader"),
-        ):
-            mock_sim_reader_cls.return_value.read.return_value = sim_config
-            result = load_complete_model(sim_file)
-
-        # Should have been called with the pp candidate found by glob
-        mock_load_pp.assert_called_once_with(pp_candidate)
-        assert result is mock_model
+from pyiwfm.io.preprocessor import save_complete_model  # noqa: E402
 
 
 # =============================================================================

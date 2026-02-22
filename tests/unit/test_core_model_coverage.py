@@ -141,21 +141,24 @@ class TestFromPreprocessorBinary:
     """Test from_preprocessor_binary()."""
 
     def test_from_preprocessor_binary_stub(self, tmp_path: Path) -> None:
-        """Binary loader basic path."""
+        """Binary loader basic path via PreprocessorBinaryReader."""
         from pyiwfm.core.model import IWFMModel
 
-        mock_mesh = MagicMock()
-        mock_mesh.n_nodes = 10
-        mock_mesh.n_elements = 5
+        mock_data = MagicMock()
+        mock_model = MagicMock(spec=IWFMModel)
+        mock_model.name = "TestBinary"
+        mock_model.metadata = {"source": "binary"}
 
         with (
-            patch("pyiwfm.io.binary.FortranBinaryReader") as MockReader,
-            patch("pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh),
+            patch(
+                "pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader.read",
+                return_value=mock_data,
+            ),
+            patch(
+                "pyiwfm.core.model._binary_data_to_model",
+                return_value=mock_model,
+            ),
         ):
-            # Mock the context manager
-            MockReader.return_value.__enter__ = MagicMock(return_value=MockReader.return_value)
-            MockReader.return_value.__exit__ = MagicMock(return_value=False)
-
             model = IWFMModel.from_preprocessor_binary(
                 tmp_path / "preprocessor.bin",
                 name="TestBinary",

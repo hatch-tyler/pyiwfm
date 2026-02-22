@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.stratigraphy import Stratigraphy
     from pyiwfm.io.groundwater import KhAnomalyEntry
+    from pyiwfm.io.preprocessor_binary import PreprocessorBinaryData
     from pyiwfm.io.supply_adjust import SupplyAdjustment
 
 
@@ -305,6 +306,152 @@ def _apply_parametric_subsidence(
     return node_params
 
 
+def _binary_data_to_model(
+    data: PreprocessorBinaryData,
+    name: str = "",
+) -> IWFMModel:
+    """Convert :class:`PreprocessorBinaryData` to an :class:`IWFMModel`.
+
+    Builds Node, Element, Subregion, Stratigraphy, AppStream, and AppLake
+    objects from the raw arrays in *data*.
+    """
+    from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
+    from pyiwfm.core.stratigraphy import Stratigraphy
+
+    # -- Mesh: Nodes -------------------------------------------------------
+    nodes: dict[int, Node] = {}
+    for i in range(data.n_nodes):
+        nid = i + 1  # 1-based
+        nodes[nid] = Node(id=nid, x=float(data.x[i]), y=float(data.y[i]))
+
+    # -- Mesh: Elements ----------------------------------------------------
+    max_nv = int(data.n_vertex.max()) if data.n_elements > 0 else 4
+    vertex_2d = data.vertex.reshape((max_nv, data.n_elements), order="F").T
+
+    elements: dict[int, Element] = {}
+    for i in range(data.n_elements):
+        eid = i + 1
+        nv = int(data.n_vertex[i])
+        verts = tuple(int(vertex_2d[i, j]) for j in range(nv) if vertex_2d[i, j] != 0)
+        sub_id = int(data.app_elements[i].subregion) if i < len(data.app_elements) else 0
+        elements[eid] = Element(id=eid, vertices=verts, subregion=sub_id)
+
+    # -- Mesh: Subregions --------------------------------------------------
+    subregions: dict[int, Subregion] = {}
+    for sd in data.subregions:
+        subregions[sd.id] = Subregion(id=sd.id, name=sd.name)
+
+    mesh = AppGrid(nodes=nodes, elements=elements, subregions=subregions)
+    mesh.compute_areas()
+    mesh.compute_connectivity()
+
+    # -- Stratigraphy ------------------------------------------------------
+    strat: Stratigraphy | None = None
+    if data.stratigraphy is not None:
+        sd2 = data.stratigraphy
+        strat = Stratigraphy(
+            n_layers=sd2.n_layers,
+            n_nodes=data.n_nodes,
+            gs_elev=sd2.ground_surface_elev,
+            top_elev=sd2.top_elev,
+            bottom_elev=sd2.bottom_elev,
+            active_node=sd2.active_node,
+        )
+
+    model = IWFMModel(
+        name=name,
+        mesh=mesh,
+        stratigraphy=strat,
+        metadata={"source": "preprocessor_binary"},
+    )
+
+    # -- Streams -----------------------------------------------------------
+    if (
+        data.streams is not None
+        and data.streams.n_reaches > 0
+        and data.stream_gw_connector is not None
+    ):
+        from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
+
+        stream = AppStream()
+        gw_conn = data.stream_gw_connector
+        for sn_id in range(1, data.streams.n_stream_nodes + 1):
+            gw_node: int | None = None
+            if sn_id <= gw_conn.n_stream_nodes:
+                gw_node = int(gw_conn.gw_nodes[sn_id - 1])
+                if gw_node <= 0:
+                    gw_node = None
+            stream.add_node(
+                StrmNode(id=sn_id, x=0.0, y=0.0, gw_node=gw_node)
+            )
+
+        sd3 = data.streams
+        for i in range(sd3.n_reaches):
+            rid = int(sd3.reach_ids[i])
+            rname = sd3.reach_names[i] if i < len(sd3.reach_names) else ""
+            up = int(sd3.reach_upstream_nodes[i])
+            dn = int(sd3.reach_downstream_nodes[i])
+            reach_nodes = list(range(up, dn + 1))
+            stream.add_reach(
+                StrmReach(
+                    id=rid,
+                    upstream_node=up,
+                    downstream_node=dn,
+                    nodes=reach_nodes,
+                    name=rname,
+                )
+            )
+            for sn_id in reach_nodes:
+                if sn_id in stream.nodes:
+                    stream.nodes[sn_id].reach_id = rid
+
+        model.streams = stream
+
+    # -- Lakes -------------------------------------------------------------
+    if data.lakes is not None and data.lakes.n_lakes > 0:
+        from pyiwfm.components.lake import AppLake, Lake, LakeElement
+
+        lakes = AppLake()
+        ld = data.lakes
+        for i in range(ld.n_lakes):
+            lid = int(ld.lake_ids[i])
+            elem_ids = [int(e) for e in ld.lake_elements[i]] if i < len(ld.lake_elements) else []
+            lake = Lake(
+                id=lid,
+                name=ld.lake_names[i] if i < len(ld.lake_names) else f"Lake {lid}",
+                max_elevation=float(ld.lake_max_elevations[i]),
+                elements=elem_ids,
+            )
+            lakes.add_lake(lake)
+            for eid in elem_ids:
+                lakes.add_lake_element(LakeElement(element_id=eid, lake_id=lid))
+        model.lakes = lakes
+
+    return model
+
+
+def _resolve_stream_node_coordinates(model: IWFMModel) -> int:
+    """Resolve stream node (0,0) coordinates from associated GW nodes.
+
+    Many IWFM loaders create stream nodes with placeholder ``(0, 0)``
+    coordinates.  When the stream node has a ``gw_node`` reference we can
+    look up the real coordinates from the mesh.
+
+    Returns the number of nodes updated.
+    """
+    if model.mesh is None or model.streams is None:
+        return 0
+    resolved = 0
+    for node in model.streams.nodes.values():
+        if node.x == 0.0 and node.y == 0.0 and node.gw_node is not None:
+            gw = model.mesh.nodes.get(node.gw_node)
+            if gw is not None:
+                node.x = gw.x
+                node.y = gw.y
+                resolved += 1
+    return resolved
+
+
 @dataclass
 class IWFMModel:
     """
@@ -511,6 +658,7 @@ class IWFMModel:
                 model.metadata["lakes_load_error"] = str(e)
 
         model.metadata["source"] = "preprocessor"
+        _resolve_stream_node_coordinates(model)
         return model
 
     @classmethod
@@ -519,130 +667,58 @@ class IWFMModel:
         binary_file: Path | str,
         name: str = "",
     ) -> IWFMModel:
-        """
-        Load a model from IWFM PreProcessor binary output file.
+        """Load a model from the native IWFM PreProcessor binary output.
 
-        The preprocessor binary file contains the mesh, stratigraphy, and
-        connector information compiled from the preprocessor input files.
-        This is the same binary file that the IWFM Simulation reads.
-
-        Note: This creates a "partial" model with mesh and stratigraphy.
-        Stream and lake data in the binary file are in a compiled format
-        that differs from the original input files.
+        The preprocessor binary file (``ACCESS='STREAM'``) contains mesh,
+        stratigraphy, stream/lake connectors, and component data compiled
+        by the IWFM PreProcessor.
 
         Args:
             binary_file: Path to the preprocessor binary output file
             name: Model name (optional, defaults to file stem)
 
         Returns:
-            IWFMModel instance with mesh and stratigraphy loaded
+            IWFMModel with mesh, stratigraphy, streams, and lakes loaded
 
         Example:
-            >>> model = IWFMModel.from_preprocessor_binary("Preprocessor.bin")
+            >>> model = IWFMModel.from_preprocessor_binary("PreprocessorOut.bin")
             >>> print(f"Loaded {model.n_nodes} nodes, {model.n_layers} layers")
         """
-        from pyiwfm.io.binary import (
-            FortranBinaryReader,
-            read_binary_mesh,
-            read_binary_stratigraphy,
-        )
+        from pyiwfm.io.preprocessor_binary import PreprocessorBinaryReader
 
         binary_file = Path(binary_file)
-
-        # The IWFM preprocessor binary file structure:
-        # - AppGrid data
-        # - Stratigraphy data
-        # - StreamLakeConnector data
-        # - StreamGWConnector data
-        # - LakeGWConnector data
-        # - AppLake data
-        # - AppStream data
-        # - Matrix data
-        #
-        # We need to read the full file structure carefully.
-        # For now, we implement a simplified version that reads mesh/stratigraphy.
-
-        with FortranBinaryReader(binary_file) as _f:
-            # Read header/version info if present
-            try:
-                # Try to read as mesh first (standard pyiwfm binary format)
-                pass
-            except Exception:
-                pass
-
-        # Use the existing binary readers for mesh and stratigraphy
-        # Note: The IWFM preprocessor binary is more complex and contains
-        # additional data. For full compatibility, we'd need to implement
-        # the complete binary format parsing.
-
-        # For now, we support the pyiwfm binary format:
-        mesh = read_binary_mesh(binary_file)
-
-        # Try to read stratigraphy from separate file or embedded
-        stratigraphy = None
-        strat_file = binary_file.with_suffix(".strat.bin")
-        if strat_file.exists():
-            stratigraphy = read_binary_stratigraphy(strat_file)
-
-        return cls(
-            name=name or binary_file.stem,
-            mesh=mesh,
-            stratigraphy=stratigraphy,
-            metadata={
-                "source": "binary",
-                "binary_file": str(binary_file),
-            },
-        )
-
-    @classmethod
-    def from_binary(cls, binary_file: Path | str) -> IWFMModel:
-        """
-        Load a model from IWFM binary output files.
-
-        This is an alias for from_preprocessor_binary for backward compatibility.
-
-        Args:
-            binary_file: Path to the binary file
-
-        Returns:
-            Loaded IWFMModel instance
-        """
-        return cls.from_preprocessor_binary(binary_file)
+        reader = PreprocessorBinaryReader()
+        data = reader.read(binary_file)
+        model = _binary_data_to_model(data, name=name or binary_file.stem)
+        model.metadata["binary_file"] = str(binary_file)
+        _resolve_stream_node_coordinates(model)
+        return model
 
     @classmethod
     def from_simulation(
         cls,
         simulation_file: Path | str,
-        load_timeseries: bool = False,
     ) -> IWFMModel:
-        """
-        Load a complete IWFM model from a simulation main input file.
+        """Load a complete IWFM model from a simulation main input file.
 
-        This loads the full model including all components:
-        - Mesh and stratigraphy (from preprocessor binary or files)
-        - Groundwater component (wells, boundary conditions, parameters)
-        - Stream network component (nodes, reaches, diversions)
-        - Lake component (definitions, elements)
-        - Root zone component (crop types, soil parameters)
-
-        This is the recommended method for loading a complete IWFM model
-        for analysis or modification.
+        Delegates to :class:`~pyiwfm.io.model_loader.CompleteModelLoader`
+        which auto-detects the simulation file format and loads all
+        components (mesh, stratigraphy, groundwater, streams, lakes,
+        root zone, etc.).
 
         Args:
             simulation_file: Path to the simulation main input file
-            load_timeseries: If True, also load time series data (slower)
 
         Returns:
             IWFMModel instance with all components loaded
 
         Example:
             >>> model = IWFMModel.from_simulation("Simulation/Simulation.in")
-            >>> print(f"Loaded model with {len(model.groundwater.wells)} wells")
             >>> print(f"Stream nodes: {len(model.streams.nodes)}")
         """
-        from pyiwfm.io.preprocessor import load_complete_model
+        from pyiwfm.io.model_loader import load_complete_model
 
-        return load_complete_model(simulation_file, load_timeseries=load_timeseries)
+        return load_complete_model(simulation_file)
 
     @classmethod
     def from_simulation_with_preprocessor(
@@ -2028,6 +2104,7 @@ class IWFMModel:
                 except Exception as e:
                     model.metadata["unsat_zone_load_error"] = str(e)
 
+        _resolve_stream_node_coordinates(model)
         return model
 
     @classmethod

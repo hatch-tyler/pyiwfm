@@ -12,14 +12,13 @@ import pytest
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.mesh import Subregion
+from pyiwfm.core.model import IWFMModel
 from pyiwfm.io.preprocessor import (
     PreProcessorConfig,
     _is_comment_line,
     _make_relative_path,
     _resolve_path,
     _strip_comment,
-    load_complete_model,
-    load_model_from_preprocessor,
     read_preprocessor_main,
     read_subregions_file,
     save_complete_model,
@@ -581,170 +580,40 @@ class TestSaveModelToPreprocessor:
 
 
 class TestLoadModelFromPreprocessor:
-    """Test load_model_from_preprocessor function."""
+    """Test IWFMModel.from_preprocessor error paths."""
 
-    @patch("pyiwfm.io.preprocessor.AppGrid")
-    @patch("pyiwfm.io.preprocessor.read_stratigraphy")
-    @patch("pyiwfm.io.preprocessor.read_elements")
-    @patch("pyiwfm.io.preprocessor.read_nodes")
-    @patch("pyiwfm.io.preprocessor.read_preprocessor_main")
-    def test_load_basic_model(
-        self,
-        mock_read_pp,
-        mock_read_nodes,
-        mock_read_elem,
-        mock_read_strat,
-        mock_grid_cls,
-        tmp_path,
-    ):
-        """Test loading basic model."""
-        # Setup mocks
-        mock_config = MagicMock()
-        mock_config.model_name = "TestModel"
-        mock_config.nodes_file = tmp_path / "nodes.dat"
-        mock_config.elements_file = tmp_path / "elements.dat"
-        mock_config.stratigraphy_file = None
-        mock_config.subregions_file = None
-        mock_config.length_unit = "FT"
-        mock_config.area_unit = "ACRES"
-        mock_config.volume_unit = "AF"
-        mock_read_pp.return_value = mock_config
-
-        mock_read_nodes.return_value = {
-            1: MagicMock(id=1, x=0.0, y=0.0),
-            2: MagicMock(id=2, x=1.0, y=0.0),
-        }
-        mock_read_elem.return_value = (
-            {1: MagicMock(id=1, node_ids=[1, 2, 3])},
-            1,
-            {},  # subregion_names dict
+    def test_load_raises_on_missing_nodes_file(self, tmp_path):
+        """Test error when nodes file is not specified."""
+        pp_file = tmp_path / "pp.in"
+        pp_file.write_text(
+            "Model                           / MODEL_NAME\n"
+            "elements.dat                    / ELEMENTS_FILE\n"
         )
 
-        mock_mesh = MagicMock()
-        mock_grid_cls.return_value = mock_mesh
-
-        model = load_model_from_preprocessor(tmp_path / "pp.in")
-
-        assert model.name == "TestModel"
-        assert model.mesh is mock_mesh
-        assert model.metadata["length_unit"] == "FT"
-        mock_mesh.compute_areas.assert_called_once()
-        mock_mesh.compute_connectivity.assert_called_once()
-
-    @patch("pyiwfm.io.preprocessor.read_preprocessor_main")
-    def test_load_raises_on_missing_nodes_file(self, mock_read_pp, tmp_path):
-        """Test error when nodes file is not specified."""
-        mock_config = MagicMock()
-        mock_config.nodes_file = None
-        mock_read_pp.return_value = mock_config
-
         with pytest.raises(FileFormatError) as exc_info:
-            load_model_from_preprocessor(tmp_path / "pp.in")
+            IWFMModel.from_preprocessor(pp_file)
         assert "Nodes file not specified" in str(exc_info.value)
 
-    @patch("pyiwfm.io.preprocessor.read_nodes")
-    @patch("pyiwfm.io.preprocessor.read_preprocessor_main")
-    def test_load_raises_on_missing_elements_file(self, mock_read_pp, mock_read_nodes, tmp_path):
+    def test_load_raises_on_missing_elements_file(self, tmp_path):
         """Test error when elements file is not specified."""
-        mock_config = MagicMock()
-        mock_config.nodes_file = tmp_path / "nodes.dat"
-        mock_config.elements_file = None
-        mock_read_pp.return_value = mock_config
-        mock_read_nodes.return_value = {}
+        pp_file = tmp_path / "pp.in"
+        pp_file.write_text(
+            "Model                           / MODEL_NAME\n"
+            "nodes.dat                       / NODES_FILE\n"
+        )
+        nodes_file = tmp_path / "nodes.dat"
+        nodes_file.write_text(
+            "C  Node file\n"
+            "3                               / NNODES\n"
+            "1.0                             / FACTXY\n"
+            "     1      0.0      0.0\n"
+            "     2   1000.0      0.0\n"
+            "     3   1000.0   1000.0\n"
+        )
 
         with pytest.raises(FileFormatError) as exc_info:
-            load_model_from_preprocessor(tmp_path / "pp.in")
+            IWFMModel.from_preprocessor(pp_file)
         assert "Elements file not specified" in str(exc_info.value)
-
-
-# =============================================================================
-# Load Complete Model Tests
-# =============================================================================
-
-
-class TestLoadCompleteModel:
-    """Test load_complete_model function."""
-
-    @patch("pyiwfm.io.rootzone.RootZoneReader")
-    @patch("pyiwfm.io.lakes.LakeReader")
-    @patch("pyiwfm.io.streams.StreamReader")
-    @patch("pyiwfm.io.groundwater.GroundwaterReader")
-    @patch("pyiwfm.io.preprocessor.load_model_from_preprocessor")
-    @patch("pyiwfm.io.simulation.SimulationReader")
-    def test_load_complete_model_basic(
-        self,
-        mock_sim_reader,
-        mock_load_pp,
-        mock_gw_reader,
-        mock_stream_reader,
-        mock_lake_reader,
-        mock_rz_reader,
-        tmp_path,
-    ):
-        """Test loading complete model from simulation file."""
-        # Create a real Path that exists check can work on
-        pp_file = tmp_path / "pp.in"
-        pp_file.touch()
-
-        # Setup simulation reader mock
-        sim_reader_instance = MagicMock()
-        mock_sim_reader.return_value = sim_reader_instance
-
-        sim_config = MagicMock()
-        sim_config.preprocessor_file = pp_file
-        sim_config.groundwater_file = None
-        sim_config.streams_file = None
-        sim_config.lakes_file = None
-        sim_config.rootzone_file = None
-        sim_config.start_date.isoformat.return_value = "2000-01-01"
-        sim_config.end_date.isoformat.return_value = "2000-12-31"
-        sim_config.time_step_length = 1
-        sim_config.time_step_unit.value = "MONTH"
-        sim_reader_instance.read.return_value = sim_config
-
-        # Setup model mock
-        model = MagicMock()
-        model.metadata = {}
-        model.mesh = MagicMock()
-        model.mesh.n_nodes = 10
-        model.mesh.n_elements = 5
-        model.n_layers = 1
-        mock_load_pp.return_value = model
-
-        result = load_complete_model(tmp_path / "simulation.in")
-
-        assert result == model
-        assert "simulation_file" in model.metadata
-        mock_load_pp.assert_called_once()
-
-    @patch("pyiwfm.io.preprocessor.IWFMModel")
-    @patch("pyiwfm.io.simulation.SimulationReader")
-    def test_load_handles_missing_preprocessor(self, mock_sim_reader, mock_model_cls, tmp_path):
-        """Test loading when preprocessor file doesn't exist."""
-        sim_reader_instance = MagicMock()
-        mock_sim_reader.return_value = sim_reader_instance
-
-        sim_config = MagicMock()
-        sim_config.model_name = "TestModel"
-        sim_config.preprocessor_file = None
-        sim_config.groundwater_file = None
-        sim_config.streams_file = None
-        sim_config.lakes_file = None
-        sim_config.rootzone_file = None
-        sim_config.start_date.isoformat.return_value = "2000-01-01"
-        sim_config.end_date.isoformat.return_value = "2000-12-31"
-        sim_config.time_step_length = 1
-        sim_config.time_step_unit.value = "MONTH"
-        sim_reader_instance.read.return_value = sim_config
-
-        mock_model = MagicMock()
-        mock_model.metadata = {}
-        mock_model_cls.return_value = mock_model
-
-        result = load_complete_model(tmp_path / "simulation.in")
-
-        # Should create empty model when no preprocessor
-        assert result is not None
 
 
 # =============================================================================

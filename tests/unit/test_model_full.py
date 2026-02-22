@@ -576,73 +576,43 @@ class TestIWFMModelFromPreprocessor:
 class TestIWFMModelFromPreprocessorBinary:
     """Test from_preprocessor_binary class method."""
 
-    @patch("pyiwfm.io.binary.read_binary_mesh")
-    @patch("pyiwfm.io.binary.FortranBinaryReader")
-    def test_from_preprocessor_binary_basic(self, mock_reader, mock_read_mesh):
+    @patch("pyiwfm.core.model._binary_data_to_model")
+    @patch("pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader.read")
+    def test_from_preprocessor_binary_basic(self, mock_read, mock_to_model):
         """Test basic binary loading."""
-        mock_mesh = MagicMock()
-        mock_read_mesh.return_value = mock_mesh
+        mock_data = MagicMock()
+        mock_read.return_value = mock_data
+        mock_model = MagicMock(spec=IWFMModel)
+        mock_model.metadata = {}
+        mock_model.streams = None
+        mock_to_model.return_value = mock_model
 
-        model = IWFMModel.from_preprocessor_binary("model.bin", name="TestModel")
+        result = IWFMModel.from_preprocessor_binary("model.bin", name="TestModel")
 
-        assert model.name == "TestModel"
-        assert model.mesh == mock_mesh
-        mock_read_mesh.assert_called_once()
+        assert result is mock_model
+        mock_read.assert_called_once()
+        mock_to_model.assert_called_once_with(mock_data, name="TestModel")
 
-    @patch("pyiwfm.io.binary.read_binary_mesh")
-    @patch("pyiwfm.io.binary.FortranBinaryReader")
-    def test_from_preprocessor_binary_default_name(self, mock_reader, mock_read_mesh):
+    @patch("pyiwfm.core.model._binary_data_to_model")
+    @patch("pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader.read")
+    def test_from_preprocessor_binary_default_name(self, mock_read, mock_to_model):
         """Test binary loading uses file stem as default name."""
-        mock_read_mesh.return_value = MagicMock()
+        mock_data = MagicMock()
+        mock_read.return_value = mock_data
+        mock_model = MagicMock(spec=IWFMModel)
+        mock_model.metadata = {}
+        mock_model.streams = None
+        mock_to_model.return_value = mock_model
 
-        model = IWFMModel.from_preprocessor_binary("model.bin")
+        IWFMModel.from_preprocessor_binary("model.bin")
 
-        assert model.name == "model"
-
-    @patch("pyiwfm.io.binary.read_binary_mesh")
-    @patch("pyiwfm.io.binary.read_binary_stratigraphy")
-    @patch("pyiwfm.io.binary.FortranBinaryReader")
-    def test_from_preprocessor_binary_with_stratigraphy(
-        self, mock_reader, mock_read_strat, mock_read_mesh, tmp_path
-    ):
-        """Test binary loading with stratigraphy file."""
-        # Create temp strat file
-        strat_file = tmp_path / "model.strat.bin"
-        strat_file.touch()
-
-        bin_file = tmp_path / "model.bin"
-        bin_file.touch()
-
-        mock_mesh = MagicMock()
-        mock_strat = MagicMock()
-        mock_read_mesh.return_value = mock_mesh
-        mock_read_strat.return_value = mock_strat
-
-        model = IWFMModel.from_preprocessor_binary(bin_file)
-
-        assert model.mesh == mock_mesh
-        assert model.stratigraphy == mock_strat
-
-
-class TestIWFMModelFromBinary:
-    """Test from_binary class method (alias)."""
-
-    @patch("pyiwfm.io.binary.read_binary_mesh")
-    @patch("pyiwfm.io.binary.FortranBinaryReader")
-    def test_from_binary_is_alias(self, mock_reader, mock_read_mesh):
-        """Test from_binary calls from_preprocessor_binary."""
-        mock_read_mesh.return_value = MagicMock()
-
-        model = IWFMModel.from_binary("model.bin")
-
-        assert model.name == "model"
-        mock_read_mesh.assert_called_once()
+        mock_to_model.assert_called_once_with(mock_data, name="model")
 
 
 class TestIWFMModelFromSimulation:
     """Test from_simulation class method."""
 
-    @patch("pyiwfm.io.preprocessor.load_complete_model")
+    @patch("pyiwfm.io.model_loader.load_complete_model")
     def test_from_simulation_basic(self, mock_load):
         """Test basic simulation loading."""
         mock_model = MagicMock(spec=IWFMModel)
@@ -651,17 +621,7 @@ class TestIWFMModelFromSimulation:
         result = IWFMModel.from_simulation("simulation.in")
 
         assert result == mock_model
-        mock_load.assert_called_once_with("simulation.in", load_timeseries=False)
-
-    @patch("pyiwfm.io.preprocessor.load_complete_model")
-    def test_from_simulation_with_timeseries(self, mock_load):
-        """Test simulation loading with timeseries."""
-        mock_model = MagicMock(spec=IWFMModel)
-        mock_load.return_value = mock_model
-
-        IWFMModel.from_simulation("simulation.in", load_timeseries=True)
-
-        mock_load.assert_called_once_with("simulation.in", load_timeseries=True)
+        mock_load.assert_called_once_with("simulation.in")
 
 
 class TestIWFMModelFromHDF5:

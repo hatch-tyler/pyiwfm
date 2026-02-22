@@ -39,12 +39,12 @@ class PreProcessorWriter(TemplateWriter):
 
     Example
     -------
-    >>> from pyiwfm.io import load_model_from_preprocessor
+    >>> from pyiwfm.core.model import IWFMModel
     >>> from pyiwfm.io.preprocessor_writer import PreProcessorWriter
     >>> from pyiwfm.io.config import PreProcessorFileConfig
     >>>
     >>> # Load a model
-    >>> model = load_model_from_preprocessor("model/Preprocessor.in")
+    >>> model = IWFMModel.from_preprocessor("model/Preprocessor.in")
     >>>
     >>> # Write to new location
     >>> config = PreProcessorFileConfig(output_dir="output/Preprocessor")
@@ -635,10 +635,10 @@ def write_preprocessor_files(
 
     Example
     -------
-    >>> from pyiwfm.io import load_model_from_preprocessor
+    >>> from pyiwfm.core.model import IWFMModel
     >>> from pyiwfm.io.preprocessor_writer import write_preprocessor_files
     >>>
-    >>> model = load_model_from_preprocessor("model/Preprocessor.in")
+    >>> model = IWFMModel.from_preprocessor("model/Preprocessor.in")
     >>> results = write_preprocessor_files(model, "output/Preprocessor")
     >>> print(results["main"])
     output/Preprocessor/Preprocessor.in

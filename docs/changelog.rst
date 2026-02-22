@@ -102,7 +102,7 @@ Added
 **IWFMModel Class Methods**
 
 - ``IWFMModel.from_preprocessor(pp_file)``: Load from preprocessor input files (mesh, stratigraphy, geometry)
-- ``IWFMModel.from_preprocessor_binary(binary_file)``: Load from preprocessor binary output file
+- ``IWFMModel.from_preprocessor_binary(binary_file)``: Load from native IWFM preprocessor binary (``ACCESS='STREAM'``)
 - ``IWFMModel.from_simulation(sim_file)``: Load complete model from simulation input file
 - ``IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)``: Load using both files
 - ``IWFMModel.from_hdf5(hdf5_file)``: Load from HDF5 file

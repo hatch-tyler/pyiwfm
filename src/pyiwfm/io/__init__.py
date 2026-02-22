@@ -36,8 +36,7 @@ from pyiwfm.io.base import (
 from pyiwfm.io.binary import (
     FortranBinaryReader,
     FortranBinaryWriter,
-    read_binary_mesh,
-    read_binary_stratigraphy,
+    StreamAccessBinaryReader,
     write_binary_mesh,
     write_binary_stratigraphy,
 )
@@ -174,12 +173,14 @@ from pyiwfm.io.lakes import (
 )
 
 # Model Loader
+# Convenience alias: load_complete_model from model_loader (the strong loader)
 from pyiwfm.io.model_loader import (
     CommentAwareModelLoader,
     CompleteModelLoader,
     ModelLoadResult,
     # Comment-aware loading
     ModelLoadResultWithComments,
+    load_complete_model,  # noqa: E402
     load_model_with_comments,
 )
 from pyiwfm.io.model_loader import (
@@ -200,8 +201,6 @@ from pyiwfm.io.model_writer import (
 # PreProcessor I/O
 from pyiwfm.io.preprocessor import (
     PreProcessorConfig,
-    load_complete_model,
-    load_model_from_preprocessor,
     read_preprocessor_main,
     read_subregions_file,
     save_complete_model,
@@ -604,9 +603,8 @@ __all__ = [
     # Binary I/O
     "FortranBinaryReader",
     "FortranBinaryWriter",
-    "read_binary_mesh",
+    "StreamAccessBinaryReader",
     "write_binary_mesh",
-    "read_binary_stratigraphy",
     "write_binary_stratigraphy",
     # Preprocessor Binary I/O
     "PreprocessorBinaryData",
@@ -627,7 +625,6 @@ __all__ = [
     "read_preprocessor_main",
     "write_preprocessor_main",
     "read_subregions_file",
-    "load_model_from_preprocessor",
     "load_complete_model",
     "save_model_to_preprocessor",
     "save_complete_model",

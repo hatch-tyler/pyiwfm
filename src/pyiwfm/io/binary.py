@@ -1,8 +1,11 @@
 """
 Binary file I/O handlers for IWFM model files.
 
-This module provides functions for reading and writing IWFM binary files,
-including Fortran unformatted record handling.
+This module provides classes for reading and writing IWFM binary files:
+- ``FortranBinaryReader`` / ``FortranBinaryWriter``: Fortran unformatted
+  sequential-access files (record markers around each write).
+- ``StreamAccessBinaryReader``: Raw byte-stream files matching IWFM's
+  ``ACCESS='STREAM'`` (no record markers; caller supplies counts).
 """
 
 from __future__ import annotations
@@ -15,7 +18,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
+from pyiwfm.core.mesh import AppGrid
 from pyiwfm.core.stratigraphy import Stratigraphy
 
 
@@ -365,68 +368,105 @@ class FortranBinaryWriter:
         self.write_record(data)
 
 
-def read_binary_mesh(filepath: Path | str, endian: str = "<") -> AppGrid:
+class StreamAccessBinaryReader:
+    """Reader for IWFM stream-access binary files (``ACCESS='STREAM'``).
+
+    Unlike :class:`FortranBinaryReader`, IWFM preprocessor binary output
+    is written with ``ACCESS='STREAM'`` which produces raw bytes without
+    the 4-byte record-length markers that Fortran sequential writes add.
+    The caller must supply explicit counts for every array read.
     """
-    Read mesh data from a binary file.
 
-    Expected format:
-        - Record 1: n_nodes (int)
-        - Record 2: n_elements (int)
-        - Record 3: x coordinates (double array)
-        - Record 4: y coordinates (double array)
-        - Record 5: vertex connectivity (int array, n_elements * 4)
-        - Record 6: subregion IDs (int array, n_elements)
+    def __init__(self, filepath: Path | str, endian: str = "<") -> None:
+        self.filepath = Path(filepath)
+        self.endian = endian
+        self._file: BinaryIO | None = None
 
-    Args:
-        filepath: Path to the binary file
-        endian: Byte order
+    # -- context manager ---------------------------------------------------
+    def __enter__(self) -> StreamAccessBinaryReader:
+        self._file = open(self.filepath, "rb")
+        return self
 
-    Returns:
-        AppGrid instance
-    """
-    with FortranBinaryReader(filepath, endian) as f:
-        n_nodes = f.read_int()
-        n_elements = f.read_int()
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
+        if self._file:
+            self._file.close()
 
-        x = f.read_double_array()
-        y = f.read_double_array()
-
-        if len(x) != n_nodes or len(y) != n_nodes:
-            raise FileFormatError(
-                f"Coordinate array size mismatch: expected {n_nodes}, got x={len(x)}, y={len(y)}"
+    # -- helpers -----------------------------------------------------------
+    def _read_bytes(self, n: int) -> bytes:
+        if self._file is None:
+            raise RuntimeError("File not open")
+        data = self._file.read(n)
+        if len(data) < n:
+            raise EOFError(
+                f"Expected {n} bytes at offset {self._file.tell() - len(data)}, "
+                f"got {len(data)}"
             )
+        return data
 
-        vertex_flat = f.read_int_array()
-        vertex = vertex_flat.reshape((n_elements, 4))
+    # -- scalar reads ------------------------------------------------------
+    def read_int(self) -> int:
+        """Read a single 4-byte integer."""
+        result: int = struct.unpack(f"{self.endian}i", self._read_bytes(4))[0]
+        return result
 
-        subregions = f.read_int_array()
+    def read_double(self) -> float:
+        """Read a single 8-byte float (REAL*8)."""
+        result: float = struct.unpack(f"{self.endian}d", self._read_bytes(8))[0]
+        return result
 
-        # Build nodes dict
-        nodes: dict[int, Node] = {}
-        for i in range(n_nodes):
-            node_id = i + 1  # 1-based
-            nodes[node_id] = Node(id=node_id, x=float(x[i]), y=float(y[i]))
+    # -- array reads -------------------------------------------------------
+    def read_ints(self, n: int) -> NDArray[np.int32]:
+        """Read *n* consecutive 4-byte integers."""
+        if n <= 0:
+            return np.array([], dtype=np.int32)
+        data = self._read_bytes(4 * n)
+        return np.frombuffer(data, dtype=f"{self.endian}i4", count=n).copy()
 
-        # Build elements dict
-        elements: dict[int, Element] = {}
-        for i in range(n_elements):
-            elem_id = i + 1  # 1-based
-            v = vertex[i]
-            # Convert from 0-based indices to 1-based node IDs
-            verts: tuple[int, ...]
-            if v[3] == 0:
-                # Triangle (0 indicates no 4th vertex)
-                verts = (int(v[0]) + 1, int(v[1]) + 1, int(v[2]) + 1)
-            else:
-                verts = (int(v[0]) + 1, int(v[1]) + 1, int(v[2]) + 1, int(v[3]) + 1)
+    def read_doubles(self, n: int) -> NDArray[np.float64]:
+        """Read *n* consecutive 8-byte floats."""
+        if n <= 0:
+            return np.array([], dtype=np.float64)
+        data = self._read_bytes(8 * n)
+        return np.frombuffer(data, dtype=f"{self.endian}f8", count=n).copy()
 
-            elements[elem_id] = Element(id=elem_id, vertices=verts, subregion=int(subregions[i]))
+    # -- logical -----------------------------------------------------------
+    def read_logical(self) -> bool:
+        """Read a single Fortran LOGICAL (4-byte int, non-zero = True)."""
+        return self.read_int() != 0
 
-    # Build subregion metadata from unique subregion IDs found on elements
-    sub_ids = sorted({int(subregions[i]) for i in range(n_elements) if int(subregions[i]) > 0})
-    sub_dict = {sid: Subregion(id=sid, name=f"Subregion {sid}") for sid in sub_ids}
+    def read_logicals(self, n: int) -> NDArray[np.bool_]:
+        """Read *n* consecutive Fortran LOGICALs."""
+        if n <= 0:
+            return np.array([], dtype=np.bool_)
+        raw = self.read_ints(n)
+        return raw.astype(np.bool_)
 
-    return AppGrid(nodes=nodes, elements=elements, subregions=sub_dict)
+    # -- string ------------------------------------------------------------
+    def read_string(self, length: int) -> str:
+        """Read a fixed-length ASCII string, right-stripped."""
+        data = self._read_bytes(length)
+        return data.decode("ascii", errors="replace").rstrip()
+
+    # -- position ----------------------------------------------------------
+    def get_position(self) -> int:
+        if self._file is None:
+            raise RuntimeError("File not open")
+        return self._file.tell()
+
+    def at_eof(self) -> bool:
+        if self._file is None:
+            raise RuntimeError("File not open")
+        pos = self._file.tell()
+        data = self._file.read(1)
+        if not data:
+            return True
+        self._file.seek(pos)
+        return False
 
 
 def write_binary_mesh(filepath: Path | str, grid: AppGrid, endian: str = "<") -> None:
@@ -460,48 +500,6 @@ def write_binary_mesh(filepath: Path | str, grid: AppGrid, endian: str = "<") ->
 
         f.write_int_array(vertex.flatten())
         f.write_int_array(subregions)
-
-
-def read_binary_stratigraphy(filepath: Path | str, endian: str = "<") -> Stratigraphy:
-    """
-    Read stratigraphy data from a binary file.
-
-    Expected format:
-        - Record 1: n_nodes (int)
-        - Record 2: n_layers (int)
-        - Record 3: ground surface elevations (double array)
-        - Record 4: layer top elevations (double array, n_nodes * n_layers)
-        - Record 5: layer bottom elevations (double array, n_nodes * n_layers)
-        - Record 6: active flags (int array, n_nodes * n_layers)
-
-    Args:
-        filepath: Path to the binary file
-        endian: Byte order
-
-    Returns:
-        Stratigraphy instance
-    """
-    with FortranBinaryReader(filepath, endian) as f:
-        n_nodes = f.read_int()
-        n_layers = f.read_int()
-
-        gs_elev = f.read_double_array()
-        top_flat = f.read_double_array()
-        bottom_flat = f.read_double_array()
-        active_flat = f.read_int_array()
-
-        top_elev = top_flat.reshape((n_nodes, n_layers))
-        bottom_elev = bottom_flat.reshape((n_nodes, n_layers))
-        active_node = active_flat.reshape((n_nodes, n_layers)).astype(bool)
-
-    return Stratigraphy(
-        n_layers=n_layers,
-        n_nodes=n_nodes,
-        gs_elev=gs_elev,
-        top_elev=top_elev,
-        bottom_elev=bottom_elev,
-        active_node=active_node,
-    )
 
 
 def write_binary_stratigraphy(filepath: Path | str, strat: Stratigraphy, endian: str = "<") -> None:

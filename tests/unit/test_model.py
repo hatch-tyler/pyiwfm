@@ -530,92 +530,76 @@ class TestFromPreprocessorBinary:
         binary_file = tmp_path / "model.bin"
         binary_file.write_bytes(b"\x00")  # Dummy file
 
-        mock_mesh = MagicMock()
-        mock_mesh.n_nodes = 50
-        mock_mesh.n_elements = 30
+        mock_data = MagicMock()
+        mock_model = IWFMModel(name="TestBinary")
 
         from unittest.mock import patch
 
-        with patch("pyiwfm.core.model.Path", wraps=Path):
-            with (
-                patch("pyiwfm.io.binary.FortranBinaryReader") as mock_reader_cls,
-                patch(
-                    "pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh
-                ) as mock_read_mesh,
-                patch("pyiwfm.io.binary.read_binary_stratigraphy"),
-            ):
-                # Mock context manager
-                mock_reader_inst = MagicMock()
-                mock_reader_cls.return_value.__enter__ = MagicMock(return_value=mock_reader_inst)
-                mock_reader_cls.return_value.__exit__ = MagicMock(return_value=False)
+        with (
+            patch(
+                "pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader.read",
+                return_value=mock_data,
+            ) as mock_read,
+            patch(
+                "pyiwfm.core.model._binary_data_to_model",
+                return_value=mock_model,
+            ) as mock_convert,
+        ):
+            result = IWFMModel.from_preprocessor_binary(binary_file, name="TestBinary")
 
-                model = IWFMModel.from_preprocessor_binary(binary_file, name="TestBinary")
-
-                assert model.name == "TestBinary"
-                assert model.mesh is mock_mesh
-                assert model.metadata["source"] == "binary"
-                assert model.metadata["binary_file"] == str(binary_file)
-                mock_read_mesh.assert_called_once_with(binary_file)
+            mock_read.assert_called_once_with(binary_file)
+            mock_convert.assert_called_once_with(mock_data, name="TestBinary")
+            assert result is mock_model
+            assert result.metadata["binary_file"] == str(binary_file)
 
     def test_from_preprocessor_binary_default_name(self, tmp_path: Path) -> None:
         """Test that name defaults to file stem when not provided."""
         binary_file = tmp_path / "my_model.bin"
         binary_file.write_bytes(b"\x00")
 
-        mock_mesh = MagicMock()
+        mock_data = MagicMock()
+        mock_model = IWFMModel(name="my_model")
 
         from unittest.mock import patch
 
         with (
-            patch("pyiwfm.io.binary.FortranBinaryReader") as mock_reader_cls,
-            patch("pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh),
-            patch("pyiwfm.io.binary.read_binary_stratigraphy"),
+            patch(
+                "pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader.read",
+                return_value=mock_data,
+            ),
+            patch(
+                "pyiwfm.core.model._binary_data_to_model",
+                return_value=mock_model,
+            ) as mock_convert,
         ):
-            mock_reader_cls.return_value.__enter__ = MagicMock()
-            mock_reader_cls.return_value.__exit__ = MagicMock(return_value=False)
+            result = IWFMModel.from_preprocessor_binary(binary_file)
 
-            model = IWFMModel.from_preprocessor_binary(binary_file)
+            mock_convert.assert_called_once_with(mock_data, name="my_model")
+            assert result.name == "my_model"
 
-            assert model.name == "my_model"
-
-    def test_from_preprocessor_binary_with_stratigraphy(self, tmp_path: Path) -> None:
-        """Test loading with companion stratigraphy binary file."""
+    def test_from_preprocessor_binary_metadata(self, tmp_path: Path) -> None:
+        """Test that metadata includes binary_file path."""
         binary_file = tmp_path / "model.bin"
         binary_file.write_bytes(b"\x00")
-        strat_file = tmp_path / "model.strat.bin"
-        strat_file.write_bytes(b"\x00")
 
-        mock_mesh = MagicMock()
-        mock_strat = MagicMock()
+        mock_data = MagicMock()
+        mock_model = IWFMModel(name="model")
 
         from unittest.mock import patch
 
         with (
-            patch("pyiwfm.io.binary.FortranBinaryReader") as mock_reader_cls,
-            patch("pyiwfm.io.binary.read_binary_mesh", return_value=mock_mesh),
             patch(
-                "pyiwfm.io.binary.read_binary_stratigraphy",
-                return_value=mock_strat,
+                "pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader.read",
+                return_value=mock_data,
+            ),
+            patch(
+                "pyiwfm.core.model._binary_data_to_model",
+                return_value=mock_model,
             ),
         ):
-            mock_reader_cls.return_value.__enter__ = MagicMock()
-            mock_reader_cls.return_value.__exit__ = MagicMock(return_value=False)
+            result = IWFMModel.from_preprocessor_binary(binary_file)
 
-            model = IWFMModel.from_preprocessor_binary(binary_file)
-
-            assert model.stratigraphy is mock_strat
-
-    def test_from_binary_is_alias(self) -> None:
-        """Test that from_binary delegates to from_preprocessor_binary."""
-        from unittest.mock import patch
-
-        mock_model = IWFMModel(name="alias_test")
-        with patch.object(
-            IWFMModel, "from_preprocessor_binary", return_value=mock_model
-        ) as mock_method:
-            result = IWFMModel.from_binary("some_path.bin")
-            mock_method.assert_called_once_with("some_path.bin")
-            assert result is mock_model
+            assert result.metadata["binary_file"] == str(binary_file)
 
 
 # =============================================================================
@@ -1171,27 +1155,13 @@ class TestModelQuery:
         mock_model = IWFMModel(name="loaded")
 
         with patch(
-            "pyiwfm.io.preprocessor.load_complete_model",
+            "pyiwfm.io.model_loader.load_complete_model",
             return_value=mock_model,
         ) as mock_load:
-            result = IWFMModel.from_simulation("sim.in", load_timeseries=True)
+            result = IWFMModel.from_simulation("sim.in")
 
-            mock_load.assert_called_once_with("sim.in", load_timeseries=True)
+            mock_load.assert_called_once_with("sim.in")
             assert result is mock_model
-
-    def test_from_simulation_default_args(self) -> None:
-        """Test from_simulation default argument for load_timeseries."""
-        from unittest.mock import patch
-
-        mock_model = IWFMModel(name="loaded")
-
-        with patch(
-            "pyiwfm.io.preprocessor.load_complete_model",
-            return_value=mock_model,
-        ) as mock_load:
-            IWFMModel.from_simulation("sim.in")
-
-            mock_load.assert_called_once_with("sim.in", load_timeseries=False)
 
     def test_from_hdf5_delegates(self) -> None:
         """Test from_hdf5 delegates to read_model_hdf5."""
