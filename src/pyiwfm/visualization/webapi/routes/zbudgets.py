@@ -86,6 +86,31 @@ ZBUDGET_GLOSSARY: dict[str, dict[str, str]] = {
 }
 
 
+def _sync_active_zones(reader: Any) -> None:
+    """Register zones from the active zone definition into the reader.
+
+    The ZBudgetReader only knows about zones stored in the HDF5 file.
+    When the user creates a custom zone definition via the zone editor,
+    those zone names (e.g. "Subregion 1") won't exist in the reader.
+    This helper injects them so ``reader.get_zone_info(name)`` succeeds.
+    """
+    zone_def = model_state.get_zone_definition()
+    if zone_def is None:
+        return
+
+    from pyiwfm.io.zbudget import ZoneInfo as ZBZoneInfo
+
+    for z in zone_def.iter_zones():
+        if z.name not in reader._zone_info:
+            reader._zone_info[z.name] = ZBZoneInfo(
+                id=z.id,
+                name=z.name,
+                n_elements=z.n_elements,
+                element_ids=list(z.elements),
+                area=z.area,
+            )
+
+
 def _safe_float(val: float) -> float | None:
     """Convert NaN/Inf to None for JSON-safe serialization."""
     if val is None or math.isnan(val) or math.isinf(val):
@@ -295,6 +320,9 @@ def get_zbudget_data(
             detail=f"ZBudget type '{zbudget_type}' not available",
         )
 
+    # Sync user-defined zones into the reader so custom zone names resolve
+    _sync_active_zones(reader)
+
     # Determine which zone to use
     zone_name = zone
     if not zone_name:
@@ -378,6 +406,9 @@ def get_zbudget_summary(
             status_code=404,
             detail=f"ZBudget type '{zbudget_type}' not available",
         )
+
+    # Sync user-defined zones into the reader so custom zone names resolve
+    _sync_active_zones(reader)
 
     zone_name = zone
     if not zone_name and reader.zones:
