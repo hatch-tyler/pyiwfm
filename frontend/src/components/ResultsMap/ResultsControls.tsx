@@ -45,6 +45,7 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
   const {
     headTimestep, headTimes, headLayer,
     showGWLocations, showStreamLocations, showSubsidenceLocations,
+    showTileDrainLocations,
     showSubregions, showStreamsOnMap, showWells, showNodes,
     showLakes, showBoundaryConditions,
     showSmallWatersheds, showDiversions,
@@ -58,6 +59,7 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
     setHeadTimestep, setHeadLayer,
     setAnimationSpeed,
     setShowGWLocations, setShowStreamLocations, setShowSubsidenceLocations,
+    setShowTileDrainLocations,
     setShowSubregions, setShowStreamsOnMap, setShowWells, setShowNodes,
     setShowLakes, setShowBoundaryConditions,
     setShowSmallWatersheds, setShowDiversions, setDiversionListOpen,
@@ -369,6 +371,10 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
       <FormControlLabel
         control={<Checkbox size="small" checked={showSubsidenceLocations} onChange={(_, c) => setShowSubsidenceLocations(c)} />}
         label={<Typography variant="body2">Subsidence Locations</Typography>}
+      />
+      <FormControlLabel
+        control={<Checkbox size="small" checked={showTileDrainLocations} onChange={(_, c) => setShowTileDrainLocations(c)} />}
+        label={<Typography variant="body2">Tile Drain Locations</Typography>}
       />
 
       <Divider sx={{ my: 1 }} />

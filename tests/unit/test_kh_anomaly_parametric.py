@@ -390,7 +390,7 @@ class TestGWMainFileWithAnomaly:
         # version, BCFL, TDFL, PUMPFL, SUBSFL, OVRWRTFL,
         # FACTLTOU, UNITLTOU, FACTVLOU, UNITVLOU, FACTVROU, UNITVROU,
         # VELOUTFL, VFLOWOUTFL, GWALLOUTFL, HTPOUTFL, VTPOUTFL,
-        # GWBUDFL, ZBUDFL, FNGWFL, IHTPFLAG, KDEB,
+        # GWBUDFL, ZBUDFL, FNGWFL, ITECPLOTFLAG, KDEB,
         # NOUTH, FACTXY, GWHYDOUTFL, [hydrograph data],
         # NOUTF, FCHYDOUTFL, [face flow data],
         # NGROUP, factors, time units, [node data],
@@ -437,7 +437,7 @@ C  ZBUDFL
 
 C  FNGWFL
 
-C  IHTPFLAG
+C  ITECPLOTFLAG
 1
 C  KDEB
 0

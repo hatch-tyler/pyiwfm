@@ -91,7 +91,7 @@ def _gw_main_output_files_empty() -> list[str]:
 def _gw_main_tail_minimal() -> list[str]:
     """Minimal tail: debug=0, no hydrographs, no face flows, no aq params."""
     return [
-        "1  / IHTPFLAG\n",
+        "1  / ITECPLOTFLAG\n",
         "0  / KDEB\n",
         "0  / NOUTH\n",
         "1.0  / FACTXY\n",
@@ -164,7 +164,7 @@ class TestDebugFlagValueError:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "abc  / KDEB\n",  # non-integer debug flag
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -194,7 +194,7 @@ class TestCoordFactorValueError:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "xyz  / FACTXY\n",  # non-float coord factor
@@ -224,7 +224,7 @@ class TestFaceFlowOutputsValueError:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -256,7 +256,7 @@ class TestSectionExceptionHandlers:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -281,7 +281,7 @@ class TestSectionExceptionHandlers:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -313,7 +313,7 @@ class TestSectionExceptionHandlers:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -399,7 +399,7 @@ class TestHydrographParsingEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 f"{n_hydro}  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -511,7 +511,7 @@ class TestFaceFlowSpecEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -535,7 +535,7 @@ class TestFaceFlowSpecEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -568,7 +568,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -591,7 +591,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -613,7 +613,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -636,7 +636,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -659,7 +659,7 @@ class TestAquiferParamsEarlyReturns:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -691,7 +691,7 @@ class TestAquiferParamsParsingEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -843,7 +843,7 @@ class TestParametricGridEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -1060,7 +1060,7 @@ class TestKhAnomalyEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",
@@ -1167,7 +1167,7 @@ class TestInitialHeadsEdgeCases:
             _gw_main_header_lines()
             + _gw_main_output_files_empty()
             + [
-                "1  / IHTPFLAG\n",
+                "1  / ITECPLOTFLAG\n",
                 "0  / KDEB\n",
                 "0  / NOUTH\n",
                 "1.0  / FACTXY\n",

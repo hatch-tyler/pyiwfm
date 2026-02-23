@@ -1699,6 +1699,8 @@ class IWFMModel:
                     model.metadata["unsat_zone_n_layers"] = uz_config.n_layers
                     if uz_config.budget_file:
                         model.metadata["unsat_zone_budget_file"] = str(uz_config.budget_file)
+                    if uz_config.zbudget_file:
+                        model.metadata["unsat_zone_zbudget_file"] = str(uz_config.zbudget_file)
 
                     # Build component from config
                     if uz_config.n_layers > 0:

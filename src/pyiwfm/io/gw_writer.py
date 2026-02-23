@@ -321,8 +321,8 @@ class GWComponentWriter(TemplateWriter):
         lines.append(_val(raw.get("zbudget", ""), "ZBUDFL"))
         lines.append(_val(raw.get("final_heads", ""), "FNGWFL"))
 
-        # IHTPFLAG
-        lines.append(_val(str(cfg.aq_head_output_flag), "IHTPFLAG"))
+        # ITECPLOTFLAG
+        lines.append(_val(str(cfg.tecplot_print_flag), "ITECPLOTFLAG"))
 
         # Debug flag
         lines.append(f"    {cfg.debug_flag}                           / KDEB")
@@ -512,7 +512,7 @@ class GWComponentWriter(TemplateWriter):
             "budget_file": self.config.gw_budget_file,
             "zbudget_file": self.config.gw_zbudget_file,
             "final_heads_file": self.config.final_heads_file,
-            "head_output_flag": 1,
+            "tecplot_print_flag": 1,
             "debug_flag": 1,
             "n_hydrographs": len(hydrograph_locations),
             "hydrograph_xy_factor": 1.0,

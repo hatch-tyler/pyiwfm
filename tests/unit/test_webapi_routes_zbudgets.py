@@ -281,6 +281,7 @@ class TestWithModel:
         assert "gw" in data
         assert "rootzone" in data
         assert "lwu" in data
+        assert "unsaturated" in data
         assert len(data["gw"]) > 0
 
 
@@ -339,6 +340,7 @@ class TestGlossary:
         assert "gw" in ZBUDGET_GLOSSARY
         assert "rootzone" in ZBUDGET_GLOSSARY
         assert "lwu" in ZBUDGET_GLOSSARY
+        assert "unsaturated" in ZBUDGET_GLOSSARY
         assert "Storage (+/-)" in ZBUDGET_GLOSSARY["gw"]
         assert "AG_Precip (+)" in ZBUDGET_GLOSSARY["rootzone"]
         assert "AG_Supply Requirement" in ZBUDGET_GLOSSARY["lwu"]

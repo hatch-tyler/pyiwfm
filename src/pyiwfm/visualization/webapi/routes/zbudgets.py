@@ -77,6 +77,12 @@ ZBUDGET_GLOSSARY: dict[str, dict[str, str]] = {
         "URB_Diversion": "Surface water diverted for urban use.",
         "URB_Shortage": "Shortfall of urban water supply vs demand.",
     },
+    "unsaturated": {
+        "Deep Percolation (+)": "Water percolating from root zone into the unsaturated zone.",
+        "Deep Percolation to GW (-)": "Water draining from unsaturated zone to the aquifer.",
+        "Storage (+/-)": "Change in water stored within the unsaturated zone.",
+        "Discrepancy": "Numerical mass balance error. Should be small relative to other terms.",
+    },
 }
 
 

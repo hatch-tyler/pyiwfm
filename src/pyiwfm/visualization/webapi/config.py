@@ -1227,23 +1227,25 @@ class ModelState:
 
     def get_available_zbudgets(self) -> list[str]:
         """Return list of zbudget types that have HDF5 files available."""
-        if self._model is None or self._results_dir is None:
+        if self._model is None:
             return []
 
-        available: list[str] = []
-        # Scan results dir for ZBudget HDF files
-        zbud_patterns = {
-            "gw": ["GWZBud", "GW_ZBud", "gwzbud"],
-            "rootzone": ["RZZBud", "RZ_ZBud", "rzzbud", "RootZoneZBud"],
-            "lwu": ["LWUZBud", "LWU_ZBud", "lwuzbud"],
+        zbudget_keys = {
+            "gw": "gw_zbudget_file",
+            "lwu": "rootzone_lwu_zbudget_file",
+            "rootzone": "rootzone_rz_zbudget_file",
+            "unsaturated": "unsat_zone_zbudget_file",
         }
 
-        for ztype, patterns in zbud_patterns.items():
-            for p in patterns:
-                matches = list(self._results_dir.glob(f"*{p}*.hdf"))
-                if matches:
+        available: list[str] = []
+        for ztype, meta_key in zbudget_keys.items():
+            fpath = self._model.metadata.get(meta_key)
+            if fpath:
+                p = Path(fpath)
+                if not p.is_absolute() and self._results_dir:
+                    p = self._results_dir / p
+                if p.exists():
                     available.append(ztype)
-                    break
 
         return available
 
@@ -1252,36 +1254,40 @@ class ModelState:
         if zbudget_type in self._zbudget_readers:
             return self._zbudget_readers[zbudget_type]
 
-        if self._model is None or self._results_dir is None:
+        if self._model is None:
             return None
 
-        zbud_patterns = {
-            "gw": ["GWZBud", "GW_ZBud", "gwzbud"],
-            "rootzone": ["RZZBud", "RZ_ZBud", "rzzbud", "RootZoneZBud"],
-            "lwu": ["LWUZBud", "LWU_ZBud", "lwuzbud"],
+        zbudget_keys = {
+            "gw": "gw_zbudget_file",
+            "lwu": "rootzone_lwu_zbudget_file",
+            "rootzone": "rootzone_rz_zbudget_file",
+            "unsaturated": "unsat_zone_zbudget_file",
         }
 
-        patterns = zbud_patterns.get(zbudget_type)
-        if not patterns:
+        meta_key = zbudget_keys.get(zbudget_type)
+        if not meta_key:
             return None
 
-        # Find the first matching HDF file
-        for p in patterns:
-            matches = list(self._results_dir.glob(f"*{p}*.hdf"))
-            if matches:
-                filepath = matches[0]
-                try:
-                    from pyiwfm.io.zbudget import ZBudgetReader
+        fpath = self._model.metadata.get(meta_key)
+        if not fpath:
+            return None
 
-                    reader = ZBudgetReader(filepath)
-                    self._zbudget_readers[zbudget_type] = reader
-                    logger.info("ZBudget reader for '%s': %s", zbudget_type, reader.descriptor)
-                    return reader
-                except Exception as e:
-                    logger.error("Failed to load zbudget file %s: %s", filepath, e)
-                    return None
+        p = Path(fpath)
+        if not p.is_absolute() and self._results_dir:
+            p = self._results_dir / p
+        if not p.exists():
+            return None
 
-        return None
+        try:
+            from pyiwfm.io.zbudget import ZBudgetReader
+
+            reader = ZBudgetReader(p)
+            self._zbudget_readers[zbudget_type] = reader
+            logger.info("ZBudget reader for '%s': %s", zbudget_type, reader.descriptor)
+            return reader
+        except Exception as e:
+            logger.error("Failed to load zbudget file %s: %s", p, e)
+            return None
 
     def set_zone_definition(self, zone_def: ZoneDefinition) -> None:
         """Set the active zone definition for ZBudget analysis."""

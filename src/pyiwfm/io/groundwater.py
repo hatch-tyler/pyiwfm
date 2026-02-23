@@ -863,7 +863,7 @@ class GWMainFileConfig:
     aq_time_unit_kh: str = ""  # TUNITKH
     aq_time_unit_v: str = ""  # TUNITV (aquitard vertical K)
     aq_time_unit_l: str = ""  # TUNITL (aquifer vertical K)
-    aq_head_output_flag: int = 1  # IHTPFLAG
+    tecplot_print_flag: int = 1  # ITECPLOTFLAG
 
     # Kh anomaly overwrites (parsed but not yet applied to node arrays)
     kh_anomalies: list[KhAnomalyEntry] = field(default_factory=list)
@@ -1039,24 +1039,55 @@ class GWMainFileReader:
                 config.raw_paths["final_heads"] = final_path
                 config.final_heads_file = _resolve_path_f(base_dir, final_path)
 
-            # IHTPFLAG (head print-out type flag: 1=heads, 2=depth-to-gw)
-            ihtpflag = _next_data_or_empty(f)
-            if ihtpflag:
+            # iTecPlotFlag / KDEB / NOUTH — 3-value lookahead
+            # iTecPlotFlag is optional in IWFM.  The Fortran determines its
+            # presence by counting non-comment lines (20+ → flag present,
+            # 19 → absent).  We detect it here by reading three values and
+            # checking whether the third parses as int (NOUTH) or float
+            # (FACTXY).  int(line_c) succeeds for NOUTH (an integer) but
+            # fails for FACTXY (a float like "3.2808" or "1.0").
+            line_a = _next_data_or_empty(f)
+            line_b = _next_data_or_empty(f)
+            line_c = _next_data_or_empty(f)
+
+            # Detect: if line_c is a pure integer → (a=flag, b=KDEB, c=NOUTH)
+            # If line_c contains '.' or fails int parse → (a=KDEB, b=NOUTH, c=FACTXY)
+            has_tecplot_flag = False
+            if line_c:
                 try:
-                    config.aq_head_output_flag = int(ihtpflag)
+                    if "." not in line_c:
+                        int(line_c)
+                        has_tecplot_flag = True
                 except ValueError:
                     pass
 
-            # KDEB (debug flag)
-            kdeb = _next_data_or_empty(f)
-            if kdeb:
-                try:
-                    config.debug_flag = int(kdeb)
-                except ValueError:
-                    pass
+            if has_tecplot_flag:
+                # a=iTecPlotFlag, b=KDEB, c=NOUTH
+                if line_a:
+                    try:
+                        config.tecplot_print_flag = int(line_a)
+                    except ValueError:
+                        pass
+                if line_b:
+                    try:
+                        config.debug_flag = int(line_b)
+                    except ValueError:
+                        pass
+                nouth_str = line_c
+                factxy = _next_data_or_empty(f)
+                hydout_path = _next_data_or_empty(f)
+            else:
+                # a=KDEB, b=NOUTH, c=FACTXY (no iTecPlotFlag)
+                if line_a:
+                    try:
+                        config.debug_flag = int(line_a)
+                    except ValueError:
+                        pass
+                nouth_str = line_b
+                factxy = line_c
+                hydout_path = _next_data_or_empty(f)
 
-            # NOUTH (number of hydrograph output locations)
-            nouth_str = _next_data_or_empty(f)
+            # Parse NOUTH
             n_hydrographs = 0
             if nouth_str:
                 try:
@@ -1070,16 +1101,14 @@ class GWMainFileReader:
                         self._line_num,
                     )
 
-            # FACTXY (coordinate conversion factor — read regardless of NOUTH)
-            factxy = _next_data_or_empty(f)
+            # Parse FACTXY
             if factxy:
                 try:
                     config.coord_factor = float(factxy)
                 except ValueError:
                     pass
 
-            # GWHYDOUTFL (hydrograph output file — read regardless of NOUTH)
-            hydout_path = _next_data_or_empty(f)
+            # GWHYDOUTFL (hydrograph output file)
             if hydout_path:
                 config.raw_paths["hydout"] = hydout_path
                 config.hydrograph_output_file = _resolve_path_f(base_dir, hydout_path)
