@@ -18,6 +18,7 @@ import { InfoPanel } from './components/InfoPanel';
 import { CrossSectionPanel } from './components/CrossSection';
 import { ResultsMapView } from './components/ResultsMap/ResultsMapView';
 import { BudgetView } from './components/BudgetDashboard/BudgetView';
+import { ZBudgetView } from './components/ZBudgetDashboard';
 import { useViewerStore } from './stores/viewerStore';
 import { fetchModelInfo, fetchBounds, fetchResultsInfo, fetchProperties, fetchObservations } from './api/client';
 
@@ -27,8 +28,9 @@ const TAB_HASHES: Record<string, number> = {
   '#3d': 1,
   '#results': 2,
   '#budgets': 3,
+  '#zbudgets': 4,
 };
-const HASH_FOR_TAB = ['#overview', '#3d', '#results', '#budgets'];
+const HASH_FOR_TAB = ['#overview', '#3d', '#results', '#budgets', '#zbudgets'];
 
 export default function App() {
   const {
@@ -139,6 +141,7 @@ export default function App() {
             <Tab label="3D Mesh" sx={{ minHeight: 48 }} />
             <Tab label="Results Map" sx={{ minHeight: 48 }} />
             <Tab label="Budgets" sx={{ minHeight: 48 }} />
+            <Tab label="Z-Budgets" sx={{ minHeight: 48 }} />
           </Tabs>
         </Toolbar>
       </AppBar>
@@ -191,6 +194,13 @@ export default function App() {
         {activeTab === 3 && (
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
             <BudgetView />
+          </Box>
+        )}
+
+        {/* Tab 4: Z-Budgets */}
+        {activeTab === 4 && (
+          <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+            <ZBudgetView />
           </Box>
         )}
       </Box>

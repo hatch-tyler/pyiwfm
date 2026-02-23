@@ -29,18 +29,7 @@ import { fetchBudgetLocations, getExportBudgetCsvUrl } from '../../api/client';
 import type { BudgetLocation, BudgetUnitsMetadata } from '../../api/client';
 import { BudgetGlossary } from './BudgetGlossary';
 import { BudgetSettingsModal } from './BudgetSettingsModal';
-
-export const BUDGET_LABELS: Record<string, string> = {
-  gw: 'Groundwater',
-  stream: 'Stream',
-  stream_node: 'Stream Node',
-  lwu: 'Land & Water Use',
-  rootzone: 'Root Zone',
-  unsaturated: 'Unsaturated Zone',
-  diversion: 'Diversion',
-  lake: 'Lake',
-  small_watershed: 'Small Watershed',
-};
+import { BUDGET_LABELS } from './budgetLabels';
 
 interface BudgetControlsProps {
   budgetTypes: string[];

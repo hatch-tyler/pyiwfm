@@ -7,7 +7,7 @@ import type {
   ModelInfo, BoundsInfo, PropertyInfo,
   ResultsInfo, HydrographData, ObservationFile,
   CrossSectionData, LakeRatingData, ReachProfileData,
-  DiversionDetail, SmallWatershed,
+  DiversionDetail, SmallWatershed, ZoneInfo,
 } from '../api/client';
 
 export interface ViewerState {
@@ -131,6 +131,14 @@ export interface ViewerState {
   budgetAnalysisMode: 'timeseries' | 'monthly_pattern' | 'component_ratios' | 'cumulative_departure' | 'exceedance';
   expandedChartIndex: number | null;
 
+  // === ZBudget state ===
+  zbudgetTypes: string[];
+  zbudgetActiveType: string;
+  zbudgetZones: ZoneInfo[];
+  zbudgetActiveZone: string;
+  zbudgetEditMode: boolean;
+  zbudgetPaintZoneId: number;
+
   // === Observation state ===
   observations: ObservationFile[];
 
@@ -245,6 +253,14 @@ export interface ViewerState {
   setShowBudgetGlossary: (show: boolean) => void;
   setBudgetAnalysisMode: (mode: 'timeseries' | 'monthly_pattern' | 'component_ratios' | 'cumulative_departure' | 'exceedance') => void;
   setExpandedChartIndex: (index: number | null) => void;
+
+  // ZBudget
+  setZBudgetTypes: (types: string[]) => void;
+  setZBudgetActiveType: (type: string) => void;
+  setZBudgetZones: (zones: ZoneInfo[]) => void;
+  setZBudgetActiveZone: (zone: string) => void;
+  setZBudgetEditMode: (mode: boolean) => void;
+  setZBudgetPaintZoneId: (id: number) => void;
 
   // Observations
   setObservations: (obs: ObservationFile[]) => void;
@@ -370,6 +386,14 @@ export const useViewerStore = create<ViewerState>((set) => ({
   showBudgetGlossary: false,
   budgetAnalysisMode: 'timeseries',
   expandedChartIndex: null,
+
+  // ZBudget
+  zbudgetTypes: [],
+  zbudgetActiveType: '',
+  zbudgetZones: [],
+  zbudgetActiveZone: '',
+  zbudgetEditMode: true,
+  zbudgetPaintZoneId: 1,
 
   // Observations
   observations: [],
@@ -521,6 +545,14 @@ export const useViewerStore = create<ViewerState>((set) => ({
   setShowBudgetGlossary: (show) => set({ showBudgetGlossary: show }),
   setBudgetAnalysisMode: (mode) => set({ budgetAnalysisMode: mode }),
   setExpandedChartIndex: (index) => set({ expandedChartIndex: index }),
+
+  // ZBudget
+  setZBudgetTypes: (types) => set({ zbudgetTypes: types }),
+  setZBudgetActiveType: (type) => set({ zbudgetActiveType: type }),
+  setZBudgetZones: (zones) => set({ zbudgetZones: zones }),
+  setZBudgetActiveZone: (zone) => set({ zbudgetActiveZone: zone }),
+  setZBudgetEditMode: (mode) => set({ zbudgetEditMode: mode }),
+  setZBudgetPaintZoneId: (id) => set({ zbudgetPaintZoneId: id }),
 
   // Observations
   setObservations: (obs) => set({ observations: obs }),

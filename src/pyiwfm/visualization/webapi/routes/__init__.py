@@ -17,6 +17,7 @@ from pyiwfm.visualization.webapi.routes.small_watersheds import (
     router as small_watersheds_router,
 )
 from pyiwfm.visualization.webapi.routes.streams import router as streams_router
+from pyiwfm.visualization.webapi.routes.zbudgets import router as zbudgets_router
 
 __all__ = [
     "model_router",
@@ -32,4 +33,5 @@ __all__ = [
     "lakes_router",
     "export_router",
     "small_watersheds_router",
+    "zbudgets_router",
 ]

@@ -172,11 +172,13 @@ export default function Viewer3D() {
     vtkRefs.current.renderer = renderer;
     vtkRefs.current.renderWindow = renderWindow;
 
+    const refs = vtkRefs.current;
+
     loadMesh();
 
     return () => {
-      if (vtkRefs.current.fullScreenRenderer) {
-        vtkRefs.current.fullScreenRenderer.delete();
+      if (refs.fullScreenRenderer) {
+        refs.fullScreenRenderer.delete();
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -401,7 +403,7 @@ export default function Viewer3D() {
         clearTimeout(sliceTimerRef.current);
       }
     };
-  }, [showCrossSection, sliceAngle, slicePosition, zExaggeration, removeSliceActors]);
+  }, [showCrossSection, sliceAngle, slicePosition, zExaggeration, removeSliceActors, createPolyDataActor]);
 
   // Load and toggle streams
   useEffect(() => {

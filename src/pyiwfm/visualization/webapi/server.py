@@ -29,6 +29,7 @@ from pyiwfm.visualization.webapi.routes import (
     slices_router,
     small_watersheds_router,
     streams_router,
+    zbudgets_router,
 )
 
 if TYPE_CHECKING:
@@ -88,6 +89,7 @@ def create_app(
     app.include_router(lakes_router)
     app.include_router(export_router)
     app.include_router(small_watersheds_router)
+    app.include_router(zbudgets_router)
 
     static_dir = Path(__file__).parent / "static"
     if static_dir.exists():

@@ -1350,3 +1350,133 @@ export function getExportBudgetCsvUrl(budgetType: string, location: string): str
 export function getExportHydrographCsvUrl(type: string, locationId: number): string {
   return `${API_BASE}/export/hydrograph-csv?type=${type}&location_id=${locationId}`;
 }
+
+// ===================================================================
+// ZBudget API
+// ===================================================================
+
+export interface ZoneInfo {
+  id: number;
+  name: string;
+  elements: number[];
+  color?: string;
+  n_elements?: number;
+  area?: number;
+}
+
+export interface ZoneDefinitionPayload {
+  zones: ZoneInfo[];
+  extent: 'horizontal' | 'vertical';
+}
+
+export interface ZoneDefinitionResponse {
+  zones: ZoneInfo[];
+  extent: string;
+  name: string;
+  n_zones: number;
+}
+
+export interface ElementInfo {
+  id: number;
+  centroid: [number, number];  // [lng, lat] in WGS84
+  subregion?: number;
+}
+
+export interface ZBudgetPreset {
+  name: string;
+  zones: ZoneInfo[];
+}
+
+export async function fetchZBudgetTypes(): Promise<string[]> {
+  const response = await fetch(`${API_BASE}/zbudgets/types`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch zbudget types: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchZBudgetElements(): Promise<ElementInfo[]> {
+  const response = await fetch(`${API_BASE}/zbudgets/elements`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch zbudget elements: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchZBudgetPresets(): Promise<ZBudgetPreset[]> {
+  const response = await fetch(`${API_BASE}/zbudgets/presets`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch zbudget presets: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function postZoneDefinition(
+  payload: ZoneDefinitionPayload,
+): Promise<{ status: string; n_zones: number; n_elements: number }> {
+  const response = await fetch(`${API_BASE}/zbudgets/zones`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to post zone definition: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchZoneDefinition(): Promise<ZoneDefinitionResponse | null> {
+  const response = await fetch(`${API_BASE}/zbudgets/zones`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch zone definition: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchZBudgetData(
+  type: string,
+  zone: string,
+  columns: string = 'all',
+  volumeFactor: number = 1.0,
+): Promise<BudgetData> {
+  const params = new URLSearchParams({
+    zone,
+    columns,
+    volume_factor: String(volumeFactor),
+  });
+  const response = await fetch(`${API_BASE}/zbudgets/${type}/data?${params}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch zbudget data: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchZBudgetColumns(
+  type: string,
+): Promise<{ columns: BudgetColumn[] }> {
+  const response = await fetch(`${API_BASE}/zbudgets/${type}/columns`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch zbudget columns: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchZBudgetSummary(
+  type: string,
+  zone: string,
+): Promise<BudgetSummary> {
+  const params = new URLSearchParams({ zone });
+  const response = await fetch(`${API_BASE}/zbudgets/${type}/summary?${params}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch zbudget summary: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchZBudgetGlossary(): Promise<Record<string, Record<string, string>>> {
+  const response = await fetch(`${API_BASE}/zbudgets/glossary`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch zbudget glossary: ${response.statusText}`);
+  }
+  return response.json();
+}

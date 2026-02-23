@@ -4,7 +4,7 @@
  * and the selected feature highlighted.
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { Map } from 'react-map-gl/maplibre';
@@ -45,6 +45,38 @@ const DEFAULT_VIEW = {
   pitch: 0,
   bearing: 0,
 };
+
+function extractCoords(geom: GeoJSON.Geometry, out: number[][]): void {
+  if (geom.type === 'Point') {
+    out.push(geom.coordinates as number[]);
+  } else if (geom.type === 'MultiPoint' || geom.type === 'LineString') {
+    for (const c of geom.coordinates) out.push(c as number[]);
+  } else if (geom.type === 'MultiLineString' || geom.type === 'Polygon') {
+    for (const ring of geom.coordinates) {
+      for (const c of ring) out.push(c as number[]);
+    }
+  } else if (geom.type === 'MultiPolygon') {
+    for (const poly of geom.coordinates) {
+      for (const ring of poly) {
+        for (const c of ring) out.push(c as number[]);
+      }
+    }
+  }
+}
+
+function getFeatureBounds(feature: GeoJSON.Feature): [number, number, number, number] | null {
+  const coords: number[][] = [];
+  extractCoords(feature.geometry, coords);
+  if (coords.length === 0) return null;
+  let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+  for (const c of coords) {
+    if (c[0] < minLng) minLng = c[0];
+    if (c[1] < minLat) minLat = c[1];
+    if (c[0] > maxLng) maxLng = c[0];
+    if (c[1] > maxLat) maxLat = c[1];
+  }
+  return [minLng, minLat, maxLng, maxLat];
+}
 
 export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMapProps) {
   const mapRef = useRef<MapRef>(null);
@@ -108,12 +140,6 @@ export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMa
       .catch(() => {});
   }, [budgetType, locationName]);
 
-  // Center map on selected location whenever relevant data changes
-  useEffect(() => {
-    if (!locationGeo) return;
-    fitToFeature(locationGeo);
-  }, [locationGeo, contextData, pointData]);
-
   function detectCategory(bt: string): string {
     const l = bt.toLowerCase();
     if (l.startsWith('gw') || l.includes('groundwater') || l === 'lwu' || l.includes('land')
@@ -149,7 +175,7 @@ export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMa
     return null;
   }
 
-  function fitToFeature(_geo: BudgetLocationGeometry) {
+  const fitToFeature = useCallback((_geo: BudgetLocationGeometry) => {
     const isEntireModel = _geo.spatial_type === 'entire_model';
 
     // If only a point geometry (stream_node) and no context yet, center on it
@@ -233,39 +259,13 @@ export function BudgetLocationMap({ budgetType, locationName }: BudgetLocationMa
       const [lng, lat] = _geo.geometry.coordinates;
       setViewState({ ...DEFAULT_VIEW, longitude: lng, latitude: lat, zoom: 8 });
     }
-  }
+  }, [contextData, pointData]);
 
-  function getFeatureBounds(feature: GeoJSON.Feature): [number, number, number, number] | null {
-    const coords: number[][] = [];
-    extractCoords(feature.geometry, coords);
-    if (coords.length === 0) return null;
-    let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
-    for (const c of coords) {
-      if (c[0] < minLng) minLng = c[0];
-      if (c[1] < minLat) minLat = c[1];
-      if (c[0] > maxLng) maxLng = c[0];
-      if (c[1] > maxLat) maxLat = c[1];
-    }
-    return [minLng, minLat, maxLng, maxLat];
-  }
-
-  function extractCoords(geom: GeoJSON.Geometry, out: number[][]): void {
-    if (geom.type === 'Point') {
-      out.push(geom.coordinates as number[]);
-    } else if (geom.type === 'MultiPoint' || geom.type === 'LineString') {
-      for (const c of geom.coordinates) out.push(c as number[]);
-    } else if (geom.type === 'MultiLineString' || geom.type === 'Polygon') {
-      for (const ring of geom.coordinates) {
-        for (const c of ring) out.push(c as number[]);
-      }
-    } else if (geom.type === 'MultiPolygon') {
-      for (const poly of geom.coordinates) {
-        for (const ring of poly) {
-          for (const c of ring) out.push(c as number[]);
-        }
-      }
-    }
-  }
+  // Center map on selected location whenever relevant data changes
+  useEffect(() => {
+    if (!locationGeo) return;
+    fitToFeature(locationGeo);
+  }, [locationGeo, fitToFeature]);
 
   // Build layers
   const layers = useMemo(() => {

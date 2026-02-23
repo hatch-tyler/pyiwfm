@@ -12,11 +12,13 @@ from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
+    from pyiwfm.core.zones import ZoneDefinition
     from pyiwfm.io.area_loader import AreaDataManager
     from pyiwfm.io.budget import BudgetReader
     from pyiwfm.io.cache_loader import SqliteCacheLoader
     from pyiwfm.io.head_loader import LazyHeadDataLoader
     from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
+    from pyiwfm.io.zbudget import ZBudgetReader
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +77,8 @@ class ModelState:
         self._subsidence_reader: IWFMHydrographReader | None = None
         self._tile_drain_reader: IWFMHydrographReader | None = None
         self._budget_readers: dict[str, BudgetReader] = {}
+        self._zbudget_readers: dict[str, ZBudgetReader] = {}
+        self._active_zone_def: ZoneDefinition | None = None
         self._results_dir: Path | None = None
         self._area_manager: AreaDataManager | None = None
         self._observations: dict[str, dict] = {}  # id -> observation data
@@ -120,6 +124,8 @@ class ModelState:
         self._subsidence_reader = None
         self._tile_drain_reader = None
         self._budget_readers = {}
+        self._zbudget_readers = {}
+        self._active_zone_def = None
         self._area_manager = None
         self._observations = {}
         self._stream_reach_boundaries = None
@@ -1214,6 +1220,76 @@ class ModelState:
         except Exception as e:
             logger.error("Failed to load budget file %s: %s", p, e)
             return None
+
+    # ------------------------------------------------------------------
+    # ZBudget readers
+    # ------------------------------------------------------------------
+
+    def get_available_zbudgets(self) -> list[str]:
+        """Return list of zbudget types that have HDF5 files available."""
+        if self._model is None or self._results_dir is None:
+            return []
+
+        available: list[str] = []
+        # Scan results dir for ZBudget HDF files
+        zbud_patterns = {
+            "gw": ["GWZBud", "GW_ZBud", "gwzbud"],
+            "rootzone": ["RZZBud", "RZ_ZBud", "rzzbud", "RootZoneZBud"],
+            "lwu": ["LWUZBud", "LWU_ZBud", "lwuzbud"],
+        }
+
+        for ztype, patterns in zbud_patterns.items():
+            for p in patterns:
+                matches = list(self._results_dir.glob(f"*{p}*.hdf"))
+                if matches:
+                    available.append(ztype)
+                    break
+
+        return available
+
+    def get_zbudget_reader(self, zbudget_type: str) -> ZBudgetReader | None:
+        """Get or create a ZBudgetReader for the given type."""
+        if zbudget_type in self._zbudget_readers:
+            return self._zbudget_readers[zbudget_type]
+
+        if self._model is None or self._results_dir is None:
+            return None
+
+        zbud_patterns = {
+            "gw": ["GWZBud", "GW_ZBud", "gwzbud"],
+            "rootzone": ["RZZBud", "RZ_ZBud", "rzzbud", "RootZoneZBud"],
+            "lwu": ["LWUZBud", "LWU_ZBud", "lwuzbud"],
+        }
+
+        patterns = zbud_patterns.get(zbudget_type)
+        if not patterns:
+            return None
+
+        # Find the first matching HDF file
+        for p in patterns:
+            matches = list(self._results_dir.glob(f"*{p}*.hdf"))
+            if matches:
+                filepath = matches[0]
+                try:
+                    from pyiwfm.io.zbudget import ZBudgetReader
+
+                    reader = ZBudgetReader(filepath)
+                    self._zbudget_readers[zbudget_type] = reader
+                    logger.info("ZBudget reader for '%s': %s", zbudget_type, reader.descriptor)
+                    return reader
+                except Exception as e:
+                    logger.error("Failed to load zbudget file %s: %s", filepath, e)
+                    return None
+
+        return None
+
+    def set_zone_definition(self, zone_def: ZoneDefinition) -> None:
+        """Set the active zone definition for ZBudget analysis."""
+        self._active_zone_def = zone_def
+
+    def get_zone_definition(self) -> ZoneDefinition | None:
+        """Get the current active zone definition."""
+        return self._active_zone_def
 
     # ------------------------------------------------------------------
     # Observations (session-scoped, in-memory)
