@@ -543,7 +543,6 @@ try:
 except ImportError:
     _dss_exports = []
 
-# Budget Reader (h5py is a required dependency)
 # Data loaders (moved from visualization.webapi — pure I/O, no web deps)
 from pyiwfm.io.area_loader import AreaDataManager, LazyAreaDataLoader
 from pyiwfm.io.budget import (
@@ -558,6 +557,22 @@ from pyiwfm.io.budget import (
     julian_to_datetime,
     parse_iwfm_datetime,
 )
+
+# Budget control file parsers and Excel export
+from pyiwfm.io.budget_control import (
+    BudgetControlConfig,
+    BudgetOutputSpec,
+    read_budget_control,
+)
+from pyiwfm.io.budget_excel import (
+    budget_control_to_excel,
+    budget_to_excel,
+)
+from pyiwfm.io.budget_utils import (
+    apply_unit_conversion,
+    filter_time_range,
+    format_title_lines,
+)
 from pyiwfm.io.cache_builder import SqliteCacheBuilder, is_cache_stale
 from pyiwfm.io.cache_loader import SqliteCacheLoader
 from pyiwfm.io.head_loader import LazyHeadDataLoader
@@ -570,6 +585,17 @@ from pyiwfm.io.zbudget import (
     ZBudgetHeader,
     ZBudgetReader,
     ZoneInfo,
+)
+
+# ZBudget control file parser and Excel export
+from pyiwfm.io.zbudget_control import (
+    ZBudgetControlConfig,
+    ZBudgetOutputSpec,
+    read_zbudget_control,
+)
+from pyiwfm.io.zbudget_excel import (
+    zbudget_control_to_excel,
+    zbudget_to_excel,
 )
 
 __all__ = [
@@ -934,6 +960,22 @@ __all__ = [
     "ZBudgetHeader",
     "ZoneInfo",
     "ZBUDGET_DATA_TYPES",
+    # Budget control file parsers
+    "BudgetControlConfig",
+    "BudgetOutputSpec",
+    "read_budget_control",
+    "ZBudgetControlConfig",
+    "ZBudgetOutputSpec",
+    "read_zbudget_control",
+    # Budget Excel export
+    "budget_to_excel",
+    "budget_control_to_excel",
+    "zbudget_to_excel",
+    "zbudget_control_to_excel",
+    # Budget utilities
+    "apply_unit_conversion",
+    "format_title_lines",
+    "filter_time_range",
     # Data loaders (moved from visualization.webapi)
     "IWFMHydrographReader",
     "LazyHydrographDataLoader",

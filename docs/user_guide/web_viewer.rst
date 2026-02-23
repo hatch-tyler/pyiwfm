@@ -150,6 +150,10 @@ Data Export
 The viewer provides several data export endpoints:
 
 - **CSV**: Heads per node, budget time series, GW/stream hydrographs
+- **Excel**: Budget data as formatted ``.xlsx`` workbooks (one sheet per
+  location with title lines, bold headers, unit conversion, and auto-fitted
+  column widths) via ``GET /api/budgets/{budget_type}/excel`` and
+  ``GET /api/export/budget-excel``
 - **GeoJSON**: Mesh elements as downloadable GeoJSON
 - **GeoPackage**: Multi-layer GeoPackage with nodes, elements, streams,
   subregions, and model boundary via ``GISExporter``

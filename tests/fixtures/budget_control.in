@@ -1,0 +1,19 @@
+C Budget Control File for testing
+C
+     2.29568E-05                   / FACTLTOU  (SQ FT -> FEET factor)
+     FEET                          / UNITLTOU
+     2.29568E-05                   / FACTAROU  (SQ FT -> ACRES factor)
+     AC                            / UNITAROU
+     2.29568E-05                   / FACTVLOU  (CU FT -> AC-FT factor)
+     AC.FT.                        / UNITVLOU
+     100                           / NTIME
+     1                             / NBUDGET
+     *                             / TIMBGN  (begin date, * = start of data)
+     *                             / TIMEND  (end date, * = end of data)
+C
+C Budget #1
+C
+     GW_Budget.hdf                 / Budget HDF5 file
+     GW_Budget.xlsx                / Output file
+     1MON                          / Print interval
+     -1                            / NLPRNT  (-1 = all locations)

@@ -445,6 +445,99 @@ Reading Time Series from DSS
             "/MODEL/WELL_2/HEAD//1DAY//",
         ])
 
+Budget Excel Export
+-------------------
+
+pyiwfm can parse IWFM budget and zone budget control files and export the
+results to formatted Excel workbooks -- one sheet per location (or zone) with
+title lines, bold headers, unit conversion, and auto-fitted column widths.
+
+Control File Workflow
+~~~~~~~~~~~~~~~~~~~~~
+
+The standard IWFM workflow uses a control file that references one or more HDF5
+budget files with unit conversion factors and output paths:
+
+.. code-block:: python
+
+    from pyiwfm.io import read_budget_control, budget_control_to_excel
+
+    # Parse the control file
+    config = read_budget_control("C2VSimFG_Budget_xlsx.in")
+
+    # Export all budgets to Excel (one .xlsx per budget spec)
+    created_files = budget_control_to_excel(config)
+    for f in created_files:
+        print(f"Created: {f}")
+
+Zone budget control files follow the same pattern:
+
+.. code-block:: python
+
+    from pyiwfm.io import read_zbudget_control, zbudget_control_to_excel
+
+    config = read_zbudget_control("C2VSimFG_ZBudget_xlsx.in")
+    created_files = zbudget_control_to_excel(config)
+
+Direct Export
+~~~~~~~~~~~~~
+
+You can also export directly from a ``BudgetReader`` or ``ZBudgetReader``
+without a control file:
+
+.. code-block:: python
+
+    from pyiwfm.io import BudgetReader, budget_to_excel
+
+    reader = BudgetReader("GW_Budget.hdf")
+    budget_to_excel(
+        reader,
+        "GW_Budget.xlsx",
+        volume_factor=2.29568e-05,
+        volume_unit="AC.FT.",
+        area_factor=2.29568e-05,
+        area_unit="AC",
+    )
+
+Unit-Converted DataFrames
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``get_dataframe()`` method on both ``BudgetReader`` and ``ZBudgetReader``
+accepts optional conversion factors for direct use in scripts and notebooks:
+
+.. code-block:: python
+
+    from pyiwfm.io import BudgetReader
+
+    reader = BudgetReader("GW_Budget.hdf")
+
+    # Raw data (no conversion)
+    df_raw = reader.get_dataframe(0)
+
+    # With unit conversion applied
+    df_converted = reader.get_dataframe(
+        0,
+        length_factor=1.0,
+        area_factor=2.29568e-05,
+        volume_factor=2.29568e-05,
+    )
+
+CLI Commands
+~~~~~~~~~~~~
+
+Budget export is also available from the command line:
+
+.. code-block:: bash
+
+    # Export budgets from a control file
+    pyiwfm budget C2VSimFG_Budget_xlsx.in
+
+    # Export zone budgets from a control file
+    pyiwfm zbudget C2VSimFG_ZBudget_xlsx.in
+
+    # Override output directory
+    pyiwfm budget C2VSimFG_Budget_xlsx.in --output-dir /path/to/output
+
 PreProcessor Integration
 ------------------------
 

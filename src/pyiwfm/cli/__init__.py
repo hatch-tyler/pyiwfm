@@ -21,11 +21,15 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Register subcommands
+    from pyiwfm.cli.budget import add_budget_parser
     from pyiwfm.cli.export import add_export_parser
     from pyiwfm.cli.viewer import add_viewer_parser
+    from pyiwfm.cli.zbudget import add_zbudget_parser
 
     add_viewer_parser(subparsers)
     add_export_parser(subparsers)
+    add_budget_parser(subparsers)
+    add_zbudget_parser(subparsers)
 
     args = parser.parse_args(argv)
 

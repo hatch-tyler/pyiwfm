@@ -461,6 +461,57 @@ Reader for IWFM zone budget output files.
    :undoc-members:
    :show-inheritance:
 
+Budget Control File Parser
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Parser for IWFM budget post-processor control files (``.bud`` / ``.in``).
+
+.. automodule:: pyiwfm.io.budget_control
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ZBudget Control File Parser
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Parser for IWFM zone budget post-processor control files.
+
+.. automodule:: pyiwfm.io.zbudget_control
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Budget Utilities
+~~~~~~~~~~~~~~~~
+
+Shared helpers for unit conversion, title-line formatting, and time filtering
+used by both budget and zone budget Excel export.
+
+.. automodule:: pyiwfm.io.budget_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Budget Excel Export
+~~~~~~~~~~~~~~~~~~~
+
+Excel workbook generation from budget HDF5 data (one sheet per location).
+
+.. automodule:: pyiwfm.io.budget_excel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ZBudget Excel Export
+~~~~~~~~~~~~~~~~~~~~
+
+Excel workbook generation from zone budget HDF5 data (one sheet per zone).
+
+.. automodule:: pyiwfm.io.zbudget_excel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Model I/O
 ---------
 

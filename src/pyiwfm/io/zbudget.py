@@ -462,9 +462,15 @@ class ZBudgetReader:
         zone: str | int,
         layer: int = 1,
         data_columns: list[str] | None = None,
+        *,
+        volume_factor: float = 1.0,
     ) -> pd.DataFrame:
         """
         Read zone budget data as a pandas DataFrame.
+
+        When *volume_factor* is left at its default of ``1.0`` the raw
+        simulation values are returned unchanged.  Pass the FACTVLOU
+        value to get unit-converted output.
 
         Parameters
         ----------
@@ -474,6 +480,9 @@ class ZBudgetReader:
             Layer number (1-based).
         data_columns : list[str], optional
             Specific data columns to include. If None, includes all.
+        volume_factor : float
+            Multiplier for all data columns (zone budget columns are
+            volumetric).  Default ``1.0``.
 
         Returns
         -------
@@ -486,6 +495,10 @@ class ZBudgetReader:
         # Ensure 2D
         if values.ndim == 1:
             values = values.reshape(-1, 1)
+
+        # Apply unit conversion when factor is non-unity
+        if volume_factor != 1.0:
+            values = values * volume_factor
 
         # Create datetime index
         ts = self.header

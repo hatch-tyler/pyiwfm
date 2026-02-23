@@ -30,6 +30,30 @@ pip install -e ".[all]"
 pip install -e ".[dev]"
 ```
 
+## Budget Post-Processing
+
+Export IWFM budget and zone budget results to Excel workbooks:
+
+```bash
+# Export budgets from a control file (one .xlsx per budget spec)
+pyiwfm budget C2VSimFG_Budget_xlsx.in
+
+# Export zone budgets from a control file
+pyiwfm zbudget C2VSimFG_ZBudget_xlsx.in
+```
+
+Or use the Python API directly:
+
+```python
+from pyiwfm.io import BudgetReader, budget_to_excel
+
+reader = BudgetReader("GW_Budget.hdf")
+budget_to_excel(
+    reader, "GW_Budget.xlsx",
+    volume_factor=2.29568e-05, volume_unit="AC.FT.",
+)
+```
+
 ## Quick Start
 
 ```python
@@ -117,6 +141,10 @@ cd frontend && npm install && npm run build
   - Binary files (Fortran unformatted)
   - HDF5 files (efficient large model storage)
   - HEC-DSS 7 files (time series with optional library support)
+- **Budget Post-Processing**: Parse IWFM budget/zbudget control files and export to Excel
+  - One sheet per location/zone with title lines, bold headers, and auto-fitted columns
+  - Unit conversion factors (FACTLTOU, FACTAROU, FACTVLOU) applied per column type
+  - CLI commands: `pyiwfm budget` and `pyiwfm zbudget`
 - **Component Writers**: Write complete IWFM input files with shared `BaseComponentWriterConfig`
   - Groundwater: wells, pumping, boundary conditions, aquifer parameters
   - Streams: nodes, reaches, diversions, bypasses, rating curves

@@ -157,6 +157,62 @@ def export_budget_csv(
     )
 
 
+@router.get("/budget-excel")
+def export_budget_excel(
+    budget_type: str = Query(..., description="Budget type"),
+    location: str = Query(default="", description="Location name/index or empty for all"),
+) -> Response:
+    """Export budget data as an Excel workbook."""
+    reader = model_state.get_budget_reader(budget_type)
+    if reader is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Budget type '{budget_type}' not available",
+        )
+
+    from pyiwfm.io.budget_excel import budget_to_excel
+
+    location_ids: list[int] | None = None
+    if location:
+        try:
+            loc_idx = reader.get_location_index(location)
+            location_ids = [loc_idx + 1]
+        except (KeyError, IndexError) as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        from pathlib import Path
+
+        budget_to_excel(
+            reader=reader,
+            output_path=tmp_path,
+            location_ids=location_ids,
+        )
+        data = Path(tmp_path).read_bytes()
+    except Exception as e:
+        logger.exception("Budget Excel export failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        import os
+
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+    safe_type = budget_type.replace(" ", "_").replace("/", "_")
+    filename = f"budget_{safe_type}.xlsx"
+
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 @router.get("/hydrograph-csv")
 def export_hydrograph_csv(
     type: str = Query(..., description="Type: gw, stream, subsidence, tile_drain"),

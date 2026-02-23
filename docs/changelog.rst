@@ -137,6 +137,50 @@ Added
 - Top-level ``pyiwfm`` package now exports AppGW, AppStream, AppLake, RootZone,
   AppSmallWatershed, AppUnsatZone for convenient ``from pyiwfm import AppGW``
 
+**Budget & Zone Budget Excel Export** (``pyiwfm.io.budget_excel``, ``pyiwfm.io.zbudget_excel``)
+
+- ``budget_to_excel()``: Export budget HDF5 data to formatted Excel workbooks
+  (one sheet per location, bold titles/headers, auto-fit columns)
+- ``zbudget_to_excel()``: Same for zone budget data (one sheet per zone)
+- ``budget_control_to_excel()`` / ``zbudget_control_to_excel()``: Batch export
+  from control file configuration (one ``.xlsx`` per budget spec)
+- Unit conversion factors (FACTLTOU/FACTAROU/FACTVLOU) applied per column type
+  using codes from ``Budget_Parameters.f90``
+
+**Budget & Zone Budget Control File Parsers** (``pyiwfm.io.budget_control``, ``pyiwfm.io.zbudget_control``)
+
+- ``read_budget_control()``: Parse IWFM budget post-processor control files
+  (FACTLTOU, UNITLTOU, FACTAROU, UNITAROU, FACTVLOU, UNITVLOU, dates,
+  per-budget HDF5 paths, output paths, location IDs)
+- ``read_zbudget_control()``: Parse IWFM zone budget control files
+  (same pattern with zone definition file support)
+- ``BudgetControlConfig`` / ``ZBudgetControlConfig``: Typed dataclasses
+
+**Budget Utilities** (``pyiwfm.io.budget_utils``)
+
+- ``apply_unit_conversion()``: Apply IWFM conversion factors per column type
+- ``format_title_lines()``: Substitute ``@UNITVL@``, ``@UNITAR@``, ``@LOCNAME@``,
+  ``@AREA@`` markers in title templates
+- ``filter_time_range()``: Filter DataFrames by IWFM date range
+
+**Budget CLI Commands** (``pyiwfm.cli.budget``, ``pyiwfm.cli.zbudget``)
+
+- ``pyiwfm budget <control_file>``: Export budgets to Excel from control file
+- ``pyiwfm zbudget <control_file>``: Export zone budgets to Excel from control file
+- ``--output-dir`` flag to override output directory
+
+**Budget Unit Conversion in Readers**
+
+- ``BudgetReader.get_dataframe()`` now accepts keyword-only ``length_factor``,
+  ``area_factor``, ``volume_factor`` for on-the-fly unit conversion
+- ``ZBudgetReader.get_dataframe()`` now accepts keyword-only ``volume_factor``
+- Backward compatible: all factors default to 1.0
+
+**Budget Excel Download Endpoints**
+
+- ``GET /api/budgets/{budget_type}/excel``: Download formatted budget workbook
+- ``GET /api/export/budget-excel``: Download budget Excel from the export routes
+
 **Documentation**
 
 - Added ~30 missing module entries to API docs (``docs/api/io.rst``)

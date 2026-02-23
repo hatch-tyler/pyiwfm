@@ -1,0 +1,18 @@
+C ZBudget Control File for testing
+C
+     2.29568E-05                   / FACTAROU  (SQ FT -> ACRES factor)
+     AC                            / UNITAROU
+     2.29568E-05                   / FACTVLOU  (CU FT -> AC-FT factor)
+     AC.FT.                        / UNITVLOU
+     100                           / NTIME
+     1                             / NZBUDGET
+     *                             / TIMBGN
+     *                             / TIMEND
+C
+C ZBudget #1
+C
+                                   / Zone definition file (blank = use embedded)
+     GWZBud.hdf                    / ZBudget HDF5 file
+     GWZBud.xlsx                   / Output file
+     1MON                          / Print interval
+     -1                            / NZPRNT  (-1 = all zones)

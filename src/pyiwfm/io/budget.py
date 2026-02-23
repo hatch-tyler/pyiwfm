@@ -894,9 +894,19 @@ class BudgetReader:
         self,
         location: str | int = 0,
         columns: list[int] | list[str] | None = None,
+        *,
+        length_factor: float = 1.0,
+        area_factor: float = 1.0,
+        volume_factor: float = 1.0,
     ) -> pd.DataFrame:
         """
         Read budget values as a pandas DataFrame.
+
+        When *all* conversion factors are left at their default of ``1.0``
+        the raw simulation values are returned unchanged.  Pass non-unity
+        factors (FACTLTOU / FACTAROU / FACTVLOU) to get unit-converted
+        output — each column is multiplied by the factor that matches its
+        IWFM data-type code (volume, area, or length).
 
         Parameters
         ----------
@@ -904,16 +914,17 @@ class BudgetReader:
             Location name or index.
         columns : list, optional
             Column indices or names to read. If None, reads all columns.
+        length_factor : float
+            Multiplier for length columns (type 5).  Default ``1.0``.
+        area_factor : float
+            Multiplier for area columns (type 4).  Default ``1.0``.
+        volume_factor : float
+            Multiplier for volume columns (types 1-3, 6-11).  Default ``1.0``.
 
         Returns
         -------
         pd.DataFrame
             DataFrame with datetime index and budget columns.
-
-        Raises
-        ------
-        ImportError
-            If pandas is not installed.
         """
         # Get column headers
         all_headers = self.get_column_headers(location)
@@ -952,6 +963,38 @@ class BudgetReader:
             col_names = [all_headers[i] for i in col_indices]
         else:
             col_names = all_headers
+
+        # Apply unit conversion when any factor is non-unity
+        needs_conversion = length_factor != 1.0 or area_factor != 1.0 or volume_factor != 1.0
+        if needs_conversion:
+            from pyiwfm.io.budget_utils import apply_unit_conversion
+
+            loc_idx = self.get_location_index(location)
+            if len(self.header.location_data) == 1:
+                loc_data = self.header.location_data[0]
+            else:
+                loc_data = self.header.location_data[loc_idx]
+
+            if loc_data.column_types:
+                # Build column-type list for the selected columns
+                if col_indices is not None:
+                    col_type_list = [
+                        loc_data.column_types[i] if i < len(loc_data.column_types) else 1
+                        for i in col_indices
+                    ]
+                else:
+                    col_type_list = loc_data.column_types
+
+                values = apply_unit_conversion(
+                    values,
+                    col_type_list,
+                    length_factor=length_factor,
+                    area_factor=area_factor,
+                    volume_factor=volume_factor,
+                )
+            else:
+                # No column type info — apply volume factor to everything
+                values = values * volume_factor
 
         return pd.DataFrame(values, index=index, columns=col_names)
 

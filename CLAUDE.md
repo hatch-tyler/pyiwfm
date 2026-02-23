@@ -48,6 +48,8 @@ sphinx-build docs docs/_build          # Build Sphinx docs (requires .[docs] ext
 ```bash
 pyiwfm viewer --model-dir /path/to/model   # Launch the web viewer
 pyiwfm export --model-dir /path/to/model   # Export to VTK/GeoPackage
+pyiwfm budget <control_file>               # Export budgets to Excel
+pyiwfm zbudget <control_file>              # Export zone budgets to Excel
 ```
 
 ### Frontend
