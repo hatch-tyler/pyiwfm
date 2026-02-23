@@ -3,11 +3,14 @@
  * Displayed when clicking a stream gage location on the map.
  */
 
+import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import Plot from 'react-plotly.js';
 import type { StreamNodeRatingData } from '../../api/client';
 
@@ -17,6 +20,8 @@ interface StreamNodeRatingChartProps {
 }
 
 export function StreamNodeRatingChart({ data, onClose }: StreamNodeRatingChartProps) {
+  const [expanded, setExpanded] = useState(false);
+
   const traces: Plotly.Data[] = [
     {
       x: data.flows,
@@ -32,7 +37,16 @@ export function StreamNodeRatingChart({ data, onClose }: StreamNodeRatingChartPr
   return (
     <Paper
       elevation={3}
-      sx={{
+      sx={expanded ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 1300,
+      } : {
         position: 'absolute',
         bottom: 0,
         left: 0,
@@ -48,6 +62,9 @@ export function StreamNodeRatingChart({ data, onClose }: StreamNodeRatingChartPr
           Stream Node {data.stream_node_id} &mdash; Rating Curve
           ({data.n_points} points, bed elev: {data.bottom_elev.toFixed(1)} ft)
         </Typography>
+        <IconButton size="small" onClick={() => setExpanded(!expanded)} title={expanded ? 'Exit fullscreen' : 'Fullscreen'}>
+          {expanded ? <FullscreenExitIcon /> : <FullscreenIcon />}
+        </IconButton>
         <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
       </Box>
       <Box sx={{ flexGrow: 1, px: 1, pb: 1 }}>

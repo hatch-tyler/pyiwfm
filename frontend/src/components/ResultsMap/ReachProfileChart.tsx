@@ -11,6 +11,8 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import Plot from 'react-plotly.js';
 import type { ReachProfileData, StreamNodeRatingData } from '../../api/client';
 import { fetchStreamNodeRating } from '../../api/client';
@@ -21,6 +23,7 @@ interface ReachProfileChartProps {
 }
 
 export function ReachProfileChart({ data, onClose }: ReachProfileChartProps) {
+  const [expanded, setExpanded] = useState(false);
   const [ratingData, setRatingData] = useState<StreamNodeRatingData | null>(null);
   const [ratingLoading, setRatingLoading] = useState(false);
 
@@ -84,7 +87,16 @@ export function ReachProfileChart({ data, onClose }: ReachProfileChartProps) {
   return (
     <Paper
       elevation={3}
-      sx={{
+      sx={expanded ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 1300,
+      } : {
         position: 'absolute',
         bottom: 0,
         left: 0,
@@ -100,6 +112,9 @@ export function ReachProfileChart({ data, onClose }: ReachProfileChartProps) {
           {data.name} &mdash; Profile ({data.total_length.toFixed(0)} ft, {data.n_nodes} nodes)
           {ratingLoading && ' (loading rating...)'}
         </Typography>
+        <IconButton size="small" onClick={() => setExpanded(!expanded)} title={expanded ? 'Exit fullscreen' : 'Fullscreen'}>
+          {expanded ? <FullscreenExitIcon /> : <FullscreenIcon />}
+        </IconButton>
         <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
       </Box>
       <Box sx={{ display: 'flex', flexGrow: 1, px: 1, pb: 1, gap: 1 }}>

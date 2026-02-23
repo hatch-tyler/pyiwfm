@@ -20,6 +20,8 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import CloseIcon from '@mui/icons-material/Close';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import Plot from 'react-plotly.js';
 import type { HydrographData, ObservationData, GWAllLayersData, SubsidenceAllLayersData } from '../../api/client';
 import { fetchGWHydrographAllLayers, fetchSubsidenceAllLayers } from '../../api/client';
@@ -39,6 +41,7 @@ interface HydrographChartProps {
 }
 
 export function HydrographChart({ data, observation, onClose }: HydrographChartProps) {
+  const [expanded, setExpanded] = useState(false);
   const hasStreamDualAxis = data.type === 'stream' && data.flow_values && data.stage_values;
   const isGW = data.type === 'gw';
   const isSubsidence = data.type === 'subsidence';
@@ -191,7 +194,17 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
 
   return (
     <Box
-      sx={{
+      sx={expanded ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        bgcolor: 'background.paper',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 1300,
+      } : {
         height: 280,
         bgcolor: 'background.paper',
         borderTop: '1px solid',
@@ -260,6 +273,9 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
           </ToggleButtonGroup>
         )}
 
+        <IconButton size="small" onClick={() => setExpanded(!expanded)} title={expanded ? 'Exit fullscreen' : 'Fullscreen'}>
+          {expanded ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+        </IconButton>
         <IconButton size="small" onClick={onClose}>
           <CloseIcon fontSize="small" />
         </IconButton>
