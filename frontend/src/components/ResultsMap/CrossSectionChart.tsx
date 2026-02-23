@@ -3,12 +3,14 @@
  * Uses Plotly to render layer geometry along the distance axis.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import Plot from 'react-plotly.js';
 import type { CrossSectionData, CrossSectionHeadData } from '../../api/client';
 
@@ -124,10 +126,21 @@ export function CrossSectionChart({ data, headData, onClose }: CrossSectionChart
     return result;
   }, [data, headData]);
 
+  const [expanded, setExpanded] = useState(false);
+
   return (
     <Paper
       elevation={3}
-      sx={{
+      sx={expanded ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 1300,
+      } : {
         position: 'absolute',
         bottom: 0,
         left: 0,
@@ -142,6 +155,9 @@ export function CrossSectionChart({ data, headData, onClose }: CrossSectionChart
         <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
           Cross-Section ({data.total_distance.toFixed(0)} ft)
         </Typography>
+        <IconButton size="small" onClick={() => setExpanded(!expanded)} title={expanded ? 'Exit fullscreen' : 'Fullscreen'}>
+          {expanded ? <FullscreenExitIcon /> : <FullscreenIcon />}
+        </IconButton>
         <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
       </Box>
       <Box sx={{ flexGrow: 1, px: 1, pb: 1 }}>
