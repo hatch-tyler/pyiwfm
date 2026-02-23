@@ -38,7 +38,7 @@ import {
   fetchCrossSectionJSON, fetchCrossSectionHeads,
   fetchSmallWatersheds, fetchDiversions, fetchDiversionDetail,
   fetchReachProfile, fetchHydrographsMulti,
-  fetchMeshNodes,
+  fetchMeshNodes, fetchStreamNodeRating,
 } from '../../api/client';
 import type {
   HydrographLocation, HydrographData, WellInfo,
@@ -62,6 +62,7 @@ import { ElementDetailPanel } from './ElementDetailPanel';
 import { CrossSectionChart } from './CrossSectionChart';
 import { LakeRatingChart } from './LakeRatingChart';
 import { ReachProfileChart } from './ReachProfileChart';
+import { StreamNodeRatingChart } from './StreamNodeRatingChart';
 import { ComparisonChart } from './ComparisonChart';
 import { DiversionPanel } from './DiversionPanel';
 import { WatershedDetailPanel } from './WatershedDetailPanel';
@@ -90,6 +91,7 @@ export function ResultsMapView() {
     selectedLakeRating,
     compareMode, comparedLocationIds,
     selectedReachProfile,
+    selectedStreamNodeRating,
     selectedWatershedId, selectedWatershedDetail,
     selectedDiversionId, diversionDetail, diversionListOpen,
     isAnimating,
@@ -102,6 +104,7 @@ export function ResultsMapView() {
     setCrossSectionPoints, setCrossSectionData,
     setSelectedLakeRating,
     setSelectedReachProfile,
+    setSelectedStreamNodeRating,
     setSelectedDiversionId, setDiversionDetail, setDiversionListOpen,
     addComparedLocationId,
     setMapColorProperty,
@@ -432,7 +435,18 @@ export function ResultsMapView() {
       console.error('Failed to load hydrograph:', err);
       setSelectedHydrograph(null);
     }
-  }, [setSelectedLocation, setSelectedHydrograph]);
+    // For stream locations, also try to fetch rating curve
+    if (type === 'stream') {
+      try {
+        const rating = await fetchStreamNodeRating(loc.id);
+        setSelectedStreamNodeRating(rating);
+      } catch {
+        setSelectedStreamNodeRating(null);
+      }
+    } else {
+      setSelectedStreamNodeRating(null);
+    }
+  }, [setSelectedLocation, setSelectedHydrograph, setSelectedStreamNodeRating]);
 
   // Click handler for mesh elements
   const handleElementClick = useCallback(async (elemId: number) => {
@@ -1276,6 +1290,14 @@ export function ResultsMapView() {
           <ReachProfileChart
             data={selectedReachProfile}
             onClose={() => setSelectedReachProfile(null)}
+          />
+        )}
+
+        {/* Stream node rating chart panel (from map click) */}
+        {selectedStreamNodeRating && (
+          <StreamNodeRatingChart
+            data={selectedStreamNodeRating}
+            onClose={() => setSelectedStreamNodeRating(null)}
           />
         )}
 

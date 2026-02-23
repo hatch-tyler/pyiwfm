@@ -8,6 +8,7 @@ import type {
   ResultsInfo, HydrographData, ObservationFile,
   CrossSectionData, LakeRatingData, ReachProfileData,
   DiversionDetail, SmallWatershed, ZoneInfo,
+  StreamNodeRatingData,
 } from '../api/client';
 
 export interface ViewerState {
@@ -113,6 +114,9 @@ export interface ViewerState {
 
   // === Phase 3: Stream reach profile ===
   selectedReachProfile: ReachProfileData | null;
+
+  // === Stream node rating from map click ===
+  selectedStreamNodeRating: StreamNodeRatingData | null;
 
   // === Phase 3: Budget views ===
   showBudgetSankey: boolean;
@@ -236,6 +240,9 @@ export interface ViewerState {
 
   // Phase 3 stream reach profile
   setSelectedReachProfile: (data: ReachProfileData | null) => void;
+
+  // Stream node rating from map click
+  setSelectedStreamNodeRating: (data: StreamNodeRatingData | null) => void;
 
   // Phase 3 budget sankey
   setShowBudgetSankey: (show: boolean) => void;
@@ -369,6 +376,9 @@ export const useViewerStore = create<ViewerState>((set) => ({
 
   // Phase 3 stream reach profile
   selectedReachProfile: null,
+
+  // Stream node rating from map click
+  selectedStreamNodeRating: null,
 
   // Phase 3 budget sankey
   showBudgetSankey: false,
@@ -528,6 +538,9 @@ export const useViewerStore = create<ViewerState>((set) => ({
 
   // Phase 3 stream reach profile
   setSelectedReachProfile: (data) => set({ selectedReachProfile: data }),
+
+  // Stream node rating from map click
+  setSelectedStreamNodeRating: (data) => set({ selectedStreamNodeRating: data }),
 
   // Phase 3 budget sankey
   setShowBudgetSankey: (show) => set({ showBudgetSankey: show }),

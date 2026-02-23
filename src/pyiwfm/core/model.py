@@ -203,15 +203,28 @@ class IWFMModel:
                             for sn_id in rs.node_ids:
                                 if sn_id not in stream.nodes:
                                     gw = rs.node_to_gw_node.get(sn_id)
-                                    stream.add_node(
-                                        StrmNode(
-                                            id=sn_id,
-                                            x=0.0,
-                                            y=0.0,
-                                            reach_id=rs.id,
-                                            gw_node=gw if gw and gw > 0 else None,
-                                        )
+                                    node = StrmNode(
+                                        id=sn_id,
+                                        x=0.0,
+                                        y=0.0,
+                                        reach_id=rs.id,
+                                        gw_node=gw if gw and gw > 0 else None,
                                     )
+                                    # Transfer bottom elevation from rating table section
+                                    if sn_id in rs.node_bottom_elevations:
+                                        node.bottom_elev = rs.node_bottom_elevations[sn_id]
+                                    # Transfer rating table
+                                    if sn_id in rs.node_rating_tables:
+                                        import numpy as np
+
+                                        from pyiwfm.components.stream import StreamRating
+
+                                        stages, flows = rs.node_rating_tables[sn_id]
+                                        node.rating = StreamRating(
+                                            stages=np.array(stages, dtype=np.float64),
+                                            flows=np.array(flows, dtype=np.float64),
+                                        )
+                                    stream.add_node(node)
                             stream.add_reach(
                                 StrmReach(
                                     id=rs.id,
@@ -1158,8 +1171,8 @@ class IWFMModel:
 
                     model.streams = stream
 
-                    # ---- Enrich reaches if still empty ----
-                    if not stream.reaches and stream.nodes:
+                    # ---- Enrich stream nodes (bottom_elev, rating) and reaches ----
+                    if stream.nodes:
                         try:
                             from pyiwfm.components.stream import StrmReach
                             from pyiwfm.io.preprocessor import read_preprocessor_main
@@ -1199,6 +1212,8 @@ class IWFMModel:
                                                     stages=np.array(stages, dtype=np.float64),
                                                     flows=np.array(flows, dtype=np.float64),
                                                 )
+                                # Only add reaches if not already populated
+                                if not stream.reaches:
                                     stream.add_reach(
                                         StrmReach(
                                             id=rs.id,
