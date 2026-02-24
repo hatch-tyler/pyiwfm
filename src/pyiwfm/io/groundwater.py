@@ -1166,7 +1166,7 @@ class GWMainFileReader:
             try:
                 iflagrf_str = _next_data_or_empty(f)
                 if iflagrf_str:
-                    config.return_flow_flag = int(iflagrf_str)
+                    config.return_flow_flag = int(float(iflagrf_str))
             except Exception as exc:
                 import logging
 
