@@ -349,9 +349,13 @@ def get_zbudget_data(
             raise HTTPException(status_code=400, detail="No zone specified and no zones available")
 
     logger.debug(
-        "Fetching zbudget data: type=%s, zone=%s, reader_zones=%s",
+        "Fetching zbudget data: type=%s, zone=%s, n_timesteps=%d, "
+        "n_elements=%d, n_data=%d, reader_zones=%s",
         zbudget_type,
         zone_name,
+        reader.n_timesteps,
+        reader.header.n_elements,
+        reader.header.n_data,
         reader.zones[:5] if reader.zones else [],
     )
 

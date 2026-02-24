@@ -29,11 +29,13 @@ from pyiwfm.io.zbudget import (
 
 @pytest.fixture
 def mock_zbudget_file(tmp_path):
-    """Create a mock ZBudget HDF5 file."""
+    """Create a mock ZBudget HDF5 file (old-style data_name/Layer_N layout)."""
     pytest.importorskip("h5py")
     import h5py
 
     filepath = tmp_path / "test_zbudget.hdf"
+    n_elements = 30
+    n_timesteps = 12
 
     with h5py.File(filepath, "w") as f:
         # Create Attributes group
@@ -64,7 +66,7 @@ def mock_zbudget_file(tmp_path):
                 b"/StorageChange",
             ],
         )
-        attrs.create_dataset("NTimeSteps", data=12)
+        attrs.create_dataset("NTimeSteps", data=n_timesteps)
 
         # Create ZoneList group
         zone_list = f.create_group("ZoneList")
@@ -78,15 +80,12 @@ def mock_zbudget_file(tmp_path):
             zone_group.create_dataset("Area", data=1000.0 * (i + 1))
             zone_group.create_dataset("AdjacentZones", data=[j + 1 for j in range(3) if j != i])
 
-        # Create data groups
+        # Create data groups — old-style: data_name/Layer_N
+        # Shape: (n_timesteps, n_elements) to match real IWFM convention
         rng = np.random.default_rng(42)
-        n_elements = 30
-        n_timesteps = 12
-
         for path in ["/DeepPercolation", "/Pumping", "/SubsurfaceInflow", "/StorageChange"]:
             data_group = f.create_group(path.strip("/"))
-            # Create layer data
-            data = rng.random((n_elements, n_timesteps)) * 100
+            data = rng.random((n_timesteps, n_elements)) * 100
             data_group.create_dataset("Layer_1", data=data)
             data_group.create_dataset("Layer_2", data=data * 0.5)
 
@@ -284,21 +283,21 @@ class TestElementData:
         reader = ZBudgetReader(mock_zbudget_file)
         data = reader.get_element_data("Deep Percolation", layer=1)
 
-        assert data.shape == (30, 12)  # n_elements x n_timesteps
+        assert data.shape == (12, 30)  # n_timesteps x n_elements
 
     def test_get_element_data_by_index(self, mock_zbudget_file):
         """Test reading element data by column index."""
         reader = ZBudgetReader(mock_zbudget_file)
         data = reader.get_element_data(0, layer=1)
 
-        assert data.shape == (30, 12)
+        assert data.shape == (12, 30)
 
     def test_get_element_data_layer_2(self, mock_zbudget_file):
         """Test reading element data from layer 2."""
         reader = ZBudgetReader(mock_zbudget_file)
         data = reader.get_element_data("Pumping", layer=2)
 
-        assert data.shape == (30, 12)
+        assert data.shape == (12, 30)
 
     def test_get_element_data_invalid_name(self, mock_zbudget_file):
         """Test invalid data name raises error."""
@@ -519,7 +518,7 @@ class TestConstants:
 
 @pytest.fixture
 def mock_zbudget_with_datetime(tmp_path):
-    """Create a ZBudget HDF5 file that has start_datetime set."""
+    """Create a ZBudget HDF5 file that has start_datetime set via attrs."""
     pytest.importorskip("h5py")
     import h5py
 
@@ -544,8 +543,12 @@ def mock_zbudget_with_datetime(tmp_path):
         )
         attrs.create_dataset("NTimeSteps", data=n_timesteps)
         # Layer ElemDataColumns keys to test n_layers derivation
-        attrs.create_dataset("Layer1_ElemDataColumns", data=[1, 2])
-        attrs.create_dataset("Layer2_ElemDataColumns", data=[1, 2])
+        attrs.create_dataset(
+            "Layer1_ElemDataColumns", data=np.ones((3, n_elements), dtype=np.int32)
+        )
+        attrs.create_dataset(
+            "Layer2_ElemDataColumns", data=np.ones((3, n_elements), dtype=np.int32)
+        )
 
         zone_list = f.create_group("ZoneList")
         zone_list.attrs["NZones"] = 2
@@ -557,7 +560,7 @@ def mock_zbudget_with_datetime(tmp_path):
 
         for path in ["/Recharge", "/Pumping", "/ET"]:
             dg = f.create_group(path.strip("/"))
-            data = rng.random((n_elements, n_timesteps)) * 50
+            data = rng.random((n_timesteps, n_elements)) * 50
             dg.create_dataset("Layer_1", data=data)
             dg.create_dataset("Layer_2", data=data * 0.3)
 
@@ -581,7 +584,7 @@ def mock_zbudget_no_zonelist(tmp_path):
         attrs.create_dataset("DataHDFPaths", data=[b"/Flow"])
         attrs.create_dataset("NTimeSteps", data=5)
         dg = f.create_group("Flow")
-        dg.create_dataset("Layer_1", data=np.ones((10, 5)))
+        dg.create_dataset("Layer_1", data=np.ones((5, 10)))
 
     return filepath
 
@@ -603,7 +606,7 @@ def mock_zbudget_no_attrs_group(tmp_path):
         f.create_dataset("DataHDFPaths", data=[b"/TestData"])
         f.create_dataset("NTimeSteps", data=3)
         dg = f.create_group("TestData")
-        dg.create_dataset("Layer_1", data=np.ones((5, 3)))
+        dg.create_dataset("Layer_1", data=np.ones((3, 5)))
 
     return filepath
 
@@ -630,7 +633,7 @@ def mock_zbudget_nzones_dataset(tmp_path):
         # No ZoneNames - should auto-generate
 
         dg = f.create_group("Flow")
-        dg.create_dataset("Layer_1", data=np.ones((5, 4)))
+        dg.create_dataset("Layer_1", data=np.ones((4, 5)))
 
     return filepath
 
@@ -684,13 +687,15 @@ class TestElementDataEdgeCases:
         """Case-insensitive data name lookup works."""
         reader = ZBudgetReader(mock_zbudget_file)
         data = reader.get_element_data("deep percolation", layer=1)
-        assert data.shape == (30, 12)
+        assert data.shape == (12, 30)
 
     def test_get_element_data_nonexistent_path(self, mock_zbudget_file):
         """Reading data from a non-existent HDF5 path raises KeyError."""
         reader = ZBudgetReader(mock_zbudget_file)
         # Temporarily modify the header to have a wrong path
         reader.header.data_hdf_paths[0] = "/NonExistentPath"
+        # Also change the data name so neither strategy finds data
+        reader.header.data_names[0] = "NonExistent Name"
         with pytest.raises(KeyError, match="not found in file"):
             reader.get_element_data(0, layer=1)
 
@@ -699,8 +704,8 @@ class TestElementDataEdgeCases:
         reader = ZBudgetReader(mock_zbudget_file)
         # Truncate paths to force fallback
         reader.header.data_hdf_paths = []
-        # The fallback will try "Deep_Percolation" (spaces replaced with _)
-        # This path doesn't exist, so it should raise KeyError
+        # The fallback will try name "Deep Percolation" which doesn't match a
+        # Layer_N group and data_name/Layer_N won't work either
         with pytest.raises(KeyError):
             reader.get_element_data(0, layer=1)
 
@@ -846,7 +851,7 @@ class TestAggregationEdgeCases:
             zg.create_dataset("Elements", data=[1, 2, 3, 4, 5])
 
             dg = f.create_group("Flow")
-            dg.create_dataset("Layer_1", data=np.ones((n_elements, n_timesteps)))
+            dg.create_dataset("Layer_1", data=np.ones((n_timesteps, n_elements)))
 
         reader = ZBudgetReader(filepath)
         # No start_datetime => non-DatetimeIndex path
@@ -923,3 +928,213 @@ class TestReprAdditional:
         reader = ZBudgetReader(mock_zbudget_with_datetime)
         repr_str = repr(reader)
         assert "ZBudgetReader" in repr_str
+
+
+# =============================================================================
+# C2VSimFG-style structure tests (Layer_N/data_name + ElemDataColumns)
+# =============================================================================
+
+
+@pytest.fixture
+def mock_zbudget_c2vsim_structure(tmp_path):
+    """Create a ZBudget HDF5 file matching real C2VSimFG layout.
+
+    Structure:
+    - Scalar metadata in /Attributes/.attrs (not datasets)
+    - Layer_N/data_name path hierarchy
+    - ElemDataColumns for sparse datasets
+    - Some datasets have n_items < n_elements
+    """
+    pytest.importorskip("h5py")
+    import h5py
+
+    filepath = tmp_path / "c2vsim_gw_zbudget.hdf"
+    n_elements = 20
+    n_timesteps = 6
+    n_layers = 2
+    n_data = 3
+
+    # Sparse dataset: only 8 out of 20 elements have stream data
+    n_stream_items = 8
+    stream_elems = [2, 5, 7, 10, 12, 14, 17, 19]  # 1-based elem IDs
+
+    with h5py.File(filepath, "w") as f:
+        ag = f.create_group("Attributes")
+
+        # Scalars as HDF5 attrs (NOT datasets)
+        ag.attrs["NTimeSteps"] = n_timesteps
+        ag.attrs["Descriptor"] = "GROUNDWATER ZONE BUDGET"
+        ag.attrs["Software_Version"] = "IWFM 2025.0"
+        ag.attrs["NData"] = n_data
+        ag.attrs["SystemData%NElements"] = n_elements
+        ag.attrs["SystemData%NLayers"] = n_layers
+        ag.attrs["lVertFlows_DefinedAtNode"] = False
+        ag.attrs["lFaceFlows_Defined"] = True
+        ag.attrs["lStorages_Defined"] = True
+        ag.attrs["lComputeError"] = True
+        ag.attrs["TimeStep%BeginDateAndTime"] = "10/31/1973_24:00"
+        ag.attrs["TimeStep%Unit"] = "1MON"
+        ag.attrs["TimeStep%DeltaT_InMinutes"] = 43200
+
+        # Array datasets under Attributes group
+        ag.create_dataset(
+            "FullDataNames",
+            data=[b"GW Storage_Inflow (+)", b"Streams_Inflow (+)", b"Pumping by Well_Inflow (+)"],
+        )
+        ag.create_dataset(
+            "DataHDFPaths",
+            data=[b"/GW Storage", b"/Streams", b"/Pumping"],
+        )
+        ag.create_dataset("DataTypes", data=[1, 4, 4])
+
+        # ElemDataColumns — shape (n_data, n_elements)
+        rng = np.random.default_rng(42)
+        for layer_num in range(1, n_layers + 1):
+            edc = np.zeros((n_data, n_elements), dtype=np.int32)
+            # Data 0 (GW Storage): all elements → 1:1 mapping
+            for j in range(n_elements):
+                edc[0, j] = j + 1  # 1-based column index
+            # Data 1 (Streams): only stream_elems have data
+            for col_idx, eid in enumerate(stream_elems):
+                edc[1, eid - 1] = col_idx + 1  # 1-based compressed column
+            # Data 2 (Pumping): all elements
+            for j in range(n_elements):
+                edc[2, j] = j + 1
+            ag.create_dataset(f"Layer{layer_num}_ElemDataColumns", data=edc)
+
+        # Layer_N/data_name datasets
+        for layer_num in range(1, n_layers + 1):
+            lg = f.create_group(f"Layer_{layer_num}")
+            # GW Storage: all elements
+            lg.create_dataset(
+                "GW Storage_Inflow (+)",
+                data=rng.random((n_timesteps, n_elements)) * 100,
+            )
+            # Streams: sparse — only 8 items
+            lg.create_dataset(
+                "Streams_Inflow (+)",
+                data=rng.random((n_timesteps, n_stream_items)) * 50,
+            )
+            # Pumping: all elements
+            lg.create_dataset(
+                "Pumping by Well_Inflow (+)",
+                data=rng.random((n_timesteps, n_elements)) * 30,
+            )
+
+    return filepath
+
+
+class TestC2VSimFGStructure:
+    """Tests for real C2VSimFG HDF5 layout."""
+
+    def test_header_reads_attrs_metadata(self, mock_zbudget_c2vsim_structure):
+        """n_timesteps, descriptor, start_datetime read from .attrs."""
+        reader = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        assert reader.n_timesteps == 6
+        assert reader.descriptor == "GROUNDWATER ZONE BUDGET"
+        assert reader.header.start_datetime is not None
+        # 10/31/1973_24:00 → 11/01/1973 00:00
+        assert reader.header.start_datetime == datetime(1973, 11, 1, 0, 0)
+
+    def test_header_reads_system_data(self, mock_zbudget_c2vsim_structure):
+        """n_elements, n_layers read from SystemData% attrs."""
+        reader = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        assert reader.header.n_elements == 20
+        assert reader.header.n_layers == 2
+
+    def test_header_reads_elem_data_columns(self, mock_zbudget_c2vsim_structure):
+        """ElemDataColumns arrays are loaded into header."""
+        reader = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        assert 1 in reader.header.elem_data_columns
+        assert 2 in reader.header.elem_data_columns
+        edc1 = reader.header.elem_data_columns[1]
+        assert edc1.shape == (3, 20)  # n_data x n_elements
+
+    def test_get_element_data_layer_first_structure(self, mock_zbudget_c2vsim_structure):
+        """Layer_N/data_name path works for element data retrieval."""
+        reader = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        # Full-elements dataset
+        data = reader.get_element_data("GW Storage_Inflow (+)", layer=1)
+        assert data.shape == (6, 20)  # n_timesteps x n_elements
+        # Sparse dataset
+        data = reader.get_element_data("Streams_Inflow (+)", layer=1)
+        assert data.shape == (6, 8)  # n_timesteps x n_stream_items
+
+    def test_get_zone_data_with_elem_data_columns(self, mock_zbudget_c2vsim_structure):
+        """Sparse aggregation using ElemDataColumns mapping."""
+        reader = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        # Inject a zone with elements that include some stream-adjacent ones
+        reader._zone_info["TestZone"] = ZoneInfo(
+            id=1,
+            name="TestZone",
+            n_elements=5,
+            element_ids=[1, 2, 5, 10, 15],  # elems 2, 5, 10 have stream data
+        )
+        times, values = reader.get_zone_data("TestZone", data_name="Streams_Inflow (+)", layer=1)
+        assert len(times) == 6
+        assert values.ndim == 1
+        # Values should be non-zero (3 elements contribute)
+        assert np.any(values != 0)
+
+    def test_elem_data_columns_subset_aggregation(self, mock_zbudget_c2vsim_structure):
+        """Elements not in sparse dataset are correctly skipped."""
+        reader = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        # Zone with elements that have NO stream data
+        reader._zone_info["NoStreamZone"] = ZoneInfo(
+            id=2,
+            name="NoStreamZone",
+            n_elements=3,
+            element_ids=[1, 3, 4],  # none in stream_elems
+        )
+        times, values = reader.get_zone_data(
+            "NoStreamZone", data_name="Streams_Inflow (+)", layer=1
+        )
+        assert len(times) == 6
+        # All zeros — none of these elements have stream data
+        assert np.all(values == 0)
+
+    def test_get_dataframe_monthly_timestamps(self, mock_zbudget_c2vsim_structure):
+        """Monthly timesteps use relativedelta for proper dates."""
+        pd = pytest.importorskip("pandas")
+        reader = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        reader._zone_info["TestZone"] = ZoneInfo(
+            id=1,
+            name="TestZone",
+            n_elements=3,
+            element_ids=[1, 2, 3],
+        )
+        df = reader.get_dataframe("TestZone", layer=1)
+        assert isinstance(df.index, pd.DatetimeIndex)
+        assert len(df) == 6
+        # Check monthly increments
+        assert df.index[0].year == 1973
+        assert df.index[0].month == 11
+        assert df.index[1].month == 12
+        assert df.index[2].year == 1974
+        assert df.index[2].month == 1
+
+    def test_both_path_structures_work(self, mock_zbudget_file, mock_zbudget_c2vsim_structure):
+        """Old fixture structure (data_name/Layer_N) and new (Layer_N/data_name) both work."""
+        # Old structure
+        reader_old = ZBudgetReader(mock_zbudget_file)
+        data_old = reader_old.get_element_data("Deep Percolation", layer=1)
+        assert data_old.ndim == 2
+
+        # New structure
+        reader_new = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        data_new = reader_new.get_element_data("GW Storage_Inflow (+)", layer=1)
+        assert data_new.ndim == 2
+
+    def test_flags_from_attrs(self, mock_zbudget_c2vsim_structure):
+        """Boolean flags read from .attrs correctly."""
+        reader = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        assert reader.header.face_flows_defined is True
+        assert reader.header.storages_defined is True
+        assert reader.header.compute_error is True
+        assert reader.header.vert_flows_at_node is False
+
+    def test_time_unit_from_attrs(self, mock_zbudget_c2vsim_structure):
+        """Time unit and delta read from attrs."""
+        reader = ZBudgetReader(mock_zbudget_c2vsim_structure)
+        assert reader.header.time_unit == "1MON"
+        assert reader.header.delta_t_minutes == 43200
