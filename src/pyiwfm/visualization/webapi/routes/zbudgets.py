@@ -93,15 +93,23 @@ def _sync_active_zones(reader: Any) -> None:
     When the user creates a custom zone definition via the zone editor,
     those zone names (e.g. "Subregion 1") won't exist in the reader.
     This helper injects them so ``reader.get_zone_info(name)`` succeeds.
+
+    If the zone already exists in the reader (from HDF5), but has no
+    element_ids (empty list), it is overwritten with the user-defined
+    zone info to ensure proper aggregation.
     """
     zone_def = model_state.get_zone_definition()
     if zone_def is None:
+        logger.debug("No active zone definition to sync")
         return
 
     from pyiwfm.io.zbudget import ZoneInfo as ZBZoneInfo
 
+    synced = 0
     for z in zone_def.iter_zones():
-        if z.name not in reader._zone_info:
+        existing = reader._zone_info.get(z.name)
+        # Inject if zone doesn't exist, or if existing zone has no element_ids
+        if existing is None or not existing.element_ids:
             reader._zone_info[z.name] = ZBZoneInfo(
                 id=z.id,
                 name=z.name,
@@ -109,6 +117,14 @@ def _sync_active_zones(reader: Any) -> None:
                 element_ids=list(z.elements),
                 area=z.area,
             )
+            synced += 1
+
+    if synced:
+        logger.info(
+            "Synced %d zone(s) into reader (reader now has %d zones)",
+            synced,
+            len(reader._zone_info),
+        )
 
 
 def _safe_float(val: float) -> float | None:
@@ -332,10 +348,21 @@ def get_zbudget_data(
         else:
             raise HTTPException(status_code=400, detail="No zone specified and no zones available")
 
+    logger.debug(
+        "Fetching zbudget data: type=%s, zone=%s, reader_zones=%s",
+        zbudget_type,
+        zone_name,
+        reader.zones[:5] if reader.zones else [],
+    )
+
     try:
         df = reader.get_dataframe(zone_name, volume_factor=volume_factor)
     except (KeyError, IndexError, ValueError) as e:
+        logger.warning("ZBudget data error for zone '%s': %s", zone_name, e)
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.error("Unexpected ZBudget error for zone '%s': %s", zone_name, e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}") from e
 
     # Convert index to ISO strings
     if hasattr(df.index, "strftime"):

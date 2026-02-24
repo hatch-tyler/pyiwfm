@@ -130,7 +130,9 @@ export function ZBudgetView() {
   const [zbudgetData, setZbudgetData] = useState<BudgetData | null>(null);
   const [unitsMeta, setUnitsMeta] = useState<BudgetUnitsMetadata | undefined>(undefined);
   const [zoneNames, setZoneNames] = useState<string[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const unitsSynced = useRef(false);
+  const skipNextFetch = useRef(false);
 
   // Load types and presets on mount
   useEffect(() => {
@@ -209,10 +211,11 @@ export function ZBudgetView() {
     setZBudgetZones([]);
   }, [setZBudgetZones]);
 
-  // Run ZBudget: post zones then switch to chart view (data is fetched by useEffect)
+  // Run ZBudget: post zones, fetch data, then switch to chart view
   const handleRunZBudget = useCallback(async () => {
     if (zbudgetZones.length === 0) return;
     setLoading(true);
+    setFetchError(null);
     try {
       await postZoneDefinition({
         zones: zbudgetZones,
@@ -222,31 +225,49 @@ export function ZBudgetView() {
       const names = zbudgetZones.map((z) => z.name);
       setZoneNames(names);
       // Always update active zone to first zone (zones may have changed)
-      setZBudgetActiveZone(names.length > 0 ? names[0] : '');
-      // Switch to chart view — the useEffect will fetch data
+      const activeZone = names.length > 0 ? names[0] : '';
+      setZBudgetActiveZone(activeZone);
+      // Fetch data for first zone and active type
+      if (zbudgetActiveType && activeZone) {
+        const data = await fetchZBudgetData(zbudgetActiveType, activeZone);
+        setUnitsMeta(data.units_metadata);
+        setZbudgetData(data);
+        unitsSynced.current = false;
+      }
+      // Prevent useEffect from re-fetching the same data
+      skipNextFetch.current = true;
+      // Switch to chart view so results are visible
       setZBudgetEditMode(false);
     } catch (err) {
-      console.error('Failed to post zone definition:', err);
+      console.error('Failed to run zbudget:', err);
+      setFetchError(err instanceof Error ? err.message : String(err));
+    } finally {
       setLoading(false);
     }
-  }, [zbudgetZones, setZBudgetActiveZone, setZBudgetEditMode]);
+  }, [zbudgetZones, zbudgetActiveType, setZBudgetActiveZone, setZBudgetEditMode]);
 
-  // Reload data when zone or type changes (chart mode)
+  // Reload data when zone or type changes (chart mode only)
   useEffect(() => {
-    if (zbudgetEditMode || !zbudgetActiveType || !zbudgetActiveZone || zoneNames.length === 0) return;
+    if (zbudgetEditMode || !zbudgetActiveType || !zbudgetActiveZone) return;
+    // Skip if data was just loaded by handleRunZBudget
+    if (skipNextFetch.current) {
+      skipNextFetch.current = false;
+      return;
+    }
     setLoading(true);
+    setFetchError(null);
     fetchZBudgetData(zbudgetActiveType, zbudgetActiveZone)
       .then((data) => {
         setUnitsMeta(data.units_metadata);
         setZbudgetData(data);
-        setLoading(false);
       })
       .catch((err) => {
         console.error('Failed to load zbudget data:', err);
+        setFetchError(err instanceof Error ? err.message : String(err));
         setZbudgetData(null);
-        setLoading(false);
-      });
-  }, [zbudgetActiveType, zbudgetActiveZone, zbudgetEditMode, zoneNames.length]);
+      })
+      .finally(() => setLoading(false));
+  }, [zbudgetActiveType, zbudgetActiveZone, zbudgetEditMode]);
 
   // Classify + convert chart data
   const classified = useMemo(
@@ -346,10 +367,17 @@ export function ZBudgetView() {
                   <CircularProgress />
                 </Box>
               ) : !zbudgetData || !classified ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 4, flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                   <Typography color="text.secondary">
-                    Define zones and click "Run ZBudget" to see charts.
+                    {fetchError
+                      ? 'Failed to load ZBudget data. Check the server logs for details.'
+                      : 'Define zones and click "Run ZBudget" to see charts.'}
                   </Typography>
+                  {fetchError && (
+                    <Typography variant="caption" color="error" sx={{ maxWidth: 500, textAlign: 'center' }}>
+                      {fetchError}
+                    </Typography>
+                  )}
                 </Box>
               ) : budgetAnalysisMode === 'timeseries' ? (
                 /* Time series charts */
