@@ -209,7 +209,7 @@ export function ZBudgetView() {
     setZBudgetZones([]);
   }, [setZBudgetZones]);
 
-  // Run ZBudget: post zones, fetch data, then switch to chart view
+  // Run ZBudget: post zones then switch to chart view (data is fetched by useEffect)
   const handleRunZBudget = useCallback(async () => {
     if (zbudgetZones.length === 0) return;
     setLoading(true);
@@ -222,23 +222,14 @@ export function ZBudgetView() {
       const names = zbudgetZones.map((z) => z.name);
       setZoneNames(names);
       // Always update active zone to first zone (zones may have changed)
-      const activeZone = names.length > 0 ? names[0] : '';
-      setZBudgetActiveZone(activeZone);
-      // Fetch data for first zone and active type
-      if (zbudgetActiveType && activeZone) {
-        const data = await fetchZBudgetData(zbudgetActiveType, activeZone);
-        setUnitsMeta(data.units_metadata);
-        setZbudgetData(data);
-        unitsSynced.current = false;
-      }
-      // Switch to chart view so results are visible
+      setZBudgetActiveZone(names.length > 0 ? names[0] : '');
+      // Switch to chart view — the useEffect will fetch data
       setZBudgetEditMode(false);
     } catch (err) {
-      console.error('Failed to run zbudget:', err);
-    } finally {
+      console.error('Failed to post zone definition:', err);
       setLoading(false);
     }
-  }, [zbudgetZones, zbudgetActiveType, setZBudgetActiveZone, setZBudgetEditMode]);
+  }, [zbudgetZones, setZBudgetActiveZone, setZBudgetEditMode]);
 
   // Reload data when zone or type changes (chart mode)
   useEffect(() => {
