@@ -33,7 +33,10 @@ import { MonthlyPatternChart } from '../BudgetDashboard/MonthlyPatternChart';
 import { ComponentRatioChart } from '../BudgetDashboard/ComponentRatioChart';
 import { CumulativeDepartureChart } from '../BudgetDashboard/CumulativeDepartureChart';
 import { ExceedanceChart } from '../BudgetDashboard/ExceedanceChart';
-import { classifyColumns } from '../BudgetDashboard/budgetSplitter';
+import { classifyZBudgetColumns } from './zbudgetClassifier';
+import type { ZBudgetChartGroup } from './zbudgetClassifier';
+import { InflowOutflowChart } from './InflowOutflowChart';
+import { StorageChangeChart } from './StorageChangeChart';
 import type { ChartGroup } from '../BudgetDashboard/budgetSplitter';
 import {
   convertVolumeValues,
@@ -272,7 +275,7 @@ export function ZBudgetView() {
   // Classify + convert chart data
   const classified = useMemo(
     () => zbudgetData && zbudgetActiveType
-      ? classifyColumns(zbudgetData, zbudgetActiveType)
+      ? classifyZBudgetColumns(zbudgetData, zbudgetActiveType)
       : null,
     [zbudgetData, zbudgetActiveType],
   );
@@ -382,20 +385,47 @@ export function ZBudgetView() {
               ) : budgetAnalysisMode === 'timeseries' ? (
                 /* Time series charts */
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {convertedCharts.map((chart, i) => (
-                    <Box key={i} sx={{ height: 350 }}>
-                      <BudgetChart
-                        data={chart.data}
-                        chartType={chartKinds[i] === 'flow' ? budgetChartType : 'line'}
-                        loading={false}
-                        title={classified?.charts[i]?.title ?? ''}
-                        yAxisLabel={chart.yAxisLabel}
-                        xAxisLabel={xAxisLabel}
-                        partialYearNote={chart.partialYearNote}
-                        onExpand={() => setExpandedChartIndex(i)}
-                      />
-                    </Box>
-                  ))}
+                  {convertedCharts.map((chart, i) => {
+                    const group = classified?.charts[i] as ZBudgetChartGroup | undefined;
+                    const kind = chartKinds[i];
+                    const isInflowOutflow = group?.zbudgetKind === 'inflow_outflow' && budgetChartType === 'bar';
+                    const isStorage = kind === 'storage';
+
+                    return (
+                      <Box key={i} sx={{ height: 350 }}>
+                        {isInflowOutflow ? (
+                          <InflowOutflowChart
+                            data={chart.data}
+                            yAxisLabel={chart.yAxisLabel}
+                            title={group?.title ?? ''}
+                            xAxisLabel={xAxisLabel}
+                            partialYearNote={chart.partialYearNote}
+                            onExpand={() => setExpandedChartIndex(i)}
+                          />
+                        ) : isStorage ? (
+                          <StorageChangeChart
+                            data={chart.data}
+                            yAxisLabel={chart.yAxisLabel}
+                            title={group?.title ?? ''}
+                            xAxisLabel={xAxisLabel}
+                            partialYearNote={chart.partialYearNote}
+                            onExpand={() => setExpandedChartIndex(i)}
+                          />
+                        ) : (
+                          <BudgetChart
+                            data={chart.data}
+                            chartType={kind === 'flow' ? budgetChartType : 'line'}
+                            loading={false}
+                            title={group?.title ?? ''}
+                            yAxisLabel={chart.yAxisLabel}
+                            xAxisLabel={xAxisLabel}
+                            partialYearNote={chart.partialYearNote}
+                            onExpand={() => setExpandedChartIndex(i)}
+                          />
+                        )}
+                      </Box>
+                    );
+                  })}
                 </Box>
               ) : budgetAnalysisMode === 'monthly_pattern' ? (
                 <MonthlyPatternChart
@@ -446,16 +476,44 @@ export function ZBudgetView() {
           >
             <CloseIcon />
           </IconButton>
-          {expandedChartIndex !== null && expandedChartIndex < convertedCharts.length && (
-            <BudgetChart
-              data={convertedCharts[expandedChartIndex].data}
-              chartType={chartKinds[expandedChartIndex] === 'flow' ? budgetChartType : 'line'}
-              loading={false}
-              title={classified?.charts[expandedChartIndex]?.title ?? ''}
-              yAxisLabel={convertedCharts[expandedChartIndex].yAxisLabel}
-              xAxisLabel={xAxisLabel}
-            />
-          )}
+          {expandedChartIndex !== null && expandedChartIndex < convertedCharts.length && (() => {
+            const eGroup = classified?.charts[expandedChartIndex] as ZBudgetChartGroup | undefined;
+            const eKind = chartKinds[expandedChartIndex];
+            const eChart = convertedCharts[expandedChartIndex];
+            const eIsInflowOutflow = eGroup?.zbudgetKind === 'inflow_outflow' && budgetChartType === 'bar';
+            const eIsStorage = eKind === 'storage';
+
+            if (eIsInflowOutflow) {
+              return (
+                <InflowOutflowChart
+                  data={eChart.data}
+                  yAxisLabel={eChart.yAxisLabel}
+                  title={eGroup?.title ?? ''}
+                  xAxisLabel={xAxisLabel}
+                />
+              );
+            }
+            if (eIsStorage) {
+              return (
+                <StorageChangeChart
+                  data={eChart.data}
+                  yAxisLabel={eChart.yAxisLabel}
+                  title={eGroup?.title ?? ''}
+                  xAxisLabel={xAxisLabel}
+                />
+              );
+            }
+            return (
+              <BudgetChart
+                data={eChart.data}
+                chartType={eKind === 'flow' ? budgetChartType : 'line'}
+                loading={false}
+                title={eGroup?.title ?? ''}
+                yAxisLabel={eChart.yAxisLabel}
+                xAxisLabel={xAxisLabel}
+              />
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </Box>
