@@ -118,7 +118,7 @@ export function ZBudgetView() {
     budgetAreaUnit, budgetLengthUnit, budgetTimeAgg,
     budgetAnalysisMode,
     expandedChartIndex, setExpandedChartIndex,
-    setZBudgetTypes, setZBudgetZones, setZBudgetActiveZone,
+    setZBudgetTypes, setZBudgetZones, setZBudgetActiveZone, setZBudgetEditMode,
     setBudgetVolumeUnit, setBudgetAreaUnit,
     setBudgetAnalysisMode,
   } = useViewerStore();
@@ -209,7 +209,7 @@ export function ZBudgetView() {
     setZBudgetZones([]);
   }, [setZBudgetZones]);
 
-  // Run ZBudget: post zones and fetch data
+  // Run ZBudget: post zones, fetch data, then switch to chart view
   const handleRunZBudget = useCallback(async () => {
     if (zbudgetZones.length === 0) return;
     setLoading(true);
@@ -221,22 +221,24 @@ export function ZBudgetView() {
       // Set zone names for the zone selector
       const names = zbudgetZones.map((z) => z.name);
       setZoneNames(names);
-      if (names.length > 0 && !zbudgetActiveZone) {
-        setZBudgetActiveZone(names[0]);
-      }
+      // Always update active zone to first zone (zones may have changed)
+      const activeZone = names.length > 0 ? names[0] : '';
+      setZBudgetActiveZone(activeZone);
       // Fetch data for first zone and active type
-      if (zbudgetActiveType && names.length > 0) {
-        const data = await fetchZBudgetData(zbudgetActiveType, names[0]);
+      if (zbudgetActiveType && activeZone) {
+        const data = await fetchZBudgetData(zbudgetActiveType, activeZone);
         setUnitsMeta(data.units_metadata);
         setZbudgetData(data);
         unitsSynced.current = false;
       }
+      // Switch to chart view so results are visible
+      setZBudgetEditMode(false);
     } catch (err) {
       console.error('Failed to run zbudget:', err);
     } finally {
       setLoading(false);
     }
-  }, [zbudgetZones, zbudgetActiveType, zbudgetActiveZone, setZBudgetActiveZone]);
+  }, [zbudgetZones, zbudgetActiveType, setZBudgetActiveZone, setZBudgetEditMode]);
 
   // Reload data when zone or type changes (chart mode)
   useEffect(() => {
