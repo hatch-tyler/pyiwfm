@@ -9,6 +9,7 @@ Step-by-step tutorials for common pyiwfm workflows.
    reading_models
    building_sample_model
    mesh_generation
+   mixed_mesh
    visualization
    model_comparison
    calibration
@@ -32,6 +33,11 @@ These tutorials walk you through complete workflows using pyiwfm:
 **Mesh Generation**
     Create a finite element mesh from scratch, including defining boundaries,
     adding stream constraints, and refining areas of interest.
+
+**Mixed Triangular-Quadrilateral Mesh**
+    Generate meshes with Gmsh that combine triangles and quadrilaterals.
+    Compare pure triangle, pure quad, and mixed element modes side by side,
+    and visualize element type distributions and area statistics.
 
 **Visualization**
     Export model data for visualization in GIS software, ParaView, and

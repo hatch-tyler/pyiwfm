@@ -107,8 +107,10 @@ class GmshMeshGenerator(MeshGenerator):
                 gmsh.option.setNumber("Mesh.RecombineAll", 1)
                 gmsh.option.setNumber("Mesh.Algorithm", 8)  # Frontal-Delaunay for quads
             elif self.element_type == "mixed":
-                gmsh.option.setNumber("Mesh.RecombineAll", 0)
+                gmsh.option.setNumber("Mesh.RecombineAll", 1)
                 gmsh.option.setNumber("Mesh.RecombinationAlgorithm", 1)  # Blossom
+                # Blossom naturally leaves triangles where quads aren't suitable
+                gmsh.option.setNumber("Mesh.SubdivisionAlgorithm", 0)  # Don't subdivide
 
             # Set minimum angle if specified
             if min_angle is not None:
