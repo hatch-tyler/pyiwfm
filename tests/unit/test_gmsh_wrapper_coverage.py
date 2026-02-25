@@ -113,8 +113,10 @@ class TestGenerateMixed:
             )
             gen.generate(boundary)
 
-        # Verify mixed settings
-        mock_gmsh.option.setNumber.assert_any_call("Mesh.RecombineAll", 0)
+        # Verify mixed settings: Blossom recombination with RecombineAll enabled
+        mock_gmsh.option.setNumber.assert_any_call("Mesh.RecombineAll", 1)
+        mock_gmsh.option.setNumber.assert_any_call("Mesh.RecombinationAlgorithm", 1)
+        mock_gmsh.option.setNumber.assert_any_call("Mesh.SubdivisionAlgorithm", 0)
 
 
 class TestBuildGeometryStreams:
