@@ -90,6 +90,23 @@ This installs:
 
 - scipy >= 1.7
 
+Documentation
+~~~~~~~~~~~~~
+
+For building the Sphinx documentation:
+
+.. code-block:: bash
+
+    pip install pyiwfm[docs]
+
+This installs:
+
+- sphinx
+- pydata-sphinx-theme
+- myst-parser
+- sphinx-design
+- sphinx-copybutton
+
 All Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 

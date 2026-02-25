@@ -11,6 +11,7 @@ Step-by-step tutorials for common pyiwfm workflows.
    mesh_generation
    visualization
    model_comparison
+   calibration
 
 Overview
 --------
@@ -39,6 +40,11 @@ These tutorials walk you through complete workflows using pyiwfm:
 **Model Comparison**
     Compare two model versions, compute performance metrics, and generate
     comparison reports.
+
+**Calibration Workflow**
+    Cluster observation wells, interpolate simulated heads to observation
+    times (IWFM2OBS), compute typical hydrographs (CalcTypHyd), and create
+    publication-quality calibration figures.
 
 Prerequisites
 -------------

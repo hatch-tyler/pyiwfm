@@ -11,6 +11,7 @@ This user guide provides comprehensive documentation for using pyiwfm.
    mesh
    stratigraphy
    io
+   calibration
    web_viewer
    pest
 
@@ -41,6 +42,11 @@ pyiwfm is organized into several main modules:
     Subprocess execution of IWFM executables, scenario management, and complete
     PEST++ calibration interface with parameter estimation, geostatistics,
     ensemble methods, and post-processing.
+
+**Calibration** (``pyiwfm.calibration``)
+    Observation well clustering (fuzzy c-means), time interpolation of
+    simulated heads to observation times (IWFM2OBS), typical hydrograph
+    computation (CalcTypHyd), and publication-quality calibration figures.
 
 **Comparison** (``pyiwfm.comparison``)
     Tools for comparing models and generating reports.

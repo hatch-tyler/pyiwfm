@@ -366,26 +366,31 @@ After running an IWFM simulation, load results for visualization:
    budget_data = reader.read()
    print(f"Budget components: {list(budget_data.keys())}")
 
-The following figures show what C2VSimCG-scale budget plots look like
-(illustrative values -- actual values depend on your simulation results):
+Read budget data directly from C2VSimCG's HDF5 output files and
+visualize:
 
-**Budget bar chart:**
+**Budget bar chart (time-averaged):**
 
 .. code-block:: python
 
+   from pyiwfm.io import BudgetReader
    from pyiwfm.visualization.plotting import plot_budget_bar
 
-   budget_components = {
-       'Deep Percolation': 5_800_000,
-       'Stream Seepage': 2_400_000,
-       'Subsurface Inflow': 800_000,
-       'Pumping': -7_500_000,
-       'Outflow to Streams': -1_200_000,
-       'Subsurface Outflow': -300_000,
-   }
+   reader = BudgetReader("C2VSimCG/Results/GW_Budget.hdf")
+
+   # Read the first location (whole-model summary) as a DataFrame
+   df = reader.get_dataframe(
+       0,
+       volume_factor=2.29568e-05,   # Cubic feet -> acre-feet
+   )
+
+   # Compute time-averaged budget components
+   budget_components = df.drop(columns=["Time"], errors="ignore").mean().to_dict()
+   print(f"Budget components: {list(budget_components.keys())}")
+
    fig, ax = plot_budget_bar(budget_components,
                               title='C2VSimCG Groundwater Budget',
-                              units='AF/year')
+                              units='AF/month')
 
 .. image:: /_static/tutorials/reading_models/budget_bar.png
    :alt: C2VSimCG groundwater budget bar chart
@@ -395,19 +400,18 @@ The following figures show what C2VSimCG-scale budget plots look like
 
 .. code-block:: python
 
-   import numpy as np
    from pyiwfm.visualization.plotting import plot_budget_stacked
 
-   times = np.arange('2005-01-01', '2015-01-01', dtype='datetime64[Y]')
+   # Use the same DataFrame -- extract times and component columns
+   times = df["Time"].values
    components = {
-       'Deep Percolation': 5_800_000 + np.random.normal(0, 400_000, 10),
-       'Stream Seepage': 2_400_000 + np.random.normal(0, 200_000, 10),
-       'Pumping': -(7_500_000 + np.arange(10) * 50_000),
-       'Outflow to Streams': -(1_200_000 + np.random.normal(0, 100_000, 10)),
+       col: df[col].values
+       for col in df.columns if col != "Time"
    }
+
    fig, ax = plot_budget_stacked(times, components,
                                   title='C2VSimCG GW Budget Over Time',
-                                  units='AF/year')
+                                  units='AF/month')
 
 .. image:: /_static/tutorials/reading_models/budget_stacked.png
    :alt: C2VSimCG groundwater budget stacked over time

@@ -268,50 +268,84 @@ def generate_cross_section(model: IWFMModel, output_dir: Path) -> None:
     print("  Saved cross_section.png")
 
 
-def generate_budget_bar(output_dir: Path) -> None:
-    """budget_bar.png -- representative GW budget bar chart at C2VSimCG scale."""
+def _find_budget_file(model_dir: Path) -> Path | None:
+    """Locate a GW budget HDF5 file in the model results."""
+    candidates = [
+        model_dir / "Results" / "GW_Budget.hdf",
+        model_dir / "Results" / "GW_Budget.hdf5",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c
+    # Glob for any GW budget file
+    for p in model_dir.rglob("*GW*Budget*.hdf*"):
+        return p
+    return None
+
+
+def generate_budget_bar(model_dir: Path, output_dir: Path) -> None:
+    """budget_bar.png -- GW budget bar chart from real C2VSimCG data."""
     from pyiwfm.visualization.plotting import plot_budget_bar
 
-    # Illustrative values at C2VSimCG scale (acre-feet / year)
-    budget: dict[str, float] = {
-        "Deep Percolation": 5_800_000.0,
-        "Stream Seepage": 2_400_000.0,
-        "Subsurface Inflow": 800_000.0,
-        "Pumping": -7_500_000.0,
-        "Outflow to Streams": -1_200_000.0,
-        "Subsurface Outflow": -300_000.0,
-    }
-    fig, ax = plot_budget_bar(
-        budget,
-        title="C2VSimCG Groundwater Budget (Illustrative)",
-        units="AF/year",
-    )
+    budget_file = _find_budget_file(model_dir)
+    if budget_file is not None:
+        from pyiwfm.io import BudgetReader
+
+        reader = BudgetReader(budget_file)
+        df = reader.get_dataframe(0, volume_factor=2.29568e-05)
+        budget = df.drop(columns=["Time"], errors="ignore").mean().to_dict()
+        title = "C2VSimCG Groundwater Budget"
+        units = "AF/month"
+    else:
+        print("  WARNING: No GW budget HDF5 found -- using illustrative values")
+        budget = {
+            "Deep Percolation": 5_800_000.0,
+            "Stream Seepage": 2_400_000.0,
+            "Subsurface Inflow": 800_000.0,
+            "Pumping": -7_500_000.0,
+            "Outflow to Streams": -1_200_000.0,
+            "Subsurface Outflow": -300_000.0,
+        }
+        title = "C2VSimCG Groundwater Budget (Illustrative)"
+        units = "AF/year"
+
+    fig, ax = plot_budget_bar(budget, title=title, units=units)
     fig.savefig(output_dir / "budget_bar.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
     print("  Saved budget_bar.png")
 
 
-def generate_budget_stacked(output_dir: Path) -> None:
-    """budget_stacked.png -- budget components over time at C2VSimCG scale."""
+def generate_budget_stacked(model_dir: Path, output_dir: Path) -> None:
+    """budget_stacked.png -- budget components over time from real C2VSimCG data."""
     from pyiwfm.visualization.plotting import plot_budget_stacked
 
-    rng = np.random.default_rng(42)
-    n_years = 10
-    times = np.array([np.datetime64(f"{y}-01-01") for y in range(2005, 2015)])
+    budget_file = _find_budget_file(model_dir)
+    if budget_file is not None:
+        from pyiwfm.io import BudgetReader
 
-    # Illustrative annual values (acre-feet) with realistic variability
-    components = {
-        "Deep Percolation": 5_800_000 + rng.normal(0, 400_000, n_years),
-        "Stream Seepage": 2_400_000 + rng.normal(0, 200_000, n_years),
-        "Pumping": -(7_500_000 + np.arange(n_years) * 50_000 + rng.normal(0, 300_000, n_years)),
-        "Outflow to Streams": -(1_200_000 + rng.normal(0, 100_000, n_years)),
-    }
-    fig, ax = plot_budget_stacked(
-        times,
-        components,
-        title="C2VSimCG Groundwater Budget Over Time (Illustrative)",
-        units="AF/year",
-    )
+        reader = BudgetReader(budget_file)
+        df = reader.get_dataframe(0, volume_factor=2.29568e-05)
+        times = df["Time"].values
+        components = {col: df[col].values for col in df.columns if col != "Time"}
+        title = "C2VSimCG GW Budget Over Time"
+        units = "AF/month"
+    else:
+        print("  WARNING: No GW budget HDF5 found -- using illustrative values")
+        rng = np.random.default_rng(42)
+        n_years = 10
+        times = np.array([np.datetime64(f"{y}-01-01") for y in range(2005, 2015)])
+        components = {
+            "Deep Percolation": 5_800_000 + rng.normal(0, 400_000, n_years),
+            "Stream Seepage": 2_400_000 + rng.normal(0, 200_000, n_years),
+            "Pumping": -(
+                7_500_000 + np.arange(n_years) * 50_000 + rng.normal(0, 300_000, n_years)
+            ),
+            "Outflow to Streams": -(1_200_000 + rng.normal(0, 100_000, n_years)),
+        }
+        title = "C2VSimCG Groundwater Budget Over Time (Illustrative)"
+        units = "AF/year"
+
+    fig, ax = plot_budget_stacked(times, components, title=title, units=units)
     fig.savefig(output_dir / "budget_stacked.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
     print("  Saved budget_stacked.png")
@@ -369,9 +403,9 @@ def main() -> None:
     generate_layer_thickness(model, OUTPUT_DIR)
     generate_cross_section(model, OUTPUT_DIR)
 
-    # Budget figures use illustrative data (no simulation results needed)
-    generate_budget_bar(OUTPUT_DIR)
-    generate_budget_stacked(OUTPUT_DIR)
+    # Budget figures use real C2VSimCG data when available
+    generate_budget_bar(model_dir, OUTPUT_DIR)
+    generate_budget_stacked(model_dir, OUTPUT_DIR)
 
     print(f"\nAll figures saved to {OUTPUT_DIR}")
 

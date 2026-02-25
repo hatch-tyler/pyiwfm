@@ -12,6 +12,8 @@ pyiwfm supports multiple file formats:
 - **Binary**: Fortran unformatted binary files (faster I/O)
 - **HDF5**: Hierarchical data format (efficient for large datasets)
 - **HEC-DSS 7**: Time series data format (optional, requires external library)
+- **SMP**: IWFM observation file format (bore ID, date/time, value, exclusion flag)
+- **SimulationMessages.out**: Parser for IWFM simulation diagnostic output
 
 Complete Model I/O
 ------------------

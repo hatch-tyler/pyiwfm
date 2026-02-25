@@ -700,6 +700,32 @@ Read-only access to the viewer SQLite cache.
    :undoc-members:
    :show-inheritance:
 
+Observation File I/O
+---------------------
+
+SMP Module
+~~~~~~~~~~
+
+Reader and writer for IWFM SMP (Sample/Bore) observation files, the
+standard format for observed and simulated time series at well locations.
+
+.. automodule:: pyiwfm.io.smp
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Simulation Messages
+~~~~~~~~~~~~~~~~~~~
+
+Parser for IWFM ``SimulationMessages.out`` files, extracting messages by
+severity (INFO, WARN, FATAL) and spatial IDs (node, element, reach,
+layer) via regex patterns.
+
+.. automodule:: pyiwfm.io.simulation_messages
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Zone File I/O
 -------------
 

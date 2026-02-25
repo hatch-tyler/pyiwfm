@@ -224,17 +224,18 @@ Compare simulation results using statistical metrics:
 
     from pyiwfm.comparison.metrics import (
         ComparisonMetrics,
-        rmse, mae, nash_sutcliffe, percent_bias
+        rmse, mae, nash_sutcliffe, percent_bias, scaled_rmse,
     )
 
-    # Simulated observed and simulated head data
-    np.random.seed(42)
-    observed_heads = 50 + 10 * np.random.randn(100)
-    simulated_heads = observed_heads + 2 * np.random.randn(100)  # Add some error
+    # Synthetic observed and simulated head data
+    rng = np.random.default_rng(42)
+    observed_heads = 50 + 10 * rng.standard_normal(100)
+    simulated_heads = observed_heads + 2 * rng.standard_normal(100)
 
     # Calculate individual metrics
     print("Individual Metrics:")
     print(f"  RMSE: {rmse(observed_heads, simulated_heads):.3f} ft")
+    print(f"  Scaled RMSE: {scaled_rmse(observed_heads, simulated_heads):.4f}")
     print(f"  MAE: {mae(observed_heads, simulated_heads):.3f} ft")
     print(f"  NSE: {nash_sutcliffe(observed_heads, simulated_heads):.3f}")
     print(f"  PBIAS: {percent_bias(observed_heads, simulated_heads):.2f}%")
@@ -513,7 +514,7 @@ This tutorial covered:
 
 - **Mesh comparison**: Detect node/element changes
 - **Stratigraphy comparison**: Detect layer changes
-- **Performance metrics**: RMSE, MAE, NSE, PBIAS
+- **Performance metrics**: RMSE, Scaled RMSE, MAE, NSE, PBIAS
 - **Time series**: Compare temporal data with residual analysis
 - **Spatial comparison**: Regional analysis of spatial fields
 - **Report generation**: Text, JSON, and HTML reports

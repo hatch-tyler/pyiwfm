@@ -13,5 +13,6 @@ generated from source code docstrings.
    io
    mesh_generation
    visualization
+   calibration
    comparison
    runner
