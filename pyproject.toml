@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyiwfm"
-version = "0.1.0"
+version = "1.0.0"
 description = "Python package for reading, writing, visualizing, and comparing IWFM models"
 readme = "README.md"
 license = "GPL-2.0-only"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["iwfm", "hydrology", "groundwater", "water-resources", "modeling"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Operating System :: OS Independent",

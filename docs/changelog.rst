@@ -6,7 +6,77 @@ All notable changes to pyiwfm will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-[0.4.0] - 2026-XX-XX
+[1.0.0] - 2026-02-24
+--------------------
+
+Calibration Tools, Clustering, and Publication-Quality Plotting
+
+Added
+~~~~~
+
+**SMP Observation File I/O** (``pyiwfm.io.smp``)
+
+- ``SMPReader`` / ``SMPWriter``: Read and write IWFM SMP (Sample/Bore) observation files
+- ``SMPRecord``, ``SMPTimeSeries``: Typed containers for bore ID, datetime, value, exclusion flag
+- Fixed-width parsing with sentinel value (NaN) handling
+
+**SimulationMessages.out Parser** (``pyiwfm.io.simulation_messages``)
+
+- ``SimulationMessagesReader``: Parse IWFM simulation diagnostic output files
+- ``SimulationMessage``: Structured message with severity, procedure, spatial IDs
+- Regex-based extraction of node, element, reach, and layer IDs
+- ``to_geodataframe()``: Map messages to spatial locations for GIS analysis
+
+**IWFM2OBS Time Interpolation** (``pyiwfm.calibration.iwfm2obs``)
+
+- ``interpolate_to_obs_times()``: Linear/nearest interpolation of simulated to observed times
+- ``compute_multilayer_weights()``: Transmissivity-weighted averaging for multi-layer wells
+- ``compute_composite_head()``: Composite head from layer heads using T-weights
+- ``iwfm2obs()``: Complete workflow function matching Fortran IWFM2OBS utility
+
+**Typical Hydrograph Computation** (``pyiwfm.calibration.calctyphyd``)
+
+- ``compute_typical_hydrographs()``: Seasonal averaging + de-meaning + weighted combination
+- ``compute_seasonal_averages()``: Per-well seasonal period averaging
+- ``read_cluster_weights()``: Parse cluster weight files for CalcTypHyd input
+
+**Fuzzy C-Means Clustering** (``pyiwfm.calibration.clustering``)
+
+- ``fuzzy_cmeans_cluster()``: NumPy-only fuzzy c-means with spatial + temporal features
+- ``ClusteringResult``: Membership matrix, cluster centers, fuzzy partition coefficient
+- ``to_weights_file()``: Export weights in CalcTypHyd-compatible format
+- Feature extraction: cross-correlation, amplitude, trend, seasonal strength
+
+**Calibration Plots** (``pyiwfm.visualization.calibration_plots``)
+
+- ``plot_calibration_summary()``: Multi-panel publication figure (1:1, spatial bias, histogram, metrics)
+- ``plot_hydrograph_panel()``: Grid of observed vs simulated hydrographs
+- ``plot_metrics_table()``: Matplotlib table of per-well statistics
+- ``plot_residual_histogram()``: Residual distribution with optional normal fit
+- ``plot_water_budget_summary()`` / ``plot_zbudget_summary()``: Stacked bar budget charts
+- ``plot_cluster_map()``: Spatial cluster membership visualization
+- ``plot_typical_hydrographs()``: Overlay of typical hydrographs by cluster
+
+**New Plot Functions** (``pyiwfm.visualization.plotting``)
+
+- ``plot_one_to_one()``: Scatter with 1:1 line, regression, and metrics text box
+- ``plot_spatial_bias()``: Diverging colormap of observation bias on mesh background
+
+**Publication Matplotlib Style** (``visualization/styles/pyiwfm-publication.mplstyle``)
+
+- Journal-quality defaults: serif fonts, no top/right spines, 300 DPI, constrained layout
+
+**Scaled RMSE Metric** (``pyiwfm.comparison.metrics``)
+
+- ``scaled_rmse()``: Dimensionless RMSE / (max - min) for cross-site comparison
+- Added ``scaled_rmse`` field to ``ComparisonMetrics`` dataclass
+
+**CLI Subcommands**
+
+- ``pyiwfm iwfm2obs``: Time interpolation of simulated to observed SMP times
+- ``pyiwfm calctyphyd``: Compute typical hydrographs from clustered observation wells
+
+[0.4.0] - 2026-01-15
 --------------------
 
 Supplemental Package Support and Web Viewer Enhancements
@@ -190,7 +260,7 @@ Added
 - Added writer_config_base to I/O API docs
 - Added API routes summary to visualization docs
 
-[0.2.0] - 2025-XX-XX
+[0.2.0] - 2025-06-01
 --------------------
 
 Complete IWFM File Writers Implementation
@@ -286,7 +356,7 @@ Changed
 - Updated ``pyiwfm.io.__init__.py`` with all new exports
 - Extended ``pyiwfm.io.preprocessor`` with ``load_complete_model()`` and ``save_complete_model()``
 
-[0.3.0] - 2025-XX-XX
+[0.3.0] - 2025-10-01
 --------------------
 
 PEST++ Calibration Interface, Multi-Scale Viewing, and Subprocess Runner
@@ -423,7 +493,7 @@ Added
 - Auto-detection of preprocessor and simulation files
 - Graceful degradation for missing components
 
-[0.1.0] - 2024-XX-XX
+[0.1.0] - 2024-07-01
 --------------------
 
 Initial release of pyiwfm.

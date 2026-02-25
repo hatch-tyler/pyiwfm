@@ -16,6 +16,7 @@ import h5py
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm import __version__
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.mesh import AppGrid, Element, Node, Subregion
 from pyiwfm.core.model import IWFMModel
@@ -221,7 +222,7 @@ class HDF5ModelWriter:
             {
                 "name": model.name,
                 "created": datetime.now().isoformat(),
-                "pyiwfm_version": "0.1.0",
+                "pyiwfm_version": __version__,
             }
         )
 

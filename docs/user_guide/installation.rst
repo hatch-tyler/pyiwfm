@@ -143,7 +143,7 @@ Verify your installation by importing pyiwfm:
 
     >>> import pyiwfm
     >>> print(pyiwfm.__version__)
-    0.1.0
+    1.0.0
 
 Check available modules:
 
