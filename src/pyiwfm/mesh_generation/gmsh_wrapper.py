@@ -85,6 +85,11 @@ class GmshMeshGenerator(MeshGenerator):
         """
         import gmsh
 
+        # Convert area to characteristic length for mesh sizing
+        char_length: float | None = None
+        if max_area is not None:
+            char_length = math.sqrt(max_area)
+
         # Initialize Gmsh
         gmsh.initialize()
         gmsh.option.setNumber("General.Terminal", 0)  # Suppress output
@@ -93,13 +98,11 @@ class GmshMeshGenerator(MeshGenerator):
             # Create new model
             gmsh.model.add("mesh")
 
-            # Build geometry
-            self._build_geometry(boundary, streams, points, refinement_zones)
+            # Build geometry (pass char_length so boundary points get mesh size)
+            self._build_geometry(boundary, streams, points, refinement_zones, char_length)
 
-            # Set mesh size
-            if max_area is not None:
-                # Convert area to characteristic length
-                char_length = math.sqrt(max_area)
+            # Set global mesh size cap
+            if char_length is not None:
                 gmsh.option.setNumber("Mesh.CharacteristicLengthMax", char_length)
 
             # Set element type options
@@ -121,7 +124,11 @@ class GmshMeshGenerator(MeshGenerator):
             gmsh.model.geo.synchronize()
             gmsh.model.mesh.generate(2)
 
-            # Extract mesh data
+            # Merge duplicate nodes (stream endpoints on boundary edges
+            # can create duplicate Gmsh points at the same location)
+            gmsh.model.mesh.removeDuplicateNodes()
+
+            # Extract mesh data (filters degenerate elements)
             result = self._extract_mesh()
 
             return result
@@ -129,20 +136,103 @@ class GmshMeshGenerator(MeshGenerator):
         finally:
             gmsh.finalize()
 
+    @staticmethod
+    def _insert_stream_points_on_boundary(
+        boundary_verts: list[tuple[float, float]],
+        streams: list[StreamConstraint] | None,
+        tol: float = 1e-6,
+    ) -> list[tuple[float, float]]:
+        """Insert stream endpoints that lie on boundary edges into the vertex list.
+
+        When a stream endpoint falls on a boundary edge (but not at a
+        vertex), the boundary edge must be split so the stream connects
+        to a proper boundary vertex.  This prevents Gmsh from creating
+        large fan-shaped elements around embedded points on edges.
+        """
+        if not streams:
+            return boundary_verts
+
+        # Collect stream endpoints to test
+        edge_points: list[tuple[float, float, int]] = []  # (x, y, edge_index)
+        n = len(boundary_verts)
+
+        for stream in streams:
+            for sx, sy in [
+                (float(stream.vertices[0, 0]), float(stream.vertices[0, 1])),
+                (float(stream.vertices[-1, 0]), float(stream.vertices[-1, 1])),
+            ]:
+                # Skip if already a boundary vertex
+                if any(abs(sx - bx) < tol and abs(sy - by) < tol for bx, by in boundary_verts):
+                    continue
+
+                # Check if on a boundary edge
+                for i in range(n):
+                    x1, y1 = boundary_verts[i]
+                    x2, y2 = boundary_verts[(i + 1) % n]
+                    # Parametric position along edge
+                    dx, dy = x2 - x1, y2 - y1
+                    edge_len_sq = dx * dx + dy * dy
+                    if edge_len_sq < tol * tol:
+                        continue
+                    t = ((sx - x1) * dx + (sy - y1) * dy) / edge_len_sq
+                    if t < tol or t > 1.0 - tol:
+                        continue
+                    # Distance from point to edge
+                    px = x1 + t * dx
+                    py = y1 + t * dy
+                    dist = math.sqrt((sx - px) ** 2 + (sy - py) ** 2)
+                    if dist < tol * math.sqrt(edge_len_sq):
+                        edge_points.append((sx, sy, i))
+                        break
+
+        if not edge_points:
+            return boundary_verts
+
+        # Group insertions by edge, sorted by parameter t (ascending)
+        edge_inserts: dict[int, list[tuple[float, float, float]]] = {}
+        for sx, sy, edge_idx in edge_points:
+            x1, y1 = boundary_verts[edge_idx]
+            x2, y2 = boundary_verts[(edge_idx + 1) % n]
+            dx, dy = x2 - x1, y2 - y1
+            t = ((sx - x1) * dx + (sy - y1) * dy) / (dx * dx + dy * dy)
+            edge_inserts.setdefault(edge_idx, []).append((t, sx, sy))
+
+        for edge_idx in edge_inserts:
+            edge_inserts[edge_idx].sort()
+
+        # Rebuild vertex list with inserted points
+        new_verts: list[tuple[float, float]] = []
+        for i in range(n):
+            new_verts.append(boundary_verts[i])
+            if i in edge_inserts:
+                for _t, sx, sy in edge_inserts[i]:
+                    new_verts.append((sx, sy))
+
+        return new_verts
+
     def _build_geometry(
         self,
         boundary: Boundary,
         streams: list[StreamConstraint] | None = None,
         points: list[PointConstraint] | None = None,
         refinement_zones: list[RefinementZone] | None = None,
+        char_length: float | None = None,
     ) -> None:
         """Build Gmsh geometry from constraints."""
         import gmsh
 
-        # Create boundary points
+        # Insert stream endpoints that lie on boundary edges so the
+        # boundary is properly split (prevents large fan-shaped elements).
+        raw_verts = [(float(x), float(y)) for x, y in boundary.vertices]
+        verts = self._insert_stream_points_on_boundary(raw_verts, streams)
+
+        # Create boundary points (with mesh size if specified)
         boundary_point_ids = []
-        for _i, (x, y) in enumerate(boundary.vertices):
-            pt_id = gmsh.model.geo.addPoint(x, y, 0)
+        for x, y in verts:
+            if char_length is not None:
+                pt_id = gmsh.model.geo.addPoint(x, y, 0, char_length)
+            else:
+                pt_id = gmsh.model.geo.addPoint(x, y, 0)
             boundary_point_ids.append(pt_id)
 
         # Create boundary lines
@@ -180,13 +270,25 @@ class GmshMeshGenerator(MeshGenerator):
         else:
             gmsh.model.geo.addPlaneSurface([boundary_loop])
 
+        # Build map from boundary coordinates to point IDs for reuse
+        coord_to_point: dict[tuple[float, float], int] = {}
+        for idx, (bx, by) in enumerate(verts):
+            coord_to_point[(bx, by)] = boundary_point_ids[idx]
+
         # Add stream constraints as embedded curves
         if streams:
             for stream in streams:
                 stream_point_ids = []
                 for x, y in stream.vertices:
-                    pt_id = gmsh.model.geo.addPoint(x, y, 0)
-                    stream_point_ids.append(pt_id)
+                    fx, fy = float(x), float(y)
+                    # Reuse existing point if stream vertex coincides with boundary
+                    existing_id = coord_to_point.get((fx, fy))
+                    if existing_id is not None:
+                        stream_point_ids.append(existing_id)
+                    else:
+                        pt_id = gmsh.model.geo.addPoint(fx, fy, 0)
+                        coord_to_point[(fx, fy)] = pt_id
+                        stream_point_ids.append(pt_id)
 
                 stream_line_ids = []
                 for i in range(len(stream_point_ids) - 1):
@@ -207,11 +309,12 @@ class GmshMeshGenerator(MeshGenerator):
 
         # Apply refinement zones using mesh size fields
         if refinement_zones:
-            self._apply_refinement_fields(refinement_zones)
+            self._apply_refinement_fields(refinement_zones, char_length)
 
     def _apply_refinement_fields(
         self,
         refinement_zones: list[RefinementZone],
+        max_char_length: float | None = None,
     ) -> None:
         """Apply refinement zones using Gmsh mesh size fields."""
         import gmsh
@@ -219,7 +322,9 @@ class GmshMeshGenerator(MeshGenerator):
         field_ids = []
 
         for _i, zone in enumerate(refinement_zones):
-            char_length = math.sqrt(zone.max_area)
+            zone_char = math.sqrt(zone.max_area)
+            # VOut should not exceed the global char_length
+            v_out = max_char_length if max_char_length is not None else zone_char * 3
 
             if zone.center is not None and zone.radius is not None:
                 # Circular refinement zone using Ball field
@@ -228,11 +333,33 @@ class GmshMeshGenerator(MeshGenerator):
                 gmsh.model.mesh.field.setNumber(field_id, "YCenter", zone.center[1])
                 gmsh.model.mesh.field.setNumber(field_id, "ZCenter", 0)
                 gmsh.model.mesh.field.setNumber(field_id, "Radius", zone.radius)
-                gmsh.model.mesh.field.setNumber(field_id, "VIn", char_length)
-                gmsh.model.mesh.field.setNumber(
-                    field_id, "VOut", char_length * 3
-                )  # Coarser outside
+                gmsh.model.mesh.field.setNumber(field_id, "VIn", zone_char)
+                gmsh.model.mesh.field.setNumber(field_id, "VOut", v_out)
                 field_ids.append(field_id)
+
+            elif zone.polygon is not None:
+                # Polygon refinement zone using Box field on bounding box
+                xmin, ymin = zone.polygon.min(axis=0)
+                xmax, ymax = zone.polygon.max(axis=0)
+                field_id = gmsh.model.mesh.field.add("Box")
+                gmsh.model.mesh.field.setNumber(field_id, "VIn", zone_char)
+                gmsh.model.mesh.field.setNumber(field_id, "VOut", v_out)
+                gmsh.model.mesh.field.setNumber(field_id, "XMin", float(xmin))
+                gmsh.model.mesh.field.setNumber(field_id, "XMax", float(xmax))
+                gmsh.model.mesh.field.setNumber(field_id, "YMin", float(ymin))
+                gmsh.model.mesh.field.setNumber(field_id, "YMax", float(ymax))
+                gmsh.model.mesh.field.setNumber(field_id, "ZMin", -1)
+                gmsh.model.mesh.field.setNumber(field_id, "ZMax", 1)
+                gmsh.model.mesh.field.setNumber(field_id, "Thickness", zone_char)
+                field_ids.append(field_id)
+
+        # Add a constant field at the global char_length so the background
+        # mesh never exceeds the max_area target (setAsBackgroundMesh
+        # overrides Mesh.CharacteristicLengthMax).
+        if max_char_length is not None:
+            const_field = gmsh.model.mesh.field.add("MathEval")
+            gmsh.model.mesh.field.setString(const_field, "F", str(max_char_length))
+            field_ids.append(const_field)
 
         if field_ids:
             # Combine fields using Min
@@ -241,7 +368,7 @@ class GmshMeshGenerator(MeshGenerator):
             gmsh.model.mesh.field.setAsBackgroundMesh(min_field)
 
     def _extract_mesh(self) -> MeshResult:
-        """Extract mesh data from Gmsh."""
+        """Extract mesh data from Gmsh, filtering degenerate elements."""
         import gmsh
 
         # Get nodes
@@ -249,47 +376,53 @@ class GmshMeshGenerator(MeshGenerator):
 
         # Build node array (x, y only, ignore z)
         n_nodes = len(node_tags)
-        nodes = np.zeros((n_nodes, 2))
+        raw_nodes = np.zeros((n_nodes, 2))
 
         # Create mapping from Gmsh node tag to array index
         tag_to_idx = {}
         for i, tag in enumerate(node_tags):
             tag_to_idx[int(tag)] = i
             # Coordinates are interleaved: x, y, z, x, y, z, ...
-            nodes[i, 0] = node_coords[i * 3]
-            nodes[i, 1] = node_coords[i * 3 + 1]
+            raw_nodes[i, 0] = node_coords[i * 3]
+            raw_nodes[i, 1] = node_coords[i * 3 + 1]
 
         # Get elements
         elem_types, elem_tags, elem_node_tags = gmsh.model.mesh.getElements(2)
 
-        # Process elements
-        elements_list = []
+        # Process elements, skipping degenerate ones (duplicate nodes)
+        elements_list: list[list[int]] = []
 
         for etype, etags, enodes in zip(elem_types, elem_tags, elem_node_tags, strict=False):
             if etype == 2:  # Triangle
-                # 3 nodes per triangle
                 n_tri = len(etags)
                 for i in range(n_tri):
-                    tri_nodes = [
-                        tag_to_idx[int(enodes[i * 3])],
-                        tag_to_idx[int(enodes[i * 3 + 1])],
-                        tag_to_idx[int(enodes[i * 3 + 2])],
-                        -1,  # Padding for 4th vertex
-                    ]
-                    elements_list.append(tri_nodes)
+                    n0 = tag_to_idx[int(enodes[i * 3])]
+                    n1 = tag_to_idx[int(enodes[i * 3 + 1])]
+                    n2 = tag_to_idx[int(enodes[i * 3 + 2])]
+                    if n0 == n1 or n1 == n2 or n0 == n2:
+                        continue  # Skip degenerate triangle
+                    elements_list.append([n0, n1, n2, -1])
 
             elif etype == 3:  # Quad
-                # 4 nodes per quad
                 n_quad = len(etags)
                 for i in range(n_quad):
-                    quad_nodes = [
-                        tag_to_idx[int(enodes[i * 4])],
-                        tag_to_idx[int(enodes[i * 4 + 1])],
-                        tag_to_idx[int(enodes[i * 4 + 2])],
-                        tag_to_idx[int(enodes[i * 4 + 3])],
-                    ]
-                    elements_list.append(quad_nodes)
+                    n0 = tag_to_idx[int(enodes[i * 4])]
+                    n1 = tag_to_idx[int(enodes[i * 4 + 1])]
+                    n2 = tag_to_idx[int(enodes[i * 4 + 2])]
+                    n3 = tag_to_idx[int(enodes[i * 4 + 3])]
+                    if len({n0, n1, n2, n3}) < 4:
+                        continue  # Skip degenerate quad
+                    elements_list.append([n0, n1, n2, n3])
 
         elements = np.array(elements_list, dtype=np.int32)
+
+        # Compact: keep only nodes referenced by elements
+        used_nodes = np.unique(elements[elements >= 0])
+        old_to_new = np.full(n_nodes, -1, dtype=np.int32)
+        for new_idx, old_idx in enumerate(used_nodes):
+            old_to_new[old_idx] = new_idx
+
+        nodes = raw_nodes[used_nodes]
+        elements = np.where(elements >= 0, old_to_new[elements], -1).astype(np.int32)
 
         return MeshResult(nodes=nodes, elements=elements)
