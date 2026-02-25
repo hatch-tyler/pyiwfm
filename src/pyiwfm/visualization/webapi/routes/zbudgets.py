@@ -6,10 +6,12 @@ from __future__ import annotations
 
 import logging
 import math
+import tempfile
+from pathlib import Path
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
 from pyiwfm.visualization.webapi.config import model_state
 
@@ -301,6 +303,124 @@ def get_zone_definition() -> dict | None:
         "extent": zone_def.extent,
         "name": zone_def.name,
         "n_zones": zone_def.n_zones,
+    }
+
+
+@router.post("/upload-zones")
+async def upload_zone_file(
+    file: UploadFile = File(...),
+    name_field: str | None = Query(default=None, description="Attribute field to use as zone name"),
+) -> dict:
+    """Upload a shapefile (.zip) or GeoJSON to define zones via spatial join.
+
+    Returns attribute fields and a preview of zones with matched element IDs.
+    """
+    if not model_state.is_loaded or model_state.model is None:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    try:
+        import geopandas as gpd
+        from shapely.geometry import Point
+        from shapely import STRtree
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail="geopandas and shapely are required for zone upload",
+        ) from e
+
+    # Save uploaded file to temp
+    suffix = Path(file.filename or "upload").suffix.lower()
+    if suffix not in (".zip", ".geojson", ".json"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type '{suffix}'. Use .zip (shapefile), .geojson, or .json.",
+        )
+
+    contents = await file.read()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+
+    try:
+        gdf = gpd.read_file(tmp_path)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}") from e
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+    if gdf.empty:
+        raise HTTPException(status_code=400, detail="Uploaded file contains no features")
+
+    # Reproject to WGS84 if needed
+    if gdf.crs is not None and not gdf.crs.equals("EPSG:4326"):
+        gdf = gdf.to_crs("EPSG:4326")
+
+    # Identify usable string/object fields for zone naming
+    fields = [
+        col for col in gdf.columns
+        if col != "geometry" and gdf[col].dtype in ("object", "str", "string", "int64", "float64")
+    ]
+
+    # Pick default name field
+    default_field = name_field or (fields[0] if fields else "")
+
+    # Build element centroids as shapely Points (WGS84)
+    grid = model_state.model.grid
+    if grid is None:
+        raise HTTPException(status_code=404, detail="No grid available")
+
+    transformer = model_state._transformer
+    if transformer is None:
+        try:
+            import pyproj
+
+            transformer = pyproj.Transformer.from_crs(
+                model_state._crs, "EPSG:4326", always_xy=True
+            )
+            model_state._transformer = transformer
+        except ImportError:
+            transformer = None
+
+    elem_ids: list[int] = []
+    elem_points: list[Point] = []
+    for eid in sorted(grid.elements.keys()):
+        elem = grid.elements[eid]
+        node_ids = elem.vertices
+        if not node_ids:
+            continue
+        cx = sum(grid.nodes[nid].x for nid in node_ids) / len(node_ids)
+        cy = sum(grid.nodes[nid].y for nid in node_ids) / len(node_ids)
+        if transformer is not None:
+            lng, lat = transformer.transform(cx, cy)
+        else:
+            lng, lat = cx, cy
+        elem_ids.append(eid)
+        elem_points.append(Point(lng, lat))
+
+    # Spatial join using STRtree for efficiency
+    tree = STRtree(elem_points)
+    zones: list[dict] = []
+
+    for idx, row in gdf.iterrows():
+        geom = row.geometry
+        if geom is None or geom.is_empty:
+            continue
+
+        zone_name = str(row[default_field]) if default_field and default_field in row.index else f"Zone {idx}"
+        matched_indices = tree.query(geom, predicate="intersects")
+        matched_elem_ids = [elem_ids[i] for i in matched_indices]
+
+        zones.append({
+            "id": len(zones) + 1,
+            "name": zone_name,
+            "elements": matched_elem_ids,
+            "n_elements": len(matched_elem_ids),
+        })
+
+    return {
+        "fields": fields,
+        "default_field": default_field,
+        "zones": zones,
     }
 
 

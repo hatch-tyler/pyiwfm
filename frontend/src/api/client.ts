@@ -1480,3 +1480,38 @@ export async function fetchZBudgetGlossary(): Promise<Record<string, Record<stri
   }
   return response.json();
 }
+
+// ===================================================================
+// ZBudget Zone File Upload API
+// ===================================================================
+
+export interface ZoneUploadPreviewZone {
+  id: number;
+  name: string;
+  elements: number[];
+  n_elements: number;
+}
+
+export interface ZoneUploadPreview {
+  fields: string[];
+  default_field: string;
+  zones: ZoneUploadPreviewZone[];
+}
+
+export async function uploadZoneFile(
+  file: File,
+  nameField?: string,
+): Promise<ZoneUploadPreview> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const params = new URLSearchParams();
+  if (nameField) params.set('name_field', nameField);
+  const qs = params.toString();
+  const url = `${API_BASE}/zbudgets/upload-zones${qs ? `?${qs}` : ''}`;
+  const response = await fetch(url, { method: 'POST', body: formData });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Upload failed: ${detail}`);
+  }
+  return response.json();
+}

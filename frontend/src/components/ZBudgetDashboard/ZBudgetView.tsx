@@ -28,6 +28,8 @@ import type {
 } from '../../api/client';
 import { ZBudgetControls } from './ZBudgetControls';
 import { ZoneMap } from './ZoneMap';
+import { ZoneUploadDialog } from './ZoneUploadDialog';
+import type { SelectionMode } from './ZoneSelectionToolbar';
 import { BudgetChart } from '../BudgetDashboard/BudgetChart';
 import { MonthlyPatternChart } from '../BudgetDashboard/MonthlyPatternChart';
 import { ComponentRatioChart } from '../BudgetDashboard/ComponentRatioChart';
@@ -134,6 +136,8 @@ export function ZBudgetView() {
   const [unitsMeta, setUnitsMeta] = useState<BudgetUnitsMetadata | undefined>(undefined);
   const [zoneNames, setZoneNames] = useState<string[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('point');
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const unitsSynced = useRef(false);
   const skipNextFetch = useRef(false);
 
@@ -173,9 +177,38 @@ export function ZBudgetView() {
     unitsSynced.current = true;
   }, [unitsMeta, setBudgetVolumeUnit, setBudgetAreaUnit]);
 
-  // Handle element click: assign to active paint zone
-  const handleElementClick = useCallback((elementId: number) => {
+  // Precompute element centroids from GeoJSON for spatial selection
+  const elementCentroids = useMemo(() => {
+    const map = new Map<number, [number, number]>();
+    if (!geojson) return map;
+    for (const f of geojson.features) {
+      const props = f.properties as Record<string, unknown>;
+      const elemId = props?.element_id as number;
+      if (!elemId) continue;
+      const coords = (f.geometry as GeoJSON.Polygon).coordinates[0];
+      let sumLng = 0, sumLat = 0;
+      for (const [lng, lat] of coords) {
+        sumLng += lng;
+        sumLat += lat;
+      }
+      map.set(elemId, [sumLng / coords.length, sumLat / coords.length]);
+    }
+    return map;
+  }, [geojson]);
+
+  // Handle element click: assign to active paint zone (Ctrl+click deselects)
+  const handleElementClick = useCallback((elementId: number, ctrlKey: boolean) => {
     const current = useViewerStore.getState().zbudgetZones;
+    if (ctrlKey) {
+      // Deselect: remove element from whichever zone it belongs to
+      const next = current.map((z) => ({
+        ...z,
+        elements: z.elements.filter((e) => e !== elementId),
+      }));
+      setZBudgetZones(next);
+      return;
+    }
+    // Normal click: remove from all zones, add to paint zone
     const next = current.map((z) => ({
       ...z,
       elements: z.elements.filter((e) => e !== elementId),
@@ -186,6 +219,26 @@ export function ZBudgetView() {
     }
     setZBudgetZones(next);
   }, [zbudgetPaintZoneId, setZBudgetZones]);
+
+  // Handle shape selection (rectangle/polygon): batch-assign to paint zone
+  const handleShapeSelect = useCallback((elementIds: number[]) => {
+    const current = useViewerStore.getState().zbudgetZones;
+    const idSet = new Set(elementIds);
+    const next = current.map((z) => ({
+      ...z,
+      elements: z.elements.filter((e) => !idSet.has(e)),
+    }));
+    const target = next.find((z) => z.id === zbudgetPaintZoneId);
+    if (target) {
+      target.elements = [...target.elements, ...elementIds];
+    }
+    setZBudgetZones(next);
+  }, [zbudgetPaintZoneId, setZBudgetZones]);
+
+  // Handle zones imported from file upload
+  const handleZonesImported = useCallback((zones: ZoneInfo[]) => {
+    setZBudgetZones(zones);
+  }, [setZBudgetZones]);
 
   // Zone management callbacks
   const handleAddZone = useCallback(() => {
@@ -338,7 +391,12 @@ export function ZBudgetView() {
                 geojson={geojson}
                 zones={zbudgetZones}
                 paintZoneId={zbudgetPaintZoneId}
+                selectionMode={selectionMode}
+                onSelectionModeChange={setSelectionMode}
                 onElementClick={handleElementClick}
+                onShapeSelect={handleShapeSelect}
+                elementCentroids={elementCentroids}
+                onUploadClick={() => setUploadDialogOpen(true)}
               />
             ) : (
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -466,6 +524,13 @@ export function ZBudgetView() {
           </>
         )}
       </Box>
+
+      {/* Zone file upload dialog */}
+      <ZoneUploadDialog
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        onZonesImported={handleZonesImported}
+      />
 
       {/* Fullscreen chart dialog */}
       <Dialog fullScreen open={expandedChartIndex !== null} onClose={() => setExpandedChartIndex(null)}>
