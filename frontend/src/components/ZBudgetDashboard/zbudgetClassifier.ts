@@ -30,14 +30,17 @@ export function classifyColumnSign(name: string): ColumnSign {
   return 'neutral';
 }
 
-/** True if the column is a storage term (Storage (+/-) or Absolute Storage). */
+/** True if the column is a storage term (Storage (+/-), Absolute Storage, or bare "Storage"). */
 export function isZBudgetStorageColumn(name: string): boolean {
-  const l = name.toLowerCase();
-  return (
-    (l.includes('storage') && l.includes('(+/)')) ||
-    (l.includes('storage') && l.includes('(+/-)')) ||
-    l.includes('absolute storage')
-  );
+  const l = name.toLowerCase().trim();
+  // Match "Storage (+/-)", "Absolute Storage", or bare "Storage"
+  if (l.includes('absolute storage')) return true;
+  if (l.includes('storage') && l.includes('(+/-)')) return true;
+  // Bare "storage" as the entire name (not partial match like "Storage Change")
+  if (l === 'storage') return true;
+  // "Storage" with any sign suffix
+  if (l.includes('storage') && (l.includes('(+)') || l.includes('(-)') || l.includes('(+/'))) return true;
+  return false;
 }
 
 /** True if the column is cumulative subsidence. */
@@ -127,12 +130,15 @@ function classifyGWZBudget(data: BudgetData): ZBudgetClassifiedBudget {
     (c) => !isZBudgetStorageColumn(c.name) && !isZBudgetCumulativeSubsidence(c.name),
   );
 
+  // Only tag as inflow_outflow when columns have sign suffixes
+  const hasSigns = flowCols.some((c) => classifyColumnSign(c.name) !== 'neutral');
+
   if (flowCols.length > 0) {
     charts.push({
       title: 'Flow Components',
       data: { location: data.location, times: data.times, columns: flowCols },
       chartKind: 'flow' as ChartKind,
-      zbudgetKind: 'inflow_outflow',
+      ...(hasSigns ? { zbudgetKind: 'inflow_outflow' as const } : {}),
     });
   }
 
@@ -197,12 +203,14 @@ function classifyRootZoneZBudget(data: BudgetData): ZBudgetClassifiedBudget {
       (c) => !isAreaColumn(c.name) && !isZBudgetStorageColumn(c.name),
     );
 
+    const prefixHasSigns = flowCols.some((c) => classifyColumnSign(c.name) !== 'neutral');
+
     if (flowCols.length > 0) {
       charts.push({
         title: `${label} Flow Components`,
         data: { location: data.location, times: data.times, columns: flowCols },
         chartKind: 'flow' as ChartKind,
-        zbudgetKind: 'inflow_outflow',
+        ...(prefixHasSigns ? { zbudgetKind: 'inflow_outflow' as const } : {}),
       });
     }
 
@@ -233,12 +241,14 @@ function classifyRootZoneZBudget(data: BudgetData): ZBudgetClassifiedBudget {
     (c) => !isZBudgetStorageColumn(c.name) && !isAreaColumn(c.name),
   );
 
+  const unprefixedHasSigns = unprefixedFlow.some((c) => classifyColumnSign(c.name) !== 'neutral');
+
   if (unprefixedFlow.length > 0) {
     charts.push({
       title: 'Other Flow Components',
       data: { location: data.location, times: data.times, columns: unprefixedFlow },
       chartKind: 'flow' as ChartKind,
-      zbudgetKind: 'inflow_outflow',
+      ...(unprefixedHasSigns ? { zbudgetKind: 'inflow_outflow' as const } : {}),
     });
   }
   if (unprefixedStorage.length > 0) {
@@ -279,14 +289,10 @@ export function classifyZBudgetColumns(
   data: BudgetData,
   budgetType: string,
 ): ZBudgetClassifiedBudget {
-  // Only apply sign-aware classification if columns have sign suffixes
-  if (!hasSignSuffixes(data)) {
-    const result = classifyColumns(data, budgetType);
-    return { charts: result.charts };
-  }
-
   const category = detectCategory(budgetType);
 
+  // Always use ZBudget-aware classifiers for known budget types —
+  // they handle storage separation regardless of sign suffixes.
   switch (category) {
     case 'gw':
     case 'unsaturated':
@@ -294,8 +300,12 @@ export function classifyZBudgetColumns(
     case 'rootzone':
       return classifyRootZoneZBudget(data);
     default: {
-      // For other types with sign suffixes, still apply GW-style classification
-      return classifyGWZBudget(data);
+      // For unknown types, check if columns have sign suffixes to decide
+      if (hasSignSuffixes(data)) {
+        return classifyGWZBudget(data);
+      }
+      const result = classifyColumns(data, budgetType);
+      return { charts: result.charts };
     }
   }
 }
