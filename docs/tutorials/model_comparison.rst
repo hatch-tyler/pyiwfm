@@ -107,6 +107,61 @@ Let's create two versions of a model - an "original" and a "modified" version:
     print(f"Original: {grid1.n_nodes} nodes, {grid1.n_elements} elements")
     print(f"Modified: {grid2.n_nodes} nodes, {grid2.n_elements} elements")
 
+.. plot::
+   :context:
+   :nofigs:
+   :include-source: False
+
+   import numpy as np
+   import matplotlib.pyplot as plt
+   from pyiwfm.core.mesh import AppGrid, Node, Element
+   from pyiwfm.core.stratigraphy import Stratigraphy
+   from pyiwfm.visualization.plotting import plot_mesh
+
+   def create_base_model():
+       nodes = {}
+       node_id = 1
+       for j in range(4):
+           for i in range(4):
+               is_boundary = (i == 0 or i == 3 or j == 0 or j == 3)
+               nodes[node_id] = Node(
+                   id=node_id, x=float(i * 100), y=float(j * 100),
+                   is_boundary=is_boundary,
+               )
+               node_id += 1
+       elements = {}
+       elem_id = 1
+       for j in range(3):
+           for i in range(3):
+               n1 = j * 4 + i + 1
+               elements[elem_id] = Element(
+                   id=elem_id, vertices=(n1, n1 + 1, n1 + 5, n1 + 4),
+                   subregion=1,
+               )
+               elem_id += 1
+       grid = AppGrid(nodes=nodes, elements=elements)
+       grid.compute_connectivity()
+       return grid
+
+   def create_modified_model():
+       grid = create_base_model()
+       grid.nodes[6] = Node(id=6, x=105.0, y=105.0, is_boundary=False)
+       grid.nodes[17] = Node(id=17, x=350.0, y=150.0, is_boundary=True)
+       grid.elements[5] = Element(
+           id=5, vertices=grid.elements[5].vertices, subregion=2,
+       )
+       return grid
+
+   grid1 = create_base_model()
+   grid2 = create_modified_model()
+
+   # Synthetic time-series data for residual plots
+   times = np.arange(365)
+   observed = 50 + 10 * np.sin(times * 2 * np.pi / 365)
+   rng = np.random.default_rng(42)
+   simulated = observed + 2 * rng.standard_normal(365)
+   residuals = simulated - observed
+
 Part 1: Comparing Meshes
 ------------------------
 
@@ -459,53 +514,50 @@ Part 8: Visualizing Differences
 
 Visualize the comparison results:
 
-.. code-block:: python
+.. plot::
+   :context: close-figs
 
-    import matplotlib.pyplot as plt
-    from pyiwfm.visualization.plotting import plot_mesh
+   # Create side-by-side comparison plot
+   fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-    # Create side-by-side comparison plot
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+   # Original model
+   plot_mesh(grid1, ax=axes[0], show_edges=True, fill_color="lightblue")
+   axes[0].set_title("Original Model")
 
-    # Original model
-    plot_mesh(grid1, ax=axes[0], show_edges=True, fill_color="lightblue")
-    axes[0].set_title("Original Model")
+   # Modified model
+   plot_mesh(grid2, ax=axes[1], show_edges=True, fill_color="lightgreen")
+   axes[1].set_title("Modified Model")
 
-    # Modified model
-    plot_mesh(grid2, ax=axes[1], show_edges=True, fill_color="lightgreen")
-    axes[1].set_title("Modified Model")
-
-    plt.tight_layout()
-    fig.savefig("model_comparison.png", dpi=150)
-    plt.close(fig)
+   plt.tight_layout()
+   plt.show()
 
 Plotting Residuals
 ~~~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+.. plot::
+   :context: close-figs
 
-    # Time series residual plot
-    fig, axes = plt.subplots(2, 1, figsize=(12, 8))
+   # Time series residual plot
+   fig, axes = plt.subplots(2, 1, figsize=(12, 8))
 
-    # Time series plot
-    axes[0].plot(times, observed, 'b-', label='Observed', alpha=0.7)
-    axes[0].plot(times, simulated, 'r--', label='Simulated', alpha=0.7)
-    axes[0].set_xlabel('Day of Year')
-    axes[0].set_ylabel('Head (ft)')
-    axes[0].legend()
-    axes[0].set_title('Time Series Comparison')
+   # Time series plot
+   axes[0].plot(times, observed, 'b-', label='Observed', alpha=0.7)
+   axes[0].plot(times, simulated, 'r--', label='Simulated', alpha=0.7)
+   axes[0].set_xlabel('Day of Year')
+   axes[0].set_ylabel('Head (ft)')
+   axes[0].legend()
+   axes[0].set_title('Time Series Comparison')
 
-    # Residuals plot
-    axes[1].plot(times, residuals, 'g-', alpha=0.7)
-    axes[1].axhline(y=0, color='k', linestyle='-', linewidth=0.5)
-    axes[1].fill_between(times, residuals, 0, alpha=0.3)
-    axes[1].set_xlabel('Day of Year')
-    axes[1].set_ylabel('Residual (ft)')
-    axes[1].set_title('Residuals (Simulated - Observed)')
+   # Residuals plot
+   axes[1].plot(times, residuals, 'g-', alpha=0.7)
+   axes[1].axhline(y=0, color='k', linestyle='-', linewidth=0.5)
+   axes[1].fill_between(times, residuals, 0, alpha=0.3)
+   axes[1].set_xlabel('Day of Year')
+   axes[1].set_ylabel('Residual (ft)')
+   axes[1].set_title('Residuals (Simulated - Observed)')
 
-    plt.tight_layout()
-    fig.savefig("residuals.png", dpi=150)
-    plt.close(fig)
+   plt.tight_layout()
+   plt.show()
 
 Summary
 -------

@@ -249,6 +249,19 @@ style (serif fonts, no top/right spines, 300 DPI).
    )
    fig.savefig("one_to_one.png", dpi=300)
 
+.. plot::
+   :include-source: False
+
+   import numpy as np
+   from pyiwfm.visualization.plotting import plot_one_to_one
+   rng = np.random.default_rng(42)
+   obs = 50 + 30 * rng.standard_normal(120)
+   sim = obs + 3 * rng.standard_normal(120) + 1.5
+   fig, ax = plot_one_to_one(
+       obs, sim, show_metrics=True, show_identity=True,
+       show_regression=True, title="Head Calibration", units="ft",
+   )
+
 **Residual Histogram:**
 
 .. code-block:: python
@@ -261,6 +274,15 @@ style (serif fonts, no top/right spines, 300 DPI).
        show_normal_fit=True,
    )
    fig.savefig("residual_hist.png", dpi=300)
+
+.. plot::
+   :include-source: False
+
+   import numpy as np
+   from pyiwfm.visualization.calibration_plots import plot_residual_histogram
+   rng = np.random.default_rng(42)
+   residuals = 1.5 + 3 * rng.standard_normal(120)
+   fig, ax = plot_residual_histogram(residuals, show_normal_fit=True)
 
 **Multi-panel Calibration Summary:**
 
@@ -278,6 +300,19 @@ style (serif fonts, no top/right spines, 300 DPI).
        output_dir=Path("calibration_plots"),
        dpi=300,
    )
+
+.. plot::
+   :include-source: False
+
+   import numpy as np
+   from pyiwfm.visualization.calibration_plots import plot_calibration_summary
+   rng = np.random.default_rng(42)
+   well_comparisons = {}
+   for name in ["WELL-001", "WELL-002", "WELL-003", "WELL-004", "WELL-005"]:
+       obs = 50 + 30 * rng.standard_normal(80)
+       sim = obs + rng.uniform(1, 4) * rng.standard_normal(80) + rng.uniform(-2, 2)
+       well_comparisons[name] = (obs, sim)
+   figures = plot_calibration_summary(well_comparisons)
 
 **Hydrograph Panel (grid of obs vs sim):**
 
@@ -297,6 +332,21 @@ style (serif fonts, no top/right spines, 300 DPI).
        output_path=Path("hydrographs.png"),
    )
 
+.. plot::
+   :include-source: False
+
+   import numpy as np
+   from pyiwfm.visualization.calibration_plots import plot_hydrograph_panel
+   rng = np.random.default_rng(42)
+   times = np.arange("2000-01-01", "2005-01-01", dtype="datetime64[M]")
+   comparisons = {}
+   for name in ["WELL-001", "WELL-002", "WELL-003", "WELL-004", "WELL-005", "WELL-006"]:
+       base = 50 + 10 * rng.standard_normal()
+       obs = base + 5 * np.sin(np.linspace(0, 8 * np.pi, len(times))) + rng.standard_normal(len(times))
+       sim = obs + rng.uniform(1, 3) * rng.standard_normal(len(times)) + rng.uniform(-1, 1)
+       comparisons[name] = (times, obs, sim)
+   fig = plot_hydrograph_panel(comparisons, n_cols=3, max_panels=6)
+
 **Metrics Table:**
 
 .. code-block:: python
@@ -309,6 +359,20 @@ style (serif fonts, no top/right spines, 300 DPI).
    }
 
    fig = plot_metrics_table(metrics_by_well, output_path=Path("metrics.png"))
+
+.. plot::
+   :include-source: False
+
+   import numpy as np
+   from pyiwfm.comparison.metrics import ComparisonMetrics
+   from pyiwfm.visualization.calibration_plots import plot_metrics_table
+   rng = np.random.default_rng(42)
+   metrics_by_well = {}
+   for name in ["WELL-001", "WELL-002", "WELL-003", "WELL-004", "WELL-005"]:
+       obs = 50 + 30 * rng.standard_normal(100)
+       sim = obs + rng.uniform(1, 5) * rng.standard_normal(100) + rng.uniform(-2, 2)
+       metrics_by_well[name] = ComparisonMetrics.compute(obs, sim)
+   fig = plot_metrics_table(metrics_by_well)
 
 **Spatial Bias Map:**
 
@@ -325,6 +389,41 @@ style (serif fonts, no top/right spines, 300 DPI).
    )
    fig.savefig("spatial_bias.png", dpi=300)
 
+.. plot::
+   :include-source: False
+
+   import numpy as np
+   from pyiwfm.core.mesh import AppGrid, Node, Element
+   from pyiwfm.visualization.plotting import plot_spatial_bias
+
+   nodes = {}
+   nid = 1
+   for j in range(5):
+       for i in range(5):
+           nodes[nid] = Node(id=nid, x=float(i * 250), y=float(j * 250),
+                             is_boundary=(i == 0 or i == 4 or j == 0 or j == 4))
+           nid += 1
+   elements = {}
+   eid = 1
+   for j in range(4):
+       for i in range(4):
+           n1 = j * 5 + i + 1
+           elements[eid] = Element(id=eid, vertices=(n1, n1 + 1, n1 + 6, n1 + 5),
+                                   subregion=1)
+           eid += 1
+   grid = AppGrid(nodes=nodes, elements=elements)
+   grid.compute_connectivity()
+
+   rng = np.random.default_rng(42)
+   n_obs = 8
+   x_obs = rng.uniform(100, 900, n_obs)
+   y_obs = rng.uniform(100, 900, n_obs)
+   bias = rng.uniform(-5, 5, n_obs)
+   fig, ax = plot_spatial_bias(
+       grid, x_obs, y_obs, bias, show_mesh=True,
+       cmap="RdBu_r", title="Mean Bias (Simulated - Observed)", units="ft",
+   )
+
 **Cluster Map:**
 
 .. code-block:: python
@@ -338,6 +437,50 @@ style (serif fonts, no top/right spines, 300 DPI).
    )
    fig.savefig("cluster_map.png", dpi=300)
 
+.. plot::
+   :include-source: False
+
+   import numpy as np
+   from pyiwfm.core.mesh import AppGrid, Node, Element
+   from pyiwfm.calibration.clustering import ClusteringResult
+   from pyiwfm.visualization.calibration_plots import plot_cluster_map
+
+   nodes = {}
+   nid = 1
+   for j in range(5):
+       for i in range(5):
+           nodes[nid] = Node(id=nid, x=float(i * 250), y=float(j * 250),
+                             is_boundary=(i == 0 or i == 4 or j == 0 or j == 4))
+           nid += 1
+   elements = {}
+   eid = 1
+   for j in range(4):
+       for i in range(4):
+           n1 = j * 5 + i + 1
+           elements[eid] = Element(id=eid, vertices=(n1, n1 + 1, n1 + 6, n1 + 5),
+                                   subregion=1)
+           eid += 1
+   grid = AppGrid(nodes=nodes, elements=elements)
+   grid.compute_connectivity()
+
+   rng = np.random.default_rng(42)
+   n_wells = 10
+   well_ids = [f"WELL-{i+1:03d}" for i in range(n_wells)]
+   well_locations = {
+       wid: (rng.uniform(100, 900), rng.uniform(100, 900))
+       for wid in well_ids
+   }
+   n_clusters = 3
+   raw = rng.dirichlet(np.ones(n_clusters), size=n_wells)
+   result = ClusteringResult(
+       membership=raw,
+       cluster_centers=rng.standard_normal((n_clusters, 4)),
+       well_ids=well_ids,
+       n_clusters=n_clusters,
+       fpc=0.82,
+   )
+   fig, ax = plot_cluster_map(well_locations, result, grid=grid)
+
 **Typical Hydrographs by Cluster:**
 
 .. code-block:: python
@@ -346,6 +489,33 @@ style (serif fonts, no top/right spines, 300 DPI).
 
    fig, ax = plot_typical_hydrographs(typ_result)
    fig.savefig("typical_hydrographs.png", dpi=300)
+
+.. plot::
+   :include-source: False
+
+   import numpy as np
+   from pyiwfm.calibration.calctyphyd import TypicalHydrograph, CalcTypHydResult
+   from pyiwfm.visualization.calibration_plots import plot_typical_hydrographs
+
+   times = np.array(["2000-02-15", "2000-05-15", "2000-08-15", "2000-11-15"],
+                    dtype="datetime64")
+   rng = np.random.default_rng(42)
+   hydrographs = []
+   for cid in range(3):
+       seasonal = np.array([2.0, -1.5, -3.0, 1.5]) * (1 + 0.3 * rng.standard_normal())
+       seasonal += 0.5 * rng.standard_normal(4)
+       wells = [f"WELL-{i+1:03d}" for i in range(cid * 3, cid * 3 + 4)]
+       hydrographs.append(TypicalHydrograph(
+           cluster_id=cid,
+           times=times,
+           values=seasonal,
+           contributing_wells=wells,
+       ))
+   typ_result = CalcTypHydResult(
+       hydrographs=hydrographs,
+       well_means={f"WELL-{i+1:03d}": 50 + 10 * rng.standard_normal() for i in range(12)},
+   )
+   fig, ax = plot_typical_hydrographs(typ_result)
 
 Step 7: Parse SimulationMessages.out
 --------------------------------------
