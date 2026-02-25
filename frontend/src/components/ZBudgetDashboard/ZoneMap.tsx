@@ -2,6 +2,10 @@
  * ZoneMap: deck.gl element map for interactive zone assignment.
  * Supports point-click, rectangle drag-select, and polygon draw-select.
  * Ctrl+click deselects (removes element from its zone).
+ *
+ * Architecture: the SVG overlay is purely visual (pointerEvents: 'none').
+ * A transparent interaction div sits on top for drawing events and forwards
+ * wheel events to the deck.gl canvas so zoom always works.
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -73,24 +77,38 @@ export function ZoneMap({
     };
   }, []);
 
-  // Drawing state for rectangle
-  const [rectStart, setRectStart] = useState<[number, number] | null>(null);
-  const [rectEnd, setRectEnd] = useState<[number, number] | null>(null);
-  const isDrawingRect = useRef(false);
+  // ---- Drawing state using refs (synchronous) + state (for visual render) ----
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Drawing state for polygon
-  const [polyVertices, setPolyVertices] = useState<[number, number][]>([]);
+  // Rectangle
+  const rectStartRef = useRef<[number, number] | null>(null);
+  const rectEndRef = useRef<[number, number] | null>(null);
+  const isDrawingRect = useRef(false);
+  const [rectVisual, setRectVisual] = useState<{ start: [number, number]; end: [number, number] } | null>(null);
+
+  // Polygon
+  const polyVertsRef = useRef<[number, number][]>([]);
+  const [polyVisual, setPolyVisual] = useState<[number, number][]>([]);
   const [polyPreviewPt, setPolyPreviewPt] = useState<[number, number] | null>(null);
 
-  // Container ref for measuring SVG overlay size
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Stable ref for viewState so screenToGeo never uses a stale closure
+  const viewStateRef = useRef(viewState);
+  viewStateRef.current = viewState;
+
+  // Stable refs for callbacks that need latest values without re-creating
+  const elementCentroidsRef = useRef(elementCentroids);
+  elementCentroidsRef.current = elementCentroids;
+  const onShapeSelectRef = useRef(onShapeSelect);
+  onShapeSelectRef.current = onShapeSelect;
 
   // Reset drawing state when mode changes
   useEffect(() => {
-    setRectStart(null);
-    setRectEnd(null);
+    rectStartRef.current = null;
+    rectEndRef.current = null;
     isDrawingRect.current = false;
-    setPolyVertices([]);
+    setRectVisual(null);
+    polyVertsRef.current = [];
+    setPolyVisual([]);
     setPolyPreviewPt(null);
   }, [selectionMode]);
 
@@ -126,15 +144,37 @@ export function ZoneMap({
     }));
   }, [geojson]);
 
-  // Screen-to-geo coordinate conversion using current viewState
+  // Screen-to-geo coordinate conversion (reads from ref, never stale)
   const screenToGeo = useCallback((screenX: number, screenY: number): [number, number] => {
     const el = containerRef.current;
     const width = el?.clientWidth ?? 800;
     const height = el?.clientHeight ?? 600;
-    const vp = new WebMercatorViewport({ ...viewState, width, height });
+    const vs = viewStateRef.current;
+    const vp = new WebMercatorViewport({ ...vs, width, height });
     const [lng, lat] = vp.unproject([screenX, screenY]);
     return [lng, lat];
-  }, [viewState]);
+  }, []);
+
+  // Forward wheel events from the interaction overlay to the deck.gl canvas
+  const handleOverlayWheel = useCallback((e: React.WheelEvent) => {
+    const canvas = containerRef.current?.querySelector('canvas');
+    if (canvas) {
+      canvas.dispatchEvent(new WheelEvent('wheel', {
+        deltaX: e.deltaX,
+        deltaY: e.deltaY,
+        deltaMode: e.deltaMode,
+        clientX: e.clientX,
+        clientY: e.clientY,
+        screenX: e.screenX,
+        screenY: e.screenY,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
+        bubbles: true,
+      }));
+    }
+  }, []);
 
   // Point-mode click handler for deck.gl
   const handleClick = useCallback((info: PickingInfo) => {
@@ -148,83 +188,98 @@ export function ZoneMap({
     }
   }, [onElementClick, selectionMode]);
 
-  // --- Rectangle drawing handlers ---
+  // Helper: get mouse position relative to interaction overlay
+  const getRelPos = (e: React.MouseEvent | React.PointerEvent): [number, number] => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top];
+  };
+
+  // ---- Rectangle drawing handlers ----
   const handleRectPointerDown = useCallback((e: React.PointerEvent) => {
     if (selectionMode !== 'rectangle') return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setRectStart([x, y]);
-    setRectEnd([x, y]);
+    const pt = getRelPos(e);
+    rectStartRef.current = pt;
+    rectEndRef.current = pt;
     isDrawingRect.current = true;
+    setRectVisual({ start: pt, end: pt });
   }, [selectionMode]);
 
   const handleRectPointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDrawingRect.current) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setRectEnd([x, y]);
+    const pt = getRelPos(e);
+    rectEndRef.current = pt;
+    setRectVisual({ start: rectStartRef.current!, end: pt });
   }, []);
 
   const handleRectPointerUp = useCallback(() => {
-    if (!isDrawingRect.current || !rectStart || !rectEnd) return;
+    if (!isDrawingRect.current) return;
     isDrawingRect.current = false;
 
+    const start = rectStartRef.current;
+    const end = rectEndRef.current;
+    if (!start || !end) { setRectVisual(null); return; }
+
     // Convert screen corners to geo
-    const [lng1, lat1] = screenToGeo(rectStart[0], rectStart[1]);
-    const [lng2, lat2] = screenToGeo(rectEnd[0], rectEnd[1]);
+    const [lng1, lat1] = screenToGeo(start[0], start[1]);
+    const [lng2, lat2] = screenToGeo(end[0], end[1]);
 
     const minLng = Math.min(lng1, lng2);
     const maxLng = Math.max(lng1, lng2);
     const minLat = Math.min(lat1, lat2);
     const maxLat = Math.max(lat1, lat2);
 
-    const ids = elementsInRect(elementCentroids, minLng, minLat, maxLng, maxLat);
+    const ids = elementsInRect(elementCentroidsRef.current, minLng, minLat, maxLng, maxLat);
     if (ids.length > 0) {
-      onShapeSelect(ids);
+      onShapeSelectRef.current(ids);
     }
 
-    setRectStart(null);
-    setRectEnd(null);
-  }, [rectStart, rectEnd, screenToGeo, elementCentroids, onShapeSelect]);
+    rectStartRef.current = null;
+    rectEndRef.current = null;
+    setRectVisual(null);
+  }, [screenToGeo]);
 
-  // --- Polygon drawing handlers ---
+  // ---- Polygon drawing handlers ----
   const handlePolySvgClick = useCallback((e: React.MouseEvent) => {
     if (selectionMode !== 'polygon') return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setPolyVertices((prev) => [...prev, [x, y]]);
+    const pt = getRelPos(e);
+    polyVertsRef.current = [...polyVertsRef.current, pt];
+    setPolyVisual([...polyVertsRef.current]);
   }, [selectionMode]);
 
   const handlePolySvgMouseMove = useCallback((e: React.MouseEvent) => {
-    if (selectionMode !== 'polygon' || polyVertices.length === 0) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setPolyPreviewPt([x, y]);
-  }, [selectionMode, polyVertices.length]);
+    if (selectionMode !== 'polygon' || polyVertsRef.current.length === 0) return;
+    setPolyPreviewPt(getRelPos(e));
+  }, [selectionMode]);
 
   const handlePolyDoubleClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (selectionMode !== 'polygon' || polyVertices.length < 3) return;
+    if (selectionMode !== 'polygon') return;
 
-    // The double-click fires two clicks before this event, so the last vertex
-    // is a duplicate from the second click. Pop it.
-    const verts = polyVertices.slice(0, -1);
+    // Double-click fires two clicks first, so the last vertex is a duplicate.
+    // We need at least 3 real vertices (the 4th is the duplicate from 2nd click).
+    const allVerts = polyVertsRef.current;
+    if (allVerts.length < 4) { // 3 real + 1 duplicate
+      polyVertsRef.current = [];
+      setPolyVisual([]);
+      setPolyPreviewPt(null);
+      return;
+    }
+
+    // Remove the duplicate last vertex from the second click
+    const verts = allVerts.slice(0, -1);
 
     // Convert screen vertices to geo
     const geoVerts = verts.map(([sx, sy]) => screenToGeo(sx, sy));
-    const ids = elementsInPolygon(elementCentroids, geoVerts);
+    const ids = elementsInPolygon(elementCentroidsRef.current, geoVerts);
     if (ids.length > 0) {
-      onShapeSelect(ids);
+      onShapeSelectRef.current(ids);
     }
 
-    setPolyVertices([]);
+    polyVertsRef.current = [];
+    setPolyVisual([]);
     setPolyPreviewPt(null);
-  }, [selectionMode, polyVertices, screenToGeo, elementCentroids, onShapeSelect]);
+  }, [selectionMode, screenToGeo]);
 
   const layers = useMemo(() => {
     if (!geojson) return [];
@@ -283,8 +338,8 @@ export function ZoneMap({
       ? `Drag a rectangle to select elements. Paint zone: ${paintZoneId}`
       : `Click to add vertices, double-click to close. Paint zone: ${paintZoneId}`;
 
-  // Determine whether the SVG drawing overlay should intercept pointer events
   const isDrawingMode = selectionMode !== 'point';
+  const noZones = zones.length === 0;
 
   return (
     <Box ref={containerRef} sx={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -292,13 +347,38 @@ export function ZoneMap({
         viewState={viewState}
         onViewStateChange={({ viewState: vs }) => setViewState(vs as ViewState)}
         layers={layers}
-        controller={isDrawingMode ? { dragPan: false, doubleClickZoom: false } : true}
+        controller={isDrawingMode
+          ? { scrollZoom: true, dragPan: false, doubleClickZoom: false, dragRotate: false }
+          : true
+        }
         getCursor={() => (selectionMode === 'point' ? 'pointer' : 'crosshair')}
       >
         <Map mapStyle={mapStyle} />
       </DeckGL>
 
-      {/* SVG drawing overlay for rectangle/polygon modes */}
+      {/* Interaction overlay: captures drawing events, forwards wheel to deck.gl */}
+      {isDrawingMode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            zIndex: 4,
+            cursor: 'crosshair',
+          }}
+          onWheel={handleOverlayWheel}
+          onPointerDown={selectionMode === 'rectangle' ? handleRectPointerDown : undefined}
+          onPointerMove={selectionMode === 'rectangle' ? handleRectPointerMove : undefined}
+          onPointerUp={selectionMode === 'rectangle' ? handleRectPointerUp : undefined}
+          onClick={selectionMode === 'polygon' ? handlePolySvgClick : undefined}
+          onMouseMove={selectionMode === 'polygon' ? handlePolySvgMouseMove : undefined}
+          onDoubleClick={selectionMode === 'polygon' ? handlePolyDoubleClick : undefined}
+        />
+      )}
+
+      {/* SVG visual overlay: purely for rendering shapes, no event handling */}
       {isDrawingMode && (
         <svg
           style={{
@@ -308,22 +388,16 @@ export function ZoneMap({
             width: '100%',
             height: '100%',
             zIndex: 5,
-            cursor: 'crosshair',
+            pointerEvents: 'none',
           }}
-          onPointerDown={selectionMode === 'rectangle' ? handleRectPointerDown : undefined}
-          onPointerMove={selectionMode === 'rectangle' ? handleRectPointerMove : undefined}
-          onPointerUp={selectionMode === 'rectangle' ? handleRectPointerUp : undefined}
-          onClick={selectionMode === 'polygon' ? handlePolySvgClick : undefined}
-          onMouseMove={selectionMode === 'polygon' ? handlePolySvgMouseMove : undefined}
-          onDoubleClick={selectionMode === 'polygon' ? handlePolyDoubleClick : undefined}
         >
           {/* Rectangle preview */}
-          {selectionMode === 'rectangle' && rectStart && rectEnd && (
+          {selectionMode === 'rectangle' && rectVisual && (
             <rect
-              x={Math.min(rectStart[0], rectEnd[0])}
-              y={Math.min(rectStart[1], rectEnd[1])}
-              width={Math.abs(rectEnd[0] - rectStart[0])}
-              height={Math.abs(rectEnd[1] - rectStart[1])}
+              x={Math.min(rectVisual.start[0], rectVisual.end[0])}
+              y={Math.min(rectVisual.start[1], rectVisual.end[1])}
+              width={Math.abs(rectVisual.end[0] - rectVisual.start[0])}
+              height={Math.abs(rectVisual.end[1] - rectVisual.start[1])}
               fill="rgba(25, 118, 210, 0.15)"
               stroke="#1976d2"
               strokeWidth={2}
@@ -332,20 +406,18 @@ export function ZoneMap({
           )}
 
           {/* Polygon preview */}
-          {selectionMode === 'polygon' && polyVertices.length > 0 && (
+          {selectionMode === 'polygon' && polyVisual.length > 0 && (
             <>
-              {/* Edges between placed vertices */}
               <polyline
-                points={polyVertices.map(([x, y]) => `${x},${y}`).join(' ')}
+                points={polyVisual.map(([x, y]) => `${x},${y}`).join(' ')}
                 fill="none"
                 stroke="#1976d2"
                 strokeWidth={2}
               />
-              {/* Preview edge to cursor */}
               {polyPreviewPt && (
                 <line
-                  x1={polyVertices[polyVertices.length - 1][0]}
-                  y1={polyVertices[polyVertices.length - 1][1]}
+                  x1={polyVisual[polyVisual.length - 1][0]}
+                  y1={polyVisual[polyVisual.length - 1][1]}
                   x2={polyPreviewPt[0]}
                   y2={polyPreviewPt[1]}
                   stroke="#1976d2"
@@ -353,29 +425,26 @@ export function ZoneMap({
                   strokeDasharray="4 2"
                 />
               )}
-              {/* Closing edge preview (from cursor to first vertex) when 3+ vertices */}
-              {polyPreviewPt && polyVertices.length >= 2 && (
+              {polyPreviewPt && polyVisual.length >= 2 && (
                 <line
                   x1={polyPreviewPt[0]}
                   y1={polyPreviewPt[1]}
-                  x2={polyVertices[0][0]}
-                  y2={polyVertices[0][1]}
+                  x2={polyVisual[0][0]}
+                  y2={polyVisual[0][1]}
                   stroke="#1976d2"
                   strokeWidth={1}
                   strokeDasharray="4 2"
                   opacity={0.5}
                 />
               )}
-              {/* Shaded fill preview */}
-              {polyVertices.length >= 2 && polyPreviewPt && (
+              {polyVisual.length >= 2 && polyPreviewPt && (
                 <polygon
-                  points={[...polyVertices, polyPreviewPt].map(([x, y]) => `${x},${y}`).join(' ')}
+                  points={[...polyVisual, polyPreviewPt].map(([x, y]) => `${x},${y}`).join(' ')}
                   fill="rgba(25, 118, 210, 0.1)"
                   stroke="none"
                 />
               )}
-              {/* Vertex dots */}
-              {polyVertices.map(([x, y], i) => (
+              {polyVisual.map(([x, y], i) => (
                 <circle key={i} cx={x} cy={y} r={4} fill="#1976d2" />
               ))}
             </>
@@ -388,6 +457,7 @@ export function ZoneMap({
         mode={selectionMode}
         onModeChange={onSelectionModeChange}
         onUploadClick={onUploadClick}
+        disabled={noZones}
       />
 
       {/* Active paint zone indicator */}
@@ -396,7 +466,7 @@ export function ZoneMap({
         borderRadius: 1, px: 1.5, py: 0.5, pointerEvents: 'none',
       }}>
         <Typography variant="caption">
-          {helpText}
+          {noZones ? 'Add a zone first, then select elements.' : helpText}
         </Typography>
       </Box>
 

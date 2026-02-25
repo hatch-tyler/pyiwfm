@@ -10,7 +10,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import CropSquareIcon from '@mui/icons-material/CropSquare';
-import PentagonIcon from '@mui/icons-material/Pentagon';
+import PolylineIcon from '@mui/icons-material/Polyline';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 
 export type SelectionMode = 'point' | 'rectangle' | 'polygon';
@@ -19,9 +19,10 @@ interface ZoneSelectionToolbarProps {
   mode: SelectionMode;
   onModeChange: (mode: SelectionMode) => void;
   onUploadClick: () => void;
+  disabled?: boolean;
 }
 
-export function ZoneSelectionToolbar({ mode, onModeChange, onUploadClick }: ZoneSelectionToolbarProps) {
+export function ZoneSelectionToolbar({ mode, onModeChange, onUploadClick, disabled }: ZoneSelectionToolbarProps) {
   return (
     <Box sx={{
       position: 'absolute',
@@ -49,14 +50,14 @@ export function ZoneSelectionToolbar({ mode, onModeChange, onUploadClick }: Zone
             <TouchAppIcon fontSize="small" />
           </Tooltip>
         </ToggleButton>
-        <ToggleButton value="rectangle">
-          <Tooltip title="Rectangle select (drag)">
+        <ToggleButton value="rectangle" disabled={disabled}>
+          <Tooltip title={disabled ? 'Add a zone first' : 'Rectangle select (drag)'}>
             <CropSquareIcon fontSize="small" />
           </Tooltip>
         </ToggleButton>
-        <ToggleButton value="polygon">
-          <Tooltip title="Polygon select (click vertices, double-click to close)">
-            <PentagonIcon fontSize="small" />
+        <ToggleButton value="polygon" disabled={disabled}>
+          <Tooltip title={disabled ? 'Add a zone first' : 'Polygon select (click vertices, double-click to close)'}>
+            <PolylineIcon fontSize="small" />
           </Tooltip>
         </ToggleButton>
       </ToggleButtonGroup>
