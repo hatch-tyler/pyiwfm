@@ -157,6 +157,8 @@ class AvailableResults(BaseModel):
     has_stream_hydrographs: bool = False
     n_budget_types: int = 0
     budget_types: list[str] = []
+    n_zbudget_types: int = 0
+    zbudget_types: list[str] = []
 
 
 class ModelSummary(BaseModel):
@@ -471,6 +473,14 @@ def get_model_summary() -> ModelSummary:
         if budget_types:
             available.n_budget_types = len(budget_types)
             available.budget_types = budget_types
+    except Exception:
+        pass
+
+    try:
+        zbudget_types = model_state.get_available_zbudgets()
+        if zbudget_types:
+            available.n_zbudget_types = len(zbudget_types)
+            available.zbudget_types = zbudget_types
     except Exception:
         pass
 

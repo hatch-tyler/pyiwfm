@@ -11,7 +11,7 @@ import Divider from '@mui/material/Divider';
 import { useViewerStore } from '../../stores/viewerStore';
 
 export default function InfoPanel() {
-  const { modelInfo, bounds, isLoading, error } = useViewerStore();
+  const { modelInfo, isLoading, error } = useViewerStore();
 
   if (isLoading) {
     return (
@@ -35,11 +35,7 @@ export default function InfoPanel() {
 
   return (
     <Paper sx={{ p: 2 }} elevation={1}>
-      <Typography variant="h6" gutterBottom>
-        {modelInfo.name}
-      </Typography>
-
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Chip
           label={`${modelInfo.n_nodes.toLocaleString()} nodes`}
           size="small"
@@ -81,16 +77,6 @@ export default function InfoPanel() {
         </>
       )}
 
-      {bounds && (
-        <>
-          <Divider sx={{ my: 1 }} />
-          <Typography variant="caption" color="text.secondary">
-            Bounds: X [{bounds.xmin.toFixed(0)} - {bounds.xmax.toFixed(0)}],
-            Y [{bounds.ymin.toFixed(0)} - {bounds.ymax.toFixed(0)}],
-            Z [{bounds.zmin.toFixed(0)} - {bounds.zmax.toFixed(0)}]
-          </Typography>
-        </>
-      )}
     </Paper>
   );
 }

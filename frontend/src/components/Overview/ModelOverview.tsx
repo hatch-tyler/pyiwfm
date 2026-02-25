@@ -72,9 +72,6 @@ export function ModelOverview() {
 
   return (
     <Box sx={{ p: 3, overflowY: 'auto', height: '100%' }}>
-      <Typography variant="h5" gutterBottom>
-        {summary.name}
-      </Typography>
       {summary.source && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Source: {summary.source}
@@ -282,6 +279,12 @@ export function ModelOverview() {
                   ? summary.available_results.budget_types.join(', ')
                   : 'None'}
               />
+              <StatLine
+                label="Z-Budget Types"
+                value={summary.available_results.n_zbudget_types > 0
+                  ? summary.available_results.zbudget_types.join(', ')
+                  : 'None'}
+              />
               {summary.available_results.has_head_data && (
                 <Button
                   size="small"
@@ -298,6 +301,15 @@ export function ModelOverview() {
                   onClick={() => setActiveTab(3)}
                 >
                   View Budgets
+                </Button>
+              )}
+              {summary.available_results.n_zbudget_types > 0 && (
+                <Button
+                  size="small"
+                  sx={{ mt: 1, ml: 1 }}
+                  onClick={() => setActiveTab(4)}
+                >
+                  View Z-Budgets
                 </Button>
               )}
             </CardContent>

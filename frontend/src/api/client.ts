@@ -122,6 +122,8 @@ export interface AvailableResultsSummary {
   has_stream_hydrographs: boolean;
   n_budget_types: number;
   budget_types: string[];
+  n_zbudget_types: number;
+  zbudget_types: string[];
 }
 
 export interface ModelSummary {
