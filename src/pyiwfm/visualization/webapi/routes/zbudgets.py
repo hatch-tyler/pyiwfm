@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, HTTPException, Query, UploadFile
 
 from pyiwfm.visualization.webapi.config import model_state
 
@@ -308,7 +308,7 @@ def get_zone_definition() -> dict | None:
 
 @router.post("/upload-zones")
 async def upload_zone_file(
-    file: UploadFile = File(...),
+    file: UploadFile,
     name_field: str | None = Query(default=None, description="Attribute field to use as zone name"),
 ) -> dict:
     """Upload a shapefile (.zip) or GeoJSON to define zones via spatial join.
@@ -320,8 +320,8 @@ async def upload_zone_file(
 
     try:
         import geopandas as gpd
-        from shapely.geometry import Point
         from shapely import STRtree
+        from shapely.geometry import Point
     except ImportError as e:
         raise HTTPException(
             status_code=500,
@@ -357,7 +357,8 @@ async def upload_zone_file(
 
     # Identify usable string/object fields for zone naming
     fields = [
-        col for col in gdf.columns
+        col
+        for col in gdf.columns
         if col != "geometry" and gdf[col].dtype in ("object", "str", "string", "int64", "float64")
     ]
 
@@ -374,9 +375,7 @@ async def upload_zone_file(
         try:
             import pyproj
 
-            transformer = pyproj.Transformer.from_crs(
-                model_state._crs, "EPSG:4326", always_xy=True
-            )
+            transformer = pyproj.Transformer.from_crs(model_state._crs, "EPSG:4326", always_xy=True)
             model_state._transformer = transformer
         except ImportError:
             transformer = None
@@ -406,16 +405,22 @@ async def upload_zone_file(
         if geom is None or geom.is_empty:
             continue
 
-        zone_name = str(row[default_field]) if default_field and default_field in row.index else f"Zone {idx}"
+        zone_name = (
+            str(row[default_field])
+            if default_field and default_field in row.index
+            else f"Zone {idx}"
+        )
         matched_indices = tree.query(geom, predicate="intersects")
         matched_elem_ids = [elem_ids[i] for i in matched_indices]
 
-        zones.append({
-            "id": len(zones) + 1,
-            "name": zone_name,
-            "elements": matched_elem_ids,
-            "n_elements": len(matched_elem_ids),
-        })
+        zones.append(
+            {
+                "id": len(zones) + 1,
+                "name": zone_name,
+                "elements": matched_elem_ids,
+                "n_elements": len(matched_elem_ids),
+            }
+        )
 
     return {
         "fields": fields,
