@@ -106,6 +106,8 @@ This installs:
 - myst-parser
 - sphinx-design
 - sphinx-copybutton
+- triangle (for mesh generation tutorial plots)
+- gmsh (for mesh generation tutorial plots)
 
 All Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~~

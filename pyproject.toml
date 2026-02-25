@@ -76,6 +76,8 @@ docs = [
     "sphinx-design>=0.5",
     "myst-parser>=2.0",
     "numpydoc>=1.6",
+    "triangle>=20220202",
+    "gmsh>=4.11",
 ]
 all = [
     "pyiwfm[mesh,viz,webapi,pest]",
