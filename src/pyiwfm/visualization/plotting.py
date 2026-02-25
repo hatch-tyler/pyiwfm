@@ -2817,8 +2817,12 @@ def plot_one_to_one(
             f"r = {metrics.correlation:.3f}"
         )
         ax.text(
-            0.05, 0.95, text, transform=ax.transAxes,
-            verticalalignment="top", fontsize=8,
+            0.05,
+            0.95,
+            text,
+            transform=ax.transAxes,
+            verticalalignment="top",
+            fontsize=8,
             bbox={"boxstyle": "round,pad=0.4", "facecolor": "wheat", "alpha": 0.8},
         )
 
@@ -2895,8 +2899,16 @@ def plot_spatial_bias(
         vmax = float(np.max(bias))
 
     scatter = ax.scatter(
-        x, y, c=bias, s=60, cmap=cmap, vmin=vmin, vmax=vmax,
-        edgecolors="black", linewidths=0.5, zorder=5,
+        x,
+        y,
+        c=bias,
+        s=60,
+        cmap=cmap,
+        vmin=vmin,
+        vmax=vmax,
+        edgecolors="black",
+        linewidths=0.5,
+        zorder=5,
     )
 
     unit_str = f" ({units})" if units else ""

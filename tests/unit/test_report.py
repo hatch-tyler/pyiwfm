@@ -635,6 +635,7 @@ class TestHtmlReportExtended:
             correlation=0.99,
             max_error=0.02,
             n_points=100,
+            scaled_rmse=0.001,
         )
         report = HtmlReport()
         content = report.generate_metrics_report(m_excellent)
@@ -651,6 +652,7 @@ class TestHtmlReportExtended:
             correlation=0.9,
             max_error=1.0,
             n_points=100,
+            scaled_rmse=0.05,
         )
         content_good = report.generate_metrics_report(m_good)
         assert "GOOD" in content_good
@@ -666,6 +668,7 @@ class TestHtmlReportExtended:
             correlation=0.8,
             max_error=2.0,
             n_points=100,
+            scaled_rmse=0.1,
         )
         content_fair = report.generate_metrics_report(m_fair)
         assert "FAIR" in content_fair
@@ -681,6 +684,7 @@ class TestHtmlReportExtended:
             correlation=0.5,
             max_error=10.0,
             n_points=100,
+            scaled_rmse=0.5,
         )
         content_poor = report.generate_metrics_report(m_poor)
         assert "POOR" in content_poor
