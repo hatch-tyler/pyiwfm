@@ -40,7 +40,10 @@ try:
         plot_lakes,
         plot_mesh,
         plot_nodes,
+        # Calibration plotting
+        plot_one_to_one,
         plot_scalar_field,
+        plot_spatial_bias,
         plot_streamflow_hydrograph,
         plot_streams,
         plot_streams_colored,
@@ -78,6 +81,9 @@ except ImportError:
     plot_water_balance = None  # type: ignore
     plot_zbudget = None  # type: ignore
     plot_budget_timeseries = None  # type: ignore
+    # Calibration plotting
+    plot_one_to_one = None  # type: ignore
+    plot_spatial_bias = None  # type: ignore
 
 __all__ = [
     # Export classes
@@ -108,4 +114,7 @@ __all__ = [
     "plot_water_balance",
     "plot_zbudget",
     "plot_budget_timeseries",
+    # Calibration plotting
+    "plot_one_to_one",
+    "plot_spatial_bias",
 ]

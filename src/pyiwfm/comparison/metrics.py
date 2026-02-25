@@ -14,6 +14,7 @@ Metric Functions
 - :func:`percent_bias`: Percent Bias (PBIAS)
 - :func:`correlation_coefficient`: Pearson correlation
 - :func:`max_error`: Maximum absolute error
+- :func:`scaled_rmse`: Scaled RMSE (dimensionless)
 
 Classes
 -------
@@ -212,6 +213,31 @@ def max_error(
     return float(np.max(np.abs(simulated - observed)))
 
 
+def scaled_rmse(
+    observed: NDArray[np.float64],
+    simulated: NDArray[np.float64],
+) -> float:
+    """
+    Calculate Scaled Root Mean Square Error.
+
+    SRMSE = RMSE / (max(obs) - min(obs))
+
+    A dimensionless metric that allows comparison across sites with
+    different magnitudes. Values closer to 0 indicate better fit.
+
+    Args:
+        observed: Observed values
+        simulated: Simulated values
+
+    Returns:
+        Scaled RMSE value. Returns inf if observed range is zero.
+    """
+    obs_range = float(np.max(observed) - np.min(observed))
+    if obs_range == 0.0:
+        return float("inf")
+    return rmse(observed, simulated) / obs_range
+
+
 @dataclass
 class ComparisonMetrics:
     """
@@ -225,6 +251,7 @@ class ComparisonMetrics:
         percent_bias: Percent Bias
         correlation: Pearson correlation coefficient
         max_error: Maximum absolute error
+        scaled_rmse: Scaled RMSE (dimensionless)
         n_points: Number of data points
     """
 
@@ -235,6 +262,7 @@ class ComparisonMetrics:
     percent_bias: float
     correlation: float
     max_error: float
+    scaled_rmse: float
     n_points: int
 
     @classmethod
@@ -266,6 +294,7 @@ class ComparisonMetrics:
             percent_bias=percent_bias(obs_clean, sim_clean),
             correlation=correlation_coefficient(obs_clean, sim_clean),
             max_error=max_error(obs_clean, sim_clean),
+            scaled_rmse=scaled_rmse(obs_clean, sim_clean),
             n_points=len(obs_clean),
         )
 
@@ -284,6 +313,7 @@ class ComparisonMetrics:
             "percent_bias": self.percent_bias,
             "correlation": self.correlation,
             "max_error": self.max_error,
+            "scaled_rmse": self.scaled_rmse,
             "n_points": self.n_points,
         }
 
@@ -298,6 +328,7 @@ class ComparisonMetrics:
             "Comparison Metrics",
             "=" * 30,
             f"RMSE:            {self.rmse:.4f}",
+            f"Scaled RMSE:     {self.scaled_rmse:.4f}",
             f"MAE:             {self.mae:.4f}",
             f"MBE:             {self.mbe:.4f}",
             f"Nash-Sutcliffe:  {self.nash_sutcliffe:.4f}",

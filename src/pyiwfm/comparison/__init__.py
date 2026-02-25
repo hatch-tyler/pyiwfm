@@ -22,6 +22,7 @@ from pyiwfm.comparison.metrics import (
     percent_bias,
     relative_error,
     rmse,
+    scaled_rmse,
 )
 from pyiwfm.comparison.report import (
     ComparisonReport,
@@ -55,6 +56,7 @@ __all__ = [
     "percent_bias",
     "relative_error",
     "rmse",
+    "scaled_rmse",
     # Report
     "ComparisonReport",
     "HtmlReport",

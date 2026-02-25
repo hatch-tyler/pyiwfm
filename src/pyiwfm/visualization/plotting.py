@@ -2715,3 +2715,196 @@ def plot_cross_section_location(
         )
 
     return fig, ax
+
+
+# ---------------------------------------------------------------------------
+# Calibration Plotting Functions
+# ---------------------------------------------------------------------------
+
+
+@_with_style(CHART_STYLE)
+def plot_one_to_one(
+    observed: NDArray[np.float64],
+    simulated: NDArray[np.float64],
+    ax: Axes | None = None,
+    color_by: NDArray[np.float64] | None = None,
+    show_metrics: bool = True,
+    show_identity: bool = True,
+    show_regression: bool = True,
+    title: str | None = None,
+    units: str = "",
+    figsize: tuple[float, float] = (8, 8),
+) -> tuple[Figure, Axes]:
+    """Plot a 1:1 comparison of observed vs simulated values.
+
+    Parameters
+    ----------
+    observed : NDArray[np.float64]
+        Observed values.
+    simulated : NDArray[np.float64]
+        Simulated values.
+    ax : Axes | None
+        Existing axes to plot on.
+    color_by : NDArray[np.float64] | None
+        Optional array to color scatter points by.
+    show_metrics : bool
+        Show a text box with RMSE, NSE, etc.
+    show_identity : bool
+        Show the 1:1 identity line.
+    show_regression : bool
+        Show a linear regression line.
+    title : str | None
+        Plot title.
+    units : str
+        Unit label for axes.
+    figsize : tuple[float, float]
+        Figure size.
+
+    Returns
+    -------
+    tuple[Figure, Axes]
+        The figure and axes.
+    """
+    from pyiwfm.comparison.metrics import ComparisonMetrics
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()  # type: ignore[assignment]
+
+    # Remove NaNs
+    mask = ~(np.isnan(observed) | np.isnan(simulated))
+    obs = observed[mask]
+    sim = simulated[mask]
+
+    # Scatter plot
+    if color_by is not None:
+        cb = color_by[mask]
+        scatter = ax.scatter(obs, sim, c=cb, s=20, alpha=0.7, edgecolors="none")
+        fig.colorbar(scatter, ax=ax, shrink=0.8)
+    else:
+        ax.scatter(obs, sim, s=20, alpha=0.7, edgecolors="none", color="steelblue")
+
+    # Axis limits (equal, with padding)
+    all_vals = np.concatenate([obs, sim])
+    vmin, vmax = float(np.min(all_vals)), float(np.max(all_vals))
+    pad = (vmax - vmin) * 0.05
+    lims = (vmin - pad, vmax + pad)
+    ax.set_xlim(lims)
+    ax.set_ylim(lims)
+    ax.set_aspect("equal", adjustable="box")
+
+    # 1:1 identity line
+    if show_identity:
+        ax.plot(lims, lims, "k--", linewidth=0.8, alpha=0.5, label="1:1")
+
+    # Regression line
+    if show_regression and len(obs) > 1:
+        coeffs = np.polyfit(obs, sim, 1)
+        x_fit = np.array(lims)
+        y_fit = np.polyval(coeffs, x_fit)
+        ax.plot(x_fit, y_fit, "r-", linewidth=1, alpha=0.7, label="Regression")
+
+    # Metrics text box
+    if show_metrics and len(obs) > 1:
+        metrics = ComparisonMetrics.compute(obs, sim)
+        text = (
+            f"N = {metrics.n_points}\n"
+            f"RMSE = {metrics.rmse:.2f}\n"
+            f"SRMSE = {metrics.scaled_rmse:.3f}\n"
+            f"ME = {metrics.mbe:.2f}\n"
+            f"NSE = {metrics.nash_sutcliffe:.3f}\n"
+            f"r = {metrics.correlation:.3f}"
+        )
+        ax.text(
+            0.05, 0.95, text, transform=ax.transAxes,
+            verticalalignment="top", fontsize=8,
+            bbox={"boxstyle": "round,pad=0.4", "facecolor": "wheat", "alpha": 0.8},
+        )
+
+    unit_str = f" ({units})" if units else ""
+    ax.set_xlabel(f"Observed{unit_str}")
+    ax.set_ylabel(f"Simulated{unit_str}")
+    if title:
+        ax.set_title(title)
+
+    return fig, ax
+
+
+@_with_style(SPATIAL_STYLE)
+def plot_spatial_bias(
+    grid: AppGrid,
+    x: NDArray[np.float64],
+    y: NDArray[np.float64],
+    bias: NDArray[np.float64],
+    ax: Axes | None = None,
+    show_mesh: bool = True,
+    cmap: str = "RdBu_r",
+    symmetric_colorbar: bool = True,
+    title: str = "Spatial Bias",
+    units: str = "",
+    figsize: tuple[float, float] = (10, 8),
+) -> tuple[Figure, Axes]:
+    """Plot spatial bias (simulated - observed) at observation locations.
+
+    Parameters
+    ----------
+    grid : AppGrid
+        Model grid for background mesh.
+    x : NDArray[np.float64]
+        X coordinates of observation points.
+    y : NDArray[np.float64]
+        Y coordinates of observation points.
+    bias : NDArray[np.float64]
+        Bias values (simulated - observed).
+    ax : Axes | None
+        Existing axes to plot on.
+    show_mesh : bool
+        Show the mesh as background.
+    cmap : str
+        Colormap name (should be diverging).
+    symmetric_colorbar : bool
+        Center the colorbar at 0.
+    title : str
+        Plot title.
+    units : str
+        Unit label for colorbar.
+    figsize : tuple[float, float]
+        Figure size.
+
+    Returns
+    -------
+    tuple[Figure, Axes]
+        The figure and axes.
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()  # type: ignore[assignment]
+
+    # Plot mesh background
+    if show_mesh:
+        plot_mesh(grid, ax=ax, alpha=0.1, edge_width=0.3, fill_color="whitesmoke")
+
+    # Determine color limits
+    if symmetric_colorbar:
+        vmax = float(np.max(np.abs(bias)))
+        vmin = -vmax
+    else:
+        vmin = float(np.min(bias))
+        vmax = float(np.max(bias))
+
+    scatter = ax.scatter(
+        x, y, c=bias, s=60, cmap=cmap, vmin=vmin, vmax=vmax,
+        edgecolors="black", linewidths=0.5, zorder=5,
+    )
+
+    unit_str = f" ({units})" if units else ""
+    fig.colorbar(scatter, ax=ax, label=f"Bias{unit_str}", shrink=0.8)
+
+    ax.set_title(title)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    _format_thousands(ax)
+
+    return fig, ax

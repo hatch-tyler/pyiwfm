@@ -579,6 +579,22 @@ from pyiwfm.io.head_loader import LazyHeadDataLoader
 from pyiwfm.io.hydrograph_loader import LazyHydrographDataLoader
 from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
 
+# SimulationMessages.out Parser
+from pyiwfm.io.simulation_messages import (
+    MessageSeverity,
+    SimulationMessage,
+    SimulationMessagesReader,
+    SimulationMessagesResult,
+)
+
+# SMP (Sample/Bore) I/O
+from pyiwfm.io.smp import (
+    SMPReader,
+    SMPRecord,
+    SMPTimeSeries,
+    SMPWriter,
+)
+
 # ZBudget Reader (h5py is a required dependency)
 from pyiwfm.io.zbudget import (
     ZBUDGET_DATA_TYPES,
@@ -976,6 +992,16 @@ __all__ = [
     "apply_unit_conversion",
     "format_title_lines",
     "filter_time_range",
+    # SMP (Sample/Bore) I/O
+    "SMPRecord",
+    "SMPTimeSeries",
+    "SMPReader",
+    "SMPWriter",
+    # SimulationMessages.out Parser
+    "MessageSeverity",
+    "SimulationMessage",
+    "SimulationMessagesResult",
+    "SimulationMessagesReader",
     # Data loaders (moved from visualization.webapi)
     "IWFMHydrographReader",
     "LazyHydrographDataLoader",
