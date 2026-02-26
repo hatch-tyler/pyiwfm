@@ -1,7 +1,7 @@
 # pyiwfm
 
 ![CI](https://github.com/hatch-tyler/pyiwfm/actions/workflows/ci.yml/badge.svg)
-[![codecov](https://codecov.io/gh/hatch-tyler/pyiwfm/graph/badge.svg)](https://codecov.io/gh/hatch-tyler/pyiwfm)
+![Coverage](https://hatch-tyler.github.io/pyiwfm/coverage-badge.svg)
 
 Python package for reading, writing, visualizing, and comparing IWFM (Integrated Water Flow Model) models.
 
@@ -9,24 +9,24 @@ Python package for reading, writing, visualizing, and comparing IWFM (Integrated
 
 ```bash
 # Basic installation (includes matplotlib, geopandas, shapely, h5py)
-pip install -e .
+pip install pyiwfm
 
 # With mesh generation (triangle, gmsh)
-pip install -e ".[mesh]"
+pip install "pyiwfm[mesh]"
 
 # With VTK 3D export
-pip install -e ".[viz]"
+pip install "pyiwfm[viz]"
 
 # With web viewer (FastAPI + React + vtk.js + deck.gl)
-pip install -e ".[webapi]"
+pip install "pyiwfm[webapi]"
 
 # With PEST++ integration (scipy)
-pip install -e ".[pest]"
+pip install "pyiwfm[pest]"
 
 # With all optional dependencies
-pip install -e ".[all]"
+pip install "pyiwfm[all]"
 
-# Development installation (pytest, mypy, ruff)
+# Development (editable install with dev tools)
 pip install -e ".[dev]"
 ```
 
