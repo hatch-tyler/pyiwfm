@@ -25,7 +25,6 @@ pytest.importorskip("fastapi", reason="FastAPI not available")
 
 from pyiwfm.visualization.webapi.config import ModelState
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -363,10 +362,12 @@ class TestHydrographLocations:
         """Line 1111: tile drain obj is None -> skipped."""
         from pyiwfm.core.mesh import AppGrid, Element, Node
 
-        nodes = {1: Node(id=1, x=100.0, y=200.0),
-                 2: Node(id=2, x=300.0, y=200.0),
-                 3: Node(id=3, x=300.0, y=400.0),
-                 4: Node(id=4, x=100.0, y=400.0)}
+        nodes = {
+            1: Node(id=1, x=100.0, y=200.0),
+            2: Node(id=2, x=300.0, y=200.0),
+            3: Node(id=3, x=300.0, y=400.0),
+            4: Node(id=4, x=100.0, y=400.0),
+        }
         elements = {1: Element(id=1, vertices=(1, 2, 3, 4), subregion=1)}
         grid = AppGrid(nodes=nodes, elements=elements)
         grid.compute_connectivity()
@@ -395,10 +396,12 @@ class TestHydrographLocations:
         """Line 1124-1125: tile drain gw_node at (0, 0) -> skipped."""
         from pyiwfm.core.mesh import AppGrid, Element, Node
 
-        nodes = {1: Node(id=1, x=0.0, y=0.0),
-                 2: Node(id=2, x=100.0, y=0.0),
-                 3: Node(id=3, x=100.0, y=100.0),
-                 4: Node(id=4, x=0.0, y=100.0)}
+        nodes = {
+            1: Node(id=1, x=0.0, y=0.0),
+            2: Node(id=2, x=100.0, y=0.0),
+            3: Node(id=3, x=100.0, y=100.0),
+            4: Node(id=4, x=0.0, y=100.0),
+        }
         elements = {1: Element(id=1, vertices=(1, 2, 3, 4), subregion=1)}
         grid = AppGrid(nodes=nodes, elements=elements)
         grid.compute_connectivity()
@@ -476,9 +479,7 @@ class TestZBudgetReaders:
     def test_get_zbudget_reader_file_not_found(self, tmp_path: Path) -> None:
         """Lines 1278-1279: file doesn't exist returns None."""
         ms = _make_model_state()
-        model = _mock_model(
-            metadata={"gw_zbudget_file": str(tmp_path / "nonexistent.hdf")}
-        )
+        model = _mock_model(metadata={"gw_zbudget_file": str(tmp_path / "nonexistent.hdf")})
         ms._model = model
         ms._results_dir = tmp_path
 

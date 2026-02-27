@@ -17,14 +17,11 @@ from pathlib import Path
 
 import pytest
 
-from pyiwfm.components.lake import AppLake, Lake, LakeElement, LakeOutflow
 from pyiwfm.io.lakes import (
-    LakeMainFileConfig,
     LakeMainFileReader,
     LakeReader,
     read_lake_main_file,
 )
-
 
 # =============================================================================
 # Preprocessor-format lake definitions

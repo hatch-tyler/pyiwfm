@@ -6,8 +6,7 @@ Targets uncovered paths in src/pyiwfm/visualization/webapi/routes/zbudgets.py.
 
 from __future__ import annotations
 
-import math
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

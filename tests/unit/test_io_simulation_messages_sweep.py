@@ -16,8 +16,6 @@ from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from pyiwfm.io.simulation_messages import (
     MessageSeverity,
     SimulationMessage,
@@ -27,7 +25,6 @@ from pyiwfm.io.simulation_messages import (
     _extract_spatial_ids,
     _parse_severity,
 )
-
 
 # ---------------------------------------------------------------------------
 # _parse_severity
@@ -310,10 +307,7 @@ class TestSimulationMessagesReader:
 
     def test_continuation_new_block_breaks(self, tmp_path: Path) -> None:
         """A continuation line starting '*' without space after it starts a new block."""
-        content = (
-            "* WARN: First warning\n"
-            "*FATAL: Second is fatal\n"
-        )
+        content = "* WARN: First warning\n*FATAL: Second is fatal\n"
         fpath = tmp_path / "SimulationMessages.out"
         fpath.write_text(content, encoding="utf-8")
 
@@ -326,11 +320,7 @@ class TestSimulationMessagesReader:
 
     def test_non_continuation_line_breaks(self, tmp_path: Path) -> None:
         """A line not starting with '*' breaks the continuation."""
-        content = (
-            "* WARN: Warning message (ProcA)\n"
-            "This is a plain line\n"
-            "* INFO: Info message\n"
-        )
+        content = "* WARN: Warning message (ProcA)\nThis is a plain line\n* INFO: Info message\n"
         fpath = tmp_path / "SimulationMessages.out"
         fpath.write_text(content, encoding="utf-8")
 
@@ -340,10 +330,7 @@ class TestSimulationMessagesReader:
         assert len(result.messages) == 2
 
     def test_read_runtime_summary(self, tmp_path: Path) -> None:
-        content = (
-            "Some header text\n"
-            "Total Run-Time = 2 hours 15 min 30.5 sec\n"
-        )
+        content = "Some header text\nTotal Run-Time = 2 hours 15 min 30.5 sec\n"
         fpath = tmp_path / "SimulationMessages.out"
         fpath.write_text(content, encoding="utf-8")
 
@@ -355,11 +342,7 @@ class TestSimulationMessagesReader:
         assert result.total_runtime == expected
 
     def test_read_warning_count_summary(self, tmp_path: Path) -> None:
-        content = (
-            "* WARN: A warning\n"
-            "\n"
-            "15 warnings generated during simulation\n"
-        )
+        content = "* WARN: A warning\n\n15 warnings generated during simulation\n"
         fpath = tmp_path / "SimulationMessages.out"
         fpath.write_text(content, encoding="utf-8")
 
@@ -389,11 +372,7 @@ class TestSimulationMessagesReader:
 
     def test_continuation_with_empty_content(self, tmp_path: Path) -> None:
         """Continuation line with only asterisks and spaces (empty content)."""
-        content = (
-            "* WARN: Warning text\n"
-            "*     \n"
-            "*   actual continuation (Done)\n"
-        )
+        content = "* WARN: Warning text\n*     \n*   actual continuation (Done)\n"
         fpath = tmp_path / "SimulationMessages.out"
         fpath.write_text(content, encoding="utf-8")
 
@@ -406,13 +385,7 @@ class TestSimulationMessagesReader:
 
     def test_summary_warning_count_not_used_when_smaller(self, tmp_path: Path) -> None:
         """When summary warning count <= parsed count, parsed count is used."""
-        content = (
-            "* WARN: Warn 1\n"
-            "* WARN: Warn 2\n"
-            "* WARN: Warn 3\n"
-            "\n"
-            "2 warnings during simulation\n"
-        )
+        content = "* WARN: Warn 1\n* WARN: Warn 2\n* WARN: Warn 3\n\n2 warnings during simulation\n"
         fpath = tmp_path / "SimulationMessages.out"
         fpath.write_text(content, encoding="utf-8")
 

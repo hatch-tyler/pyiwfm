@@ -28,18 +28,14 @@ from pyiwfm.roundtrip.script_generator import (
 
 class TestGeneratePs1Scripts:
     def test_creates_three_ps1_files(self, tmp_path: Path) -> None:
-        scripts = _generate_ps1_scripts(
-            tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe"
-        )
+        scripts = _generate_ps1_scripts(tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe")
         assert len(scripts) == 3
         for s in scripts:
             assert s.exists()
             assert s.suffix == ".ps1"
 
     def test_preprocessor_content(self, tmp_path: Path) -> None:
-        scripts = _generate_ps1_scripts(
-            tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe"
-        )
+        scripts = _generate_ps1_scripts(tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe")
         pp_script = [s for s in scripts if "preprocessor" in s.stem.lower()][0]
         content = pp_script.read_text()
         assert "PP_x64.exe" in content
@@ -49,9 +45,7 @@ class TestGeneratePs1Scripts:
         assert "Pop-Location" in content
 
     def test_simulation_content(self, tmp_path: Path) -> None:
-        scripts = _generate_ps1_scripts(
-            tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe"
-        )
+        scripts = _generate_ps1_scripts(tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe")
         sim_script = [
             s for s in scripts if "simulation" in s.stem.lower() and "all" not in s.stem.lower()
         ][0]
@@ -61,9 +55,7 @@ class TestGeneratePs1Scripts:
         assert "$LASTEXITCODE" in content
 
     def test_run_all_content(self, tmp_path: Path) -> None:
-        scripts = _generate_ps1_scripts(
-            tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe"
-        )
+        scripts = _generate_ps1_scripts(tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe")
         all_script = [s for s in scripts if "all" in s.stem.lower()][0]
         content = all_script.read_text()
         assert "run_preprocessor.ps1" in content
@@ -91,9 +83,7 @@ class TestGeneratePs1Scripts:
 
 class TestPs1BudgetScripts:
     def test_no_budget_scripts_by_default(self, tmp_path: Path) -> None:
-        scripts = _generate_ps1_scripts(
-            tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe"
-        )
+        scripts = _generate_ps1_scripts(tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe")
         names = {s.stem for s in scripts}
         assert "run_budget" not in names
         assert "run_zbudget" not in names
@@ -163,9 +153,7 @@ class TestPs1BudgetScripts:
 
 class TestBatBudgetScripts:
     def test_no_budget_by_default(self, tmp_path: Path) -> None:
-        scripts = _generate_bat_scripts(
-            tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe"
-        )
+        scripts = _generate_bat_scripts(tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe")
         names = {s.stem for s in scripts}
         assert "run_budget" not in names
 
@@ -297,30 +285,22 @@ class TestShBudgetScripts:
 
 class TestFormatsParameter:
     def test_explicit_bat(self, tmp_path: Path) -> None:
-        scripts = generate_run_scripts(
-            tmp_path, "PP.in", "Sim.in", formats=["bat"]
-        )
+        scripts = generate_run_scripts(tmp_path, "PP.in", "Sim.in", formats=["bat"])
         assert all(s.suffix == ".bat" for s in scripts)
         assert len(scripts) == 3
 
     def test_explicit_ps1(self, tmp_path: Path) -> None:
-        scripts = generate_run_scripts(
-            tmp_path, "PP.in", "Sim.in", formats=["ps1"]
-        )
+        scripts = generate_run_scripts(tmp_path, "PP.in", "Sim.in", formats=["ps1"])
         assert all(s.suffix == ".ps1" for s in scripts)
         assert len(scripts) == 3
 
     def test_explicit_sh(self, tmp_path: Path) -> None:
-        scripts = generate_run_scripts(
-            tmp_path, "PP.in", "Sim.in", formats=["sh"]
-        )
+        scripts = generate_run_scripts(tmp_path, "PP.in", "Sim.in", formats=["sh"])
         assert all(s.suffix == ".sh" for s in scripts)
         assert len(scripts) == 3
 
     def test_multiple_formats(self, tmp_path: Path) -> None:
-        scripts = generate_run_scripts(
-            tmp_path, "PP.in", "Sim.in", formats=["bat", "ps1", "sh"]
-        )
+        scripts = generate_run_scripts(tmp_path, "PP.in", "Sim.in", formats=["bat", "ps1", "sh"])
         bat = [s for s in scripts if s.suffix == ".bat"]
         ps1 = [s for s in scripts if s.suffix == ".ps1"]
         sh = [s for s in scripts if s.suffix == ".sh"]
@@ -342,9 +322,7 @@ class TestFormatsParameter:
 
     def test_invalid_format_raises(self, tmp_path: Path) -> None:
         with pytest.raises(ValueError, match="Unknown script format"):
-            generate_run_scripts(
-                tmp_path, "PP.in", "Sim.in", formats=["cmd"]
-            )
+            generate_run_scripts(tmp_path, "PP.in", "Sim.in", formats=["cmd"])
 
     def test_budget_via_public_api(self, tmp_path: Path) -> None:
         scripts = generate_run_scripts(

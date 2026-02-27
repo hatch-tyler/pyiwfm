@@ -171,9 +171,7 @@ class TestExportHydrographCsv:
         app = create_app()
         with patch(EXPORT_PATCH, state):
             client = TestClient(app)
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=subsidence&location_id=1"
-            )
+            resp = client.get("/api/export/hydrograph-csv?type=subsidence&location_id=1")
             assert resp.status_code == 200
             assert resp.headers["content-type"] == "text/csv; charset=utf-8"
             lines = _csv_lines(resp.text)
@@ -185,9 +183,7 @@ class TestExportHydrographCsv:
         app = create_app()
         with patch(EXPORT_PATCH, state):
             client = TestClient(app)
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=subsidence&location_id=99"
-            )
+            resp = client.get("/api/export/hydrograph-csv?type=subsidence&location_id=99")
             assert resp.status_code == 404
 
     def test_tile_drain_csv_success(self) -> None:
@@ -195,9 +191,7 @@ class TestExportHydrographCsv:
         app = create_app()
         with patch(EXPORT_PATCH, state):
             client = TestClient(app)
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=tile_drain&location_id=1"
-            )
+            resp = client.get("/api/export/hydrograph-csv?type=tile_drain&location_id=1")
             assert resp.status_code == 200
             lines = _csv_lines(resp.text)
             assert lines[0] == "datetime,flow_volume"
@@ -208,9 +202,7 @@ class TestExportHydrographCsv:
         app = create_app()
         with patch(EXPORT_PATCH, state):
             client = TestClient(app)
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=tile_drain&location_id=99"
-            )
+            resp = client.get("/api/export/hydrograph-csv?type=tile_drain&location_id=99")
             assert resp.status_code == 404
 
     def test_unknown_type_returns_400(self) -> None:
@@ -220,9 +212,7 @@ class TestExportHydrographCsv:
         app = create_app()
         with patch(EXPORT_PATCH, state):
             client = TestClient(app)
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=bogus&location_id=1"
-            )
+            resp = client.get("/api/export/hydrograph-csv?type=bogus&location_id=1")
             assert resp.status_code == 400
             assert "Unknown type" in resp.json()["detail"]
 
@@ -234,9 +224,7 @@ class TestExportHydrographCsv:
         app = create_app()
         with patch(EXPORT_PATCH, state):
             client = TestClient(app)
-            resp = client.get(
-                "/api/export/hydrograph-csv?type=gw&location_id=1"
-            )
+            resp = client.get("/api/export/hydrograph-csv?type=gw&location_id=1")
             assert resp.status_code == 200
             lines = _csv_lines(resp.text)
             assert lines[0] == "datetime,head_ft"

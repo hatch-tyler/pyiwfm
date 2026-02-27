@@ -8,9 +8,9 @@ import pytest
 
 h5py = pytest.importorskip("h5py")
 
-import numpy as np
+import numpy as np  # noqa: E402
 
-from pyiwfm.io.hydrograph_loader import LazyHydrographDataLoader
+from pyiwfm.io.hydrograph_loader import LazyHydrographDataLoader  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -33,7 +33,12 @@ def hdf_file(tmp_path: Path) -> Path:
         ],
         dtype=np.float64,
     )
-    times = ["2020-01-31T12:00:00", "2020-02-29T12:00:00", "2020-03-31T12:00:00", "2020-04-30T12:00:00"]
+    times = [
+        "2020-01-31T12:00:00",
+        "2020-02-29T12:00:00",
+        "2020-03-31T12:00:00",
+        "2020-04-30T12:00:00",
+    ]
 
     str_dt = h5py.string_dtype(encoding="utf-8")
     with h5py.File(path, "w") as f:

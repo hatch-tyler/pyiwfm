@@ -13,8 +13,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from pyiwfm.roundtrip.file_differ import (
     FileDiffResult,
     InputDiffResult,
@@ -25,10 +23,10 @@ from pyiwfm.roundtrip.file_differ import (
     diff_iwfm_files,
 )
 
-
 # ---------------------------------------------------------------------------
 # _float_equal
 # ---------------------------------------------------------------------------
+
 
 class TestFloatEqual:
     def test_exact_match(self) -> None:
@@ -62,6 +60,7 @@ class TestFloatEqual:
 # _lines_match
 # ---------------------------------------------------------------------------
 
+
 class TestLinesMatch:
     def test_identical(self) -> None:
         assert _lines_match("1  2  3.0  HELLO", "1  2  3.0  HELLO")
@@ -82,6 +81,7 @@ class TestLinesMatch:
 # ---------------------------------------------------------------------------
 # _extract_data_lines
 # ---------------------------------------------------------------------------
+
 
 class TestExtractDataLines:
     def test_strips_comment_lines(self, tmp_path: Path) -> None:
@@ -118,6 +118,7 @@ class TestExtractDataLines:
 # diff_iwfm_files
 # ---------------------------------------------------------------------------
 
+
 class TestDiffIwfmFiles:
     def test_byte_identical(self, tmp_path: Path) -> None:
         content = "C comment\n1 2 3.0\n4 5 6.0\n"
@@ -144,9 +145,7 @@ class TestDiffIwfmFiles:
         writ = tmp_path / "writ.dat"
         writ.write_text("1 2 3\n")
 
-        result = diff_iwfm_files(
-            tmp_path / "missing.dat", writ, file_key="test"
-        )
+        result = diff_iwfm_files(tmp_path / "missing.dat", writ, file_key="test")
         assert not result.identical
         assert not result.data_identical
 
@@ -154,9 +153,7 @@ class TestDiffIwfmFiles:
         orig = tmp_path / "orig.dat"
         orig.write_text("1 2 3\n")
 
-        result = diff_iwfm_files(
-            orig, tmp_path / "missing.dat", file_key="test"
-        )
+        result = diff_iwfm_files(orig, tmp_path / "missing.dat", file_key="test")
         assert not result.identical
         assert not result.data_identical
 
@@ -190,6 +187,7 @@ class TestDiffIwfmFiles:
 # ---------------------------------------------------------------------------
 # diff_all_files
 # ---------------------------------------------------------------------------
+
 
 class TestDiffAllFiles:
     def test_auto_discovery(self, tmp_path: Path) -> None:
@@ -249,6 +247,7 @@ class TestDiffAllFiles:
 # InputDiffResult
 # ---------------------------------------------------------------------------
 
+
 class TestInputDiffResult:
     def test_empty_result(self) -> None:
         r = InputDiffResult()
@@ -258,15 +257,9 @@ class TestInputDiffResult:
 
     def test_properties(self) -> None:
         diffs = {
-            "a": FileDiffResult(
-                file_key="a", identical=True, data_identical=True
-            ),
-            "b": FileDiffResult(
-                file_key="b", identical=False, data_identical=True
-            ),
-            "c": FileDiffResult(
-                file_key="c", identical=False, data_identical=False
-            ),
+            "a": FileDiffResult(file_key="a", identical=True, data_identical=True),
+            "b": FileDiffResult(file_key="b", identical=False, data_identical=True),
+            "c": FileDiffResult(file_key="c", identical=False, data_identical=False),
         }
         r = InputDiffResult(file_diffs=diffs)
         assert r.files_compared == 3
@@ -275,9 +268,7 @@ class TestInputDiffResult:
 
     def test_summary_format(self) -> None:
         diffs = {
-            "a": FileDiffResult(
-                file_key="a", identical=True, data_identical=True
-            ),
+            "a": FileDiffResult(file_key="a", identical=True, data_identical=True),
         }
         r = InputDiffResult(file_diffs=diffs)
         s = r.summary()
@@ -288,6 +279,7 @@ class TestInputDiffResult:
 # ---------------------------------------------------------------------------
 # FileDiffResult
 # ---------------------------------------------------------------------------
+
 
 class TestFileDiffResult:
     def test_defaults(self) -> None:

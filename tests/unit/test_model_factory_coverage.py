@@ -3,10 +3,9 @@ apply_parametric_grids, apply_parametric_subsidence, binary_data_to_model."""
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
-import pytest
 
 from pyiwfm.components.groundwater import AquiferParameters
 from pyiwfm.core.model_factory import (
@@ -16,8 +15,7 @@ from pyiwfm.core.model_factory import (
     binary_data_to_model,
 )
 from pyiwfm.io.groundwater import KhAnomalyEntry
-from tests.conftest import make_simple_grid, make_simple_stratigraphy
-
+from tests.conftest import make_simple_grid
 
 # ---------------------------------------------------------------------------
 # apply_kh_anomalies
@@ -174,10 +172,11 @@ class TestApplyParametricSubsidence:
         grid_data.n_elements = 0
         # shape (1, n_layers, 5): elastic_sc, inelastic_sc, interbed_thick,
         # interbed_thick_min, precompact_head
-        grid_data.node_values = np.array([
-            [[0.1, 0.5, 10.0, 1.0, 50.0],
-             [0.2, 0.6, 12.0, 1.5, 55.0]],
-        ])
+        grid_data.node_values = np.array(
+            [
+                [[0.1, 0.5, 10.0, 1.0, 50.0], [0.2, 0.6, 12.0, 1.5, 55.0]],
+            ]
+        )
 
         subs_config = MagicMock()
         subs_config.parametric_grids = [grid_data]

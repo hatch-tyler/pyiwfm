@@ -19,13 +19,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
-
 from pyiwfm.io.stream_writer import (
     StreamComponentWriter,
     StreamWriterConfig,
 )
-
 
 # =============================================================================
 # Helpers
@@ -41,17 +38,17 @@ def _mock_engine() -> MagicMock:
 def _base_streams(**overrides: object) -> MagicMock:
     """Create a MagicMock streams component with sane defaults."""
     streams = MagicMock()
-    defaults = dict(
-        nodes={},
-        reaches={},
-        budget_node_ids=[],
-        budget_node_count=0,
-        diversions={},
-        bypasses={},
-        inflows=[],
-        evap_node_specs=[],
-        evap_area_file="",
-    )
+    defaults = {
+        "nodes": {},
+        "reaches": {},
+        "budget_node_ids": [],
+        "budget_node_count": 0,
+        "diversions": {},
+        "bypasses": {},
+        "inflows": [],
+        "evap_node_specs": [],
+        "evap_area_file": "",
+    }
     defaults.update(overrides)
     for k, v in defaults.items():
         setattr(streams, k, v)
@@ -231,9 +228,7 @@ class TestCrossSectionFactorErrors:
         # Remove roughness_factor and cross_section_length_factor
         del streams.roughness_factor
         del streams.cross_section_length_factor
-        type(streams).roughness_factor = property(
-            lambda s: (_ for _ in ()).throw(AttributeError)
-        )
+        type(streams).roughness_factor = property(lambda s: (_ for _ in ()).throw(AttributeError))
         type(streams).cross_section_length_factor = property(
             lambda s: (_ for _ in ()).throw(AttributeError)
         )
@@ -302,12 +297,8 @@ class TestInitialConditionFactorErrors:
         streams = _base_streams(nodes={1: node})
         del streams.ic_type
         del streams.ic_factor
-        type(streams).ic_type = property(
-            lambda s: (_ for _ in ()).throw(AttributeError)
-        )
-        type(streams).ic_factor = property(
-            lambda s: (_ for _ in ()).throw(AttributeError)
-        )
+        type(streams).ic_type = property(lambda s: (_ for _ in ()).throw(AttributeError))
+        type(streams).ic_factor = property(lambda s: (_ for _ in ()).throw(AttributeError))
         model = _model_with_streams(streams)
         engine = _mock_engine()
 

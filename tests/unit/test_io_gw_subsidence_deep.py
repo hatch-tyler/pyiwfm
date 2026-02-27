@@ -17,11 +17,8 @@ import numpy as np
 import pytest
 
 from pyiwfm.io.gw_subsidence import (
-    SubsidenceConfig,
-    SubsidenceReader,
     read_gw_subsidence,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

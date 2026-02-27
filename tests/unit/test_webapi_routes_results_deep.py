@@ -166,9 +166,7 @@ class TestHeadsByElementCache:
     def test_cache_hit_returns_cached_values(self) -> None:
         state = _make_state_with_head_loader()
         cached_values = [50.0, None]
-        state.get_cached_head_by_element = MagicMock(
-            return_value=(cached_values, 10.0, 90.0)
-        )
+        state.get_cached_head_by_element = MagicMock(return_value=(cached_values, 10.0, 90.0))
         app = create_app()
         with patch(RESULTS_PATCH, state):
             client = TestClient(app)
@@ -213,9 +211,7 @@ class TestDrawdownPagination:
         assert len(data["timesteps"]) == 5
 
     def test_drawdown_with_offset_and_limit(self, client_heads) -> None:
-        resp = client_heads.get(
-            "/api/results/drawdown?layer=1&offset=1&limit=2"
-        )
+        resp = client_heads.get("/api/results/drawdown?layer=1&offset=1&limit=2")
         assert resp.status_code == 200
         data = resp.json()
         assert data["n_timesteps"] == 2
@@ -234,9 +230,7 @@ class TestDrawdownPagination:
         assert resp.status_code == 400
 
     def test_drawdown_reference_timestep_out_of_range(self, client_heads) -> None:
-        resp = client_heads.get(
-            "/api/results/drawdown?layer=1&reference_timestep=999"
-        )
+        resp = client_heads.get("/api/results/drawdown?layer=1&reference_timestep=999")
         assert resp.status_code == 400
 
 
@@ -362,9 +356,7 @@ class TestHydrographsMultiGWFallback:
         app = create_app()
         with patch(RESULTS_PATCH, state):
             client = TestClient(app)
-            resp = client.get(
-                "/api/results/hydrographs-multi?type=bogus&ids=1"
-            )
+            resp = client.get("/api/results/hydrographs-multi?type=bogus&ids=1")
             assert resp.status_code == 400
 
     def test_multi_stream_type(self) -> None:
@@ -379,17 +371,13 @@ class TestHydrographsMultiGWFallback:
         reader.n_columns = 5
         reader.find_column_by_node_id = MagicMock(return_value=0)
         reader.hydrograph_ids = [10]
-        reader.get_time_series = MagicMock(
-            return_value=(["2020-01-01", "2020-02-01"], [5.5, 6.6])
-        )
+        reader.get_time_series = MagicMock(return_value=(["2020-01-01", "2020-02-01"], [5.5, 6.6]))
         state._stream_hydrograph_reader = reader
 
         app = create_app()
         with patch(RESULTS_PATCH, state):
             client = TestClient(app)
-            resp = client.get(
-                "/api/results/hydrographs-multi?type=stream&ids=10"
-            )
+            resp = client.get("/api/results/hydrographs-multi?type=stream&ids=10")
             assert resp.status_code == 200
             data = resp.json()
             assert data["type"] == "stream"

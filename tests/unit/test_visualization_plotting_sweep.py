@@ -82,9 +82,7 @@ class _FakeAppStream:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    not _HAS_SCIPY, reason="scipy not installed"
-)
+@pytest.mark.skipif(not _HAS_SCIPY, reason="scipy not installed")
 class TestPlotBoundaryConvexHullFallback:
     """Exercise the ConvexHull fallback when no nodes have is_boundary=True."""
 

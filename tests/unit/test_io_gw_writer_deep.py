@@ -12,12 +12,10 @@ Covers:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
-import pytest
 
 from pyiwfm.components.groundwater import (
     AppGW,
@@ -25,13 +23,10 @@ from pyiwfm.components.groundwater import (
     HydrographLocation,
 )
 from pyiwfm.io.groundwater import (
-    FaceFlowSpec,
     GWMainFileConfig,
     KhAnomalyEntry,
-    ParametricGridData,
 )
 from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
-
 
 # ---------------------------------------------------------------------------
 # Helpers

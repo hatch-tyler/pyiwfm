@@ -20,7 +20,6 @@ pytest.importorskip("fastapi", reason="FastAPI not available")
 
 from pyiwfm.visualization.webapi.config import ModelState
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

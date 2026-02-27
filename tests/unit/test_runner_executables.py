@@ -15,7 +15,6 @@ from pyiwfm.runner.executables import (
     _detect_platform,
 )
 
-
 # ---------------------------------------------------------------------------
 # _detect_platform
 # ---------------------------------------------------------------------------
@@ -171,9 +170,7 @@ class TestPlaceExecutables:
     """Tests for IWFMExecutableManager.place_executables."""
 
     @patch("pyiwfm.runner.executables.shutil.copy2")
-    def test_copies_existing_executables(
-        self, mock_copy2: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_copies_existing_executables(self, mock_copy2: MagicMock, tmp_path: Path) -> None:
         """Copies each existing executable into the model directory."""
         src_dir = tmp_path / "src"
         src_dir.mkdir()

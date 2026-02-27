@@ -18,11 +18,9 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pytest
 from matplotlib.figure import Figure
 
-from tests.conftest import make_simple_grid, make_simple_stratigraphy
-
+from tests.conftest import make_simple_grid
 
 # ---------------------------------------------------------------------------
 # Helpers -- synthetic CrossSection dataclass
@@ -134,7 +132,8 @@ class TestPlotCrossSection:
         from pyiwfm.visualization.plotting import plot_cross_section
 
         xs = _make_cross_section()
-        xs.layer_properties["kh"] = np.random.rand(len(xs.distance), xs.n_layers) * 10
+        rng = np.random.default_rng(42)
+        xs.layer_properties["kh"] = rng.random((len(xs.distance), xs.n_layers)) * 10
         fig, ax = plot_cross_section(xs, layer_property_name="kh")
 
         assert isinstance(fig, Figure)
@@ -203,7 +202,6 @@ class TestPlotSpatialBias:
         from pyiwfm.visualization.plotting import plot_spatial_bias
 
         grid = make_simple_grid()
-        n_obs = 5
         x = np.array([50.0, 100.0, 150.0, 50.0, 150.0])
         y = np.array([50.0, 50.0, 50.0, 150.0, 150.0])
         bias = np.array([2.0, -1.5, 3.0, -0.5, 1.0])

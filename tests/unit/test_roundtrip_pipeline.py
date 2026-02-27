@@ -16,8 +16,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from pyiwfm.roundtrip.config import RoundtripConfig
 from pyiwfm.roundtrip.pipeline import (
     RoundtripPipeline,
@@ -26,10 +24,10 @@ from pyiwfm.roundtrip.pipeline import (
     StepResult,
 )
 
-
 # ---------------------------------------------------------------------------
 # Dataclass basics
 # ---------------------------------------------------------------------------
+
 
 class TestStepResult:
     def test_defaults(self) -> None:
@@ -97,9 +95,7 @@ class TestRoundtripResult:
         assert r.success is False
 
     def test_summary_format(self) -> None:
-        r = RoundtripResult(
-            steps={"load": StepResult(name="load", success=True, message="OK")}
-        )
+        r = RoundtripResult(steps={"load": StepResult(name="load", success=True, message="OK")})
         s = r.summary()
         assert isinstance(s, str)
         assert len(s) > 0
@@ -108,6 +104,7 @@ class TestRoundtripResult:
 # ---------------------------------------------------------------------------
 # Pipeline helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_pipeline(tmp_path: Path, **overrides: object) -> RoundtripPipeline:
     """Create a pipeline with a minimal config."""
@@ -120,15 +117,15 @@ def _make_pipeline(tmp_path: Path, **overrides: object) -> RoundtripPipeline:
     pp_dir.mkdir(exist_ok=True)
     (pp_dir / "Preprocessor.in").touch()
 
-    defaults: dict = dict(
-        source_model_dir=model_dir,
-        simulation_main_file="Simulation/Simulation.in",
-        preprocessor_main_file="Preprocessor/Preprocessor.in",
-        output_dir=tmp_path / "output",
-        run_baseline=False,
-        run_written=False,
-        compare_results=False,
-    )
+    defaults: dict = {
+        "source_model_dir": model_dir,
+        "simulation_main_file": "Simulation/Simulation.in",
+        "preprocessor_main_file": "Preprocessor/Preprocessor.in",
+        "output_dir": tmp_path / "output",
+        "run_baseline": False,
+        "run_written": False,
+        "compare_results": False,
+    }
     defaults.update(overrides)
     cfg = RoundtripConfig(**defaults)
     return RoundtripPipeline(cfg)
@@ -137,6 +134,7 @@ def _make_pipeline(tmp_path: Path, **overrides: object) -> RoundtripPipeline:
 # ---------------------------------------------------------------------------
 # Pipeline steps
 # ---------------------------------------------------------------------------
+
 
 class TestStepLoad:
     @patch("pyiwfm.core.model.IWFMModel")
@@ -148,9 +146,7 @@ class TestStepLoad:
 
     @patch("pyiwfm.core.model.IWFMModel")
     def test_exception(self, mock_model_cls: MagicMock, tmp_path: Path) -> None:
-        mock_model_cls.from_simulation_with_preprocessor.side_effect = ValueError(
-            "bad"
-        )
+        mock_model_cls.from_simulation_with_preprocessor.side_effect = ValueError("bad")
         pipe = _make_pipeline(tmp_path)
         result = pipe.step_load()
         assert not result.success
@@ -268,9 +264,7 @@ class TestStepCompareResults:
         assert result.success
 
     @patch("pyiwfm.comparison.results_differ.ResultsDiffer")
-    def test_success(
-        self, mock_differ_cls: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_success(self, mock_differ_cls: MagicMock, tmp_path: Path) -> None:
         mock_differ = MagicMock()
         mock_differ.compare_all.return_value = MagicMock(success=True)
         mock_differ_cls.return_value = mock_differ
@@ -285,6 +279,7 @@ class TestStepCompareResults:
 # ---------------------------------------------------------------------------
 # Full pipeline run
 # ---------------------------------------------------------------------------
+
 
 class TestRun:
     @patch("pyiwfm.core.model.IWFMModel")
@@ -309,9 +304,7 @@ class TestRun:
         assert isinstance(result, RoundtripResult)
 
     @patch("pyiwfm.core.model.IWFMModel")
-    def test_early_abort_on_load_failure(
-        self, mock_model: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_early_abort_on_load_failure(self, mock_model: MagicMock, tmp_path: Path) -> None:
         mock_model.from_simulation_with_preprocessor.side_effect = Exception("fail")
         pipe = _make_pipeline(tmp_path)
         result = pipe.run()

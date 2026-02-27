@@ -14,7 +14,7 @@ import zlib
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -32,7 +32,6 @@ from pyiwfm.io.cache_loader import (
     _decompress_array,
     _decompress_strings,
 )
-
 
 # ======================================================================
 # Compression helpers roundtrip
@@ -119,7 +118,7 @@ def _make_mock_head_loader(
     loader.times = [datetime(2020 + i // 12, i % 12 + 1, 1) for i in range(n_frames)]
 
     frames = [
-        np.random.rand(n_nodes, n_layers).astype(np.float64) * 100
+        np.random.default_rng(42).random((n_nodes, n_layers)).astype(np.float64) * 100
         for _ in range(n_frames)
     ]
     loader.get_frame = MagicMock(side_effect=lambda idx: frames[idx])
@@ -145,9 +144,10 @@ def _make_mock_budget_reader(
     # Generate deterministic data
     data_map: dict[int, np.ndarray] = {}
     for loc in range(n_locations):
-        data_map[loc] = np.arange(
-            n_timesteps * n_cols, dtype=np.float64
-        ).reshape(n_timesteps, n_cols) + loc * 100
+        data_map[loc] = (
+            np.arange(n_timesteps * n_cols, dtype=np.float64).reshape(n_timesteps, n_cols)
+            + loc * 100
+        )
 
     reader.get_values = MagicMock(side_effect=lambda loc: data_map[loc])
     reader._data_map = data_map  # store for verification
@@ -195,9 +195,7 @@ class TestCacheBuilderSchemaAndMetadata:
 
         assert cache_path.exists()
         conn = sqlite3.connect(str(cache_path))
-        cur = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         tables = [r[0] for r in cur.fetchall()]
         conn.close()
 
@@ -434,9 +432,7 @@ class TestHydrographDataRoundtrip:
 
     def test_hydrograph_values_roundtrip(self, tmp_path: Path) -> None:
         n_cols, n_ts = 2, 10
-        cache_path, reader = self._build_cache_with_hydrograph(
-            tmp_path, n_cols=n_cols, n_ts=n_ts
-        )
+        cache_path, reader = self._build_cache_with_hydrograph(tmp_path, n_cols=n_cols, n_ts=n_ts)
         loader = SqliteCacheLoader(cache_path)
 
         for col in range(n_cols):
@@ -559,10 +555,12 @@ class TestStalenessDetection:
         src_file = tmp_path / "head_output.hdf"
         src_file.write_text("data")
 
-        model = _make_mock_model(metadata={
-            "name": "x",
-            "head_output_file": str(src_file),
-        })
+        model = _make_mock_model(
+            metadata={
+                "name": "x",
+                "head_output_file": str(src_file),
+            }
+        )
         builder.build(model)
 
         # Make source file newer by touching it after a small delay
@@ -594,19 +592,23 @@ class TestStalenessDetection:
         sim_file = tmp_path / "sim.dat"
         sim_file.write_text("sim")
 
-        model = _make_mock_model(metadata={
-            "name": "x",
-            "simulation_file": str(sim_file),
-        })
+        model = _make_mock_model(
+            metadata={
+                "name": "x",
+                "simulation_file": str(sim_file),
+            }
+        )
         mtimes = get_source_mtimes(model)
         assert "simulation_file" in mtimes
         assert mtimes["simulation_file"] > 0
 
     def test_get_source_mtimes_nonexistent_path(self) -> None:
-        model = _make_mock_model(metadata={
-            "name": "x",
-            "simulation_file": "/nonexistent/path.dat",
-        })
+        model = _make_mock_model(
+            metadata={
+                "name": "x",
+                "simulation_file": "/nonexistent/path.dat",
+            }
+        )
         mtimes = get_source_mtimes(model)
         assert mtimes == {}
 

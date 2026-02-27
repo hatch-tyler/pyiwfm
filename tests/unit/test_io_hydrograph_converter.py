@@ -8,9 +8,12 @@ import pytest
 
 h5py = pytest.importorskip("h5py")
 
-import numpy as np
+import numpy as np  # noqa: E402
 
-from pyiwfm.io.hydrograph_converter import _parse_timestamp, convert_hydrograph_to_hdf
+from pyiwfm.io.hydrograph_converter import (  # noqa: E402
+    _parse_timestamp,
+    convert_hydrograph_to_hdf,
+)
 
 # ---------------------------------------------------------------------------
 # _parse_timestamp

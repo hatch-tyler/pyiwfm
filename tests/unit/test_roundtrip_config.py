@@ -16,10 +16,10 @@ import pytest
 
 from pyiwfm.roundtrip.config import RoundtripConfig, _find_main_file
 
-
 # ---------------------------------------------------------------------------
 # RoundtripConfig defaults and post_init
 # ---------------------------------------------------------------------------
+
 
 class TestRoundtripConfigDefaults:
     def test_default_values(self) -> None:
@@ -47,6 +47,7 @@ class TestRoundtripConfigDefaults:
 # from_env()
 # ---------------------------------------------------------------------------
 
+
 class TestFromEnv:
     def test_reads_env_vars(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         model_dir = tmp_path / "model"
@@ -68,9 +69,7 @@ class TestFromEnv:
         assert cfg.source_model_dir == model_dir
         assert cfg.output_dir == out_dir
 
-    def test_missing_env_uses_defaults(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_missing_env_uses_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("IWFM_MODEL_DIR", raising=False)
         monkeypatch.delenv("IWFM_ROUNDTRIP_OUTPUT", raising=False)
         cfg = RoundtripConfig.from_env()
@@ -80,6 +79,7 @@ class TestFromEnv:
 # ---------------------------------------------------------------------------
 # Factory methods
 # ---------------------------------------------------------------------------
+
 
 class TestFactoryMethods:
     def test_for_sample_model(self, tmp_path: Path) -> None:
@@ -114,9 +114,7 @@ class TestFactoryMethods:
         pp_dir.mkdir()
         (pp_dir / "Preprocessor.in").touch()
 
-        with patch(
-            "pyiwfm.roundtrip.config.IWFMExecutableManager"
-        ) as mock_mgr:
+        with patch("pyiwfm.roundtrip.config.IWFMExecutableManager"):
             cfg = RoundtripConfig.for_c2vsimcg(tmp_path)
         assert cfg.source_model_dir == tmp_path
 
@@ -135,6 +133,7 @@ class TestFactoryMethods:
 # ---------------------------------------------------------------------------
 # _find_main_file
 # ---------------------------------------------------------------------------
+
 
 class TestFindMainFile:
     def test_finds_simulation_main(self, tmp_path: Path) -> None:

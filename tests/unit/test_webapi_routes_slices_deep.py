@@ -24,7 +24,6 @@ from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.visualization.webapi.config import model_state
 from pyiwfm.visualization.webapi.server import create_app
 
-
 # ---------------------------------------------------------------------------
 # Helpers (mirrored from existing test file for isolation)
 # ---------------------------------------------------------------------------

@@ -9,14 +9,14 @@ from __future__ import annotations
 
 import textwrap
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 
 h5py = pytest.importorskip("h5py")
 
-from pyiwfm.comparison.results_differ import (
+from pyiwfm.comparison.results_differ import (  # noqa: E402
     BudgetComparison,
     HeadComparison,
     HydrographComparison,
@@ -25,7 +25,6 @@ from pyiwfm.comparison.results_differ import (
     _parse_head_text_file,
     _parse_hydrograph_text,
 )
-
 
 # ======================================================================
 # Dataclass defaults
@@ -214,8 +213,11 @@ class TestResultsDifferInit:
 
     def test_custom_tolerances(self, tmp_path: Path) -> None:
         d = ResultsDiffer(
-            tmp_path / "a", tmp_path / "b",
-            head_atol=0.1, budget_rtol=0.5, nse_threshold=0.8,
+            tmp_path / "a",
+            tmp_path / "b",
+            head_atol=0.1,
+            budget_rtol=0.5,
+            nse_threshold=0.8,
         )
         assert d.head_atol == 0.1
         assert d.budget_rtol == 0.5
@@ -245,7 +247,8 @@ class TestCompareHeadsHDF5:
         bd.mkdir()
         wd.mkdir()
 
-        data = np.random.rand(5, 10).astype(np.float64)
+        rng = np.random.default_rng(42)
+        data = rng.random((5, 10)).astype(np.float64)
         _make_head_hdf5(bd / "GWHeadAll.hdf", data)
         _make_head_hdf5(wd / "GWHeadAll.hdf", data)
 

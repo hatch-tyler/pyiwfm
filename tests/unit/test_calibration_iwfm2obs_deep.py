@@ -53,8 +53,12 @@ class TestComputeMultilayerWeights:
         hk = np.array([10.0, 5.0])  # 1-D: layer-uniform
         # Screen from 60 to 90 => entirely within layer 0 (top=100, bot=50)
         well = MultiLayerWellSpec(
-            name="W1", x=50.0, y=50.0, element_id=1,
-            bottom_of_screen=60.0, top_of_screen=90.0,
+            name="W1",
+            x=50.0,
+            y=50.0,
+            element_id=1,
+            bottom_of_screen=60.0,
+            top_of_screen=90.0,
         )
         with patch(_FE_INTERP_TARGET) as MockInterp:
             MockInterp.return_value.interpolate.return_value = _mock_interpolate(50.0, 50.0)
@@ -71,8 +75,12 @@ class TestComputeMultilayerWeights:
         hk = np.array([10.0, 5.0])
         # Screen from 20 to 80 => layer 0: overlap 80-50=30, layer 1: overlap 50-20=30
         well = MultiLayerWellSpec(
-            name="W1", x=50.0, y=50.0, element_id=1,
-            bottom_of_screen=20.0, top_of_screen=80.0,
+            name="W1",
+            x=50.0,
+            y=50.0,
+            element_id=1,
+            bottom_of_screen=20.0,
+            top_of_screen=80.0,
         )
         with patch(_FE_INTERP_TARGET) as MockInterp:
             MockInterp.return_value.interpolate.return_value = _mock_interpolate(50.0, 50.0)
