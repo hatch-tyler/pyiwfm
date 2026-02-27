@@ -1,0 +1,6 @@
+# Typical hydrograph for cluster 1
+# Contributing wells: 5
+2000-01-15  -1.308642
+2000-04-15  -1.358025
+2000-07-15  0.024691
+2000-10-15  2.641975

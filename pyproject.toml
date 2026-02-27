@@ -60,6 +60,7 @@ pest = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "pytest-benchmark>=4.0",
     "hypothesis>=6.0",
     "mypy>=1.0",
     "ruff>=0.1.0",
@@ -136,6 +137,7 @@ markers = [
     "integration: marks tests as integration tests",
     "property: marks tests as property-based tests",
     "roundtrip: marks tests as roundtrip integration tests",
+    "benchmark: marks tests as performance benchmarks",
 ]
 
 [tool.coverage.run]
