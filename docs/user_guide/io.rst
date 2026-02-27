@@ -540,6 +540,76 @@ Budget export is also available from the command line:
     # Override output directory
     pyiwfm budget C2VSimFG_Budget_xlsx.in --output-dir /path/to/output
 
+Model Packaging
+---------------
+
+pyiwfm can package an entire IWFM model directory into a distributable ZIP
+archive, preserving the directory structure and generating a manifest.
+
+Packaging a Model
+~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+    from pathlib import Path
+    from pyiwfm.io import package_model, collect_model_files
+
+    model_dir = Path("C2VSimCG")
+
+    # Inspect which files will be included
+    files = collect_model_files(model_dir)
+    print(f"Found {len(files)} model files")
+
+    # Create the ZIP archive
+    result = package_model(model_dir, output_path=Path("C2VSimCG.zip"))
+    print(f"Packaged {len(result.files_included)} files ({result.total_size_bytes / 1e6:.1f} MB)")
+
+By default, output files (``Results/``, ``.hdf``, ``.h5``) and executables
+(``.exe``, ``.dll``, ``.so``) are excluded. Pass ``include_executables=True``
+or ``include_results=True`` to include them.
+
+Generating Run Scripts
+~~~~~~~~~~~~~~~~~~~~~~
+
+Generate platform-appropriate run scripts to execute the IWFM preprocessor,
+simulation, and optional post-processors:
+
+.. code-block:: python
+
+    from pyiwfm.roundtrip.script_generator import generate_run_scripts
+
+    scripts = generate_run_scripts(
+        model_dir=Path("C2VSimCG"),
+        preprocessor_main="Preprocessor/Preprocessor.in",
+        simulation_main="Simulation/Simulation.in",
+        budget_exe="Budget_x64.exe",
+        formats=["bat", "ps1", "sh"],
+    )
+
+    for s in scripts:
+        print(f"Generated: {s.name}")
+
+This creates ``run_preprocessor``, ``run_simulation``, ``run_budget``, and
+``run_all`` scripts in each requested format.
+
+CLI Commands
+~~~~~~~~~~~~
+
+Both operations are available from the command line:
+
+.. code-block:: bash
+
+    # Package a model
+    pyiwfm package --model-dir ./C2VSimCG --output C2VSimCG.zip
+
+    # Generate run scripts
+    pyiwfm run --model-dir ./C2VSimCG --scripts-only
+
+    # Download executables and generate scripts
+    pyiwfm run --model-dir ./C2VSimCG --download-executables --scripts-only
+
+See :doc:`/tutorials/packaging_models` for a detailed tutorial.
+
 PreProcessor Integration
 ------------------------
 

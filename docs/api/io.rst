@@ -535,6 +535,17 @@ Complete model writer that orchestrates all component writers.
    :undoc-members:
    :show-inheritance:
 
+Model Packager
+~~~~~~~~~~~~~~
+
+Package an IWFM model directory into a distributable ZIP archive with
+an embedded ``manifest.json``.
+
+.. automodule:: pyiwfm.io.model_packager
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Infrastructure
 --------------
 

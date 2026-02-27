@@ -13,6 +13,7 @@ Step-by-step tutorials for common pyiwfm workflows.
    visualization
    model_comparison
    calibration
+   packaging_models
 
 Overview
 --------
@@ -51,6 +52,11 @@ These tutorials walk you through complete workflows using pyiwfm:
     Cluster observation wells, interpolate simulated heads to observation
     times (IWFM2OBS), compute typical hydrographs (CalcTypHyd), and create
     publication-quality calibration figures.
+
+**Packaging and Running Models**
+    Package an IWFM model directory into a distributable ZIP archive,
+    generate platform-appropriate run scripts (.bat, .ps1, .sh), and
+    use the ``pyiwfm package`` and ``pyiwfm run`` CLI commands.
 
 Prerequisites
 -------------
