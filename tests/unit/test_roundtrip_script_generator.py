@@ -21,7 +21,6 @@ from pyiwfm.roundtrip.script_generator import (
     generate_run_scripts,
 )
 
-
 # ---------------------------------------------------------------------------
 # generate_run_scripts - platform dispatch
 # ---------------------------------------------------------------------------

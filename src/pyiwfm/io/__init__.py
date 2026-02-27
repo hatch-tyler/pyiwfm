@@ -172,13 +172,6 @@ from pyiwfm.io.lakes import (
     write_lakes,
 )
 
-# Model Packager
-from pyiwfm.io.model_packager import (
-    ModelPackageResult,
-    collect_model_files,
-    package_model,
-)
-
 # Model Loader
 # Convenience alias: load_complete_model from model_loader (the strong loader)
 from pyiwfm.io.model_loader import (
@@ -192,6 +185,13 @@ from pyiwfm.io.model_loader import (
 )
 from pyiwfm.io.model_loader import (
     load_complete_model as load_complete_iwfm_model,
+)
+
+# Model Packager
+from pyiwfm.io.model_packager import (
+    ModelPackageResult,
+    collect_model_files,
+    package_model,
 )
 
 # Complete Model Writer

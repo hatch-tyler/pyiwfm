@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from pyiwfm.cli.calctyphyd import add_calctyphyd_parser, run_calctyphyd
 from pyiwfm.cli.iwfm2obs import add_iwfm2obs_parser, run_iwfm2obs
+
+# On Python 3.10, `pyiwfm.calibration.iwfm2obs` (the module) gets shadowed
+# by the same-named function re-exported from calibration/__init__.py.
+# Use importlib to get a reliable reference to the actual module.
+_iwfm2obs_module = importlib.import_module("pyiwfm.calibration.iwfm2obs")
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -131,7 +137,7 @@ class TestRunIwfm2obs:
         result = run_iwfm2obs(args)
         assert result == 1
 
-    @patch("pyiwfm.calibration.iwfm2obs.iwfm2obs")
+    @patch.object(_iwfm2obs_module, "iwfm2obs")
     def test_success_returns_0(self, mock_iwfm2obs: MagicMock, tmp_path: Path) -> None:
         obs = tmp_path / "obs.smp"
         obs.touch()

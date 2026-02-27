@@ -23,6 +23,13 @@ from matplotlib.figure import Figure
 
 from tests.conftest import make_simple_grid
 
+try:
+    import scipy.spatial  # noqa: F401
+
+    _HAS_SCIPY = True
+except ImportError:
+    _HAS_SCIPY = False
+
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -75,6 +82,9 @@ class _FakeAppStream:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    not _HAS_SCIPY, reason="scipy not installed"
+)
 class TestPlotBoundaryConvexHullFallback:
     """Exercise the ConvexHull fallback when no nodes have is_boundary=True."""
 
