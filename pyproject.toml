@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyiwfm"
-version = "1.0.1"
+version = "1.0.2"
 description = "Python package for reading, writing, visualizing, and comparing IWFM models"
 readme = "README.md"
 license = "GPL-2.0-only"
