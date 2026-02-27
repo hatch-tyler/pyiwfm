@@ -52,6 +52,7 @@ an embedded ``manifest.json``.
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Executable Manager
 ------------------
