@@ -33,8 +33,12 @@ class TestGenerateRunScripts:
             scripts = generate_run_scripts(
                 tmp_path, "PP.in", "Sim.in", "PP_x64.exe", "Sim_x64.exe"
             )
-        assert len(scripts) == 3
-        assert all(str(s).endswith(".bat") for s in scripts)
+        # Default on Windows: bat + ps1 (3 each = 6 total)
+        assert len(scripts) == 6
+        bat_scripts = [s for s in scripts if s.suffix == ".bat"]
+        ps1_scripts = [s for s in scripts if s.suffix == ".ps1"]
+        assert len(bat_scripts) == 3
+        assert len(ps1_scripts) == 3
 
     def test_dispatches_to_sh_on_linux(self, tmp_path: Path) -> None:
         with patch("pyiwfm.roundtrip.script_generator.sys") as mock_sys:
@@ -44,6 +48,13 @@ class TestGenerateRunScripts:
             )
         assert len(scripts) == 3
         assert all(str(s).endswith(".sh") for s in scripts)
+
+    def test_explicit_format_bat_only(self, tmp_path: Path) -> None:
+        scripts = generate_run_scripts(
+            tmp_path, "PP.in", "Sim.in", formats=["bat"]
+        )
+        assert len(scripts) == 3
+        assert all(s.suffix == ".bat" for s in scripts)
 
     def test_returns_list_of_paths(self, tmp_path: Path) -> None:
         scripts = generate_run_scripts(
