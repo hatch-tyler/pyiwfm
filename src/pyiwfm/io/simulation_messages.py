@@ -292,9 +292,12 @@ class SimulationMessagesReader(BaseReader):
                 while i < len(lines):
                     cont = lines[i].rstrip("\n\r")
                     if cont.startswith("*") and (len(cont) < 2 or cont[1] != " "):
-                        # New severity block or separator
+                        # New severity block or separator (no space after *)
                         break
                     if cont.startswith("*"):
+                        # Check if this is a new severity block (e.g., "* FATAL: ...")
+                        if _SEVERITY_RE.match(cont):
+                            break
                         # Continuation line: strip leading '* ' or '*   '
                         content = cont.lstrip("*").strip()
                         if content:

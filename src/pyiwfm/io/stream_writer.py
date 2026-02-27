@@ -212,7 +212,7 @@ class StreamComponentWriter(TemplateWriter):
                 node_id_set.update(reach.nodes)
             stream_nodes = sorted(node_id_set)
             n_stream_nodes = len(stream_nodes)
-        elif streams is not None and streams.budget_node_ids:
+        elif streams is not None and getattr(streams, "budget_node_ids", None):
             # Second fallback: use budget node IDs
             stream_nodes = sorted(streams.budget_node_ids)
             n_stream_nodes = len(stream_nodes)
