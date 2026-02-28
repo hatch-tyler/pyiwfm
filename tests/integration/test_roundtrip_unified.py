@@ -7,8 +7,124 @@ IWFM Sample Model and C2VSimCG. Each test can be run independently.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from pyiwfm.roundtrip.config import RoundtripConfig
+
+# ---------------------------------------------------------------------------
+# Shared helpers — one per test assertion
+# ---------------------------------------------------------------------------
+
+
+def _assert_load(config: RoundtripConfig) -> None:
+    """Model loads without errors."""
+    from pyiwfm.roundtrip.pipeline import RoundtripPipeline
+
+    pipeline = RoundtripPipeline(config)
+    result = pipeline.step_load()
+    assert result.success, f"Load failed: {result.error}"
+    assert result.data is not None
+
+
+def _assert_write(config: RoundtripConfig) -> None:
+    """All expected files are written."""
+    from pyiwfm.roundtrip.pipeline import RoundtripPipeline
+
+    pipeline = RoundtripPipeline(config)
+    load = pipeline.step_load()
+    assert load.success, f"Load failed: {load.error}"
+
+    write = pipeline.step_write()
+    assert write.success, f"Write failed: {write.error}"
+    assert write.data is not None
+    assert len(write.data.files) > 0
+
+
+def _assert_input_files_match(config: RoundtripConfig) -> None:
+    """Written data matches originals (ignoring comments)."""
+    from pyiwfm.roundtrip.pipeline import RoundtripPipeline
+
+    pipeline = RoundtripPipeline(config)
+    pipeline.step_load()
+    pipeline.step_write()
+    diff = pipeline.step_diff_inputs()
+
+    assert diff.success, f"Diff failed: {diff.error}"
+    if diff.data:
+        assert diff.data.files_data_identical == diff.data.files_compared, (
+            f"Data differences found:\n{diff.data.summary()}"
+        )
+
+
+def _assert_preprocessor_runs(config: RoundtripConfig) -> None:
+    """PreProcessor succeeds on written model."""
+    from pyiwfm.roundtrip.pipeline import RoundtripPipeline
+
+    config.run_baseline = False
+    config.compare_results = False
+    pipeline = RoundtripPipeline(config)
+    pipeline.step_load()
+    pipeline.step_write()
+    pipeline.step_place_executables()
+
+    pipeline.step_run_written()
+    if pipeline.result.written_run:
+        pp = pipeline.result.written_run.preprocessor
+        if pp is not None:
+            assert pp.success, (
+                f"PP failed (rc={pp.return_code}): {pp.errors[:5]}\nstdout: {pp.stdout[:500]}"
+            )
+
+
+def _assert_simulation_runs(config: RoundtripConfig) -> None:
+    """Simulation succeeds on written model."""
+    from pyiwfm.roundtrip.pipeline import RoundtripPipeline
+
+    config.run_baseline = False
+    config.compare_results = False
+    pipeline = RoundtripPipeline(config)
+    pipeline.step_load()
+    pipeline.step_write()
+    pipeline.step_place_executables()
+
+    pipeline.step_run_written()
+    if pipeline.result.written_run:
+        sim = pipeline.result.written_run.simulation
+        if sim is not None:
+            assert sim.success, (
+                f"Sim failed (rc={sim.return_code}): {sim.errors[:5]}\nstdout: {sim.stdout[:500]}"
+            )
+
+
+def _assert_results_match(config: RoundtripConfig) -> None:
+    """Outputs match baseline within tolerance."""
+    from pyiwfm.roundtrip.pipeline import RoundtripPipeline
+
+    pipeline = RoundtripPipeline(config)
+    result = pipeline.run()
+
+    if result.results_comparison:
+        assert result.results_comparison.success, (
+            f"Results differ:\n{result.results_comparison.summary()}"
+        )
+
+
+def _assert_full_pipeline(config: RoundtripConfig) -> None:
+    """End-to-end: pipeline.run() succeeds."""
+    from pyiwfm.roundtrip.pipeline import RoundtripPipeline
+
+    pipeline = RoundtripPipeline(config)
+    result = pipeline.run()
+
+    assert result.success, f"Pipeline failed:\n{result.summary()}"
+
+
+# ---------------------------------------------------------------------------
+# Sample Model
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -27,100 +143,36 @@ class TestRoundtripSampleModel:
 
     def test_load_model(self) -> None:
         """Model loads without errors."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        pipeline = RoundtripPipeline(self.config)
-        result = pipeline.step_load()
-        assert result.success, f"Load failed: {result.error}"
-        assert result.data is not None
+        _assert_load(self.config)
 
     def test_write_model(self) -> None:
         """All expected files are written."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        pipeline = RoundtripPipeline(self.config)
-        load = pipeline.step_load()
-        assert load.success, f"Load failed: {load.error}"
-
-        write = pipeline.step_write()
-        assert write.success, f"Write failed: {write.error}"
-        assert write.data is not None
-        assert len(write.data.files) > 0
+        _assert_write(self.config)
 
     def test_input_files_match(self) -> None:
         """Written data matches originals (ignoring comments)."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        pipeline = RoundtripPipeline(self.config)
-        pipeline.step_load()
-        pipeline.step_write()
-        diff = pipeline.step_diff_inputs()
-
-        assert diff.success, f"Diff failed: {diff.error}"
-        if diff.data:
-            assert diff.data.files_data_identical == diff.data.files_compared, (
-                f"Data differences found:\n{diff.data.summary()}"
-            )
+        _assert_input_files_match(self.config)
 
     def test_preprocessor_runs(self) -> None:
         """PreProcessor succeeds on written model."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        self.config.run_baseline = False
-        self.config.compare_results = False
-        pipeline = RoundtripPipeline(self.config)
-        pipeline.step_load()
-        pipeline.step_write()
-        pipeline.step_place_executables()
-
-        pipeline.step_run_written()
-        if pipeline.result.written_run:
-            pp = pipeline.result.written_run.preprocessor
-            if pp is not None:
-                assert pp.success, (
-                    f"PP failed (rc={pp.return_code}): {pp.errors[:5]}\nstdout: {pp.stdout[:500]}"
-                )
+        _assert_preprocessor_runs(self.config)
 
     def test_simulation_runs(self) -> None:
         """Simulation succeeds on written model."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        self.config.run_baseline = False
-        self.config.compare_results = False
-        pipeline = RoundtripPipeline(self.config)
-        pipeline.step_load()
-        pipeline.step_write()
-        pipeline.step_place_executables()
-
-        pipeline.step_run_written()
-        if pipeline.result.written_run:
-            sim = pipeline.result.written_run.simulation
-            if sim is not None:
-                assert sim.success, (
-                    f"Sim failed (rc={sim.return_code}): "
-                    f"{sim.errors[:5]}\nstdout: {sim.stdout[:500]}"
-                )
+        _assert_simulation_runs(self.config)
 
     def test_results_match(self) -> None:
         """Outputs match baseline within tolerance."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        pipeline = RoundtripPipeline(self.config)
-        result = pipeline.run()
-
-        if result.results_comparison:
-            assert result.results_comparison.success, (
-                f"Results differ:\n{result.results_comparison.summary()}"
-            )
+        _assert_results_match(self.config)
 
     def test_full_pipeline(self) -> None:
         """End-to-end: pipeline.run() succeeds."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
+        _assert_full_pipeline(self.config)
 
-        pipeline = RoundtripPipeline(self.config)
-        result = pipeline.run()
 
-        assert result.success, f"Pipeline failed:\n{result.summary()}"
+# ---------------------------------------------------------------------------
+# C2VSimCG
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -139,96 +191,28 @@ class TestRoundtripC2VSimCG:
 
     def test_load_model(self) -> None:
         """Model loads without errors."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        pipeline = RoundtripPipeline(self.config)
-        result = pipeline.step_load()
-        assert result.success, f"Load failed: {result.error}"
+        _assert_load(self.config)
 
     def test_write_model(self) -> None:
         """All expected files are written."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        pipeline = RoundtripPipeline(self.config)
-        load = pipeline.step_load()
-        assert load.success, f"Load failed: {load.error}"
-
-        write = pipeline.step_write()
-        assert write.success, f"Write failed: {write.error}"
-        assert write.data is not None
-        assert len(write.data.files) > 0
+        _assert_write(self.config)
 
     def test_input_files_match(self) -> None:
         """Written data matches originals (ignoring comments)."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        pipeline = RoundtripPipeline(self.config)
-        pipeline.step_load()
-        pipeline.step_write()
-        diff = pipeline.step_diff_inputs()
-
-        assert diff.success, f"Diff failed: {diff.error}"
-        if diff.data:
-            assert diff.data.files_data_identical == diff.data.files_compared, (
-                f"Data differences found:\n{diff.data.summary()}"
-            )
+        _assert_input_files_match(self.config)
 
     def test_preprocessor_runs(self) -> None:
         """PreProcessor succeeds on written model."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        self.config.run_baseline = False
-        self.config.compare_results = False
-        pipeline = RoundtripPipeline(self.config)
-        pipeline.step_load()
-        pipeline.step_write()
-        pipeline.step_place_executables()
-
-        pipeline.step_run_written()
-        if pipeline.result.written_run:
-            pp = pipeline.result.written_run.preprocessor
-            if pp is not None:
-                assert pp.success, (
-                    f"PP failed (rc={pp.return_code}): {pp.errors[:5]}\nstdout: {pp.stdout[:500]}"
-                )
+        _assert_preprocessor_runs(self.config)
 
     def test_simulation_runs(self) -> None:
         """Simulation succeeds on written model."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        self.config.run_baseline = False
-        self.config.compare_results = False
-        pipeline = RoundtripPipeline(self.config)
-        pipeline.step_load()
-        pipeline.step_write()
-        pipeline.step_place_executables()
-
-        pipeline.step_run_written()
-        if pipeline.result.written_run:
-            sim = pipeline.result.written_run.simulation
-            if sim is not None:
-                assert sim.success, (
-                    f"Sim failed (rc={sim.return_code}): "
-                    f"{sim.errors[:5]}\nstdout: {sim.stdout[:500]}"
-                )
+        _assert_simulation_runs(self.config)
 
     def test_results_match(self) -> None:
         """Outputs match baseline within tolerance."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        pipeline = RoundtripPipeline(self.config)
-        result = pipeline.run()
-
-        if result.results_comparison:
-            assert result.results_comparison.success, (
-                f"Results differ:\n{result.results_comparison.summary()}"
-            )
+        _assert_results_match(self.config)
 
     def test_full_pipeline(self) -> None:
         """End-to-end: pipeline.run() succeeds."""
-        from pyiwfm.roundtrip.pipeline import RoundtripPipeline
-
-        pipeline = RoundtripPipeline(self.config)
-        result = pipeline.run()
-
-        assert result.success, f"Pipeline failed:\n{result.summary()}"
+        _assert_full_pipeline(self.config)

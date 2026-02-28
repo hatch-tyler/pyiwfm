@@ -104,11 +104,17 @@ class RoundtripConfig:
         """
         iwfm_dir = Path(iwfm_dir)
 
+        # Search sibling Bin/ for executables (standard CNRA zip layout)
+        bin_sibling = iwfm_dir.parent / "Bin"
+        search_paths = [bin_sibling] if bin_sibling.exists() else []
+        exe_mgr = IWFMExecutableManager(search_paths=search_paths) if search_paths else None
+
         return cls(
             source_model_dir=iwfm_dir,
             simulation_main_file=_find_main_file(iwfm_dir, "Simulation"),
             preprocessor_main_file=_find_main_file(iwfm_dir, "Preprocessor"),
             output_dir=iwfm_dir.parent / "roundtrip_sample",
+            executable_manager=exe_mgr,
             preprocessor_timeout=120,
             simulation_timeout=600,
         )

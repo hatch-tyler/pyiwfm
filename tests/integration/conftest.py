@@ -7,6 +7,10 @@ The sample model can be obtained three ways (checked in this order):
 1. ``IWFM_SAMPLE_MODEL_DIR`` environment variable
 2. Default local path ``~/OneDrive/Desktop/iwfm-2025.0.1747/samplemodel``
 3. Automatic download from the CNRA data portal (cached at ``~/.cache/pyiwfm/``)
+
+Executables are discovered via :class:`IWFMExecutableManager` which searches
+local ``Bin/`` directories first and falls back to downloading Linux/Windows
+binaries from GitHub releases.
 """
 
 from __future__ import annotations
@@ -94,19 +98,18 @@ def _download_and_cache_sample_model() -> Path | None:
     return None
 
 
-# ---------------------------------------------------------------------------
-# Model path fixtures
-# ---------------------------------------------------------------------------
+def _resolve_sample_model_path() -> Path:
+    """Resolve the sample model path (env var → default → download).
 
+    Returns
+    -------
+    Path
+        Path to the sample model directory.
 
-@pytest.fixture
-def sample_model_path() -> Path:
-    """Return path to the IWFM Sample Model directory.
-
-    Resolution order:
-    1. ``IWFM_SAMPLE_MODEL_DIR`` environment variable
-    2. Default local path
-    3. Auto-download from CNRA data portal (cached at ``~/.cache/pyiwfm/``)
+    Raises
+    ------
+    pytest.skip
+        If no sample model is available.
     """
     env = os.environ.get("IWFM_SAMPLE_MODEL_DIR")
     if env:
@@ -126,6 +129,29 @@ def sample_model_path() -> Path:
     pytest.skip("Sample model not available (set IWFM_SAMPLE_MODEL_DIR or ensure network access)")
 
 
+# ---------------------------------------------------------------------------
+# Model path fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def sample_model_path_session() -> Path:
+    """Session-scoped sample model path (downloads once per session)."""
+    return _resolve_sample_model_path()
+
+
+@pytest.fixture
+def sample_model_path(sample_model_path_session: Path) -> Path:
+    """Return path to the IWFM Sample Model directory.
+
+    Resolution order:
+    1. ``IWFM_SAMPLE_MODEL_DIR`` environment variable
+    2. Default local path
+    3. Auto-download from CNRA data portal (cached at ``~/.cache/pyiwfm/``)
+    """
+    return sample_model_path_session
+
+
 @pytest.fixture
 def c2vsimcg_path() -> Path:
     """Return path to the C2VSimCG (Coarse Grid) model directory.
@@ -142,36 +168,56 @@ def c2vsimcg_path() -> Path:
     return path
 
 
-@pytest.fixture
-def sample_exe_path(sample_model_path: Path) -> Path:
-    """Return path to the IWFM executables directory.
+# ---------------------------------------------------------------------------
+# Executable fixtures (unified via IWFMExecutableManager)
+# ---------------------------------------------------------------------------
 
-    Checks sibling ``Bin/`` directory (works for both local installs and
-    the cached download layout).
+
+@pytest.fixture(scope="session")
+def iwfm_executables(sample_model_path_session: Path):  # noqa: ANN201
+    """Session-scoped IWFM executables via IWFMExecutableManager.
+
+    Searches the ``Bin/`` sibling of the sample model first (preserves
+    CNRA zip layout for local Windows users), then falls back to
+    downloading platform-appropriate binaries from GitHub releases.
+
+    Returns
+    -------
+    IWFMExecutables
+        Dataclass with paths to preprocessor, simulation, etc.
     """
-    # Try sibling Bin/ first (standard layout for both local and cached)
-    bin_path = sample_model_path.parent / "Bin"
-    if not bin_path.exists():
-        # Legacy layout: Bin inside sample model
-        bin_path = sample_model_path / "Bin"
-    if not bin_path.exists():
-        pytest.skip(f"Executable directory not found near: {sample_model_path}")
-    return bin_path
+    from pyiwfm.runner.executables import IWFMExecutableManager
+
+    search_paths: list[Path] = []
+    bin_sibling = sample_model_path_session.parent / "Bin"
+    if bin_sibling.exists():
+        search_paths.append(bin_sibling)
+
+    mgr = IWFMExecutableManager(search_paths=search_paths)
+    try:
+        exes = mgr.find_or_download()
+    except RuntimeError:
+        pytest.skip("IWFM executables not available (local search and GitHub download failed)")
+
+    if not exes.preprocessor or not exes.simulation:
+        pytest.skip("IWFM executables incomplete (missing preprocessor or simulation)")
+
+    return exes
 
 
 @pytest.fixture
-def preprocessor_exe(sample_exe_path: Path) -> Path:
+def preprocessor_exe(iwfm_executables) -> Path:  # noqa: ANN001
     """Return path to PreProcessor executable."""
-    exe = sample_exe_path / "PreProcessor_x64.exe"
-    if not exe.exists():
-        pytest.skip(f"PreProcessor executable not found: {exe}")
+    exe = iwfm_executables.preprocessor
+    if exe is None or not exe.exists():
+        pytest.skip("PreProcessor executable not found")
     return exe
 
 
 @pytest.fixture
-def simulation_exe(sample_exe_path: Path) -> Path:
+def simulation_exe(iwfm_executables) -> Path:  # noqa: ANN001
     """Return path to Simulation executable."""
-    exe = sample_exe_path / "Simulation_x64.exe"
-    if not exe.exists():
-        pytest.skip(f"Simulation executable not found: {exe}")
+    exe = iwfm_executables.simulation
+    if exe is None or not exe.exists():
+        pytest.skip("Simulation executable not found")
     return exe
