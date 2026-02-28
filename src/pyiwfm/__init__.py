@@ -10,7 +10,7 @@ This package provides tools for:
 
 from __future__ import annotations
 
-__version__ = "1.0.1"
+__version__ = "1.0.3"
 
 from pyiwfm.components.groundwater import AppGW
 from pyiwfm.components.lake import AppLake
