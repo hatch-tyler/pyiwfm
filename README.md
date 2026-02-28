@@ -192,6 +192,38 @@ results = iwfm2obs_from_model(
 - **Visualization**: GIS export (GeoPackage download), VTK 3D export, matplotlib plot generation (PNG/SVG), interactive web viewer with budget charts, head maps, hydrograph comparison, drawdown animation, and head statistics
 - **Model Comparison**: Diff and comparison metrics, including web viewer comparison endpoint
 
+## Versioning
+
+The package version is derived automatically from **git tags** using
+[hatch-vcs](https://github.com/ofek/hatch-vcs). There is no hardcoded version
+string to maintain — `pyiwfm.__version__`, `pyproject.toml` metadata, and the
+Sphinx docs all read from the same source.
+
+| Scenario | Version produced |
+|----------|-----------------|
+| On a tagged commit (`v1.0.4`) | `1.0.4` |
+| 3 commits after a tag | `1.0.5.dev3+gabcdef1` |
+| Uncommitted changes (dirty) | `1.0.5.dev3+gabcdef1.d20260228` |
+
+**Release workflow:**
+
+```bash
+git tag -a v1.0.4 -m "Release v1.0.4"
+git push && git push origin v1.0.4
+# CI builds and publishes automatically
+```
+
+**Building locally:**
+
+```bash
+pip install -e ".[dev]"          # editable install — version from git
+python -m build                  # sdist + wheel — version baked into _version.py
+python -c "import pyiwfm; print(pyiwfm.__version__)"
+```
+
+The auto-generated `src/pyiwfm/_version.py` is gitignored and should not be
+committed.
+
 ## License
 
 GPL-2.0 - Same as IWFM
