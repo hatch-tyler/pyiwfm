@@ -48,7 +48,7 @@ Features
 - **Mesh Generation**: Create finite element meshes using Triangle or Gmsh
 - **GIS Export**: Export to GeoPackage, Shapefile, and GeoJSON formats
 - **Interactive Web Viewer**: Browser-based visualization with FastAPI, React, vtk.js, and deck.gl — includes data export (CSV, GeoPackage, matplotlib plots), model comparison, drawdown animation, and head statistics
-- **Calibration Tools**: SMP observation file I/O, IWFM2OBS time interpolation, fuzzy c-means well clustering, typical hydrograph computation (CalcTypHyd), SimulationMessages.out parser, and publication-quality calibration figures
+- **Calibration Tools**: SMP observation file I/O, IWFM2OBS time interpolation with automatic model file discovery, multi-layer T-weighted observation well processing, fuzzy c-means well clustering, typical hydrograph computation (CalcTypHyd), SimulationMessages.out parser, and publication-quality calibration figures
 - **PEST++ Integration**: Complete interface for parameter estimation with PEST++
 - **Ensemble Methods**: Prior/posterior ensemble generation for pestpp-ies
 - **Subprocess Runner**: Run IWFM executables and manage scenarios

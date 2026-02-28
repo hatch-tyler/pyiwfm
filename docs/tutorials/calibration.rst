@@ -13,10 +13,11 @@ By the end of this tutorial, you will be able to:
 
 1. Read and write SMP observation files
 2. Interpolate simulated heads to observation timestamps (IWFM2OBS)
-3. Cluster observation wells using fuzzy c-means
-4. Compute typical hydrographs by cluster (CalcTypHyd)
-5. Create 1:1 plots, residual histograms, and calibration summary figures
-6. Parse SimulationMessages.out for spatial error diagnostics
+3. Auto-discover model files and run IWFM2OBS from a simulation main file
+4. Cluster observation wells using fuzzy c-means
+5. Compute typical hydrographs by cluster (CalcTypHyd)
+6. Create 1:1 plots, residual histograms, and calibration summary figures
+7. Parse SimulationMessages.out for spatial error diagnostics
 
 Step 1: Reading SMP Files
 --------------------------
@@ -129,6 +130,96 @@ The full IWFM2OBS workflow reads SMP files, interpolates, and writes output:
        output_path=Path("interpolated.smp"),
    )
    print(f"Wrote {len(results)} interpolated bores")
+
+Step 2b: Model-Discovery Mode (IWFM2OBS from Simulation Main File)
+--------------------------------------------------------------------
+
+Instead of working with pre-converted SMP files, you can point directly at
+the IWFM simulation main file. pyiwfm will auto-discover the GW and stream
+hydrograph ``.out`` files, read them, interpolate to observation times, and
+optionally compute multi-layer T-weighted averages — all in one call.
+
+**Discover model files:**
+
+.. code-block:: python
+
+   from pyiwfm.calibration.model_file_discovery import discover_hydrograph_files
+
+   info = discover_hydrograph_files("C2VSimFG.in")
+
+   print(f"GW .out file:     {info.gw_hydrograph_path}")
+   print(f"Stream .out file: {info.stream_hydrograph_path}")
+   print(f"GW locations:     {len(info.gw_locations)}")
+   print(f"Start date:       {info.start_date_str}")
+   print(f"Time unit:        {info.time_unit}")
+
+**Run the full workflow:**
+
+.. code-block:: python
+
+   from pathlib import Path
+   from pyiwfm.calibration.iwfm2obs import iwfm2obs_from_model
+
+   results = iwfm2obs_from_model(
+       simulation_main_file=Path("C2VSimFG.in"),
+       obs_smp_paths={"gw": Path("GW_Obs.smp")},
+       output_paths={"gw": Path("GW_OUT.smp")},
+   )
+
+   for hyd_type, bore_results in results.items():
+       print(f"{hyd_type}: interpolated {len(bore_results)} bore(s)")
+
+**Multi-layer observation wells:**
+
+For wells that screen multiple aquifer layers, provide a well specification
+file and output paths for the ``GW_MultiLayer.out`` and PEST ``.ins`` files:
+
+.. code-block:: python
+
+   from pyiwfm.calibration.obs_well_spec import read_obs_well_spec
+
+   well_specs = read_obs_well_spec("obs_wells.txt")
+   for w in well_specs[:3]:
+       print(f"  {w.name}: elem={w.element_id}, "
+             f"screen={w.top_of_screen:.0f} to {w.bottom_of_screen:.0f}")
+
+   results = iwfm2obs_from_model(
+       simulation_main_file=Path("C2VSimFG.in"),
+       obs_smp_paths={"gw": Path("GW_Obs.smp")},
+       output_paths={"gw": Path("GW_OUT.smp")},
+       obs_well_spec_path=Path("obs_wells.txt"),
+       multilayer_output_path=Path("GW_MultiLayer.out"),
+       multilayer_ins_path=Path("GWHMultiLayer.ins"),
+   )
+
+**Write multi-layer outputs manually:**
+
+.. code-block:: python
+
+   from pyiwfm.calibration.iwfm2obs import (
+       write_multilayer_output,
+       write_multilayer_pest_ins,
+   )
+
+   # write_multilayer_output writes: Name, Date, Time, Simulated, T1-T4, NewTOS, NewBOS
+   write_multilayer_output(results_dict, well_specs, weights, Path("GW_MultiLayer.out"), n_layers=4)
+
+   # write_multilayer_pest_ins writes: pif #, l1, l1 [WLT00001_00001]50:60, ...
+   write_multilayer_pest_ins(results_dict, well_specs, Path("GWHMultiLayer.ins"))
+
+**CLI model-discovery mode:**
+
+.. code-block:: bash
+
+   # Auto-discover .out files and interpolate
+   pyiwfm iwfm2obs --model C2VSimFG.in --obs-gw GW_Obs.smp --output-gw GW_OUT.smp
+
+   # With multi-layer processing
+   pyiwfm iwfm2obs --model C2VSimFG.in \
+       --obs-gw GW_Obs.smp --output-gw GW_OUT.smp \
+       --well-spec obs_wells.txt \
+       --multilayer-out GW_MultiLayer.out \
+       --multilayer-ins GWHMultiLayer.ins
 
 Step 3: Cluster Observation Wells
 ----------------------------------
@@ -568,6 +659,9 @@ This tutorial covered:
 
 - **SMP I/O**: Reading and writing IWFM observation files
 - **IWFM2OBS**: Time interpolation and multi-layer T-weighted averaging
+- **Model Discovery**: Auto-discovering ``.out`` files from simulation main file
+- **Multi-layer Wells**: Observation well specification, T-weighted averaging,
+  ``GW_MultiLayer.out`` and PEST ``.ins`` output
 - **Clustering**: Fuzzy c-means well clustering with spatial+temporal features
 - **CalcTypHyd**: Typical hydrograph computation by cluster
 - **Metrics**: Scaled RMSE and standard calibration metrics
@@ -578,8 +672,11 @@ This tutorial covered:
 Key modules:
 
 - ``pyiwfm.io.smp`` -- SMP file reader/writer
+- ``pyiwfm.io.hydrograph_reader`` -- IWFM hydrograph ``.out`` file reader
 - ``pyiwfm.io.simulation_messages`` -- SimulationMessages.out parser
-- ``pyiwfm.calibration.iwfm2obs`` -- IWFM2OBS interpolation
+- ``pyiwfm.calibration.model_file_discovery`` -- Model file auto-discovery
+- ``pyiwfm.calibration.obs_well_spec`` -- Observation well specification reader
+- ``pyiwfm.calibration.iwfm2obs`` -- IWFM2OBS interpolation and model-discovery workflow
 - ``pyiwfm.calibration.clustering`` -- Fuzzy c-means clustering
 - ``pyiwfm.calibration.calctyphyd`` -- Typical hydrograph computation
 - ``pyiwfm.visualization.plotting`` -- 1:1 and spatial bias plots

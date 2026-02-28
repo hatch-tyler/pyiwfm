@@ -1,8 +1,9 @@
 # Calibration Test Fixtures
 
-Small SMP and weights files for testing IWFM2OBS and CalcTypHyd implementations.
-These fixtures can be run through both the Fortran executables and pyiwfm to verify
-identical output.
+Small SMP, weights, and specification files for testing IWFM2OBS, CalcTypHyd,
+model file discovery, and multi-layer target implementations. These fixtures
+can be run through both the Fortran executables and pyiwfm to verify identical
+output.
 
 ## Files
 
@@ -15,6 +16,9 @@ identical output.
 | `water_levels.smp` | 5 wells, 24 monthly records (2 years) |
 | `expected_typhyd_cls0.txt` | Expected CalcTypHyd output for cluster 0 |
 | `expected_typhyd_cls1.txt` | Expected CalcTypHyd output for cluster 1 |
+| `obs_well_spec.txt` | 3 observation wells with screen geometry for multi-layer tests |
+| `expected_multilayer.out` | Expected GW_MultiLayer.out format output |
+| `expected_multilayer.ins` | Expected PEST .ins file with WLT naming |
 
 ## Bore IDs
 

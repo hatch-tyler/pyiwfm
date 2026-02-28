@@ -9,11 +9,15 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.io.budget import parse_iwfm_datetime as _parse_iwfm_dt
+
+if TYPE_CHECKING:
+    from pyiwfm.io.smp import SMPTimeSeries
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +182,47 @@ class IWFMHydrographReader:
         if not self._parsed or column_index < 0 or column_index >= self.n_columns:
             return [], []
         return self._times, self._data[:, column_index].tolist()
+
+    def get_columns_as_smp_dict(
+        self,
+        bore_ids: dict[int, str],
+    ) -> dict[str, SMPTimeSeries]:
+        """Extract specified columns as :class:`SMPTimeSeries` keyed by bore ID.
+
+        Bridges the ``.out`` file reader to the interpolation pipeline.
+
+        Parameters
+        ----------
+        bore_ids : dict[int, str]
+            Mapping of 0-based column index to bore ID string.
+
+        Returns
+        -------
+        dict[str, SMPTimeSeries]
+            Time series keyed by bore ID, suitable for
+            :func:`~pyiwfm.calibration.iwfm2obs.interpolate_batch`.
+        """
+        from pyiwfm.io.smp import SMPTimeSeries
+
+        result: dict[str, SMPTimeSeries] = {}
+        if not self._parsed:
+            return result
+
+        # Convert ISO time strings to datetime64
+        times = np.array(self._times, dtype="datetime64[s]")
+
+        for col_idx, bore_id in bore_ids.items():
+            if col_idx < 0 or col_idx >= self.n_columns:
+                continue
+            values = self._data[:, col_idx].copy()
+            result[bore_id] = SMPTimeSeries(
+                bore_id=bore_id,
+                times=times.copy(),
+                values=values,
+                excluded=np.zeros(len(times), dtype=bool),
+            )
+
+        return result
 
     def find_column_by_node_id(self, node_id: int) -> int | None:
         """Find column index for a given node/element ID.

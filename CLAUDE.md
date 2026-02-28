@@ -50,6 +50,9 @@ pyiwfm viewer --model-dir /path/to/model   # Launch the web viewer
 pyiwfm export --model-dir /path/to/model   # Export to VTK/GeoPackage
 pyiwfm budget <control_file>               # Export budgets to Excel
 pyiwfm zbudget <control_file>              # Export zone budgets to Excel
+pyiwfm iwfm2obs --obs o.smp --sim s.smp --output out.smp   # Explicit SMP interpolation
+pyiwfm iwfm2obs --model C2VSimFG.in --obs-gw o.smp --output-gw out.smp  # Model discovery mode
+pyiwfm calctyphyd --water-levels wl.smp --weights w.txt --output typhyd.smp  # Typical hydrographs
 ```
 
 ### Frontend
@@ -78,6 +81,8 @@ src/pyiwfm/
 ├── io/                # 50+ file type readers/writers (ASCII, binary, HDF5, HEC-DSS), writer_config_base
 │                      # Also: head_loader, hydrograph_reader, hydrograph_loader, area_loader,
 │                      # cache_builder, cache_loader (generic data loaders, no web deps)
+├── calibration/       # IWFM2OBS interpolation, model file discovery, obs well spec,
+│                      # multi-layer T-weighted averaging, CalcTypHyd, fuzzy c-means clustering
 ├── runner/            # IWFMRunner (subprocess execution), PEST++ integration, Scenario manager
 ├── visualization/
 │   ├── webapi/        # FastAPI viewer: config.py, server.py, routes/, services/, static/
@@ -145,6 +150,16 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - `fixtures_path` / `small_model_path` — paths to test fixture data in `tests/fixtures/`
 - `mock_model_dir` — temp directory with Simulation/ and Preprocessor/ subdirs
 - Integration tests (roundtrip, preprocessor/simulation runs) live in `tests/integration/`
+
+### Calibration Pipeline
+`calibration/` modules provide IWFM2OBS and CalcTypHyd functionality:
+- `model_file_discovery.py` — `discover_hydrograph_files()` parses simulation main file → component main files → `.out` file paths and hydrograph metadata (bore IDs, layers, coordinates). Uses `iwfm_reader` utilities.
+- `obs_well_spec.py` — `read_obs_well_spec()` reads multi-layer well specification files (name, x, y, element, screen top/bottom).
+- `iwfm2obs.py` — Core interpolation (`interpolate_to_obs_times`, `interpolate_batch`, `compute_multilayer_weights`, `compute_composite_head`, `iwfm2obs`), plus integrated workflow (`iwfm2obs_from_model`) that auto-discovers `.out` files, reads them via `IWFMHydrographReader`, interpolates, and writes multi-layer outputs (`write_multilayer_output`, `write_multilayer_pest_ins`).
+- `calctyphyd.py` — Typical hydrograph computation by cluster.
+- `clustering.py` — Fuzzy c-means clustering of observation wells.
+- `io/hydrograph_reader.py` — `IWFMHydrographReader` reads IWFM `.out` files. `get_columns_as_smp_dict()` bridges `.out` data to the interpolation pipeline as `SMPTimeSeries` dicts.
+- `cli/iwfm2obs.py` — CLI subcommand with explicit SMP mode (`--obs/--sim/--output`) and model-discovery mode (`--model`, `--obs-gw/--output-gw`, `--obs-stream/--output-stream`, `--well-spec`, `--multilayer-out/--multilayer-ins`).
 
 ### PEST++ Integration
 `runner/pest*.py` modules provide parameter estimation workflow:

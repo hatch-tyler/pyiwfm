@@ -6,6 +6,51 @@ All notable changes to pyiwfm will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.0.2] - 2026-02-27
+--------------------
+
+IWFM2OBS Model Discovery and Multi-Layer Output
+
+Added
+~~~~~
+
+**Model File Discovery** (``pyiwfm.calibration.model_file_discovery``)
+
+- ``discover_hydrograph_files()``: Parse IWFM simulation main file to auto-discover
+  GW and stream hydrograph ``.out`` file paths and hydrograph metadata (bore IDs,
+  layers, coordinates)
+- ``HydrographFileInfo``: Dataclass with discovered paths, hydrograph locations,
+  start date, and time unit
+
+**Observation Well Specification** (``pyiwfm.calibration.obs_well_spec``)
+
+- ``read_obs_well_spec()``: Read observation well specification files for multi-layer
+  target processing (name, coordinates, element, screen top/bottom)
+- ``ObsWellSpec``: Dataclass for multi-layer well screen geometry
+
+**IWFM2OBS Model-Discovery Mode** (``pyiwfm.calibration.iwfm2obs``)
+
+- ``iwfm2obs_from_model()``: Full IWFM2OBS workflow that reads ``.out`` files directly
+  via simulation main file discovery — combines the old Fortran IWFM2OBS's direct
+  file reading with the new multi-layer T-weighted averaging
+- ``IWFM2OBSConfig``: Configuration dataclass for the integrated workflow
+- ``write_multilayer_output()``: Write ``GW_MultiLayer.out`` format (Name, Date, Time,
+  Simulated, T1-T4, NewTOS, NewBOS)
+- ``write_multilayer_pest_ins()``: Write PEST instruction file with ``WLT{well:05d}_{timestep:05d}``
+  naming at columns 50:60
+
+**Hydrograph Reader Enhancement** (``pyiwfm.io.hydrograph_reader``)
+
+- ``IWFMHydrographReader.get_columns_as_smp_dict()``: Extract ``.out`` columns as
+  ``SMPTimeSeries`` dict, bridging the hydrograph reader to the interpolation pipeline
+
+**CLI Model-Discovery Mode** (``pyiwfm.cli.iwfm2obs``)
+
+- ``--model`` flag for automatic model file discovery from simulation main file
+- ``--obs-gw``, ``--output-gw``, ``--obs-stream``, ``--output-stream`` for per-type
+  observation/output SMP paths
+- ``--well-spec``, ``--multilayer-out``, ``--multilayer-ins`` for multi-layer processing
+
 [1.0.0] - 2026-02-24
 --------------------
 

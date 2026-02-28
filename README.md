@@ -132,6 +132,38 @@ The frontend is pre-built into `src/pyiwfm/visualization/webapi/static/`. To reb
 cd frontend && npm install && npm run build
 ```
 
+## Calibration Tools
+
+pyiwfm provides calibration tools that mirror and extend IWFM's Fortran utilities (IWFM2OBS, CalcTypHyd):
+
+```bash
+# Explicit SMP mode: interpolate simulated heads to observation times
+pyiwfm iwfm2obs --obs observed.smp --sim simulated.smp --output interp.smp
+
+# Model discovery mode: auto-discover .out files from simulation main file
+pyiwfm iwfm2obs --model C2VSimFG.in --obs-gw gw_obs.smp --output-gw gw_out.smp
+
+# With multi-layer T-weighted averaging and PEST instruction file
+pyiwfm iwfm2obs --model C2VSimFG.in \
+    --obs-gw gw_obs.smp --output-gw gw_out.smp \
+    --well-spec obs_wells.txt \
+    --multilayer-out GW_MultiLayer.out \
+    --multilayer-ins GWHMultiLayer.ins
+```
+
+Or use the Python API:
+
+```python
+from pyiwfm.calibration import iwfm2obs_from_model, discover_hydrograph_files
+
+# Auto-discover .out files and interpolate to observation times
+results = iwfm2obs_from_model(
+    simulation_main_file="C2VSimFG.in",
+    obs_smp_paths={"gw": "GW_Obs.smp"},
+    output_paths={"gw": "GW_OUT.smp"},
+)
+```
+
 ## Features
 
 - **Core Data Structures**: Node, Element, Face, AppGrid, Stratigraphy, TimeSeries
@@ -156,6 +188,7 @@ cd frontend && npm install && npm run build
 - **PreProcessor Integration**: Load/save complete models from IWFM file structure
 - **Model Factory**: Extracted construction helpers (reach building, coordinate resolution, parametric grids, binary loading) into `pyiwfm.core.model_factory`
 - **Mesh Generation**: Triangle and Gmsh wrappers
+- **Calibration Tools**: IWFM2OBS time interpolation with automatic model file discovery, multi-layer T-weighted observation well processing (GW_MultiLayer.out + PEST .ins), fuzzy c-means well clustering, typical hydrograph computation (CalcTypHyd), and publication-quality calibration figures
 - **Visualization**: GIS export (GeoPackage download), VTK 3D export, matplotlib plot generation (PNG/SVG), interactive web viewer with budget charts, head maps, hydrograph comparison, drawdown animation, and head statistics
 - **Model Comparison**: Diff and comparison metrics, including web viewer comparison endpoint
 
