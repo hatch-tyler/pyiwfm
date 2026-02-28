@@ -71,3 +71,6 @@ NUL
 # Logs
 *.log
 npm-debug.log*
+
+# hatch-vcs generated version file
+src/pyiwfm/_version.py

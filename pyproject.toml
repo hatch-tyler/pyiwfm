@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "pyiwfm"
-version = "1.0.3"
+dynamic = ["version"]
 description = "Python package for reading, writing, visualizing, and comparing IWFM models"
 readme = "README.md"
 license = "GPL-2.0-only"
@@ -91,6 +91,13 @@ pyiwfm = "pyiwfm.cli:main"
 Homepage = "https://github.com/hatch-tyler/pyiwfm"
 Documentation = "https://hatch-tyler.github.io/pyiwfm/"
 Repository = "https://github.com/hatch-tyler/pyiwfm"
+
+[tool.hatch.version]
+source = "vcs"
+tag-pattern = "v(?P<version>.*)"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/pyiwfm/_version.py"
 
 [tool.hatch.build.targets.sdist]
 include = [

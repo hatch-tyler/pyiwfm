@@ -5,6 +5,7 @@
 
 import os
 import sys
+from importlib.metadata import version as _pkg_version
 
 # Add the source directory to the path
 sys.path.insert(0, os.path.abspath("../src"))
@@ -13,8 +14,9 @@ sys.path.insert(0, os.path.abspath("../src"))
 project = "pyiwfm"
 copyright = "2024, hatch-tyler"
 author = "hatch-tyler"
-release = "1.0.0"
-version = "1.0.0"
+_ver = _pkg_version("pyiwfm")
+release = _ver
+version = ".".join(_ver.split(".")[:2])
 
 # -- General configuration ---------------------------------------------------
 extensions = [
