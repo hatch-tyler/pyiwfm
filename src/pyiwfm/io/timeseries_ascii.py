@@ -105,6 +105,77 @@ def parse_iwfm_timestamp(ts_str: str) -> datetime:
     return dt
 
 
+def parse_iwfm_datetime(date_str: str) -> datetime | None:
+    """Parse an IWFM datetime string to Python datetime (lenient).
+
+    Unlike :func:`parse_iwfm_timestamp`, which raises on invalid input,
+    this function tries 8 format variants and returns ``None`` on failure.
+    Handles the IWFM ``_24:00`` end-of-day convention as well as ISO and
+    date-only formats.
+
+    Parameters
+    ----------
+    date_str : str
+        Datetime string in any recognised IWFM or ISO format.
+
+    Returns
+    -------
+    datetime or None
+        Parsed datetime, or ``None`` if no format matched.
+    """
+    if not date_str or date_str.strip() == "":
+        return None
+
+    date_str = date_str.strip()
+
+    # Handle IWFM _24:00 convention (end of day -> next day 00:00)
+    if "_24:00" in date_str:
+        date_part = date_str.split("_")[0]
+        for dfmt in ["%m/%d/%Y", "%Y-%m-%d"]:
+            try:
+                return datetime.strptime(date_part, dfmt) + timedelta(days=1)
+            except ValueError:
+                continue
+
+    # Try various IWFM date formats (16-char: MM/DD/YYYY_HH:MM)
+    formats = [
+        "%m/%d/%Y_%H:%M",
+        "%m/%d/%Y %H:%M",
+        "%m/%d/%Y_%H:%M:%S",
+        "%m/%d/%Y %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%m/%d/%Y",
+        "%Y-%m-%d",
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            continue
+
+    return None
+
+
+def iwfm_date_to_iso(date_str: str) -> str:
+    """Convert IWFM date string to ISO ``YYYY-MM-DD`` format.
+
+    Parameters
+    ----------
+    date_str : str
+        IWFM datetime string (e.g. ``"10/01/1921_24:00"``).
+
+    Returns
+    -------
+    str
+        ISO date string (e.g. ``"1921-10-02"``), or the original
+        string unchanged if parsing fails.
+    """
+    dt = parse_iwfm_datetime(date_str)
+    return dt.strftime("%Y-%m-%d") if dt else date_str
+
+
 def _strip_inline_comment(line: str) -> str:
     """Strip inline comment from a data line.
 

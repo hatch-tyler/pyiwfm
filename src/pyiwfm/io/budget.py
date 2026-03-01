@@ -31,6 +31,9 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from pyiwfm.io.timeseries_ascii import iwfm_date_to_iso as iwfm_date_to_iso
+from pyiwfm.io.timeseries_ascii import parse_iwfm_datetime as parse_iwfm_datetime
+
 # Budget data type codes (from Budget_Parameters.f90)
 BUDGET_DATA_TYPES = {
     1: "VR",  # Volumetric rate
@@ -113,64 +116,6 @@ class BudgetHeader:
     location_names: list[str] = field(default_factory=list)
     location_data: list[LocationData] = field(default_factory=list)
     file_position: int = 0  # Position after header in binary file
-
-
-def parse_iwfm_datetime(date_str: str) -> datetime | None:
-    """Parse IWFM datetime string to Python datetime.
-
-    Handles IWFM convention where ``_24:00`` means end of day (next day 00:00).
-    """
-    if not date_str or date_str.strip() == "":
-        return None
-
-    date_str = date_str.strip()
-
-    # Handle IWFM _24:00 convention (end of day → next day 00:00)
-    if "_24:00" in date_str:
-        date_part = date_str.split("_")[0]
-        for dfmt in ["%m/%d/%Y", "%Y-%m-%d"]:
-            try:
-                return datetime.strptime(date_part, dfmt) + timedelta(days=1)
-            except ValueError:
-                continue
-
-    # Try various IWFM date formats (16-char: MM/DD/YYYY_HH:MM)
-    formats = [
-        "%m/%d/%Y_%H:%M",
-        "%m/%d/%Y %H:%M",
-        "%m/%d/%Y_%H:%M:%S",
-        "%m/%d/%Y %H:%M:%S",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M",
-        "%m/%d/%Y",
-        "%Y-%m-%d",
-    ]
-
-    for fmt in formats:
-        try:
-            return datetime.strptime(date_str, fmt)
-        except ValueError:
-            continue
-
-    return None
-
-
-def iwfm_date_to_iso(date_str: str) -> str:
-    """Convert IWFM date string to ISO ``YYYY-MM-DD`` format.
-
-    Parameters
-    ----------
-    date_str : str
-        IWFM datetime string (e.g. ``"10/01/1921_24:00"``).
-
-    Returns
-    -------
-    str
-        ISO date string (e.g. ``"1921-10-02"``), or the original
-        string unchanged if parsing fails.
-    """
-    dt = parse_iwfm_datetime(date_str)
-    return dt.strftime("%Y-%m-%d") if dt else date_str
 
 
 def julian_to_datetime(julian_day: float) -> datetime:

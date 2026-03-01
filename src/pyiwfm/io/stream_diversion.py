@@ -19,7 +19,7 @@ from typing import TextIO
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    is_comment_line as _is_comment_line,
+    ReaderMixin,
 )
 from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
@@ -128,7 +128,7 @@ class DiversionSpecConfig:
     has_spills: bool = False
 
 
-class DiversionSpecReader:
+class DiversionSpecReader(ReaderMixin):
     """Reader for IWFM diversion specification files.
 
     Supports both 14-column (legacy) and 16-column (with spills) formats.
@@ -356,15 +356,6 @@ class DiversionSpecReader:
             pass
 
         return rz
-
-    def _next_data_line(self, f: TextIO) -> str:
-        """Return the next non-comment data line."""
-        for line in f:
-            self._line_num += 1
-            if _is_comment_line(line):
-                continue
-            return line.strip()
-        raise FileFormatError("Unexpected end of file", line_number=self._line_num)
 
 
 def read_diversion_spec(filepath: Path | str) -> DiversionSpecConfig:

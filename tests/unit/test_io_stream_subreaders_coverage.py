@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from pyiwfm.io.iwfm_reader import is_comment_line as inflow_is_comment
 from pyiwfm.io.iwfm_reader import strip_inline_comment as inflow_parse_value
 from pyiwfm.io.stream_bypass import (
     BYPASS_DEST_LAKE,
@@ -40,9 +41,6 @@ from pyiwfm.io.stream_inflow import (
     InflowReader,
     InflowSpec,
     read_stream_inflow,
-)
-from pyiwfm.io.stream_inflow import (
-    _is_comment_line as inflow_is_comment,
 )
 
 # =============================================================================

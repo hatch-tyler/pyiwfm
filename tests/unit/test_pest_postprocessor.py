@@ -11,6 +11,7 @@ from pyiwfm.runner.pest_postprocessor import (
     PestPostProcessor,
     ResidualData,
     SensitivityData,
+    read_pest_res,
 )
 
 
@@ -740,3 +741,109 @@ class TestPestPostProcessorAnalysisEdgeCases:
             result = pp.export_calibrated_parameters(output, format="csv")
             assert isinstance(result, Path)
             assert result.exists()
+
+
+class TestReadPestRes:
+    """Tests for standalone read_pest_res function."""
+
+    def test_basic_read(self):
+        """Test basic .res file reading."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = (
+                "Name Group Measured Modelled Residual Weight\n"
+                "obs1 head 100.0 98.0 2.0 1.0\n"
+                "obs2 head 200.0 205.0 -5.0 1.0\n"
+                "obs3 flow 50.0 48.0 2.0 0.5\n"
+            )
+            path = Path(tmpdir) / "test.res"
+            path.write_text(content)
+
+            df = read_pest_res(path)
+            assert len(df) == 3
+            assert list(df.columns) == [
+                "name",
+                "group",
+                "observed",
+                "simulated",
+                "residual",
+                "weight",
+            ]
+            assert df.iloc[0]["name"] == "obs1"
+            assert df.iloc[0]["observed"] == pytest.approx(100.0)
+
+    def test_prefix_filter(self):
+        """Test filtering by observation name prefix."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = (
+                "Name Group Measured Modelled Residual Weight\n"
+                "head_01 head 100.0 98.0 2.0 1.0\n"
+                "head_02 head 200.0 205.0 -5.0 1.0\n"
+                "flow_01 flow 50.0 48.0 2.0 0.5\n"
+            )
+            path = Path(tmpdir) / "test.res"
+            path.write_text(content)
+
+            df = read_pest_res(path, prefix_filter="head")
+            assert len(df) == 2
+            assert all(df["name"].str.startswith("head"))
+
+    def test_group_filter(self):
+        """Test filtering by group."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = (
+                "Name Group Measured Modelled Residual Weight\n"
+                "obs1 head 100.0 98.0 2.0 1.0\n"
+                "obs2 flow 50.0 48.0 2.0 0.5\n"
+            )
+            path = Path(tmpdir) / "test.res"
+            path.write_text(content)
+
+            df = read_pest_res(path, group_filter="flow")
+            assert len(df) == 1
+            assert df.iloc[0]["group"] == "flow"
+
+    def test_combined_filters(self):
+        """Test both prefix and group filters together."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = (
+                "Name Group Measured Modelled Residual Weight\n"
+                "gw_01 head 100.0 98.0 2.0 1.0\n"
+                "gw_02 flow 50.0 48.0 2.0 0.5\n"
+                "sw_01 flow 30.0 28.0 2.0 1.0\n"
+            )
+            path = Path(tmpdir) / "test.res"
+            path.write_text(content)
+
+            df = read_pest_res(path, prefix_filter="gw", group_filter="flow")
+            assert len(df) == 1
+            assert df.iloc[0]["name"] == "gw_02"
+
+    def test_empty_result(self):
+        """Test filtering that matches nothing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = "Name Group Measured Modelled Residual Weight\nobs1 head 100.0 98.0 2.0 1.0\n"
+            path = Path(tmpdir) / "test.res"
+            path.write_text(content)
+
+            df = read_pest_res(path, prefix_filter="zzz")
+            assert len(df) == 0
+            assert list(df.columns) == [
+                "name",
+                "group",
+                "observed",
+                "simulated",
+                "residual",
+                "weight",
+            ]
+
+    def test_case_insensitive_filter(self):
+        """Test that prefix and group filters are case-insensitive."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = (
+                "Name Group Measured Modelled Residual Weight\nHEAD_01 HEAD 100.0 98.0 2.0 1.0\n"
+            )
+            path = Path(tmpdir) / "test.res"
+            path.write_text(content)
+
+            df = read_pest_res(path, prefix_filter="head", group_filter="head")
+            assert len(df) == 1

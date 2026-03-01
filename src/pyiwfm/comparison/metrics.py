@@ -15,6 +15,7 @@ Metric Functions
 - :func:`correlation_coefficient`: Pearson correlation
 - :func:`max_error`: Maximum absolute error
 - :func:`scaled_rmse`: Scaled RMSE (dimensionless)
+- :func:`index_of_agreement`: Willmott Index of Agreement
 
 Classes
 -------
@@ -238,6 +239,39 @@ def scaled_rmse(
     return rmse(observed, simulated) / obs_range
 
 
+def index_of_agreement(
+    observed: NDArray[np.float64],
+    simulated: NDArray[np.float64],
+) -> float:
+    """
+    Calculate Willmott Index of Agreement (d).
+
+    d = 1 - [sum((sim - obs)^2) / sum((|sim - mean(obs)| + |obs - mean(obs)|)^2)]
+
+    Values range from 0 to 1.0:
+    - d = 1: Perfect agreement
+    - d = 0: No agreement
+
+    Reference: Willmott, C. J. (1981). On the validation of models.
+    Physical Geography, 2(2), 184-194.
+
+    Args:
+        observed: Observed values
+        simulated: Simulated values
+
+    Returns:
+        Index of agreement (0 to 1)
+    """
+    obs_mean = np.mean(observed)
+    numerator = np.sum((simulated - observed) ** 2)
+    denominator = np.sum((np.abs(simulated - obs_mean) + np.abs(observed - obs_mean)) ** 2)
+
+    if denominator == 0.0:
+        return 1.0 if numerator == 0.0 else 0.0
+
+    return float(1.0 - numerator / denominator)
+
+
 @dataclass
 class ComparisonMetrics:
     """
@@ -252,6 +286,7 @@ class ComparisonMetrics:
         correlation: Pearson correlation coefficient
         max_error: Maximum absolute error
         scaled_rmse: Scaled RMSE (dimensionless)
+        index_of_agreement: Willmott Index of Agreement
         n_points: Number of data points
     """
 
@@ -263,6 +298,7 @@ class ComparisonMetrics:
     correlation: float
     max_error: float
     scaled_rmse: float
+    index_of_agreement: float
     n_points: int
 
     @classmethod
@@ -295,6 +331,7 @@ class ComparisonMetrics:
             correlation=correlation_coefficient(obs_clean, sim_clean),
             max_error=max_error(obs_clean, sim_clean),
             scaled_rmse=scaled_rmse(obs_clean, sim_clean),
+            index_of_agreement=index_of_agreement(obs_clean, sim_clean),
             n_points=len(obs_clean),
         )
 
@@ -314,6 +351,7 @@ class ComparisonMetrics:
             "correlation": self.correlation,
             "max_error": self.max_error,
             "scaled_rmse": self.scaled_rmse,
+            "index_of_agreement": self.index_of_agreement,
             "n_points": self.n_points,
         }
 
@@ -335,6 +373,7 @@ class ComparisonMetrics:
             f"Percent Bias:    {self.percent_bias:.2f}%",
             f"Correlation:     {self.correlation:.4f}",
             f"Max Error:       {self.max_error:.4f}",
+            f"Index of Agr.:   {self.index_of_agreement:.4f}",
             f"N Points:        {self.n_points}",
             f"Rating:          {self.rating()}",
         ]

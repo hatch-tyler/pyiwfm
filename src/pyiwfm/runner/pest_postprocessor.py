@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 
 
@@ -210,6 +211,67 @@ class CalibrationResults:
             "nse": nse,
             "pbias": pbias,
         }
+
+
+def read_pest_res(
+    filepath: str | Path,
+    prefix_filter: str | None = None,
+    group_filter: str | None = None,
+) -> pd.DataFrame:
+    """Read a PEST++ residual file (``.res`` or ``.rei``).
+
+    Returns a DataFrame with columns: ``name``, ``group``, ``observed``,
+    ``simulated``, ``residual``, ``weight``.  Optionally filters by
+    observation name prefix and/or group.
+
+    Parameters
+    ----------
+    filepath : str or Path
+        Path to ``.res`` or ``.rei`` file.
+    prefix_filter : str | None
+        If given, keep only observations whose name starts with this prefix.
+    group_filter : str | None
+        If given, keep only observations in this group.
+
+    Returns
+    -------
+    pd.DataFrame
+        Parsed residual data.
+    """
+    filepath = Path(filepath)
+    lines = filepath.read_text().strip().split("\n")
+
+    data_start = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip().lower()
+        if stripped.startswith("name") or stripped.startswith("name"):
+            data_start = i + 1
+            break
+
+    rows: list[dict[str, object]] = []
+    for line in lines[data_start:]:
+        parts = line.split()
+        if len(parts) >= 6:
+            name = parts[0]
+            group = parts[1]
+            if prefix_filter and not name.lower().startswith(prefix_filter.lower()):
+                continue
+            if group_filter and group.lower() != group_filter.lower():
+                continue
+            rows.append(
+                {
+                    "name": name,
+                    "group": group,
+                    "observed": float(parts[2]),
+                    "simulated": float(parts[3]),
+                    "residual": float(parts[4]),
+                    "weight": float(parts[5]),
+                }
+            )
+
+    return pd.DataFrame(
+        rows, columns=["name", "group", "observed", "simulated", "residual", "weight"]
+    )
 
 
 class PestPostProcessor:

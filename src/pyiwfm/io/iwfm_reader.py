@@ -226,6 +226,58 @@ def version_ge(version: str, target: tuple[int, int]) -> bool:
     return parse_version(version) >= target
 
 
+class ReaderMixin:
+    """Mixin providing standard IWFM line-reading helpers for reader classes.
+
+    Any class that mixes this in must initialise ``self._line_num = 0``
+    before calling these methods (typically in ``__init__`` or at the
+    start of ``read()``).
+    """
+
+    _line_num: int
+
+    def _next_data_line(self, f: TextIO) -> str:
+        """Return the next non-comment data line.
+
+        Increments ``self._line_num`` for each line read.
+        Raises :class:`FileFormatError` on unexpected EOF.
+        """
+        for line in f:
+            self._line_num += 1
+            if is_comment_line(line):
+                continue
+            return line.strip()
+        raise FileFormatError("Unexpected end of file", line_number=self._line_num)
+
+    def _next_data_value(self, f: TextIO) -> str:
+        """Read next non-comment line and strip inline comment.
+
+        Increments ``self._line_num`` for each line read.
+        Raises :class:`FileFormatError` on unexpected EOF.
+        """
+        for line in f:
+            self._line_num += 1
+            if is_comment_line(line):
+                continue
+            value, _ = strip_inline_comment(line)
+            return value
+        raise FileFormatError("Unexpected end of file", line_number=self._line_num)
+
+    def _next_data_or_empty(self, f: TextIO) -> str:
+        """Read next data value, or ``""`` at EOF.
+
+        Skips full-line comments but stops at blank lines.
+        Increments ``self._line_num`` for each line read.
+        """
+        for line in f:
+            self._line_num += 1
+            if line and line[0] in COMMENT_CHARS:
+                continue
+            value, _ = strip_inline_comment(line)
+            return value
+        return ""
+
+
 class LineBuffer:
     """Read-ahead buffer for positional-sequential IWFM files.
 

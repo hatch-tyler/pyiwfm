@@ -50,6 +50,19 @@ from pyiwfm.calibration.obs_well_spec import (
     ObsWellSpec,
     read_obs_well_spec,
 )
+from pyiwfm.calibration.report import (
+    CalibrationReportConfig,
+    generate_calibration_report,
+)
+from pyiwfm.calibration.residuals import (
+    WellScreenType,
+    compute_residuals,
+    export_residual_table,
+    filter_residuals,
+    max_residuals,
+    mean_residuals,
+    residual_summary,
+)
 
 __all__ = [
     # iwfm2obs
@@ -82,4 +95,15 @@ __all__ = [
     "ClusteringConfig",
     "ClusteringResult",
     "fuzzy_cmeans_cluster",
+    # report
+    "CalibrationReportConfig",
+    "generate_calibration_report",
+    # residuals
+    "WellScreenType",
+    "compute_residuals",
+    "mean_residuals",
+    "max_residuals",
+    "filter_residuals",
+    "residual_summary",
+    "export_residual_table",
 ]

@@ -18,12 +18,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
 
-from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
-)
-from pyiwfm.io.iwfm_reader import (
-    is_comment_line as _is_comment_line,
+    ReaderMixin,
 )
 from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
@@ -205,7 +202,7 @@ class PumpingConfig:
         return len(self.elem_pumping_specs)
 
 
-class PumpingReader:
+class PumpingReader(ReaderMixin):
     """Reader for IWFM pumping files.
 
     The pumping system reads from a main file that references:
@@ -435,15 +432,6 @@ class PumpingReader:
                 continue
             break
         return ""
-
-    def _next_data_line(self, f: TextIO) -> str:
-        """Return the next non-comment data line."""
-        for line in f:
-            self._line_num += 1
-            if _is_comment_line(line):
-                continue
-            return line.strip()
-        raise FileFormatError("Unexpected end of file", line_number=self._line_num)
 
 
 def read_gw_pumping(

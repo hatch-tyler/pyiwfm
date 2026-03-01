@@ -71,6 +71,7 @@ from pyiwfm.runner.pest_postprocessor import (
     PestPostProcessor,
     ResidualData,
     SensitivityData,
+    read_pest_res,
 )
 from pyiwfm.runner.pest_templates import (
     IWFMFileSection,
@@ -169,4 +170,5 @@ __all__ = [
     "CalibrationResults",
     "ResidualData",
     "SensitivityData",
+    "read_pest_res",
 ]

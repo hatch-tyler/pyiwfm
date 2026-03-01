@@ -16,11 +16,12 @@ from __future__ import annotations
 
 import argparse
 import logging
-from datetime import datetime, timedelta
 from pathlib import Path
 
 import h5py
 import numpy as np
+
+from pyiwfm.io.timeseries_ascii import parse_iwfm_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +31,9 @@ _CHUNK_GROW = 256
 def _parse_timestamp(text: str) -> str:
     """Parse an IWFM timestamp to ISO 8601 string.
 
-    Handles ``MM/DD/YYYY_HH:MM`` and the ``_24:00`` convention.
+    Delegates to :func:`~pyiwfm.io.timeseries_ascii.parse_iwfm_timestamp`.
     """
-    text = text.strip().replace("_", " ")
-    if "24:00" in text:
-        text = text.replace("24:00", "00:00")
-        dt = datetime.strptime(text, "%m/%d/%Y %H:%M") + timedelta(days=1)
-    else:
-        dt = datetime.strptime(text, "%m/%d/%Y %H:%M")
-    return dt.isoformat()
+    return parse_iwfm_timestamp(text).isoformat()
 
 
 def convert_hydrograph_to_hdf(

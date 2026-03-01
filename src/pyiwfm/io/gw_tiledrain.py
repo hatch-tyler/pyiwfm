@@ -14,12 +14,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
 
-from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
-)
-from pyiwfm.io.iwfm_reader import (
-    is_comment_line as _is_comment_line,
+    ReaderMixin,
 )
 from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
@@ -134,7 +131,7 @@ class TileDrainConfig:
     td_hydro_specs: list[TileDrainHydroSpec] = field(default_factory=list)
 
 
-class TileDrainReader:
+class TileDrainReader(ReaderMixin):
     """Reader for IWFM tile drain/sub-irrigation file.
 
     The file contains tile drains first, then sub-irrigation data.
@@ -293,15 +290,6 @@ class TileDrainReader:
         val = _next_data_or_empty(f, lc)
         self._line_num = lc[0]
         return val
-
-    def _next_data_line(self, f: TextIO) -> str:
-        """Return the next non-comment data line."""
-        for line in f:
-            self._line_num += 1
-            if _is_comment_line(line):
-                continue
-            return line.strip()
-        raise FileFormatError("Unexpected end of file", line_number=self._line_num)
 
 
 def read_gw_tiledrain(filepath: Path | str) -> TileDrainConfig:

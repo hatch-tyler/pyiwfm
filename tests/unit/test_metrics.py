@@ -9,6 +9,7 @@ from pyiwfm.comparison.metrics import (
     SpatialComparison,
     TimeSeriesComparison,
     correlation_coefficient,
+    index_of_agreement,
     mae,
     max_error,
     mbe,
@@ -287,6 +288,61 @@ class TestSpatialComparison:
         regional_metrics = comparison.metrics_by_region(regions)
         assert 1 in regional_metrics
         assert 2 in regional_metrics
+
+
+class TestIndexOfAgreement:
+    """Tests for index_of_agreement function."""
+
+    def test_perfect_agreement(self) -> None:
+        """Test d=1 for identical arrays."""
+        observed = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        simulated = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        assert np.isclose(index_of_agreement(observed, simulated), 1.0)
+
+    def test_poor_agreement(self) -> None:
+        """Test d near 0 for very poor agreement."""
+        observed = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        simulated = np.array([100.0, 200.0, 300.0, 400.0, 500.0])
+        d = index_of_agreement(observed, simulated)
+        assert d < 0.1
+
+    def test_constant_observed_perfect(self) -> None:
+        """Test d=1 when observed is constant and simulated matches."""
+        observed = np.array([5.0, 5.0, 5.0])
+        simulated = np.array([5.0, 5.0, 5.0])
+        assert index_of_agreement(observed, simulated) == 1.0
+
+    def test_constant_observed_mismatch(self) -> None:
+        """Test d=0 when observed is constant and simulated differs."""
+        observed = np.array([5.0, 5.0, 5.0])
+        simulated = np.array([6.0, 7.0, 8.0])
+        # denominator = sum(|sim - 5| + 0)^2 = sum(1,2,3)^2 = 1+4+9=14
+        # numerator = sum(1,4,9) = 14, d = 1 - 14/14 = 0
+        assert np.isclose(index_of_agreement(observed, simulated), 0.0)
+
+    def test_in_comparison_metrics(self) -> None:
+        """Test that index_of_agreement appears in ComparisonMetrics.compute."""
+        observed = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        simulated = np.array([1.1, 2.2, 3.1, 4.2, 5.1])
+        metrics = ComparisonMetrics.compute(observed, simulated)
+        assert hasattr(metrics, "index_of_agreement")
+        assert 0.0 <= metrics.index_of_agreement <= 1.0
+
+    def test_in_to_dict(self) -> None:
+        """Test that index_of_agreement appears in to_dict output."""
+        observed = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        simulated = np.array([1.1, 2.2, 3.1, 4.2, 5.1])
+        metrics = ComparisonMetrics.compute(observed, simulated)
+        d = metrics.to_dict()
+        assert "index_of_agreement" in d
+
+    def test_in_summary(self) -> None:
+        """Test that index_of_agreement appears in summary output."""
+        observed = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        simulated = np.array([1.1, 2.2, 3.1, 4.2, 5.1])
+        metrics = ComparisonMetrics.compute(observed, simulated)
+        summary = metrics.summary()
+        assert "Index of Agr." in summary
 
 
 # ── Additional tests for increased coverage ──────────────────────────

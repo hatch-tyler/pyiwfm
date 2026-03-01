@@ -14,9 +14,9 @@ from pyiwfm.io.gw_subsidence import (
     SubsidenceConfig,
     SubsidenceNodeParams,
     SubsidenceReader,
-    _is_comment_line,
     read_gw_subsidence,
 )
+from pyiwfm.io.iwfm_reader import is_comment_line as _is_comment_line
 from pyiwfm.io.iwfm_reader import strip_inline_comment as _strip_comment
 
 # ---------------------------------------------------------------------------

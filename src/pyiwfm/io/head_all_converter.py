@@ -24,12 +24,13 @@ from __future__ import annotations
 
 import argparse
 import logging
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TextIO
 
 import h5py
 import numpy as np
+
+from pyiwfm.io.timeseries_ascii import parse_iwfm_timestamp as _parse_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -39,19 +40,6 @@ _COL_WIDTH = 12
 _TIME_WIDTH = 21
 # How many timesteps to grow the HDF5 dataset by when it fills up
 _CHUNK_GROW = 256
-
-
-def _parse_timestamp(text: str) -> datetime:
-    """Parse an IWFM timestamp like ``MM/DD/YYYY_HH:MM`` or ``MM/DD/YYYY_24:00``.
-
-    The ``_24:00`` convention means midnight at the *end* of the day,
-    which we map to 00:00 of the next day.
-    """
-    text = text.strip().replace("_", " ")
-    if "24:00" in text:
-        text = text.replace("24:00", "00:00")
-        return datetime.strptime(text, "%m/%d/%Y %H:%M") + timedelta(days=1)
-    return datetime.strptime(text, "%m/%d/%Y %H:%M")
 
 
 def _parse_node_ids(header_line: str) -> list[int]:

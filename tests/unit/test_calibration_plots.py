@@ -52,6 +52,40 @@ class TestPlotOneToOne:
         assert isinstance(fig, Figure)
 
 
+class TestPlotResidualCdf:
+    """Tests for plot_residual_cdf function."""
+
+    def test_returns_figure_and_axes(self) -> None:
+        from pyiwfm.visualization.plotting import plot_residual_cdf
+
+        rng = np.random.default_rng(42)
+        residuals = rng.normal(0, 5, 100)
+        fig, ax = plot_residual_cdf(residuals)
+        assert isinstance(fig, Figure)
+        assert ax is not None
+
+    def test_with_percentile_lines(self) -> None:
+        from pyiwfm.visualization.plotting import plot_residual_cdf
+
+        residuals = np.linspace(-10, 10, 50)
+        fig, ax = plot_residual_cdf(residuals, show_percentile_lines=True)
+        assert isinstance(fig, Figure)
+
+    def test_without_percentile_lines(self) -> None:
+        from pyiwfm.visualization.plotting import plot_residual_cdf
+
+        residuals = np.array([1.0, -1.0, 2.0, -2.0, 0.5])
+        fig, ax = plot_residual_cdf(residuals, show_percentile_lines=False)
+        assert isinstance(fig, Figure)
+
+    def test_custom_title(self) -> None:
+        from pyiwfm.visualization.plotting import plot_residual_cdf
+
+        residuals = np.array([1.0, -1.0, 2.0])
+        fig, ax = plot_residual_cdf(residuals, title="My CDF")
+        assert ax.get_title() == "My CDF"
+
+
 class TestPlotResidualHistogram:
     """Tests for plot_residual_histogram function."""
 

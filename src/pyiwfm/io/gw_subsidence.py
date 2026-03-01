@@ -20,9 +20,9 @@ from typing import TextIO
 import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
+    ReaderMixin,
 )
 from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
@@ -165,7 +165,7 @@ class SubsidenceConfig:
     ic_precompact_head: NDArray[np.float64] | None = None
 
 
-class SubsidenceReader:
+class SubsidenceReader(ReaderMixin):
     """Reader for IWFM subsidence parameter files.
 
     Supports both version 4.0 and 5.0 formats. Version is auto-detected
@@ -579,15 +579,6 @@ class SubsidenceReader:
                 continue
             break
         return ""
-
-    def _next_data_line(self, f: TextIO) -> str:
-        """Return the next non-comment data line."""
-        for line in f:
-            self._line_num += 1
-            if _is_comment_line(line):
-                continue
-            return line.strip()
-        raise FileFormatError("Unexpected end of file", line_number=self._line_num)
 
 
 def read_gw_subsidence(

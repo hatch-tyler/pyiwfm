@@ -18,11 +18,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TextIO
 
-from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
-    is_comment_line as _is_comment_line,
+    ReaderMixin,
 )
 from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
@@ -64,7 +62,7 @@ class InflowConfig:
         return [s.stream_node for s in self.inflow_specs if s.stream_node > 0]
 
 
-class InflowReader:
+class InflowReader(ReaderMixin):
     """Reader for IWFM stream inflow file header.
 
     Reads only the header (conversion factor, time unit, number of series,
@@ -123,15 +121,6 @@ class InflowReader:
                 config.inflow_specs.append(spec)
 
         return config
-
-    def _next_data_line(self, f: TextIO) -> str:
-        """Return the next non-comment data line."""
-        for line in f:
-            self._line_num += 1
-            if _is_comment_line(line):
-                continue
-            return line.strip()
-        raise FileFormatError("Unexpected end of file", line_number=self._line_num)
 
 
 def read_stream_inflow(filepath: Path | str) -> InflowConfig:

@@ -21,9 +21,7 @@ from typing import TextIO
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
-)
-from pyiwfm.io.iwfm_reader import (
-    is_comment_line as _is_comment_line,
+    ReaderMixin,
 )
 from pyiwfm.io.iwfm_reader import (
     next_data_or_empty as _next_data_or_empty,
@@ -192,7 +190,7 @@ class SmallWatershedMainConfig:
     initial_conditions: list[WatershedInitialCondition] = field(default_factory=list)
 
 
-class SmallWatershedMainReader:
+class SmallWatershedMainReader(ReaderMixin):
     """Reader for IWFM small watershed component main file.
 
     Parses the complete small watershed configuration including
@@ -452,15 +450,6 @@ class SmallWatershedMainReader:
                 continue
             break
         return ""
-
-    def _next_data_line(self, f: TextIO) -> str:
-        """Return the next non-comment data line."""
-        for line in f:
-            self._line_num += 1
-            if _is_comment_line(line):
-                continue
-            return line.strip()
-        raise FileFormatError("Unexpected end of file", line_number=self._line_num)
 
 
 def read_small_watershed_main(
