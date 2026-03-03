@@ -49,6 +49,14 @@ def add_iwfm2obs_parser(subparsers: argparse._SubParsersAction) -> None:  # type
     p.add_argument("--multilayer-out", type=str, help="Multi-layer output file path")
     p.add_argument("--multilayer-ins", type=str, help="Multi-layer PEST .ins file path")
 
+    # SMP deduplication
+    p.add_argument(
+        "--deduplicate-smp",
+        type=str,
+        metavar="SMP_FILE",
+        help="Deduplicate per-layer SMP file (strip %%N suffixes)",
+    )
+
     # Shared options
     p.add_argument(
         "--threshold",
@@ -64,6 +72,10 @@ def run_iwfm2obs(args: argparse.Namespace) -> int:
     from datetime import timedelta
 
     from pyiwfm.calibration.iwfm2obs import InterpolationConfig, iwfm2obs
+
+    # SMP deduplication mode
+    if getattr(args, "deduplicate_smp", None):
+        return _run_deduplicate(args)
 
     interp_config = InterpolationConfig(max_extrapolation_time=timedelta(days=args.threshold))
 
@@ -145,4 +157,22 @@ def _run_model_mode(
 
     total = sum(len(v) for v in results.values())
     print(f"Interpolated {total} bore(s) across {len(results)} type(s)")
+    return 0
+
+
+def _run_deduplicate(args: argparse.Namespace) -> int:
+    """Deduplicate a per-layer SMP file."""
+    from pyiwfm.calibration.iwfm2obs import deduplicate_smp
+
+    input_path = Path(args.deduplicate_smp)
+    if not input_path.exists():
+        print(f"Error: SMP file not found: {input_path}", file=sys.stderr)
+        return 1
+
+    output_path = (
+        Path(args.output) if args.output else input_path.with_stem(input_path.stem + "_dedup")
+    )
+
+    original, deduped = deduplicate_smp(input_path, output_path)
+    print(f"Deduplicated {original} bore IDs to {deduped} base IDs: {output_path}")
     return 0

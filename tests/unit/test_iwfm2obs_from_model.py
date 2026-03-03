@@ -305,6 +305,7 @@ class TestIWFM2OBSFromModel:
         # Write GW main with 1 hydrograph
         gw_lines: list[str] = []
         gw_lines.append("4.0                                     / Version")
+        gw_lines.append("BC.dat                                  / Boundary conditions")
         gw_lines.append("                                        / Tile drain")
         gw_lines.append("Pumping.dat                             / Pumping")
         gw_lines.append("                                        / Subsidence")

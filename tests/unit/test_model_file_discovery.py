@@ -57,10 +57,11 @@ def _write_gw_main(
     """Write a minimal GW main file."""
     gw_file = gw_dir / "Groundwater.dat"
 
-    # Build content: 1 skip, then tile drain, pumping, subsidence paths
+    # Build content: version, BCFL, tile drain, pumping, subsidence paths
     # Then 17 skip lines to NOUTH, FACTXY, hydrograph output path, header, entries
     lines: list[str] = []
     lines.append("4.0                                     / Version")
+    lines.append("BC.dat                                  / Boundary conditions file")
     lines.append("                                        / Tile drain file")
     lines.append("Pumping.dat                             / Pumping file")
     lines.append("                                        / Subsidence file")
@@ -91,8 +92,8 @@ def _write_stream_main(
     str_file = str_dir / "Stream.dat"
 
     lines: list[str] = []
-    # 7 non-comment lines, the 7th being NOUTR
-    for i in range(6):
+    # 8 non-comment lines, the 8th being NOUTR
+    for i in range(7):
         lines.append(f"0.0                                     / Stream param {i + 1}")
     lines.append(f"{n_hyd}                                  / NOUTR")
     # 6 lines, the 6th being the output file path
@@ -216,6 +217,7 @@ class TestDiscoverHydrographFiles:
         gw_file = tmp_path / "Groundwater.dat"
         lines: list[str] = []
         lines.append("4.0                                     / Version")
+        lines.append("BC.dat                                  / Boundary conditions")
         lines.append("                                        / Tile drain")
         lines.append("Pumping.dat                             / Pumping")
         lines.append("                                        / Subsidence")

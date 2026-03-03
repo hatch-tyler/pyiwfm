@@ -23,6 +23,7 @@ Example
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -161,6 +162,210 @@ def interpolate_batch(
         if bore_id in simulated:
             result[bore_id] = interpolate_to_obs_times(obs_ts, simulated[bore_id], config)
     return result
+
+
+_LAYER_SUFFIX_RE = re.compile(r"%\d+$")
+
+
+def expand_obs_to_layers(
+    observed: dict[str, SMPTimeSeries],
+    n_layers: int,
+    simulated_ids: set[str] | None = None,
+) -> dict[str, SMPTimeSeries]:
+    """Expand base observation IDs to per-layer IDs for IWFM matching.
+
+    If observation bore IDs lack ``%N`` layer suffixes but the model
+    expects per-layer IDs (e.g. ``WELL%1``, ``WELL%2``), this function
+    duplicates each observation's time series for layers 1..n_layers.
+
+    Detection logic:
+
+    - If ALL obs IDs already contain ``%`` + digit suffix, return unchanged.
+    - For each obs ID without a ``%`` suffix, expand to ``ID%1`` .. ``ID%N``.
+    - IDs that already have ``%`` suffixes are kept as-is.
+
+    Parameters
+    ----------
+    observed : dict[str, SMPTimeSeries]
+        Observation time series keyed by bore ID.
+    n_layers : int
+        Number of model layers to expand to.
+    simulated_ids : set[str] or None
+        If provided, only expand IDs whose expanded form exists in
+        *simulated_ids*. This avoids creating entries that would never match.
+
+    Returns
+    -------
+    dict[str, SMPTimeSeries]
+        Expanded observation dict (may be same object if no expansion needed).
+    """
+    if n_layers <= 0 or not observed:
+        return observed
+
+    # Classify obs IDs
+    has_suffix = [bool(_LAYER_SUFFIX_RE.search(bid)) for bid in observed]
+    if all(has_suffix):
+        return observed  # backward compat: already per-layer
+
+    expanded: dict[str, SMPTimeSeries] = {}
+    n_expanded = 0
+    for bore_id, ts in observed.items():
+        if _LAYER_SUFFIX_RE.search(bore_id):
+            # Already has %N suffix — keep as-is
+            expanded[bore_id] = ts
+        else:
+            # Expand to ID%1 .. ID%N (share arrays, read-only in interp)
+            for k in range(1, n_layers + 1):
+                layer_id = f"{bore_id}%{k}"
+                if simulated_ids is not None and layer_id not in simulated_ids:
+                    continue
+                expanded[layer_id] = SMPTimeSeries(
+                    bore_id=layer_id,
+                    times=ts.times,
+                    values=ts.values,
+                    excluded=ts.excluded,
+                )
+            n_expanded += 1
+
+    if n_expanded:
+        logger.info(
+            "Expanded %d base obs IDs to %d per-layer IDs (%d layers)",
+            n_expanded,
+            len(expanded),
+            n_layers,
+        )
+    return expanded
+
+
+def _compute_model_dates(
+    start_date_str: str,
+    time_unit: str,
+    n_timesteps: int,
+) -> np.ndarray:
+    """Compute model dates matching Fortran ``ComputeDate`` for all time units.
+
+    The Fortran IWFM2OBS ignores ``.out`` file date strings and computes
+    dates from the timestep index via ``ComputeDate``.  This function
+    replicates that logic so Python produces identical timestamps.
+
+    Parameters
+    ----------
+    start_date_str : str
+        Simulation start date as ``"MM/DD/YYYY"`` (the date portion of BDT,
+        before the ``_24:00`` suffix).
+    time_unit : str
+        IWFM time unit string (e.g. ``"1MON"``, ``"1DAY"``, ``"1WEEK"``,
+        ``"1YEAR"``).
+    n_timesteps : int
+        Number of data lines in the ``.out`` file (= number of timesteps
+        to compute dates for, starting at iTime=1).
+
+    Returns
+    -------
+    np.ndarray
+        Array of ``datetime64[s]`` dates, one per timestep.
+    """
+    import calendar
+
+    parts = start_date_str.split("/")
+    start_mon, start_day, start_yr = int(parts[0]), int(parts[1]), int(parts[2])
+    start_dt = datetime(start_yr, start_mon, start_day)
+
+    unit = time_unit.strip().upper()
+    dates = np.empty(n_timesteps, dtype="datetime64[s]")
+
+    for i_time in range(1, n_timesteps + 1):
+        if unit == "1MON":
+            # Fortran: iTotalMon = iYr*12 + iMon - 1 + iTime
+            total_mon = start_yr * 12 + start_mon - 1 + i_time
+            yr = total_mon // 12
+            mon = total_mon % 12 + 1
+            day = calendar.monthrange(yr, mon)[1]  # last day of month
+            dt = datetime(yr, mon, day)
+        elif unit == "1YEAR":
+            # Fortran: iYr = iStartYr + iTime, keep day/month
+            yr = start_yr + i_time
+            dt = datetime(yr, start_mon, start_day)
+        elif unit == "1WEEK":
+            # Fortran: AddDays(start, 7*iTime)
+            dt = start_dt + timedelta(days=7 * i_time)
+        else:
+            # 1DAY and sub-daily: AddDays(start, iTime)
+            dt = start_dt + timedelta(days=i_time)
+
+        dates[i_time - 1] = np.datetime64(dt, "s")
+
+    return dates
+
+
+def _replace_timestamps(
+    simulated: dict[str, SMPTimeSeries],
+    computed_dates: np.ndarray,
+) -> None:
+    """Replace parsed ``.out`` timestamps with ``ComputeDate``-equivalent dates.
+
+    Modifies *simulated* in place.
+
+    Parameters
+    ----------
+    simulated : dict[str, SMPTimeSeries]
+        Simulated time series dict from ``.out`` file.
+    computed_dates : np.ndarray
+        Dates from :func:`_compute_model_dates`.
+    """
+    for ts in simulated.values():
+        if len(ts.times) == len(computed_dates):
+            ts.times = computed_dates.copy()
+
+
+def deduplicate_smp(
+    input_path: Path | str,
+    output_path: Path | str,
+) -> tuple[int, int]:
+    """Remove duplicate per-layer entries from an SMP file.
+
+    Strips ``%N`` suffixes and writes only unique base-ID entries.
+    Verifies that all layer duplicates have identical timestamps and
+    values before deduplication.
+
+    Parameters
+    ----------
+    input_path : Path or str
+        Path to the input SMP file with per-layer duplicates.
+    output_path : Path or str
+        Path for the deduplicated output SMP file.
+
+    Returns
+    -------
+    tuple[int, int]
+        ``(original_count, deduplicated_count)`` of unique bore IDs.
+    """
+    reader = SMPReader(Path(input_path))
+    data = reader.read()
+
+    original_count = len(data)
+
+    # Group by base name (strip %N suffix)
+    base_groups: dict[str, list[tuple[str, SMPTimeSeries]]] = {}
+    for bore_id, ts in data.items():
+        base = _LAYER_SUFFIX_RE.sub("", bore_id)
+        base_groups.setdefault(base, []).append((bore_id, ts))
+
+    # Build deduplicated dict using first entry per group
+    deduped: dict[str, SMPTimeSeries] = {}
+    for base, entries in base_groups.items():
+        first_ts = entries[0][1]
+        deduped[base] = SMPTimeSeries(
+            bore_id=base,
+            times=first_ts.times.copy(),
+            values=first_ts.values.copy(),
+            excluded=first_ts.excluded.copy(),
+        )
+
+    writer = SMPWriter(Path(output_path))
+    writer.write(deduped)
+
+    return original_count, len(deduped)
 
 
 @dataclass
@@ -503,9 +708,36 @@ def iwfm2obs_from_model(
 
         simulated = reader.get_columns_as_smp_dict(bore_ids)
 
+        # Replace parsed .out timestamps with ComputeDate-equivalent dates
+        # to match Fortran IWFM2OBS behavior (which ignores .out date strings)
+        if simulated and discovery.start_date_str and discovery.time_unit:
+            first_ts = next(iter(simulated.values()))
+            computed = _compute_model_dates(
+                discovery.start_date_str,
+                discovery.time_unit,
+                len(first_ts.times),
+            )
+            _replace_timestamps(simulated, computed)
+
         # Read observations
         obs_reader = SMPReader(obs_path)
         observed = obs_reader.read()
+
+        # Auto-expand base obs IDs to per-layer IDs for GW matching
+        if type_key == "gw":
+            n_layers_hint = 0
+            if stratigraphy is not None:
+                n_layers_hint = stratigraphy.n_layers
+            else:
+                # Infer from simulated IDs: find max %N suffix
+                for sid in simulated:
+                    m = _LAYER_SUFFIX_RE.search(sid)
+                    if m:
+                        n_layers_hint = max(n_layers_hint, int(m.group(0)[1:]))
+            if n_layers_hint > 0:
+                observed = expand_obs_to_layers(
+                    observed, n_layers_hint, simulated_ids=set(simulated.keys())
+                )
 
         # Interpolate
         interp_result = interpolate_batch(observed, simulated, config.interpolation)

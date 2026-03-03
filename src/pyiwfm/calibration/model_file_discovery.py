@@ -179,18 +179,18 @@ def discover_hydrograph_files(
     # 2. Parse GW main file
     # ------------------------------------------------------------------
     if info.gw_main_path:
-        _parse_gw_main_file(info)
+        _parse_gw_main_file(info, sim_dir)
 
     # ------------------------------------------------------------------
     # 3. Parse Stream main file
     # ------------------------------------------------------------------
     if info.stream_main_path:
-        _parse_stream_main_file(info)
+        _parse_stream_main_file(info, sim_dir)
 
     return info
 
 
-def _parse_gw_main_file(info: HydrographFileInfo) -> None:
+def _parse_gw_main_file(info: HydrographFileInfo, sim_dir: Path) -> None:
     """Parse GW main file to extract hydrograph .out path and locations."""
     gw_path = info.gw_main_path
     if gw_path is None:
@@ -205,7 +205,10 @@ def _parse_gw_main_file(info: HydrographFileInfo) -> None:
             # Line 1: version/debug (skip)
             _read_data_line(f, lc)
 
-            # Line 2: Tile drain file path
+            # Line 2: Boundary conditions file (skip)
+            _read_data_line(f, lc)
+
+            # Line 3: Tile drain file path
             td_raw = _read_data_value(f, lc)
             td_path = _resolve_path(gw_dir, td_raw, allow_empty=True)
             if td_path and td_path.exists():
@@ -215,15 +218,15 @@ def _parse_gw_main_file(info: HydrographFileInfo) -> None:
             else:
                 _td_main_path = None
 
-            # Line 3: Pumping file (skip)
+            # Line 4: Pumping file (skip)
             _read_data_line(f, lc)
 
-            # Line 4: Subsidence file path
+            # Line 5: Subsidence file path
             sub_raw = _read_data_value(f, lc)
             sub_path = _resolve_path(gw_dir, sub_raw, allow_empty=True)
             _sub_main_path = sub_path if sub_path and sub_path.exists() else None
 
-            # Skip 17 lines to reach NOUTH (GW main lines 5-21)
+            # Skip 17 lines to reach NOUTH (GW main lines 6-22)
             last = _skip_lines(f, 17, lc)
             val, _ = _strip_inline_comment(last)
             n_hyd = int(val.split()[0])
@@ -236,8 +239,9 @@ def _parse_gw_main_file(info: HydrographFileInfo) -> None:
                 factxy = 1.0
 
             # GWHYDOUTFL (hydrograph output file path)
+            # Resolve relative to sim_dir (IWFM resolves all paths from simulation dir)
             out_raw = _read_data_value(f, lc)
-            out_path = _resolve_path(gw_dir, out_raw, allow_empty=True)
+            out_path = _resolve_path(sim_dir, out_raw, allow_empty=True)
             if out_path:
                 info.gw_hydrograph_path = out_path
 
@@ -289,27 +293,26 @@ def _parse_gw_main_file(info: HydrographFileInfo) -> None:
     )
 
 
-def _parse_stream_main_file(info: HydrographFileInfo) -> None:
+def _parse_stream_main_file(info: HydrographFileInfo, sim_dir: Path) -> None:
     """Parse stream main file to extract hydrograph .out path and locations."""
     str_path = info.stream_main_path
     if str_path is None:
         return
 
-    str_dir = str_path.parent
-
     try:
         with open(str_path) as f:
             lc: list[int] = [0]
 
-            # Skip 7 lines to reach NOUTR
-            last = _skip_lines(f, 7, lc)
+            # Skip 8 lines to reach NOUTR
+            last = _skip_lines(f, 8, lc)
             val, _ = _strip_inline_comment(last)
             n_hyd = int(val.split()[0])
 
             # Skip 6 lines, the last being the output file path
             last = _skip_lines(f, 6, lc)
             val, _ = _strip_inline_comment(last)
-            out_path = _resolve_path(str_dir, val.strip(), allow_empty=True)
+            # Resolve relative to sim_dir (IWFM resolves all paths from simulation dir)
+            out_path = _resolve_path(sim_dir, val.strip(), allow_empty=True)
             if out_path:
                 info.stream_hydrograph_path = out_path
 
