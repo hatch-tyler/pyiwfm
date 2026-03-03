@@ -168,13 +168,25 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 - Observation management
 - Ensemble methods (prior/posterior)
 
-## CI Pipeline
+## Versioning and Build
+
+Version is derived from git tags via [hatch-vcs](https://github.com/ofek/hatch-vcs) — no hardcoded version string. `src/pyiwfm/_version.py` is auto-generated and gitignored.
+
+- Tagged commit `v1.0.4` → version `1.0.4`
+- 3 commits after tag → `1.0.5.dev3+gabcdef1`
+- Release: `git tag -a v1.0.4 -m "Release v1.0.4" && git push && git push origin v1.0.4`
+
+`hatch_build.py` is a custom build hook that auto-builds the React frontend during `hatch build` (requires npm; falls back to pre-built assets).
+
+## CI/CD Pipeline
 
 CI runs on every push/PR to `master` (see `.github/workflows/ci.yml`):
 1. **Lint** — `ruff check` and `ruff format --check` (Python 3.12)
 2. **Typecheck** — `mypy src/pyiwfm/` (Python 3.12)
-3. **Test** — `pytest tests/unit/` on Ubuntu/Windows × Python 3.10–3.13; coverage on 3.12/Ubuntu
-4. **Integration** — scheduled/manual only; runs `pytest tests/integration/` with `.[all,dev]`
+3. **Test** — `pytest tests/unit/` on Ubuntu/Windows × Python 3.10–3.13; coverage on 3.12/Ubuntu (coverage `fail_under = 70`)
+4. **Integration** — `pytest tests/integration/` with `.[all,dev]` (caches IWFM sample model)
+
+**Publish** (`publish.yml`): triggered by `v*` tags — builds with `hatch build`, publishes to PyPI, and pushes Docker image to `ghcr.io`.
 
 All lint, typecheck, and unit test jobs must pass before merge. Run `ruff check src/ tests/ && ruff format --check src/ tests/ && mypy src/pyiwfm/ && pytest tests/unit/` locally to verify before pushing.
 

@@ -1,33 +1,47 @@
 # pyiwfm publication-quality style
-# Journal-ready defaults: serif fonts, no top/right spines, 300 DPI
-font.family: serif
-font.serif: Times New Roman, DejaVu Serif, serif
-font.size: 10
+# Higher DPI for print. Sans-serif only (ADA/Section 508 compliance).
+# Inherits most values from pyiwfm-chart.mplstyle via cascading.
+
+# Typography — sans-serif ONLY (ADA compliance for public agency reports)
+font.family:        sans-serif
+font.sans-serif:    Arial, Helvetica, DejaVu Sans
+font.size:          10
+
 figure.constrained_layout.use: True
-figure.figsize: 8, 6
-figure.dpi: 300
-savefig.dpi: 300
-savefig.bbox: tight
-axes.labelsize: 11
-axes.titlesize: 12
-axes.titleweight: bold
-axes.titlepad: 10
-axes.spines.top: False
-axes.spines.right: False
-axes.linewidth: 0.8
-xtick.labelsize: 9
-ytick.labelsize: 9
-xtick.direction: in
-ytick.direction: in
-xtick.major.width: 0.8
-ytick.major.width: 0.8
-legend.framealpha: 0.9
-legend.edgecolor: lightgray
-legend.fontsize: 9
-legend.frameon: True
-axes.grid: True
-axes.grid.axis: both
-grid.alpha: 0.2
-grid.linewidth: 0.5
-lines.linewidth: 1.5
-lines.markersize: 5
+figure.figsize:     8, 6
+figure.dpi:         300
+savefig.dpi:        600
+savefig.bbox:       tight
+
+axes.labelsize:     11
+axes.titlesize:     12
+axes.titleweight:   bold
+axes.titlepad:      10
+axes.spines.top:    False
+axes.spines.right:  False
+axes.linewidth:     0.8
+
+xtick.labelsize:    9
+ytick.labelsize:    9
+xtick.direction:    in
+ytick.direction:    in
+xtick.major.width:  0.8
+ytick.major.width:  0.8
+
+legend.frameon:     False
+legend.fontsize:    9
+
+axes.grid:          True
+axes.grid.axis:     both
+grid.alpha:         0.2
+grid.linewidth:     0.5
+
+lines.linewidth:    1.5
+lines.markersize:   5
+
+# PDF font embedding
+pdf.fonttype:       42
+ps.fonttype:        42
+
+# Okabe-Ito color cycle
+axes.prop_cycle: cycler('color', ['0072B2', 'E69F00', '009E73', 'D55E00', 'CC79A7', '56B4E9', 'F0E442', '000000'])

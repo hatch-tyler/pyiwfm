@@ -16,6 +16,7 @@ from __future__ import annotations
 from pyiwfm.visualization.plot_budget import (
     BudgetPlotter,
     plot_budget_bar,
+    plot_budget_horizontal_bars,
     plot_budget_pie,
     plot_budget_stacked,
     plot_budget_timeseries,
@@ -71,6 +72,7 @@ __all__ = [
     # Budget
     "BudgetPlotter",
     "plot_budget_bar",
+    "plot_budget_horizontal_bars",
     "plot_budget_stacked",
     "plot_budget_pie",
     "plot_water_balance",

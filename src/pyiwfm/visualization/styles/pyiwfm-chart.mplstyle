@@ -1,17 +1,64 @@
 # pyiwfm chart/timeseries plot style
+# Tufte principles: remove non-data ink, subtle grid, clean typography
+# ADA/Section 508: sans-serif only for screen reader compatibility
+
+# Tufte: remove non-data spines
+axes.spines.top:    False
+axes.spines.right:  False
+
+# Typography — sans-serif ONLY (ADA/Section 508 compliance)
+font.family:        sans-serif
+font.sans-serif:    Arial, Helvetica, DejaVu Sans
+font.size:          8
+axes.titlesize:     9
+axes.titleweight:   bold
+axes.titlepad:      8
+axes.labelsize:     8
+xtick.labelsize:    7
+ytick.labelsize:    7
+legend.fontsize:    7
+
+# Lines
+lines.linewidth:    0.8
+lines.markersize:   4
+patch.linewidth:    0.5
+
+# Axes
+axes.linewidth:     0.6
+axes.edgecolor:     333333
+axes.labelcolor:    333333
+
+# Ticks
+xtick.direction:    out
+ytick.direction:    out
+xtick.major.size:   3.5
+ytick.major.size:   3.5
+xtick.major.width:  0.6
+ytick.major.width:  0.6
+xtick.color:        333333
+ytick.color:        333333
+
+# Grid (subtle)
+axes.grid:          True
+axes.grid.axis:     y
+grid.color:         D0D0D0
+grid.linewidth:     0.4
+grid.alpha:         0.5
+
+# Legend (Tufte: no frame)
+legend.frameon:     False
+legend.handlelength: 1.5
+
+# Figure
 figure.constrained_layout.use: True
-figure.figsize: 12, 6
-axes.labelsize: 11
-axes.titlesize: 14
-axes.titleweight: bold
-axes.titlepad: 12
-axes.spines.top: False
-axes.spines.right: False
-xtick.labelsize: 9
-ytick.labelsize: 9
-legend.framealpha: 0.9
-legend.edgecolor: lightgray
-legend.fontsize: 9
-axes.grid: True
-axes.grid.axis: both
-grid.alpha: 0.3
+figure.figsize:     6.5, 4.0
+figure.dpi:         150
+savefig.dpi:        300
+savefig.bbox:       tight
+
+# PDF font embedding (required by journals)
+pdf.fonttype:       42
+ps.fonttype:        42
+
+# Okabe-Ito color cycle
+axes.prop_cycle: cycler('color', ['0072B2', 'E69F00', '009E73', 'D55E00', 'CC79A7', '56B4E9', 'F0E442', '000000'])

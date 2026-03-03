@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Literal
 
@@ -13,10 +14,15 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from matplotlib.axes import Axes  # noqa: E402
 from matplotlib.figure import Figure  # noqa: E402
+from matplotlib.ticker import FuncFormatter  # noqa: E402
 from numpy.typing import NDArray  # noqa: E402
 
 from pyiwfm.visualization._plot_utils import (  # noqa: E402
+    BUDGET_COLORS,
+    BUDGET_INFLOW_COLORS,
+    BUDGET_OUTFLOW_COLORS,
     CHART_STYLE,
+    _outlined_text,
     _rotate_date_labels,
     _with_style,
 )
@@ -134,6 +140,267 @@ def plot_budget_bar(
 
 
 @_with_style(CHART_STYLE)
+def plot_budget_horizontal_bars(
+    inflows: list[tuple[str, float]],
+    outflows: list[tuple[str, float]],
+    storage_change: float = 0.0,
+    discrepancy: float = 0.0,
+    ax: Axes | None = None,
+    table_ax: Axes | None = None,
+    title: str = "Water Budget",
+    inflow_label: str = "Inflows",
+    outflow_label: str = "Outflows",
+    units: str = "AF/yr",
+    inflow_colors: Sequence[str] | None = None,
+    outflow_colors: Sequence[str] | None = None,
+    color_map: dict[str, str] | None = None,
+    show_table: bool = True,
+    table_fontsize: float = 7.0,
+    number_fontsize: float = 6.5,
+    figsize: tuple[float, float] = (6.5, 4.0),
+) -> tuple[Figure, Axes]:
+    """Horizontal stacked bar chart for water budget data.
+
+    Two horizontal bars (inflows, outflows) with stacked colored segments,
+    plus a smaller bar for storage change.  Segments are numbered with
+    white-on-outline text.  An optional legend table maps numbers to
+    component names and values.
+
+    Parameters
+    ----------
+    inflows : list of (name, value) tuples
+        Inflow components sorted largest-first.
+    outflows : list of (name, value) tuples
+        Outflow components sorted largest-first.
+    storage_change : float
+        Net storage change (positive = increase).
+    discrepancy : float
+        Balance error / discrepancy.
+    ax : Axes, optional
+        Axes for the bar chart. Creates new figure if None.
+    table_ax : Axes, optional
+        Axes for the legend table. If None and show_table is True,
+        a table is placed below the chart.
+    title : str
+        Chart title.
+    inflow_label, outflow_label : str
+        Category labels for the y-axis.
+    units : str
+        Units string for x-axis label and table header.
+    inflow_colors, outflow_colors : sequence of str, optional
+        Override palettes for inflow/outflow segments.
+    color_map : dict, optional
+        Map of component name -> hex color.  Falls back to palette.
+    show_table : bool
+        Whether to draw the legend table.
+    table_fontsize : float
+        Font size for the legend table.
+    number_fontsize : float
+        Font size for segment numbers on bars.
+    figsize : tuple
+        Figure size when creating a new figure.
+
+    Returns
+    -------
+    tuple
+        (Figure, Axes) matplotlib objects.
+    """
+    if color_map is None:
+        color_map = BUDGET_COLORS
+    if inflow_colors is None:
+        inflow_colors = BUDGET_INFLOW_COLORS
+    if outflow_colors is None:
+        outflow_colors = BUDGET_OUTFLOW_COLORS
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()  # type: ignore[assignment]
+
+    def _get_color(
+        name: str, palette: Sequence[str], idx: int,
+    ) -> str:
+        if name in color_map:
+            return color_map[name]
+        return palette[idx % len(palette)]
+
+    # --- Draw stacked horizontal bars with numbered segments ---
+    def _draw_hbar(
+        y: float, items: list[tuple[str, float]],
+        palette: Sequence[str], start_num: int, bar_height: float,
+    ) -> list[tuple[int, str, float, str]]:
+        left = 0.0
+        entries: list[tuple[int, str, float, str]] = []
+        num = start_num
+        for idx, (name, val) in enumerate(items):
+            color = _get_color(name, palette, idx)
+            ax.barh(y, val, left=left, height=bar_height, color=color,
+                    edgecolor="white", linewidth=0.5)
+            # Numbered label centered on segment
+            cx = left + val / 2.0
+            _outlined_text(ax, cx, y, str(num), fontsize=number_fontsize)
+            entries.append((num, name, val, color))
+            num += 1
+            left += val
+        return entries
+
+    in_entries = _draw_hbar(2, inflows, inflow_colors, 1, 0.65)
+    out_entries = _draw_hbar(1, outflows, outflow_colors,
+                             len(in_entries) + 1, 0.65)
+
+    # Storage change bar
+    if abs(storage_change) > 0.5:
+        stor_color = "#009E73" if storage_change > 0 else "#D55E00"
+        ax.barh(0, abs(storage_change), height=0.45, color=stor_color,
+                edgecolor="white", linewidth=0.5)
+        sign_chr = "+" if storage_change > 0 else "\u2212"
+        _outlined_text(ax, abs(storage_change) / 2.0, 0,
+                       f"{sign_chr}{abs(storage_change):,.0f}",
+                       fontsize=number_fontsize - 0.5)
+
+    # --- Axes formatting ---
+    total_in = sum(v for _, v in inflows) if inflows else 0.0
+    total_out = sum(v for _, v in outflows) if outflows else 0.0
+    max_x = max(total_in, total_out, abs(storage_change)) * 1.05
+    ax.set_xlim(0, max(max_x, 1))
+    ax.set_ylim(-0.5, 2.7)
+    ax.set_yticks([0, 1, 2])
+    ax.set_yticklabels(["\u0394Storage", outflow_label, inflow_label])
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, _: f"{x:,.0f}"))
+    ax.set_xlabel(f"Volume ({units})")
+    ax.set_title(title, fontweight="bold", pad=8)
+    ax.yaxis.grid(False)
+    ax.xaxis.grid(True, alpha=0.5, linewidth=0.4, color="#D0D0D0")
+
+    # --- Legend table ---
+    if show_table:
+        tgt_ax = table_ax if table_ax is not None else ax
+        if table_ax is not None:
+            table_ax.axis("off")
+
+        # Build side-by-side rows: [# | Inflow | AF/yr | # | Outflow | AF/yr]
+        n_rows = max(len(in_entries), len(out_entries))
+        padded_in: list[tuple[int, str, float, str] | None] = list(in_entries)
+        padded_out: list[tuple[int, str, float, str] | None] = list(out_entries)
+        while len(padded_in) < n_rows:
+            padded_in.append(None)
+        while len(padded_out) < n_rows:
+            padded_out.append(None)
+
+        cell_text: list[list[str]] = []
+        cell_colors: list[list[str]] = []
+        for i in range(n_rows):
+            row_text: list[str] = []
+            row_clr: list[str] = []
+            ie = padded_in[i]
+            if ie:
+                row_text += [str(ie[0]), ie[1], f"{ie[2]:>12,.0f}"]
+                row_clr += [ie[3], "white", "white"]
+            else:
+                row_text += ["", "", ""]
+                row_clr += ["white", "white", "white"]
+            oe = padded_out[i]
+            if oe:
+                row_text += [str(oe[0]), oe[1], f"{oe[2]:>12,.0f}"]
+                row_clr += [oe[3], "white", "white"]
+            else:
+                row_text += ["", "", ""]
+                row_clr += ["white", "white", "white"]
+            cell_text.append(row_text)
+            cell_colors.append(row_clr)
+
+        # Summary rows
+        balance_err = total_in - total_out - storage_change
+        pct = f" ({100 * balance_err / total_in:.2f}%)" if total_in else ""
+        cell_text.append(["", "Total", f"{total_in:>12,.0f}",
+                          "", "Total", f"{total_out:>12,.0f}"])
+        cell_colors.append(["white"] * 6)
+        if abs(storage_change) > 0.5:
+            sign_s = "+" if storage_change > 0 else "\u2212"
+            cell_text.append(["", "\u0394Storage",
+                              f"{sign_s}{abs(storage_change):>11,.0f}",
+                              "", "Balance", f"{balance_err:>12,.0f}{pct}"])
+            cell_colors.append(["white"] * 6)
+        if abs(discrepancy) > 0.5:
+            cell_text.append(["", "Discrepancy", f"{discrepancy:>12,.0f}",
+                              "", "", ""])
+            cell_colors.append(["white"] * 6)
+
+        col_labels = ["#", inflow_label, units,
+                      "#", outflow_label, units]
+        col_widths = [0.04, 0.24, 0.16, 0.04, 0.24, 0.16]
+
+        table = tgt_ax.table(cellText=cell_text, colLabels=col_labels,
+                             colWidths=col_widths, loc="center",
+                             cellLoc="left")
+        table.auto_set_font_size(False)
+        table.set_fontsize(table_fontsize)
+
+        n_total_rows = len(cell_text)  # data rows (not counting header)
+
+        # Clean Tufte/APA table style:
+        #   - No vertical rules
+        #   - Thin horizontal rule under header, above summary, at bottom
+        #   - White background, subtle separator for summary block
+        for (row, col), cell in table.get_celld().items():
+            # Remove all edges by default
+            cell.set_edgecolor("white")
+            cell.set_linewidth(0)
+            cell.set_facecolor("white")
+
+            if row == 0:  # header row
+                cell.set_text_props(fontweight="bold", color="#333333")
+                cell.set_facecolor("white")
+                # Bottom edge under header
+                cell.visible_edges = "B"
+                cell.set_edgecolor("#999999")
+                cell.set_linewidth(0.8)
+            else:
+                data_row = row - 1
+                cell.visible_edges = ""  # no edges on data rows
+
+                if data_row < len(cell_colors):
+                    if col in (0, 3):  # swatch columns
+                        c = cell_colors[data_row][col]
+                        if c != "white":
+                            cell.set_facecolor(c)
+                            cell.set_text_props(
+                                fontweight="bold", color="white",
+                            )
+                        else:
+                            cell.set_text_props(color="#333333")
+                    elif col in (2, 5):  # numeric columns
+                        cell.set_text_props(
+                            fontfamily="monospace", color="#333333",
+                        )
+                    else:
+                        cell.set_text_props(color="#333333")
+
+                    # Summary rows: top separator + bold
+                    if data_row >= n_rows:
+                        cell.set_text_props(fontweight="bold",
+                                            color="#333333")
+                        if data_row == n_rows:
+                            cell.visible_edges = "T"
+                            cell.set_edgecolor("#999999")
+                            cell.set_linewidth(0.6)
+
+                # Bottom border on last row
+                if data_row == n_total_rows - 1:
+                    cell.visible_edges = (
+                        cell.visible_edges + "B" if cell.visible_edges
+                        else "B"
+                    )
+                    cell.set_edgecolor("#999999")
+                    cell.set_linewidth(0.6)
+
+            cell.set_height(cell.get_height() * 0.85)
+            cell.PAD = 0.04
+
+    return fig, ax
+
+
+@_with_style(CHART_STYLE)
 def plot_budget_stacked(
     times: NDArray[np.datetime64],
     components: dict[str, NDArray[np.float64]],
@@ -144,6 +411,7 @@ def plot_budget_stacked(
     alpha: float = 0.8,
     units: str = "AF",
     show_legend: bool = True,
+    legend_loc: str = "outside lower center",
     figsize: tuple[float, float] = (14, 7),
 ) -> tuple[Figure, Axes]:
     """
@@ -170,6 +438,8 @@ def plot_budget_stacked(
         Units for y-axis label.
     show_legend : bool, default True
         Show legend.
+    legend_loc : str, default "outside lower center"
+        Legend location string passed to ``fig.legend(loc=...)``.
     figsize : tuple, default (14, 7)
         Figure size.
 
@@ -228,7 +498,7 @@ def plot_budget_stacked(
     ax.set_title(title)
 
     if show_legend:
-        fig.legend(loc="outside upper right")
+        fig.legend(loc=legend_loc)
 
     _rotate_date_labels(ax)
 
