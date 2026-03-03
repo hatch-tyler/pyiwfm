@@ -5,8 +5,8 @@ Each combination of filter criteria (subregion, layer, date range,
 screen type) produces its own page(s) with 1:1 plots, CDF plots,
 optional spatial bias maps, and a statistics summary panel.
 
-Uses the ``pyiwfm-publication.mplstyle`` stylesheet for 300 DPI,
-serif fonts, and journal-ready defaults.
+Uses the :class:`~pyiwfm.visualization.report.ReportBuilder` framework
+for consistent page layout, headers/footers, and publication quality.
 
 Classes
 -------
@@ -28,18 +28,14 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
-from matplotlib.backends.backend_pdf import PdfPages  # noqa: E402
 from numpy.typing import NDArray  # noqa: E402
 
 from pyiwfm.calibration.residuals import filter_residuals  # noqa: E402
-from pyiwfm.visualization._plot_utils import PUBLICATION_STYLE  # noqa: E402
-from pyiwfm.visualization.plot_calibration import (  # noqa: E402
-    plot_one_to_one,
-    plot_residual_cdf,
-)
+from pyiwfm.visualization.report._page_layout import ReportConfig, ReportPage  # noqa: E402
+from pyiwfm.visualization.report._report_builder import ReportBuilder  # noqa: E402
+from pyiwfm.visualization.report._table import draw_stats_panel  # noqa: E402
 
 if TYPE_CHECKING:
     from pyiwfm.core.mesh import AppGrid
@@ -87,13 +83,13 @@ class CalibrationReportConfig:
     dpi: int = 300
 
 
-def _format_stats_text(
+def _format_stats(
     obs: NDArray[np.float64],
     sim: NDArray[np.float64],
     res: NDArray[np.float64],
     units: str,
-) -> str:
-    """Build a multi-line statistics summary string."""
+) -> dict[str, str]:
+    """Build a statistics dict for the stats panel."""
     from pyiwfm.comparison.metrics import (
         correlation_coefficient,
         index_of_agreement,
@@ -103,26 +99,31 @@ def _format_stats_text(
 
     n = len(obs)
     u = f" {units}" if units else ""
-    lines = [f"N = {n:,}"]
+    stats: dict[str, str] = {"N": f"{n:,}"}
     if n > 0:
-        lines.append(f"Mean Bias  = {np.mean(res):>10.2f}{u}")
-        lines.append(f"RMSE       = {rmse(obs, sim):>10.2f}{u}")
+        stats[f"Mean Bias{u}"] = f"{np.mean(res):.2f}"
+        stats[f"RMSE{u}"] = f"{rmse(obs, sim):.2f}"
         if n > 1:
-            lines.append(f"Std(resid) = {np.std(res, ddof=1):>10.2f}{u}")
-            lines.append(f"NSE        = {nash_sutcliffe(obs, sim):>10.3f}")
-            lines.append(f"d-index    = {index_of_agreement(obs, sim):>10.3f}")
-            lines.append(f"r          = {correlation_coefficient(obs, sim):>10.3f}")
-    return "\n".join(lines)
+            stats[f"Std(resid){u}"] = f"{np.std(res, ddof=1):.2f}"
+            stats["NSE"] = f"{nash_sutcliffe(obs, sim):.3f}"
+            stats["d-index"] = f"{index_of_agreement(obs, sim):.3f}"
+            stats["r"] = f"{correlation_coefficient(obs, sim):.3f}"
+    return stats
 
 
-def _add_page(
-    pdf: PdfPages,
+def _render_page(
+    page: ReportPage,
     df: pd.DataFrame,
     title: str,
     config: CalibrationReportConfig,
     grid: AppGrid | None,
 ) -> None:
-    """Render a single letter-size page of the report."""
+    """Render a single calibration page using ReportPage."""
+    from pyiwfm.visualization.plot_calibration import (
+        plot_one_to_one,
+        plot_residual_cdf,
+    )
+
     has_oto = config.include_one_to_one
     has_cdf = config.include_cdf
     has_spatial = (
@@ -147,34 +148,33 @@ def _add_page(
 
     page_title = f"{title}  (N = {len(df):,})"
 
-    # Create letter-size figure (constrained_layout from publication style)
-    fig = plt.figure(figsize=(_PAGE_WIDTH, _PAGE_HEIGHT))
-
-    # Layout: plots on top row(s), statistics panel at bottom-right or below
+    # Layout using printable-area gridspec
     if n == 3:
-        # 2x2: top = 1:1 + CDF, bottom-left = spatial, bottom-right = stats
-        gs = fig.add_gridspec(2, 2)
+        gs = page.add_gridspec(2, 2, hspace=0.3, wspace=0.3)
         plot_axes = [
-            fig.add_subplot(gs[0, 0]),
-            fig.add_subplot(gs[0, 1]),
-            fig.add_subplot(gs[1, 0]),
+            page.fig.add_subplot(gs[0, 0]),
+            page.fig.add_subplot(gs[0, 1]),
+            page.fig.add_subplot(gs[1, 0]),
         ]
-        ax_stats = fig.add_subplot(gs[1, 1])
+        ax_stats = page.fig.add_subplot(gs[1, 1])
     elif n == 2:
-        # Top row: two plots; bottom: stats spanning full width
-        gs = fig.add_gridspec(2, 2, height_ratios=[3, 1])
+        gs = page.add_gridspec(2, 2, height_ratios=[3, 1], hspace=0.3, wspace=0.3)
         plot_axes = [
-            fig.add_subplot(gs[0, 0]),
-            fig.add_subplot(gs[0, 1]),
+            page.fig.add_subplot(gs[0, 0]),
+            page.fig.add_subplot(gs[0, 1]),
         ]
-        ax_stats = fig.add_subplot(gs[1, :])
+        ax_stats = page.fig.add_subplot(gs[1, :])
     else:
-        # Single plot on top, stats below
-        gs = fig.add_gridspec(2, 1, height_ratios=[3, 1])
-        plot_axes = [fig.add_subplot(gs[0, 0])]
-        ax_stats = fig.add_subplot(gs[1, 0])
+        gs = page.add_gridspec(2, 1, height_ratios=[3, 1], hspace=0.3)
+        plot_axes = [page.fig.add_subplot(gs[0, 0])]
+        ax_stats = page.fig.add_subplot(gs[1, 0])
 
-    fig.suptitle(page_title, fontsize=13, fontweight="bold")
+    page.fig.suptitle(
+        page_title,
+        fontsize=11,
+        fontweight="bold",
+        y=page.config.margins.printable_bottom + page.config.margins.printable_height_frac + 0.01,
+    )
 
     # Render plots
     for kind, ax in zip(plot_kinds, plot_axes, strict=True):
@@ -193,7 +193,7 @@ def _add_page(
             from pyiwfm.calibration.residuals import mean_residuals
             from pyiwfm.visualization.plot_calibration import plot_spatial_bias
 
-            assert grid is not None  # guaranteed by has_spatial check
+            assert grid is not None
             mean_df = mean_residuals(df)
             well_xy = df.groupby("well_id")[["x", "y"]].first().reset_index()
             merged = mean_df.merge(well_xy, on="well_id")
@@ -207,28 +207,9 @@ def _add_page(
                 units=config.units,
             )
 
-    # Statistics summary panel
-    stats_text = _format_stats_text(obs, sim, residuals, config.units)
-    ax_stats.set_axis_off()
-    ax_stats.text(
-        0.5,
-        0.5,
-        stats_text,
-        transform=ax_stats.transAxes,
-        ha="center",
-        va="center",
-        fontsize=10,
-        family="monospace",
-        bbox={
-            "boxstyle": "round,pad=0.6",
-            "facecolor": "#f5f5f5",
-            "edgecolor": "lightgray",
-            "alpha": 0.9,
-        },
-    )
-
-    pdf.savefig(fig, dpi=config.dpi)
-    plt.close(fig)
+    # Statistics panel
+    stats = _format_stats(obs, sim, residuals, config.units)
+    draw_stats_panel(ax_stats, stats, title="Calibration Statistics")
 
 
 def generate_calibration_report(
@@ -264,56 +245,82 @@ def generate_calibration_report(
 
     output_path = Path(output_path)
 
-    with plt.style.context(PUBLICATION_STYLE):
-        with PdfPages(
-            output_path,
-            metadata={
-                "Title": "Calibration Report",
-                "Author": "pyiwfm",
-                "CreationDate": datetime.now(),
-            },
-        ) as pdf:
-            # Empty DataFrame: write a blank page so the PDF is valid
-            if len(residuals_df) == 0:
-                fig, ax = plt.subplots(figsize=(_PAGE_WIDTH, _PAGE_HEIGHT))
-                ax.text(
-                    0.5,
-                    0.5,
-                    "No observations",
-                    ha="center",
-                    va="center",
-                    fontsize=14,
-                )
-                ax.set_axis_off()
-                pdf.savefig(fig, dpi=config.dpi)
-                plt.close(fig)
-                return output_path
+    report_config = ReportConfig(
+        title="Calibration Report",
+        author="pyiwfm",
+        dpi=config.dpi,
+        units_length=config.units if config.units else "ft",
+    )
+    builder = ReportBuilder(report_config, output_path)
 
-            _add_page(pdf, residuals_df, "All Observations", config, grid)
+    # Empty DataFrame: single blank page
+    if len(residuals_df) == 0:
 
-            # Per-subregion pages
-            if config.filter_by_subregion and "subregion" in residuals_df.columns:
-                for sr in sorted(residuals_df["subregion"].dropna().unique()):
-                    subset = filter_residuals(residuals_df, subregions=[sr])
-                    _add_page(pdf, subset, f"Subregion {sr}", config, grid)
+        def _empty_page(page: ReportPage) -> None:
+            ax = page.add_axes(0.1, 0.3, 0.8, 0.4)
+            ax.text(
+                0.5,
+                0.5,
+                "No observations",
+                ha="center",
+                va="center",
+                fontsize=14,
+                transform=ax.transAxes,
+            )
+            ax.set_axis_off()
 
-            # Per-layer pages
-            if config.filter_by_layer and "layer" in residuals_df.columns:
-                for lyr in sorted(residuals_df["layer"].dropna().unique()):
-                    subset = filter_residuals(residuals_df, layers=[lyr])
-                    _add_page(pdf, subset, f"Layer {lyr}", config, grid)
+        builder.add_page(_empty_page, name="Empty")
+        return builder.build(progress=False)
 
-            # Per-date-range pages
-            if config.filter_by_date_range:
-                for start, end in config.filter_by_date_range:
-                    subset = filter_residuals(residuals_df, date_range=(start, end))
-                    label = f"{start:%Y-%m-%d} to {end:%Y-%m-%d}"
-                    _add_page(pdf, subset, f"Period: {label}", config, grid)
+    # All observations page
+    def _all_obs(page: ReportPage) -> None:
+        _render_page(page, residuals_df, "All Observations", config, grid)
 
-            # Per-screen-type pages
-            if config.filter_by_screen_type and "screen_type" in residuals_df.columns:
-                for st in sorted(residuals_df["screen_type"].dropna().unique()):
-                    subset = filter_residuals(residuals_df, screen_types=[st])
-                    _add_page(pdf, subset, f"Screen Type: {st}", config, grid)
+    builder.add_page(_all_obs, name="All Observations")
 
-    return output_path
+    # Per-subregion pages
+    if config.filter_by_subregion and "subregion" in residuals_df.columns:
+        for sr in sorted(residuals_df["subregion"].dropna().unique()):
+            subset = filter_residuals(residuals_df, subregions=[sr])
+
+            def _sr_page(page: ReportPage, _sr: object = sr, _sub: pd.DataFrame = subset) -> None:
+                _render_page(page, _sub, f"Subregion {_sr}", config, grid)
+
+            builder.add_page(_sr_page, name=f"Subregion {sr}")
+
+    # Per-layer pages
+    if config.filter_by_layer and "layer" in residuals_df.columns:
+        for lyr in sorted(residuals_df["layer"].dropna().unique()):
+            subset = filter_residuals(residuals_df, layers=[lyr])
+
+            def _lyr_page(
+                page: ReportPage, _lyr: object = lyr, _sub: pd.DataFrame = subset
+            ) -> None:
+                _render_page(page, _sub, f"Layer {_lyr}", config, grid)
+
+            builder.add_page(_lyr_page, name=f"Layer {lyr}")
+
+    # Per-date-range pages
+    if config.filter_by_date_range:
+        for start, end in config.filter_by_date_range:
+            subset = filter_residuals(residuals_df, date_range=(start, end))
+            label = f"{start:%Y-%m-%d} to {end:%Y-%m-%d}"
+
+            def _dr_page(
+                page: ReportPage, _label: str = label, _sub: pd.DataFrame = subset
+            ) -> None:
+                _render_page(page, _sub, f"Period: {_label}", config, grid)
+
+            builder.add_page(_dr_page, name=f"Period: {label}")
+
+    # Per-screen-type pages
+    if config.filter_by_screen_type and "screen_type" in residuals_df.columns:
+        for st in sorted(residuals_df["screen_type"].dropna().unique()):
+            subset = filter_residuals(residuals_df, screen_types=[st])
+
+            def _st_page(page: ReportPage, _st: object = st, _sub: pd.DataFrame = subset) -> None:
+                _render_page(page, _sub, f"Screen Type: {_st}", config, grid)
+
+            builder.add_page(_st_page, name=f"Screen Type: {st}")
+
+    return builder.build(progress=False)

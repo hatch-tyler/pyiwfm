@@ -32,6 +32,7 @@ try:
         MeshPlotter,
         plot_boundary,
         plot_budget_bar,
+        plot_budget_horizontal_bars,
         plot_budget_pie,
         plot_budget_stacked,
         plot_budget_timeseries,
@@ -76,6 +77,7 @@ except ImportError:
     # Budget plotting
     BudgetPlotter = None  # type: ignore
     plot_budget_bar = None  # type: ignore
+    plot_budget_horizontal_bars = None  # type: ignore
     plot_budget_stacked = None  # type: ignore
     plot_budget_pie = None  # type: ignore
     plot_water_balance = None  # type: ignore
@@ -84,6 +86,23 @@ except ImportError:
     # Calibration plotting
     plot_one_to_one = None  # type: ignore
     plot_spatial_bias = None  # type: ignore
+
+from pyiwfm.visualization.report import (
+    HATCH_PATTERNS,
+    PageMargins,
+    ReportBuilder,
+    ReportConfig,
+    ReportPage,
+    TableStyle,
+    add_alt_text,
+    apply_hatches,
+    check_contrast,
+    draw_stats_panel,
+    draw_table,
+    draw_title_page,
+    ensure_contrast,
+    validate_font_sizes,
+)
 
 __all__ = [
     # Export classes
@@ -109,6 +128,7 @@ __all__ = [
     # Budget plotting
     "BudgetPlotter",
     "plot_budget_bar",
+    "plot_budget_horizontal_bars",
     "plot_budget_stacked",
     "plot_budget_pie",
     "plot_water_balance",
@@ -117,4 +137,19 @@ __all__ = [
     # Calibration plotting
     "plot_one_to_one",
     "plot_spatial_bias",
+    # Report framework
+    "ReportBuilder",
+    "ReportConfig",
+    "ReportPage",
+    "PageMargins",
+    "TableStyle",
+    "draw_table",
+    "draw_stats_panel",
+    "draw_title_page",
+    "check_contrast",
+    "ensure_contrast",
+    "validate_font_sizes",
+    "HATCH_PATTERNS",
+    "apply_hatches",
+    "add_alt_text",
 ]
