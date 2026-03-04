@@ -50,7 +50,12 @@ Typical Hydrographs (CalcTypHyd)
 ---------------------------------
 
 Compute typical hydrograph curves by cluster using seasonal averaging
-and membership-weighted combination.
+and membership-weighted combination. Includes Fortran ``.in`` config file
+parsing (``read_calctyphyd_config``, ``CalcTypHydFileConfig``),
+Fortran-matching time-series computation
+(``compute_typical_hydrographs_timeseries``), and PEST ``.out``/``.ins``
+output (``write_pest_output``). Date-range filtering and header-aware
+cluster weight reading are also supported.
 
 .. automodule:: pyiwfm.calibration.calctyphyd
    :members:

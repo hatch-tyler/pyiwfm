@@ -94,13 +94,12 @@ print(f"Groundwater wells: {len(model.groundwater.wells) if model.groundwater el
 # Save model to new directory
 save_complete_model(model, Path("output_model"))
 
-# Write time series to HEC-DSS (requires bundled C library or HECDSS_LIB env var)
-from pyiwfm.io.dss import DSSTimeSeriesWriter, DSSPathnameTemplate, HAS_DSS_LIBRARY
+# Write time series to HEC-DSS (bundled C library)
+from pyiwfm.io.dss import DSSTimeSeriesWriter, DSSPathnameTemplate
 
-if HAS_DSS_LIBRARY:
-    template = DSSPathnameTemplate(a_part="IWFM", c_part="HEAD", e_part="1DAY")
-    with DSSTimeSeriesWriter("output.dss") as writer:
-        writer.write_timeseries(head_timeseries, template.make_pathname(location="WELL_1"))
+template = DSSPathnameTemplate(a_part="IWFM", c_part="HEAD", e_part="1DAY")
+with DSSTimeSeriesWriter("output.dss") as writer:
+    writer.write_timeseries(head_timeseries, template.make_pathname(location="WELL_1"))
 ```
 
 ## Web Visualization
@@ -151,6 +150,14 @@ pyiwfm iwfm2obs --model C2VSimFG.in \
     --multilayer-ins GWHMultiLayer.ins
 ```
 
+```bash
+# CalcTypHyd with Fortran config file (produces PEST .out/.ins files)
+pyiwfm calctyphyd --config CalcTypeHyd.in
+
+# Deduplicate per-layer SMP output (strip %N suffixes)
+pyiwfm iwfm2obs --deduplicate-smp GW_OUT.smp --output GW_OUT_dedup.smp
+```
+
 Or use the Python API:
 
 ```python
@@ -172,7 +179,7 @@ results = iwfm2obs_from_model(
   - ASCII files (nodes, elements, stratigraphy, time series)
   - Binary files (Fortran unformatted)
   - HDF5 files (efficient large model storage)
-  - HEC-DSS 7 files (time series with optional library support)
+  - HEC-DSS 7 files (bundled C library)
 - **Budget Post-Processing**: Parse IWFM budget/zbudget control files and export to Excel
   - One sheet per location/zone with title lines, bold headers, and auto-fitted columns
   - Unit conversion factors (FACTLTOU, FACTAROU, FACTVLOU) applied per column type
@@ -188,7 +195,7 @@ results = iwfm2obs_from_model(
 - **PreProcessor Integration**: Load/save complete models from IWFM file structure
 - **Model Factory**: Extracted construction helpers (reach building, coordinate resolution, parametric grids, binary loading) into `pyiwfm.core.model_factory`
 - **Mesh Generation**: Triangle and Gmsh wrappers
-- **Calibration Tools**: IWFM2OBS time interpolation with automatic model file discovery, multi-layer T-weighted observation well processing (GW_MultiLayer.out + PEST .ins), fuzzy c-means well clustering, typical hydrograph computation (CalcTypHyd), and publication-quality calibration figures
+- **Calibration Tools**: IWFM2OBS time interpolation with automatic model file discovery and Fortran-verified timestamp alignment, multi-layer T-weighted observation well processing (GW_MultiLayer.out + PEST .ins), fuzzy c-means well clustering, typical hydrograph computation (CalcTypHyd) with Fortran-format config file parsing and PEST output, and publication-quality calibration figures
 - **Visualization**: GIS export (GeoPackage download), VTK 3D export, matplotlib plot generation (PNG/SVG), interactive web viewer with budget charts, head maps, hydrograph comparison, drawdown animation, and head statistics
 - **Model Comparison**: Diff and comparison metrics, including web viewer comparison endpoint
 

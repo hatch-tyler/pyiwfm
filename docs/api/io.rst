@@ -608,8 +608,10 @@ The DSS module provides support for reading and writing HEC-DSS 7 files.
 
 .. note::
 
-   HEC-DSS support requires the HEC-DSS C library to be installed. Set the
-   ``HECDSS_LIB`` environment variable to point to the library location.
+   The HEC-DSS 7 C library is bundled with pyiwfm on Windows
+   (``io/dss/lib/hecdss.dll``). On Linux, compile from source using
+   ``dss-build/`` or set the ``HECDSS_LIB`` environment variable to point
+   to your ``libhecdss.so``.
 
 DSS Package
 ~~~~~~~~~~~

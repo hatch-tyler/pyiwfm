@@ -55,7 +55,11 @@ Modules
 ``pyiwfm.calibration.calctyphyd``
     Compute typical hydrograph curves by cluster. Seasonal averaging,
     de-meaning per well, and membership-weighted combination produce
-    representative seasonal patterns for each cluster.
+    representative seasonal patterns for each cluster. Includes Fortran
+    ``.in`` config file parsing (``read_calctyphyd_config``), time-series
+    output matching the Fortran algorithm (``compute_typical_hydrographs_timeseries``),
+    PEST ``.out``/``.ins`` file generation (``write_pest_output``), and
+    date-range filtering. Verified byte-identical vs Fortran on C2VSimFG.
 
 ``pyiwfm.visualization.calibration_plots``
     Publication-quality composite figures: 1:1 observed-vs-simulated
@@ -94,5 +98,11 @@ CLI Commands
 
    # Compute typical hydrographs
    pyiwfm calctyphyd --water-levels wl.smp --weights weights.txt --output typhyd.smp
+
+   # CalcTypHyd with Fortran config file (produces PEST .out/.ins files)
+   pyiwfm calctyphyd --config CalcTypeHyd.in
+
+   # Deduplicate per-layer SMP output (strip %N suffixes)
+   pyiwfm iwfm2obs --deduplicate-smp GW_OUT.smp --output GW_OUT_dedup.smp
 
 See the :doc:`/tutorials/calibration` tutorial for a complete walkthrough.

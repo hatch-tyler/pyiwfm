@@ -6,6 +6,34 @@ All notable changes to pyiwfm will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.0.3] - 2026-03-03
+--------------------
+
+IWFM2OBS Timestamp Alignment and CalcTypHyd Fortran-Matching Features
+
+Added
+~~~~~
+
+**IWFM2OBS Timestamp Alignment** (``pyiwfm.calibration.iwfm2obs``)
+
+- ``_compute_model_dates()``: Replicate Fortran ``ComputeDate`` for 1MON/1DAY/1WEEK/1YEAR
+- ``_replace_timestamps()``: Replace parsed ``.out`` timestamps with computed dates
+- ``expand_obs_to_layers()``: Auto-expand base observation IDs to per-layer variants
+- ``deduplicate_smp()``: Strip ``%N`` layer suffixes from SMP files
+- CLI: ``--deduplicate-smp`` mode
+- Verified: max |diff| = 0.000060 ft vs Fortran on C2VSimFG (48,816 GW bore IDs)
+
+**CalcTypHyd Fortran-Matching Features** (``pyiwfm.calibration.calctyphyd``)
+
+- ``read_calctyphyd_config()`` / ``CalcTypHydFileConfig``: Parse Fortran ``.in`` config files
+- ``compute_typical_hydrographs_timeseries()``: Per-period-year output matching Fortran
+  algorithm (period-year slot averaging, mean from slot averages)
+- ``write_pest_output()``: Write PEST ``.out``/``.ins`` files with exact Fortran column format
+- ``read_cluster_weights(n_clusters=)``: Header detection and column limiting
+- ``CalcTypHydConfig.start_date/end_date``: Date-range filtering
+- CLI: ``--config`` mode for Fortran ``.in`` files, ``--output-dir`` for PEST files
+- Verified: byte-identical output vs Fortran on C2VSimFG (6 clusters × 62 entries)
+
 [1.0.2] - 2026-02-27
 --------------------
 

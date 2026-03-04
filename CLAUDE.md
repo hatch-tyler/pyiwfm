@@ -53,6 +53,7 @@ pyiwfm zbudget <control_file>              # Export zone budgets to Excel
 pyiwfm iwfm2obs --obs o.smp --sim s.smp --output out.smp   # Explicit SMP interpolation
 pyiwfm iwfm2obs --model C2VSimFG.in --obs-gw o.smp --output-gw out.smp  # Model discovery mode
 pyiwfm calctyphyd --water-levels wl.smp --weights w.txt --output typhyd.smp  # Typical hydrographs
+pyiwfm calctyphyd --config CalcTypeHyd.in  # Fortran config mode with PEST output
 ```
 
 ### Frontend
@@ -155,11 +156,11 @@ The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D M
 `calibration/` modules provide IWFM2OBS and CalcTypHyd functionality:
 - `model_file_discovery.py` — `discover_hydrograph_files()` parses simulation main file → component main files → `.out` file paths and hydrograph metadata (bore IDs, layers, coordinates). Uses `iwfm_reader` utilities.
 - `obs_well_spec.py` — `read_obs_well_spec()` reads multi-layer well specification files (name, x, y, element, screen top/bottom).
-- `iwfm2obs.py` — Core interpolation (`interpolate_to_obs_times`, `interpolate_batch`, `compute_multilayer_weights`, `compute_composite_head`, `iwfm2obs`), plus integrated workflow (`iwfm2obs_from_model`) that auto-discovers `.out` files, reads them via `IWFMHydrographReader`, interpolates, and writes multi-layer outputs (`write_multilayer_output`, `write_multilayer_pest_ins`).
-- `calctyphyd.py` — Typical hydrograph computation by cluster.
+- `iwfm2obs.py` — Core interpolation (`interpolate_to_obs_times`, `interpolate_batch`, `compute_multilayer_weights`, `compute_composite_head`, `iwfm2obs`), plus integrated workflow (`iwfm2obs_from_model`) that auto-discovers `.out` files, reads them via `IWFMHydrographReader`, interpolates, and writes multi-layer outputs (`write_multilayer_output`, `write_multilayer_pest_ins`). Timestamp alignment via `_compute_model_dates` and `_replace_timestamps` (replicates Fortran `ComputeDate`). Layer expansion via `expand_obs_to_layers`, deduplication via `deduplicate_smp`.
+- `calctyphyd.py` — Typical hydrograph computation by cluster. Config file parsing (`read_calctyphyd_config`, `CalcTypHydFileConfig`), Fortran-matching time-series output (`compute_typical_hydrographs_timeseries`), PEST `.out`/`.ins` writer (`write_pest_output`), date-range filtering, header-aware `read_cluster_weights(n_clusters=)`.
 - `clustering.py` — Fuzzy c-means clustering of observation wells.
 - `io/hydrograph_reader.py` — `IWFMHydrographReader` reads IWFM `.out` files. `get_columns_as_smp_dict()` bridges `.out` data to the interpolation pipeline as `SMPTimeSeries` dicts.
-- `cli/iwfm2obs.py` — CLI subcommand with explicit SMP mode (`--obs/--sim/--output`) and model-discovery mode (`--model`, `--obs-gw/--output-gw`, `--obs-stream/--output-stream`, `--well-spec`, `--multilayer-out/--multilayer-ins`).
+- `cli/iwfm2obs.py` — CLI subcommand with explicit SMP mode (`--obs/--sim/--output`), model-discovery mode (`--model`, `--obs-gw/--output-gw`, `--obs-stream/--output-stream`, `--well-spec`, `--multilayer-out/--multilayer-ins`), and `--deduplicate-smp` mode.
 
 ### PEST++ Integration
 `runner/pest*.py` modules provide parameter estimation workflow:
@@ -221,5 +222,5 @@ Core dependencies include matplotlib, geopandas, shapely, and pyogrio (always in
 - `mesh`: triangle, gmsh
 - `viz`: vtk
 - `webapi`: fastapi, uvicorn, pydantic, pyvista, vtk, pyproj, python-multipart
-- `dss`: bundled HEC-DSS 7 C library (`io/dss/lib/hecdss.dll`) with ctypes wrapper; no extra install needed. On Linux, build `libhecdss.so` from source via `dss-build/` (see `dss-build/build_hecdss.py`). Set `HECDSS_LIB` env var to override library path.
+- `dss`: bundled HEC-DSS 7 C library (`io/dss/lib/hecdss.dll`) with ctypes wrapper. On Linux, build `libhecdss.so` from source via `dss-build/` (see `dss-build/build_hecdss.py`). Set `HECDSS_LIB` env var to override library path.
 - `pest`: scipy
