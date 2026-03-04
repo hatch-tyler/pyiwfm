@@ -15,6 +15,7 @@ Functions
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -248,7 +249,7 @@ def draw_table(
 
 def draw_stats_panel(
     ax: Axes,
-    stats: dict[str, str | float | int],
+    stats: Mapping[str, str | float | int],
     title: str | None = None,
     style: TableStyle | None = None,
 ) -> None:

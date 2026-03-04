@@ -218,7 +218,9 @@ def plot_budget_horizontal_bars(
         fig = ax.get_figure()  # type: ignore[assignment]
 
     def _get_color(
-        name: str, palette: Sequence[str], idx: int,
+        name: str,
+        palette: Sequence[str],
+        idx: int,
     ) -> str:
         if name in color_map:
             return color_map[name]
@@ -226,16 +228,20 @@ def plot_budget_horizontal_bars(
 
     # --- Draw stacked horizontal bars with numbered segments ---
     def _draw_hbar(
-        y: float, items: list[tuple[str, float]],
-        palette: Sequence[str], start_num: int, bar_height: float,
+        y: float,
+        items: list[tuple[str, float]],
+        palette: Sequence[str],
+        start_num: int,
+        bar_height: float,
     ) -> list[tuple[int, str, float, str]]:
         left = 0.0
         entries: list[tuple[int, str, float, str]] = []
         num = start_num
         for idx, (name, val) in enumerate(items):
             color = _get_color(name, palette, idx)
-            ax.barh(y, val, left=left, height=bar_height, color=color,
-                    edgecolor="white", linewidth=0.5)
+            ax.barh(
+                y, val, left=left, height=bar_height, color=color, edgecolor="white", linewidth=0.5
+            )
             # Numbered label centered on segment
             cx = left + val / 2.0
             _outlined_text(ax, cx, y, str(num), fontsize=number_fontsize)
@@ -245,18 +251,22 @@ def plot_budget_horizontal_bars(
         return entries
 
     in_entries = _draw_hbar(2, inflows, inflow_colors, 1, 0.65)
-    out_entries = _draw_hbar(1, outflows, outflow_colors,
-                             len(in_entries) + 1, 0.65)
+    out_entries = _draw_hbar(1, outflows, outflow_colors, len(in_entries) + 1, 0.65)
 
     # Storage change bar
     if abs(storage_change) > 0.5:
         stor_color = "#009E73" if storage_change > 0 else "#D55E00"
-        ax.barh(0, abs(storage_change), height=0.45, color=stor_color,
-                edgecolor="white", linewidth=0.5)
+        ax.barh(
+            0, abs(storage_change), height=0.45, color=stor_color, edgecolor="white", linewidth=0.5
+        )
         sign_chr = "+" if storage_change > 0 else "\u2212"
-        _outlined_text(ax, abs(storage_change) / 2.0, 0,
-                       f"{sign_chr}{abs(storage_change):,.0f}",
-                       fontsize=number_fontsize - 0.5)
+        _outlined_text(
+            ax,
+            abs(storage_change) / 2.0,
+            0,
+            f"{sign_chr}{abs(storage_change):,.0f}",
+            fontsize=number_fontsize - 0.5,
+        )
 
     # --- Axes formatting ---
     total_in = sum(v for _, v in inflows) if inflows else 0.0
@@ -312,27 +322,35 @@ def plot_budget_horizontal_bars(
         # Summary rows
         balance_err = total_in - total_out - storage_change
         pct = f" ({100 * balance_err / total_in:.2f}%)" if total_in else ""
-        cell_text.append(["", "Total", f"{total_in:>12,.0f}",
-                          "", "Total", f"{total_out:>12,.0f}"])
+        cell_text.append(["", "Total", f"{total_in:>12,.0f}", "", "Total", f"{total_out:>12,.0f}"])
         cell_colors.append(["white"] * 6)
         if abs(storage_change) > 0.5:
             sign_s = "+" if storage_change > 0 else "\u2212"
-            cell_text.append(["", "\u0394Storage",
-                              f"{sign_s}{abs(storage_change):>11,.0f}",
-                              "", "Balance", f"{balance_err:>12,.0f}{pct}"])
+            cell_text.append(
+                [
+                    "",
+                    "\u0394Storage",
+                    f"{sign_s}{abs(storage_change):>11,.0f}",
+                    "",
+                    "Balance",
+                    f"{balance_err:>12,.0f}{pct}",
+                ]
+            )
             cell_colors.append(["white"] * 6)
         if abs(discrepancy) > 0.5:
-            cell_text.append(["", "Discrepancy", f"{discrepancy:>12,.0f}",
-                              "", "", ""])
+            cell_text.append(["", "Discrepancy", f"{discrepancy:>12,.0f}", "", "", ""])
             cell_colors.append(["white"] * 6)
 
-        col_labels = ["#", inflow_label, units,
-                      "#", outflow_label, units]
+        col_labels = ["#", inflow_label, units, "#", outflow_label, units]
         col_widths = [0.04, 0.24, 0.16, 0.04, 0.24, 0.16]
 
-        table = tgt_ax.table(cellText=cell_text, colLabels=col_labels,
-                             colWidths=col_widths, loc="center",
-                             cellLoc="left")
+        table = tgt_ax.table(
+            cellText=cell_text,
+            colLabels=col_labels,
+            colWidths=col_widths,
+            loc="center",
+            cellLoc="left",
+        )
         table.auto_set_font_size(False)
         table.set_fontsize(table_fontsize)
 
@@ -365,21 +383,22 @@ def plot_budget_horizontal_bars(
                         if c != "white":
                             cell.set_facecolor(c)
                             cell.set_text_props(
-                                fontweight="bold", color="white",
+                                fontweight="bold",
+                                color="white",
                             )
                         else:
                             cell.set_text_props(color="#333333")
                     elif col in (2, 5):  # numeric columns
                         cell.set_text_props(
-                            fontfamily="monospace", color="#333333",
+                            fontfamily="monospace",
+                            color="#333333",
                         )
                     else:
                         cell.set_text_props(color="#333333")
 
                     # Summary rows: top separator + bold
                     if data_row >= n_rows:
-                        cell.set_text_props(fontweight="bold",
-                                            color="#333333")
+                        cell.set_text_props(fontweight="bold", color="#333333")
                         if data_row == n_rows:
                             cell.visible_edges = "T"
                             cell.set_edgecolor("#999999")
@@ -387,10 +406,7 @@ def plot_budget_horizontal_bars(
 
                 # Bottom border on last row
                 if data_row == n_total_rows - 1:
-                    cell.visible_edges = (
-                        cell.visible_edges + "B" if cell.visible_edges
-                        else "B"
-                    )
+                    cell.visible_edges = cell.visible_edges + "B" if cell.visible_edges else "B"
                     cell.set_edgecolor("#999999")
                     cell.set_linewidth(0.6)
 

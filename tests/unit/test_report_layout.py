@@ -7,7 +7,6 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
-import pytest
 
 from pyiwfm.visualization.report._ada import (
     HATCH_PATTERNS,
@@ -29,7 +28,6 @@ from pyiwfm.visualization.report._table import (
     draw_stats_panel,
     draw_table,
 )
-
 
 # ---------------------------------------------------------------------------
 # PageMargins
@@ -406,7 +404,8 @@ class TestDrawTable:
         fig, ax = plt.subplots()
         data = [["Name", "123", "456"]]
         draw_table(
-            ax, data,
+            ax,
+            data,
             col_labels=["Col1", "Col2", "Col3"],
             col_widths=[0.5, 0.25, 0.25],
             col_alignments=["left", "center", "right"],

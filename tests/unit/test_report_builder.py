@@ -100,7 +100,8 @@ class TestReportBuilder:
             def render(page: ReportPage, page_items: list[int]) -> None:
                 ax = page.add_axes(0.1, 0.1, 0.8, 0.8)
                 ax.text(
-                    0.5, 0.5,
+                    0.5,
+                    0.5,
                     f"Items: {page_items}",
                     transform=ax.transAxes,
                     ha="center",
@@ -211,7 +212,8 @@ class TestDrawTitlePage:
         cfg = ReportConfig(title="Model Report")
         page = ReportPage(cfg, page_number=1)
         draw_title_page(
-            page, cfg,
+            page,
+            cfg,
             model_info={"Nodes": 30000, "Elements": 20000, "Layers": 4},
         )
         texts = [t.get_text() for t in page.fig.texts]
@@ -223,7 +225,8 @@ class TestDrawTitlePage:
         cfg = ReportConfig(title="Stats Report")
         page = ReportPage(cfg, page_number=1)
         draw_title_page(
-            page, cfg,
+            page,
+            cfg,
             summary_stats={"RMSE (ft)": 12.345, "NSE": 0.876},
         )
         texts = [t.get_text() for t in page.fig.texts]

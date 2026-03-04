@@ -49,6 +49,8 @@ class TestRunCalctyphyd:
             water_levels=str(tmp_path / "nonexistent.smp"),
             weights=str(weights),
             output=str(tmp_path / "out.smp"),
+            config=None,
+            output_dir=None,
         )
         result = run_calctyphyd(args)
         assert result == 1
@@ -60,6 +62,8 @@ class TestRunCalctyphyd:
             water_levels=str(wl),
             weights=str(tmp_path / "nonexistent.txt"),
             output=str(tmp_path / "out.smp"),
+            config=None,
+            output_dir=None,
         )
         result = run_calctyphyd(args)
         assert result == 1
@@ -99,6 +103,8 @@ class TestRunCalctyphyd:
             water_levels=str(wl),
             weights=str(weights),
             output=str(tmp_path / "out.smp"),
+            config=None,
+            output_dir=None,
         )
         result = run_calctyphyd(args)
         assert result == 0
