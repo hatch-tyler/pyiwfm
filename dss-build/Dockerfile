@@ -4,12 +4,16 @@
 # then produces a pyiwfm runtime image with full DSS support.
 #
 # Build (from project root):
-#   docker build -f dss-build/Dockerfile -t pyiwfm-dss .
+#   docker build -f dss-build/Dockerfile --build-arg VERSION=1.0.4 -t pyiwfm-dss .
 #
 # Run:
 #   docker run -p 8080:8080 -v /path/to/model:/model pyiwfm-dss
 #
 # Build time: ~5-10 minutes (fetches hec-dss source from GitHub)
+
+# Version arg — .git is excluded by .dockerignore, so hatch-vcs cannot
+# detect the version automatically.
+ARG VERSION=0.0.0
 
 # ── Stage 1: Build HEC-DSS shared library ────────────────────────────────────
 FROM python:3.11-slim AS hecdss-builder
@@ -47,6 +51,10 @@ COPY --from=hecdss-builder /app /app
 # Also install the .so into the system library path for runtime linking
 COPY --from=hecdss-builder /app/src/pyiwfm/io/dss/lib/libhecdss.so /usr/local/lib/
 RUN ldconfig
+
+# Re-declare ARG after FROM so it's available in this stage
+ARG VERSION=0.0.0
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=${VERSION}
 
 # Install pyiwfm with all dependencies
 RUN pip install --no-cache-dir -e ".[all]" || \

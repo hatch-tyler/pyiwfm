@@ -187,7 +187,7 @@ CI runs on every push/PR to `master` (see `.github/workflows/ci.yml`):
 3. **Test** — `pytest tests/unit/` on Ubuntu/Windows × Python 3.10–3.13; coverage on 3.12/Ubuntu (coverage `fail_under = 70`)
 4. **Integration** — `pytest tests/integration/` with `.[all,dev]` (caches IWFM sample model)
 
-**Publish** (`publish.yml`): triggered by `v*` tags — builds with `hatch build`, publishes to PyPI, and pushes Docker image to `ghcr.io`.
+**Publish** (`publish.yml`): triggered by `v*` tags — builds with `hatch build`, publishes to PyPI, and pushes Docker image to Docker Hub.
 
 All lint, typecheck, and unit test jobs must pass before merge. Run `ruff check src/ tests/ && ruff format --check src/ tests/ && mypy src/pyiwfm/ && pytest tests/unit/` locally to verify before pushing.
 
