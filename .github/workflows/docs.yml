@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: sudo apt-get update && sudo apt-get install -y libgl1 libglu1-mesa
-      - run: pip install -e ".[docs,dev]" genbadge[coverage]
+      - run: pip install -e ".[all,docs,dev]" genbadge[coverage]
       - run: sphinx-build -W docs docs/_build
       - name: Generate coverage badge
         if: github.ref == 'refs/heads/master'
