@@ -186,6 +186,7 @@ class IWFMHydrographReader:
     def get_columns_as_smp_dict(
         self,
         bore_ids: dict[int, str],
+        filter_ids: set[int] | None = None,
     ) -> dict[str, SMPTimeSeries]:
         """Extract specified columns as :class:`SMPTimeSeries` keyed by bore ID.
 
@@ -195,6 +196,11 @@ class IWFMHydrographReader:
         ----------
         bore_ids : dict[int, str]
             Mapping of 0-based column index to bore ID string.
+        filter_ids : set[int] | None
+            Optional set of column indices to process.  When provided, only
+            columns whose index is in ``filter_ids`` are included; all others
+            are skipped.  This avoids loading every column from large ``.out``
+            files when only a subset is needed.
 
         Returns
         -------
@@ -212,6 +218,8 @@ class IWFMHydrographReader:
         times = np.array(self._times, dtype="datetime64[s]")
 
         for col_idx, bore_id in bore_ids.items():
+            if filter_ids is not None and col_idx not in filter_ids:
+                continue
             if col_idx < 0 or col_idx >= self.n_columns:
                 continue
             values = self._data[:, col_idx].copy()

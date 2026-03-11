@@ -13,9 +13,9 @@ from pyiwfm.calibration.iwfm2obs import (
     InterpolationConfig,
     IWFM2OBSConfig,
     write_multilayer_output,
-    write_multilayer_pest_ins,
 )
 from pyiwfm.calibration.obs_well_spec import ObsWellSpec
+from pyiwfm.calibration.pest_files import generate_multilayer_ins
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -102,59 +102,83 @@ class TestWriteMultilayerOutput:
 # ---------------------------------------------------------------------------
 
 
-class TestWriteMultilayerPestIns:
-    """Test write_multilayer_pest_ins()."""
+class TestGenerateMultilayerIns:
+    """Test generate_multilayer_ins() from pest_files module."""
+
+    def _write_ml_smp(self, path: Path, lines: list[str]) -> None:
+        """Helper to write a multi-layer SMP file."""
+        path.write_text("\n".join(lines) + "\n")
 
     def test_basic_ins(self, tmp_path: Path) -> None:
-        """Test writing a basic PEST .ins file."""
-        wells = [ObsWellSpec("W1", 0, 0, 1, -100, -50)]
-        results = {
-            "W1": [
-                (datetime(2020, 1, 31), 100.0),
-                (datetime(2020, 2, 29), 101.0),
+        """Test writing a basic PEST .ins file from SMP output."""
+        smp_path = tmp_path / "GW_OUT_ml.smp"
+        self._write_ml_smp(
+            smp_path,
+            [
+                "W1                       01/31/2020  12:00:00      105.50",
+                "W1                       02/29/2020  12:00:00      106.00",
             ],
-        }
+        )
         ins_path = tmp_path / "ml.ins"
 
-        write_multilayer_pest_ins(results, wells, ins_path)
+        n_obs = generate_multilayer_ins(smp_path, ins_path)
 
+        assert n_obs == 2
         assert ins_path.exists()
         lines = ins_path.read_text().strip().split("\n")
         assert lines[0] == "pif #"
-        assert lines[1] == "l1"  # skip header
-        assert lines[2] == "l1 [WLT00001_00001]50:60"
-        assert lines[3] == "l1 [WLT00001_00002]50:60"
+        assert "W1_00001" in lines[1]
+        assert "W1_00002" in lines[2]
 
     def test_multi_well_ins(self, tmp_path: Path) -> None:
         """Test .ins file with multiple wells."""
-        wells = [
-            ObsWellSpec("W1", 0, 0, 1, -100, -50),
-            ObsWellSpec("W2", 0, 0, 2, -80, -20),
-        ]
-        results = {
-            "W1": [(datetime(2020, 1, 31), 100.0)],
-            "W2": [(datetime(2020, 1, 31), 90.0), (datetime(2020, 2, 29), 91.0)],
-        }
+        smp_path = tmp_path / "GW_OUT_ml.smp"
+        self._write_ml_smp(
+            smp_path,
+            [
+                "W1                       01/31/2020  12:00:00      100.00",
+                "W2                       01/31/2020  12:00:00       90.00",
+                "W2                       02/29/2020  12:00:00       91.00",
+            ],
+        )
         ins_path = tmp_path / "ml.ins"
 
-        write_multilayer_pest_ins(results, wells, ins_path)
+        n_obs = generate_multilayer_ins(smp_path, ins_path)
 
+        assert n_obs == 3
         lines = ins_path.read_text().strip().split("\n")
-        assert lines[2] == "l1 [WLT00001_00001]50:60"
-        assert lines[3] == "l1 [WLT00002_00001]50:60"
-        assert lines[4] == "l1 [WLT00002_00002]50:60"
+        assert "W1_00001" in lines[1]
+        assert "W2_00001" in lines[2]
+        assert "W2_00002" in lines[3]
 
-    def test_wlt_naming_format(self, tmp_path: Path) -> None:
-        """Test WLT naming: 5-digit well seq and 5-digit timestep seq."""
-        wells = [ObsWellSpec("W1", 0, 0, 1, -100, -50)]
-        results = {"W1": [(datetime(2020, 1, 1), 1.0)]}
+    def test_with_header(self, tmp_path: Path) -> None:
+        """Test that header line is detected and skipped."""
+        smp_path = tmp_path / "GW_OUT_ml.smp"
+        self._write_ml_smp(
+            smp_path,
+            [
+                "Name                     Date        Time        Value",
+                "W1                       01/31/2020  12:00:00      105.50",
+            ],
+        )
         ins_path = tmp_path / "ml.ins"
 
-        write_multilayer_pest_ins(results, wells, ins_path)
+        n_obs = generate_multilayer_ins(smp_path, ins_path)
 
+        assert n_obs == 1
         lines = ins_path.read_text().strip().split("\n")
-        # Check 5-digit zero-padded format
-        assert "WLT00001_00001" in lines[2]
+        assert lines[0] == "pif #"
+        assert lines[1] == "l1"  # skip header instruction
+        assert "W1_00001" in lines[2]
+
+    def test_empty_file(self, tmp_path: Path) -> None:
+        """Test empty SMP file produces no observations."""
+        smp_path = tmp_path / "empty.smp"
+        smp_path.write_text("")
+        ins_path = tmp_path / "ml.ins"
+
+        n_obs = generate_multilayer_ins(smp_path, ins_path)
+        assert n_obs == 0
 
 
 # ---------------------------------------------------------------------------

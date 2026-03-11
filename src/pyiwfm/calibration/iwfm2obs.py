@@ -421,6 +421,13 @@ def compute_multilayer_weights(
     NDArray[np.float64]
         Layer weights array, shape ``(n_layers,)``, summing to 1.
     """
+    # Fortran: if iOverwriteLayer > 0, use only that layer
+    if hasattr(well, "overwrite_layer") and well.overwrite_layer > 0:
+        n_lay = stratigraphy.n_layers
+        w = np.zeros(n_lay)
+        w[well.overwrite_layer - 1] = 1.0  # 1-based to 0-based
+        return w
+
     from pyiwfm.core.interpolation import FEInterpolator
 
     n_layers = stratigraphy.n_layers
@@ -470,10 +477,34 @@ def compute_multilayer_weights(
     t_total = np.sum(t_k)
 
     if t_total == 0.0:
-        # Equal weights if no transmissivity
-        return np.ones(n_layers) / n_layers
+        # Fortran: weight=1.0 for first non-zero-thickness layer (or layer 0 if all zero)
+        w = np.zeros(n_layers)
+        nonzero = np.where(thicknesses > 0.0)[0]
+        w[nonzero[0] if len(nonzero) > 0 else 0] = 1.0
+        return w
 
     return t_k / t_total
+
+
+def compute_composite_subsidence(
+    layer_subsidence: NDArray[np.float64],
+) -> float:
+    """Compute composite subsidence by summing per-layer values.
+
+    Unlike head which uses T-weighted averaging, subsidence is additive
+    across layers (Fortran: Class_IWFM2OBS.f90:678-892).
+
+    Parameters
+    ----------
+    layer_subsidence : NDArray[np.float64]
+        Per-layer subsidence values, shape ``(n_layers,)``.
+
+    Returns
+    -------
+    float
+        Total subsidence (sum across all layers).
+    """
+    return float(np.nansum(layer_subsidence))
 
 
 def compute_composite_head(
@@ -603,7 +634,6 @@ def iwfm2obs_from_model(
     config: IWFM2OBSConfig | None = None,
     obs_well_spec_path: Path | None = None,
     multilayer_output_path: Path | None = None,
-    multilayer_ins_path: Path | None = None,
     grid: AppGrid | None = None,
     stratigraphy: Stratigraphy | None = None,
     hydraulic_conductivity: NDArray[np.float64] | None = None,
@@ -634,8 +664,6 @@ def iwfm2obs_from_model(
         Multi-layer well specification file (enables T-weighted averaging).
     multilayer_output_path : Path or None
         Path for ``GW_MultiLayer.out`` output.
-    multilayer_ins_path : Path or None
-        Path for PEST instruction file.
     grid : AppGrid or None
         Model grid (required for multi-layer).
     stratigraphy : Stratigraphy or None
@@ -823,13 +851,6 @@ def iwfm2obs_from_model(
                 multilayer_output_path,
                 n_layers,
             )
-            if multilayer_ins_path is not None:
-                write_multilayer_pest_ins(
-                    composite_results,
-                    well_specs,
-                    multilayer_ins_path,
-                )
-
     return results
 
 
@@ -880,35 +901,3 @@ def write_multilayer_output(
                 line += f"  {spec.top_of_screen:10.2f}"
                 line += f"  {spec.bottom_of_screen:10.2f}"
                 f.write(line + "\n")
-
-
-def write_multilayer_pest_ins(
-    results: dict[str, list[tuple[datetime, float]]],
-    well_specs: list[ObsWellSpec],
-    ins_path: Path,
-) -> None:
-    """Write PEST instruction file for multi-layer targets.
-
-    Format: ``pif #``, ``l1`` (skip header), then
-    ``l1 [WLT{well:05d}_{timestep:05d}]50:60`` for each observation.
-
-    Parameters
-    ----------
-    results : dict[str, list[tuple[datetime, float]]]
-        Composite head results keyed by well name.
-    well_specs : list[ObsWellSpec]
-        Well specifications.
-    ins_path : Path
-        Instruction file path.
-    """
-    with open(ins_path, "w") as f:
-        f.write("pif #\n")
-        f.write("l1\n")  # Skip header
-
-        well_seq = 0
-        for spec in well_specs:
-            if spec.name not in results:
-                continue
-            well_seq += 1
-            for t_seq, _ in enumerate(results[spec.name], start=1):
-                f.write(f"l1 [WLT{well_seq:05d}_{t_seq:05d}]50:60\n")

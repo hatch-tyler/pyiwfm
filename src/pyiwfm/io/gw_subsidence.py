@@ -2,13 +2,17 @@
 Groundwater Subsidence Reader for IWFM.
 
 This module reads the IWFM subsidence parameter files, which define
-compaction-related parameters for each aquifer node-layer. Two versions
+compaction-related parameters for each aquifer node-layer. Four versions
 are supported:
 
 - Version 4.0: Basic subsidence with elastic/inelastic storage, interbed
   thickness, and pre-compaction head.
+- Version 4.1: Same as 4.0 but adds AllSubsidenceAtAllNodes HDF5 output
+  file path (read before IC filename).
 - Version 5.0: Enhanced with vertical interbed conductivity, number of
   equivalent delay interbeds, and preferred discretization thickness.
+- Version 5.1: Same as 5.0 but adds AllSubsidenceAtAllNodes HDF5 output
+  file path (read before IC filename).
 """
 
 from __future__ import annotations
@@ -112,7 +116,8 @@ class SubsidenceConfig:
     """Complete subsidence configuration.
 
     Attributes:
-        version: File format version (4.0 or 5.0)
+        version: File format version (4.0, 4.1, 5.0, or 5.1)
+        all_subs_out_file: Path to AllSubsidenceAtAllNodes HDF5 output (v4.1/v5.1 only)
         ic_file: Path to initial conditions file
         tecplot_file: Path to Tecplot output file
         final_subs_file: Path to end-of-simulation output file
@@ -132,6 +137,7 @@ class SubsidenceConfig:
     """
 
     version: str = ""
+    all_subs_out_file: Path | None = None  # v4.1/v5.1: AllSubsidenceAtAllNodes HDF5
     ic_file: Path | None = None
     tecplot_file: Path | None = None
     final_subs_file: Path | None = None
@@ -148,6 +154,7 @@ class SubsidenceConfig:
     hydrograph_specs: list[SubsidenceHydrographSpec] = field(default_factory=list)
 
     # Raw path strings for roundtrip fidelity
+    _raw_all_subs_out_file: str = ""
     _raw_ic_file: str = ""
     _raw_tecplot_file: str = ""
     _raw_final_subs_file: str = ""
@@ -168,8 +175,9 @@ class SubsidenceConfig:
 class SubsidenceReader(ReaderMixin):
     """Reader for IWFM subsidence parameter files.
 
-    Supports both version 4.0 and 5.0 formats. Version is auto-detected
-    from the file header.
+    Supports versions 4.0, 4.1, 5.0, and 5.1. Version is auto-detected
+    from the file header. Versions 4.1 and 5.1 add an AllSubsidenceAtAllNodes
+    HDF5 output file path before the IC filename.
     """
 
     def __init__(self) -> None:
@@ -205,6 +213,15 @@ class SubsidenceReader(ReaderMixin):
         with open(filepath) as f:
             # Version header
             config.version = self._read_version(f)
+
+            # v4.1/v5.1: AllSubsidenceAtAllNodes HDF5 output (before IC)
+            is_v41 = config.version in ("4.1", "4_1")
+            is_v51 = config.version in ("5.1", "5_1")
+            if is_v41 or is_v51:
+                all_subs_path = _next_data_or_empty(f)
+                if all_subs_path:
+                    config._raw_all_subs_out_file = all_subs_path
+                    config.all_subs_out_file = _resolve_path_f(base_dir, all_subs_path)
 
             # IC file
             ic_path = _next_data_or_empty(f)
@@ -287,7 +304,7 @@ class SubsidenceReader(ReaderMixin):
                     config.hydrograph_specs.append(spec)
             # When NOUTS=0, Fortran does NOT read FACTXY/SUBHYDOUTFL
 
-            # v5.0 has interbed DZ before NGroup
+            # v5.0/v5.1 have interbed DZ before NGroup
             is_v50 = config.version.startswith("5")
             if is_v50:
                 dz_str = _next_data_or_empty(f)

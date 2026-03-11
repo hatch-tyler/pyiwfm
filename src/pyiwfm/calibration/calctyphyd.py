@@ -138,6 +138,12 @@ def read_cluster_weights(
     The file format is whitespace-separated with columns:
     ``well_id  w1  w2  ...  wN  [extra_cols...]``
 
+    Header auto-detection is applied unconditionally: the second token of
+    the first non-blank, non-comment line is tested with ``float()``.  If
+    the conversion fails the line is treated as a column header and skipped.
+    This allows the function to handle files both with and without a header
+    row without requiring ``n_clusters`` to be supplied.
+
     Parameters
     ----------
     filepath : Path
@@ -145,6 +151,8 @@ def read_cluster_weights(
     n_clusters : int | None
         If provided, only read this many weight columns after the well ID.
         Extra columns (e.g. ``memb``, ``cluster``, ``subregion``) are ignored.
+        When ``None`` all numeric columns are read; header auto-detection is
+        still applied so files with a text header row work correctly.
 
     Returns
     -------
@@ -163,7 +171,9 @@ def read_cluster_weights(
             if len(parts) < 2:
                 continue
 
-            # Detect and skip header: if columns 2+ contain non-numeric tokens
+            # Auto-detect and skip header: peek at first data line and try to
+            # parse the second token as a float.  If it fails the line is a
+            # header row (column labels) and is skipped.
             if not header_skipped:
                 try:
                     float(parts[1])
@@ -628,8 +638,12 @@ def compute_typical_hydrographs_timeseries(
         years = ts.times.astype("datetime64[Y]").astype(int) + 1970
         valid = ts.valid_mask & ~np.isnan(ts.values)
 
+        months_arr = months.astype(np.int32)
+        years_arr = years.astype(np.int32)
+
         avgs: dict[tuple[int, int], float] = {}
         for year in range(start.year, end.year + 1):
+            year_mask = years_arr == year
             for p_idx, period in enumerate(periods):
                 rep_month = int(period.representative_date.split("/")[0])
                 rep_val = year * 12 + rep_month
@@ -637,15 +651,8 @@ def compute_typical_hydrographs_timeseries(
                     continue
 
                 # Mask: observations in this period's months AND this year
-                season_months = set(period.months)
-                mask = np.array(
-                    [
-                        int(months[i]) in season_months and int(years[i]) == year
-                        for i in range(len(ts.times))
-                    ],
-                    dtype=np.bool_,
-                )
-                mask &= valid
+                season_mask = np.isin(months_arr, list(period.months))
+                mask = season_mask & year_mask & valid
 
                 if np.any(mask):
                     avgs[(year, p_idx)] = float(np.mean(ts.values[mask]))
@@ -743,6 +750,8 @@ def write_pest_output(
     list[Path]
         Paths to all written files.
     """
+    from pyiwfm.calibration.pest_files import generate_thyd_ins
+
     output_dir.mkdir(parents=True, exist_ok=True)
     weights_stem = file_config.weights_path.stem.lower()
     written: list[Path] = []
@@ -769,14 +778,9 @@ def write_pest_output(
                 f.write(f"{name:<16s}{date_str:>10s}{value:20.6f}\n")
         written.append(out_path)
 
-        # .ins file
+        # .ins file — PEST instruction file generated from .out
         ins_path = output_dir / f"sim_{weights_stem}_cls{cls_id}.ins"
-        with open(ins_path, "w", encoding="utf-8") as f:
-            f.write("pif #\n")
-            f.write("l1\n")  # skip header
-            for i in range(len(th.dates)):
-                name = th.pest_names[i]
-                f.write(f"l1 [{name}]34:46\n")
+        generate_thyd_ins(out_path, ins_path)
         written.append(ins_path)
 
     return written

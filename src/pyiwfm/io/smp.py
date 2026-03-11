@@ -26,6 +26,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -261,16 +262,43 @@ class SMPReader(BaseReader):
         return _records_to_timeseries(records)
 
 
-def _format_smp_line(bore_id: str, dt: datetime, value: float, excluded: bool) -> str:
-    """Format a single SMP line in fixed-width format."""
+def _format_smp_line(
+    bore_id: str,
+    dt: datetime,
+    value: float,
+    excluded: bool,
+    fixed_format: bool = False,
+) -> str:
+    """Format a single SMP line.
+
+    Parameters
+    ----------
+    bore_id : str
+        Bore / well identifier.
+    dt : datetime
+        Timestamp.
+    value : float
+        Observation value.
+    excluded : bool
+        Whether to mark as excluded.
+    fixed_format : bool
+        If True, enforce CalcTypeHyd Fortran format ``(A25,A12,A12,A11)``
+        with left-justified date/time fields instead of right-justified.
+    """
     bore_field = f"{bore_id:<25s}"
-    date_field = dt.strftime("%m/%d/%Y").rjust(12)
-    time_field = dt.strftime("%H:%M:%S").rjust(12)
+
+    if fixed_format:
+        # CalcTypeHyd format: left-justified date (12 chars), left-justified time (12 chars)
+        date_field = f"{dt.strftime('%m/%d/%Y'):<12s}"
+        time_field = f"{dt.strftime('%H:%M:%S'):<12s}"
+    else:
+        date_field = dt.strftime("%m/%d/%Y").rjust(12)
+        time_field = dt.strftime("%H:%M:%S").rjust(12)
 
     if np.isnan(value):
         val_field = f"{-1.1e38:11.4E}"
     else:
-        val_field = f"{value:11.4f}"
+        val_field = f"{value:>11.4f}"
 
     line = f"{bore_field}{date_field}{time_field}{val_field}"
     if excluded:
@@ -285,12 +313,22 @@ class SMPWriter(BaseWriter):
     ----------
     filepath : Path | str
         Path to the output SMP file.
+    fixed_format : bool
+        If True, enforce CalcTypeHyd Fortran format ``(A25,A12,A12,A11)``
+        with left-justified date/time fields. Default False.
 
     Example
     -------
     >>> writer = SMPWriter("output.smp")
     >>> writer.write(data)
+    >>> # CalcTypeHyd-compatible output
+    >>> writer = SMPWriter("output.smp", fixed_format=True)
+    >>> writer.write(data)
     """
+
+    def __init__(self, filepath: Path | str, fixed_format: bool = False) -> None:
+        super().__init__(filepath)
+        self.fixed_format = fixed_format
 
     @property
     def format(self) -> str:
@@ -308,7 +346,7 @@ class SMPWriter(BaseWriter):
 
         with open(self.filepath, "w", encoding="utf-8") as f:
             for _bore_id, ts in data.items():
-                self._write_timeseries(f, ts)
+                self._write_timeseries(f, ts, self.fixed_format)
 
     def write_bore(self, ts: SMPTimeSeries) -> None:
         """Append a single bore's time series to the file.
@@ -321,14 +359,132 @@ class SMPWriter(BaseWriter):
         self._ensure_parent_exists()
 
         with open(self.filepath, "a", encoding="utf-8") as f:
-            self._write_timeseries(f, ts)
+            self._write_timeseries(f, ts, self.fixed_format)
 
     @staticmethod
-    def _write_timeseries(f: Any, ts: SMPTimeSeries) -> None:
+    def _write_timeseries(
+        f: Any,
+        ts: SMPTimeSeries,
+        fixed_format: bool = False,
+    ) -> None:
         """Write a single bore's records to an open file."""
         for i in range(ts.n_records):
             dt = ts.times[i].astype("datetime64[s]").astype(datetime)
             value = float(ts.values[i])
             excluded = bool(ts.excluded[i])
-            line = _format_smp_line(ts.bore_id, dt, value, excluded)
+            line = _format_smp_line(ts.bore_id, dt, value, excluded, fixed_format)
             f.write(line + "\n")
+
+    @staticmethod
+    def merge(files: list[Path | str], output: Path | str) -> int:
+        """Concatenate multiple SMP files into one, with proper newline handling.
+
+        Parameters
+        ----------
+        files : list[Path | str]
+            Input SMP file paths.
+        output : Path | str
+            Output SMP file path.
+
+        Returns
+        -------
+        int
+            Total number of lines written.
+        """
+        from pathlib import Path as _Path
+
+        output = _Path(output)
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+        total = 0
+        with open(output, "w", encoding="utf-8") as fout:
+            for fpath in files:
+                fpath = _Path(fpath)
+                if not fpath.exists():
+                    continue
+                with open(fpath, encoding="utf-8", errors="replace") as fin:
+                    content = fin.read()
+                if not content:
+                    continue
+                # Ensure previous content ends with newline before appending
+                if total > 0 and not fout.tell() == 0:
+                    # Check if the output so far ends with newline
+                    fout.seek(fout.tell() - 1)
+                    if fout.read(1) != "\n":
+                        fout.write("\n")
+                fout.write(content)
+                total += content.count("\n")
+                if not content.endswith("\n"):
+                    total += 1
+
+        return total
+
+
+def smp_transform(
+    input_path: Path | str,
+    output_path: Path | str,
+    func: Any,
+) -> int:
+    """Apply a value transform to all records in an SMP file.
+
+    Reads the input SMP file, applies ``func`` to each value, and writes
+    the result to the output file. Preserves bore IDs, dates, and formatting.
+
+    Parameters
+    ----------
+    input_path : Path | str
+        Input SMP file.
+    output_path : Path | str
+        Output SMP file.
+    func : callable
+        Transform function applied to each value. Receives a float, returns a float.
+        Example: ``lambda v: math.copysign(math.sqrt(abs(v)), v)`` for signed sqrt.
+
+    Returns
+    -------
+    int
+        Number of records transformed.
+
+    Example
+    -------
+    >>> import math
+    >>> smp_transform("stream.smp", "stream_sqrt.smp",
+    ...     lambda v: math.copysign(math.sqrt(abs(v)), v))
+    """
+    from pathlib import Path as _Path
+
+    in_path = _Path(input_path)
+    out_path = _Path(output_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    count = 0
+    with (
+        open(in_path, encoding="utf-8", errors="replace") as fin,
+        open(out_path, "w", encoding="utf-8") as fout,
+    ):
+        for line in fin:
+            rec = _parse_smp_line(line)
+            if rec is None:
+                fout.write(line)
+                continue
+
+            if not np.isnan(rec.value):
+                rec = SMPRecord(
+                    bore_id=rec.bore_id,
+                    datetime=rec.datetime,
+                    value=func(rec.value),
+                    excluded=rec.excluded,
+                )
+
+            fout.write(
+                _format_smp_line(
+                    rec.bore_id,
+                    rec.datetime,
+                    rec.value,
+                    rec.excluded,
+                )
+                + "\n"
+            )
+            count += 1
+
+    return count

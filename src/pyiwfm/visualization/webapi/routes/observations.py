@@ -6,10 +6,12 @@ from __future__ import annotations
 
 import csv
 import io
+import tempfile
 import uuid
 from datetime import datetime
+from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Body, File, HTTPException, Query, UploadFile
 
 from pyiwfm.visualization.webapi.config import model_state
 
@@ -20,37 +22,134 @@ router = APIRouter(prefix="/api/observations", tags=["observations"])
 async def upload_observation(
     file: UploadFile = File(...),  # noqa: B008
     type: str = Query(default="gw", description="Observation type: gw, stream, or subsidence"),
+    date_col: int = Query(default=0, description="0-indexed column for datetime"),
+    value_col: int = Query(default=1, description="0-indexed column for values"),
+    location_col: int = Query(
+        default=-1, description="0-indexed column for location ID, -1 = none"
+    ),
 ) -> dict:
-    """Upload an observation file (CSV: datetime,value)."""
+    """Upload an observation file (CSV or SMP format).
+
+    For CSV files, specify which columns contain dates, values, and optionally
+    location identifiers. For SMP files, parsing is automatic.
+    """
     if not model_state.is_loaded:
         raise HTTPException(status_code=404, detail="No model loaded")
 
     content = await file.read()
+    filename = file.filename or "upload.csv"
+    obs_type = type if type in ("gw", "stream", "subsidence", "hdiff") else "gw"
+
+    # SMP format detection
+    if filename.lower().endswith(".smp"):
+        return _handle_smp_upload(content, filename, obs_type)
+
+    # CSV format
+    return _handle_csv_upload(content, filename, obs_type, date_col, value_col, location_col)
+
+
+def _handle_smp_upload(content: bytes, filename: str, obs_type: str) -> dict:
+    """Parse an uploaded SMP file and create one observation per bore."""
+    import re
+
+    from pyiwfm.io.smp import SMPReader
+
+    # SMPReader expects a file path, write to temp file
+    with tempfile.NamedTemporaryFile(suffix=".smp", delete=False, mode="wb") as tmp:
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+
+    try:
+        reader = SMPReader(tmp_path)
+        data = reader.read()
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    observations = []
+    n_records_total = 0
+
+    for bore_id, ts in data.items():
+        mask = ts.valid_mask
+        if not mask.any():
+            continue
+
+        times_arr = ts.times[mask]
+        values_arr = ts.values[mask]
+
+        times = [str(t.astype("datetime64[s]")).replace("T", " ") for t in times_arr]
+        values = [float(v) for v in values_arr]
+
+        display_name = re.sub(r"%[1-4]$", "", bore_id)
+
+        obs_id = str(uuid.uuid4())[:8]
+        model_state.add_observation(
+            obs_id,
+            {
+                "filename": filename,
+                "bore_id": bore_id,
+                "display_name": display_name,
+                "location_id": None,
+                "type": obs_type,
+                "n_records": len(times),
+                "times": times,
+                "values": values,
+                "units": "",
+            },
+        )
+        observations.append(
+            {
+                "obs_id": obs_id,
+                "bore_id": bore_id,
+                "n_records": len(times),
+            }
+        )
+        n_records_total += len(times)
+
+    if not observations:
+        raise HTTPException(status_code=400, detail="No valid data found in SMP file")
+
+    return {
+        "n_bores": len(observations),
+        "n_records_total": n_records_total,
+        "filename": filename,
+        "observations": observations,
+    }
+
+
+def _handle_csv_upload(
+    content: bytes,
+    filename: str,
+    obs_type: str,
+    date_col: int,
+    value_col: int,
+    location_col: int,
+) -> dict:
+    """Parse an uploaded CSV file using specified column indices."""
     text = content.decode("utf-8", errors="replace")
-
-    times: list[str] = []
-    values: list[float] = []
-
-    # Try CSV parse (datetime, value)
     reader = csv.reader(io.StringIO(text))
     header_skipped = False
 
+    # Collect rows grouped by location
+    groups: dict[str, tuple[list[str], list[float]]] = {}
+    default_key = Path(filename).stem
+
     for row in reader:
-        if len(row) < 2:
+        max_col = max(date_col, value_col, location_col if location_col >= 0 else 0)
+        if len(row) <= max_col:
             continue
 
         # Skip header row
         if not header_skipped:
             try:
-                float(row[1])
+                float(row[value_col])
             except ValueError:
                 header_skipped = True
                 continue
             header_skipped = True
 
         try:
-            dt_str = row[0].strip()
-            val = float(row[1].strip())
+            dt_str = row[date_col].strip()
+            val = float(row[value_col].strip())
 
             # Try multiple datetime formats
             dt = None
@@ -70,42 +169,160 @@ async def upload_observation(
                     continue
 
             if dt is not None:
-                times.append(dt.isoformat())
-                values.append(val)
+                loc_key = row[location_col].strip() if location_col >= 0 else default_key
+                if loc_key not in groups:
+                    groups[loc_key] = ([], [])
+                groups[loc_key][0].append(dt.isoformat())
+                groups[loc_key][1].append(val)
         except (ValueError, IndexError):
             continue
 
-    if not times:
+    if not groups or all(not t for t, _ in groups.values()):
         raise HTTPException(
             status_code=400,
-            detail="No valid data found. Expected CSV with columns: datetime, value",
+            detail="No valid data found. Expected CSV with datetime and value columns",
         )
 
-    obs_id = str(uuid.uuid4())[:8]
-    filename = file.filename or "upload.csv"
+    # Single location (no location column or single group)
+    if location_col < 0 or len(groups) == 1:
+        loc_key = next(iter(groups))
+        times, values = groups[loc_key]
 
-    obs_type = type if type in ("gw", "stream", "subsidence") else "gw"
-
-    model_state.add_observation(
-        obs_id,
-        {
-            "filename": filename,
-            "location_id": None,
-            "type": obs_type,
+        obs_id = str(uuid.uuid4())[:8]
+        model_state.add_observation(
+            obs_id,
+            {
+                "filename": filename,
+                "location_id": None,
+                "type": obs_type,
+                "n_records": len(times),
+                "times": times,
+                "values": values,
+                "units": "",
+            },
+        )
+        return {
+            "observation_id": obs_id,
             "n_records": len(times),
-            "times": times,
-            "values": values,
-            "units": "",
-        },
-    )
+            "filename": filename,
+            "start_time": times[0] if times else None,
+            "end_time": times[-1] if times else None,
+        }
+
+    # Multiple locations
+    observations = []
+    n_records_total = 0
+    for loc_key, (times, values) in groups.items():
+        if not times:
+            continue
+        obs_id = str(uuid.uuid4())[:8]
+        model_state.add_observation(
+            obs_id,
+            {
+                "filename": filename,
+                "display_name": loc_key,
+                "location_id": None,
+                "type": obs_type,
+                "n_records": len(times),
+                "times": times,
+                "values": values,
+                "units": "",
+            },
+        )
+        observations.append(
+            {
+                "obs_id": obs_id,
+                "location_name": loc_key,
+                "n_records": len(times),
+            }
+        )
+        n_records_total += len(times)
 
     return {
-        "observation_id": obs_id,
-        "n_records": len(times),
+        "n_locations": len(observations),
+        "n_records_total": n_records_total,
         "filename": filename,
-        "start_time": times[0] if times else None,
-        "end_time": times[-1] if times else None,
+        "observations": observations,
     }
+
+
+@router.post("/scan-directory")
+async def scan_directory_endpoint(
+    directory: str = Query(..., description="Path to scan for observation files"),
+    load: bool = Query(default=False, description="If true, load all found files"),
+    recursive: bool = Query(default=False, description="Scan subdirectories"),
+) -> dict:
+    """Scan a directory for loadable observation files (.smp, .csv)."""
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    from pyiwfm.visualization.webapi.services.observation_loader import (
+        scan_directory,
+    )
+
+    dir_path = Path(directory)
+    if not dir_path.is_dir():
+        raise HTTPException(status_code=400, detail=f"Directory not found: {directory}")
+
+    files = scan_directory(dir_path, recursive=recursive)
+
+    if not load:
+        return {"files": files}
+
+    # Load all discovered files
+    from pyiwfm.visualization.webapi.services.observation_loader import (
+        _load_single_file,
+    )
+
+    loaded = []
+    for info in files:
+        fp = Path(info["path"])
+        obs_type = info["type_guess"]
+        ids = _load_single_file(fp, obs_type, model_state)
+        loaded.append(
+            {
+                "path": info["path"],
+                "format": info["format"],
+                "type": obs_type,
+                "n_observations": len(ids),
+            }
+        )
+
+    return {"files": files, "loaded": loaded}
+
+
+@router.post("/load-files")
+async def load_files_endpoint(
+    files: list[dict] = Body(..., description="List of {path, type} to load"),  # noqa: B008
+) -> dict:
+    """Load specific observation files by path and type."""
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    from pyiwfm.visualization.webapi.services.observation_loader import (
+        _load_single_file,
+    )
+
+    results: list[dict[str, object]] = []
+    for entry in files:
+        fp = Path(entry["path"])
+        obs_type = entry.get("type", "gw")
+
+        if not fp.is_file():
+            results.append({"path": str(fp), "error": "File not found"})
+            continue
+
+        ids = _load_single_file(fp, obs_type, model_state)
+        results.append(
+            {
+                "path": str(fp),
+                "type": obs_type,
+                "n_observations": len(ids),
+                "observation_ids": ids,
+            }
+        )
+
+    return {"results": results}
 
 
 @router.get("")

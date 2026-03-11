@@ -87,6 +87,13 @@ def add_viewer_parser(subparsers: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Force rebuild of SQLite cache on startup",
     )
+    p.add_argument(
+        "--observations",
+        nargs="+",
+        type=Path,
+        metavar="PATH",
+        help="Observation files (.smp, .csv) or directories to scan and load at startup",
+    )
 
     p.set_defaults(func=run_viewer)
 
@@ -172,6 +179,7 @@ def run_viewer(args: argparse.Namespace) -> int:
             crs=args.crs,
             no_cache=getattr(args, "no_cache", False),
             rebuild_cache=getattr(args, "rebuild_cache", False),
+            observation_paths=getattr(args, "observations", None),
         )
 
     except ImportError as exc:

@@ -120,6 +120,7 @@ def launch_viewer(
     crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs",
     no_cache: bool = False,
     rebuild_cache: bool = False,
+    observation_paths: list[Path] | None = None,
 ) -> None:
     """
     Launch the web viewer server.
@@ -144,6 +145,8 @@ def launch_viewer(
         Disable SQLite cache layer
     rebuild_cache : bool
         Force rebuild of SQLite cache
+    observation_paths : list[Path], optional
+        Observation files (.smp, .csv) or directories to load at startup
     """
     try:
         import uvicorn
@@ -166,6 +169,16 @@ def launch_viewer(
         no_cache=no_cache,
         rebuild_cache=rebuild_cache,
     )
+
+    # Load observations if provided
+    if observation_paths:
+        from pyiwfm.visualization.webapi.services.observation_loader import (
+            load_observation_paths,
+        )
+
+        summary = load_observation_paths(observation_paths, model_state)
+        logger.info("Loaded observations at startup: %s", summary)
+
     app = create_app(model=model, settings=settings)
 
     url = f"http://{host}:{port}"

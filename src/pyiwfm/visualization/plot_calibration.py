@@ -412,10 +412,10 @@ def plot_one_to_one(
     # Scatter plot
     if color_by is not None:
         cb = color_by[mask]
-        scatter = ax.scatter(obs, sim, c=cb, s=20, alpha=0.7, edgecolors="none")
+        scatter = ax.scatter(obs, sim, c=cb, s=20, alpha=0.7, edgecolors="none", rasterized=True)
         fig.colorbar(scatter, ax=ax, shrink=0.8)
     else:
-        ax.scatter(obs, sim, s=20, alpha=0.7, edgecolors="none", color="steelblue")
+        ax.scatter(obs, sim, s=20, alpha=0.7, edgecolors="none", color="steelblue", rasterized=True)
 
     # Axis limits (equal, with padding)
     all_vals = np.concatenate([obs, sim])

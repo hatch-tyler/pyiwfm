@@ -92,7 +92,7 @@ class TestComputeMultilayerWeights:
         np.testing.assert_allclose(np.sum(weights), 1.0, atol=1e-12)
 
     def test_zero_transmissivity_fallback(self) -> None:
-        """Zero HK everywhere gives equal weights."""
+        """Zero HK: Fortran sets weight=1.0 for first non-zero-thickness layer."""
         grid = make_simple_grid()
         strat = make_simple_stratigraphy(n_nodes=9, n_layers=2)
         hk = np.array([0.0, 0.0])
@@ -101,7 +101,9 @@ class TestComputeMultilayerWeights:
             MockInterp.return_value.interpolate.return_value = _mock_interpolate(50.0, 50.0)
             weights = compute_multilayer_weights(well, grid, strat, hk)
 
-        np.testing.assert_allclose(weights, [0.5, 0.5], atol=1e-12)
+        # Fortran: weight=1.0 for first non-zero-thickness layer
+        assert np.sum(weights) == pytest.approx(1.0)
+        assert np.max(weights) == pytest.approx(1.0)
 
 
 # ---------------------------------------------------------------------------

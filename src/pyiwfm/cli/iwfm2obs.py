@@ -152,8 +152,14 @@ def _run_model_mode(
         config=config,
         obs_well_spec_path=well_spec_path,
         multilayer_output_path=ml_out_path,
-        multilayer_ins_path=ml_ins_path,
     )
+
+    # Generate PEST instruction file for multi-layer output if requested
+    if ml_ins_path and ml_out_path and ml_out_path.exists():
+        from pyiwfm.calibration.pest_files import generate_multilayer_ins
+
+        n_obs = generate_multilayer_ins(ml_out_path, ml_ins_path)
+        print(f"Generated multilayer INS file with {n_obs} observations: {ml_ins_path}")
 
     total = sum(len(v) for v in results.values())
     print(f"Interpolated {total} bore(s) across {len(results)} type(s)")

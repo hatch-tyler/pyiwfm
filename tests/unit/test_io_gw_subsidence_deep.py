@@ -290,3 +290,145 @@ class TestHydrographOutput:
         s1 = config.hydrograph_specs[1]
         assert s1.hydtyp == 1
         assert s1.layer == 2
+
+
+# ---------------------------------------------------------------------------
+# v4.1 / v5.1 — AllSubsidenceAtAllNodes HDF5 output path
+# ---------------------------------------------------------------------------
+
+
+def _write_v41_file(path: Path, n_nodes: int, n_layers: int) -> None:
+    """Write a minimal v4.1 subsidence parameter file.
+
+    v4.1 inserts AllSubsOut HDF5 filename BEFORE the IC filename,
+    then follows v4.0 format.
+    """
+    lines = [
+        "#4.1",
+        "  AllSubs.hdf                           / AllSubsOut HDF5 (v4.1)",
+        "                                        / ICFL (IC file)",
+        "                                        / TECPLOTFL",
+        "                                        / FINSUBSFL",
+        "  1.0                                   / FACTSUBS",
+        "  FEET                                  / UNITSUBS",
+        "  0                                     / NOUTS",
+        "  0                                     / NGROUP",
+        "  1.0  1.0  1.0  1.0  1.0  1.0         / Factors",
+    ]
+    for nid in range(1, n_nodes + 1):
+        for layer in range(n_layers):
+            if layer == 0:
+                line = f"  {nid}  0.001  0.01  10.0  1.0  50.0"
+            else:
+                line = "  0.002  0.02  20.0  2.0  60.0"
+            lines.append(line)
+    path.write_text("\n".join(lines) + "\n")
+
+
+def _write_v51_file(path: Path, n_nodes: int, n_layers: int) -> None:
+    """Write a minimal v5.1 subsidence parameter file.
+
+    v5.1 inserts AllSubsOut HDF5 filename BEFORE the IC filename,
+    then follows v5.0 format.
+    """
+    lines = [
+        "#5.1",
+        "  AllSubs.hdf                           / AllSubsOut HDF5 (v5.1)",
+        "                                        / ICFL (IC file)",
+        "                                        / TECPLOTFL",
+        "                                        / FINSUBSFL",
+        "  1.0                                   / FACTSUBS",
+        "  FEET                                  / UNITSUBS",
+        "  0                                     / NOUTS",
+        "  5.0                                   / INTERBED_DZ (v5.x)",
+        "  0                                     / NGROUP",
+        "  1.0  1.0  1.0  1.0  1.0  1.0  1.0    / Factors (7 for v5.x)",
+    ]
+    for nid in range(1, n_nodes + 1):
+        for layer in range(n_layers):
+            if layer == 0:
+                line = f"  {nid}  0.001  0.01  10.0  1.0  50.0  0.5  3"
+            else:
+                line = "  0.002  0.02  20.0  2.0  60.0  0.8  5"
+            lines.append(line)
+    path.write_text("\n".join(lines) + "\n")
+
+
+class TestV41Format:
+    """Tests for v4.1 subsidence file reading."""
+
+    def test_read_v41_parses_all_subs_out(self, tmp_path: Path) -> None:
+        """v4.1 reads AllSubsOut HDF5 path before IC."""
+        fpath = tmp_path / "Subsidence.dat"
+        _write_v41_file(fpath, n_nodes=2, n_layers=1)
+
+        config = read_gw_subsidence(fpath, n_nodes=2, n_layers=1)
+
+        assert config.version == "4.1"
+        assert config.all_subs_out_file is not None
+        assert config.all_subs_out_file.name == "AllSubs.hdf"
+
+    def test_v41_params_read_correctly(self, tmp_path: Path) -> None:
+        """v4.1 parameters match v4.0 after the AllSubsOut line."""
+        fpath = tmp_path / "Subsidence.dat"
+        _write_v41_file(fpath, n_nodes=3, n_layers=2)
+
+        config = read_gw_subsidence(fpath, n_nodes=3, n_layers=2)
+
+        assert len(config.node_params) == 3
+        assert len(config.node_params[0].elastic_sc) == 2
+        assert config.node_params[0].node_id == 1
+        # v4.x: no interbed_dz, 6 factors
+        assert config.interbed_dz == 0.0
+        assert len(config.conversion_factors) == 6
+
+    def test_v41_no_all_subs_out(self, tmp_path: Path) -> None:
+        """v4.1 with blank AllSubsOut line is handled."""
+        fpath = tmp_path / "Subsidence.dat"
+        lines = [
+            "#4.1",
+            "                                        / AllSubsOut (blank)",
+            "                                        / ICFL",
+            "                                        / TECPLOTFL",
+            "                                        / FINSUBSFL",
+            "  1.0                                   / FACTSUBS",
+            "  FEET                                  / UNITSUBS",
+            "  0                                     / NOUTS",
+            "  0                                     / NGROUP",
+            "  1.0  1.0  1.0  1.0  1.0  1.0         / Factors",
+            "  1  0.001  0.01  10.0  1.0  50.0",
+        ]
+        fpath.write_text("\n".join(lines) + "\n")
+
+        config = read_gw_subsidence(fpath, n_nodes=1, n_layers=1)
+
+        assert config.version == "4.1"
+        assert config.all_subs_out_file is None
+        assert len(config.node_params) == 1
+
+
+class TestV51Format:
+    """Tests for v5.1 subsidence file reading."""
+
+    def test_read_v51_parses_all_subs_out(self, tmp_path: Path) -> None:
+        """v5.1 reads AllSubsOut HDF5 path before IC."""
+        fpath = tmp_path / "Subsidence.dat"
+        _write_v51_file(fpath, n_nodes=2, n_layers=1)
+
+        config = read_gw_subsidence(fpath, n_nodes=2, n_layers=1)
+
+        assert config.version == "5.1"
+        assert config.all_subs_out_file is not None
+        assert config.all_subs_out_file.name == "AllSubs.hdf"
+
+    def test_v51_has_v50_features(self, tmp_path: Path) -> None:
+        """v5.1 inherits v5.0 features (interbed_dz, 7 factors, Kv/NEQ)."""
+        fpath = tmp_path / "Subsidence.dat"
+        _write_v51_file(fpath, n_nodes=2, n_layers=2)
+
+        config = read_gw_subsidence(fpath, n_nodes=2, n_layers=2)
+
+        assert config.interbed_dz == 5.0
+        assert len(config.conversion_factors) == 7
+        assert len(config.node_params[0].kv_sub) == 2
+        assert len(config.node_params[0].n_eq) == 2
