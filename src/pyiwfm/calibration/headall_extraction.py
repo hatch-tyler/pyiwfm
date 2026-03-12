@@ -123,19 +123,15 @@ class HeadAllExtractor:
         n_outside = 0
 
         for well in wells:
-            # Find containing element
-            elem = well.element
-            if elem <= 0:
-                elem = interp.find_element(well.x, well.y)
-                if elem <= 0:
-                    n_outside += 1
-                    continue
-
-            # Compute FE shape function weights
-            weights = interp.interpolation_weights(well.x, well.y, elem)  # type: ignore[attr-defined]
+            # Find containing element and compute FE interpolation weights
+            elem_id, node_ids, coeffs = interp.interpolate(well.x, well.y)
+            if elem_id == 0:
+                n_outside += 1
+                continue
             self._fe_weights[well.name] = {
-                "element": elem,
-                "weights": weights,
+                "element": elem_id,
+                "node_ids": node_ids,
+                "weights": coeffs,
             }
 
             # Compute T-weights for multi-layer averaging
@@ -144,7 +140,7 @@ class HeadAllExtractor:
 
                 t_weights = compute_multilayer_weights(  # type: ignore[call-arg]
                     self._model,  # type: ignore[arg-type]
-                    elem,  # type: ignore[arg-type]
+                    elem_id,  # type: ignore[arg-type]
                     well.bos,  # type: ignore[arg-type]
                     well.tos,  # type: ignore[arg-type]
                     n_layers,
@@ -196,17 +192,19 @@ class HeadAllExtractor:
                 continue
 
             fe_info = self._fe_weights[well.name]
-            elem = fe_info["element"]
-            weights = fe_info["weights"]
+            node_ids = fe_info["node_ids"]
+            coeffs = fe_info["weights"]
+            node_indices = np.array([nid - 1 for nid in node_ids])
 
             # Extract heads at this well for all timesteps and layers
             per_layer = np.full((n_times, n_layers), np.nan, dtype=np.float64)
 
             for ti, ts_idx in enumerate(time_indices):
+                frame = loader.get_frame(ts_idx)  # (n_nodes, n_layers)
                 for layer in range(n_layers):
-                    head_at_nodes = loader.get_head(ts_idx, layer, elem)  # type: ignore[attr-defined]
-                    if head_at_nodes is not None:
-                        per_layer[ti, layer] = float(np.dot(weights, head_at_nodes))
+                    vals = frame[node_indices, layer]
+                    if not np.any(np.isnan(vals)):
+                        per_layer[ti, layer] = float(np.dot(coeffs, vals))
 
             result.per_layer_heads[well.name] = per_layer
             result.well_names.append(well.name)
