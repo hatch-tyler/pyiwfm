@@ -726,3 +726,142 @@ class TestIWFMNativeIntegration:
         loader = LazyHeadDataLoader(hdf)
         assert len(loader.times) == 3
         assert loader.times[0] == datetime(2000, 1, 1)
+
+
+# ---------------------------------------------------------------------------
+# Subsidence HDF5 (SubsidenceAtAllNodes) — v4.1/v5.1
+# ---------------------------------------------------------------------------
+
+
+def _create_subsidence_hdf5(
+    path: Path,
+    n_timesteps: int = 5,
+    n_nodes: int = 10,
+    n_layers: int = 3,
+) -> Path:
+    """Create an IWFM-native subsidence HDF5 with ``SubsidenceAtAllNodes``."""
+    flat_data = np.ones((n_timesteps, n_nodes * n_layers), dtype=np.float64)
+    # Layer 0: 1.0, Layer 1: 2.0, Layer 2: 3.0 at all nodes
+    for lay in range(n_layers):
+        flat_data[:, lay * n_nodes : (lay + 1) * n_nodes] = float(lay + 1)
+
+    base = datetime(2022, 1, 1)
+    times = [(base + timedelta(days=30 * i)).isoformat().encode() for i in range(n_timesteps)]
+
+    with h5py.File(path, "w") as f:
+        ds = f.create_dataset("SubsidenceAtAllNodes", data=flat_data)
+        ds.attrs["NLayers"] = n_layers
+        f.create_dataset("times", data=times)
+    return path
+
+
+class TestSubsidenceDetection:
+    """Tests for auto-detecting SubsidenceAtAllNodes datasets."""
+
+    def test_detects_subsidence_data_type(self, tmp_path: Path) -> None:
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5")
+        loader = LazyHeadDataLoader(hdf)
+        assert loader.data_type == "subsidence"
+
+    def test_head_data_type_for_gw(self, tmp_path: Path) -> None:
+        hdf = _create_iwfm_native_hdf5(tmp_path / "head.hdf5")
+        loader = LazyHeadDataLoader(hdf)
+        assert loader.data_type == "head"
+
+    def test_subsidence_metadata(self, tmp_path: Path) -> None:
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5", 5, 10, 3)
+        loader = LazyHeadDataLoader(hdf)
+        assert loader.n_frames == 5
+        assert loader.n_nodes == 10
+        assert loader.n_layers == 3
+        assert loader.shape == (10, 3)
+
+    def test_subsidence_frame_shape(self, tmp_path: Path) -> None:
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5", 5, 10, 3)
+        loader = LazyHeadDataLoader(hdf)
+        frame = loader.get_frame(0)
+        assert frame.shape == (10, 3)
+
+
+class TestGetHead:
+    """Tests for get_head method (per-layer access)."""
+
+    def test_get_single_layer(self, tmp_path: Path) -> None:
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5", 5, 10, 3)
+        loader = LazyHeadDataLoader(hdf)
+        col = loader.get_head(0, 0)
+        assert col is not None
+        assert col.shape == (10,)
+        np.testing.assert_allclose(col, 1.0)
+
+    def test_get_layer_1(self, tmp_path: Path) -> None:
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5", 5, 10, 3)
+        loader = LazyHeadDataLoader(hdf)
+        col = loader.get_head(0, 1)
+        assert col is not None
+        np.testing.assert_allclose(col, 2.0)
+
+    def test_get_head_with_node_ids(self, tmp_path: Path) -> None:
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5", 5, 10, 3)
+        loader = LazyHeadDataLoader(hdf)
+        col = loader.get_head(0, 2, node_ids=(1, 5, 10))
+        assert col is not None
+        assert col.shape == (3,)
+        np.testing.assert_allclose(col, 3.0)
+
+    def test_get_head_out_of_range(self, tmp_path: Path) -> None:
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5", 5, 10, 3)
+        loader = LazyHeadDataLoader(hdf)
+        assert loader.get_head(99, 0) is None
+        assert loader.get_head(0, 99) is None
+
+    def test_get_head_works_for_gw(self, tmp_path: Path) -> None:
+        hdf = _create_pyiwfm_hdf5(tmp_path / "head.hdf5", 3, 20, 2)
+        loader = LazyHeadDataLoader(hdf)
+        col = loader.get_head(0, 0)
+        assert col is not None
+        assert col.shape == (20,)
+
+
+class TestCompositeSubsidence:
+    """Tests for get_composite_subsidence (layer summation)."""
+
+    def test_sum_across_layers(self, tmp_path: Path) -> None:
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5", 5, 10, 3)
+        loader = LazyHeadDataLoader(hdf)
+        total = loader.get_composite_subsidence(0)
+        assert total is not None
+        assert total.shape == (10,)
+        # Sum of layer values: 1.0 + 2.0 + 3.0 = 6.0 at each node
+        np.testing.assert_allclose(total, 6.0)
+
+    def test_composite_out_of_range(self, tmp_path: Path) -> None:
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5", 5, 10, 3)
+        loader = LazyHeadDataLoader(hdf)
+        assert loader.get_composite_subsidence(99) is None
+
+    def test_composite_with_nan(self, tmp_path: Path) -> None:
+        """NaN layers are ignored in summation."""
+        path = tmp_path / "subs_nan.hdf5"
+        n_nodes, n_layers = 4, 2
+        flat = np.array(
+            [[1.0] * n_nodes + [np.nan] * n_nodes],
+            dtype=np.float64,
+        )
+        with h5py.File(path, "w") as f:
+            ds = f.create_dataset("SubsidenceAtAllNodes", data=flat)
+            ds.attrs["NLayers"] = n_layers
+        loader = LazyHeadDataLoader(path)
+        total = loader.get_composite_subsidence(0)
+        assert total is not None
+        np.testing.assert_allclose(total, 1.0)
+
+    def test_get_layer_range_composite(self, tmp_path: Path) -> None:
+        """get_layer_range with layer=0 uses composite subsidence."""
+        hdf = _create_subsidence_hdf5(tmp_path / "subs.hdf5", 5, 10, 3)
+        loader = LazyHeadDataLoader(hdf)
+        lo, hi, n = loader.get_layer_range(0)
+        # All composite values are 6.0
+        assert lo == pytest.approx(6.0)
+        assert hi == pytest.approx(6.0)
+        assert n == 5
