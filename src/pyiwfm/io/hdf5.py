@@ -65,7 +65,7 @@ class HDF5ModelWriter:
             self._file.close()
 
     def _create_dataset(
-        self, group: h5py.Group, name: str, data: NDArray, **kwargs: Any
+        self, group: h5py.Group, name: str, data: NDArray[Any], **kwargs: Any
     ) -> h5py.Dataset:
         """Create a dataset with optional compression."""
         if self.compression and data.size > 100:

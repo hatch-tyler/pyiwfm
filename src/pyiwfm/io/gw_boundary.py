@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from pyiwfm.io.iwfm_reader import (
     ReaderMixin,
@@ -179,7 +180,7 @@ class GWBoundaryConfig:
     n_bc_output_nodes: int = 0
     bc_output_file: Path | None = None
     bc_output_file_raw: str = ""  # Unresolved path string from file
-    bc_output_specs: list[dict] = field(default_factory=list)  # [{id, layer, node, name}]
+    bc_output_specs: list[dict[str, Any]] = field(default_factory=list)  # [{id, layer, node, name}]
 
     @property
     def n_specified_flow(self) -> int:
@@ -283,7 +284,7 @@ class GWBoundaryReader(ReaderMixin):
                     parts = line.split(maxsplit=3)
                     if parts:
                         try:
-                            spec: dict = {"id": int(float(parts[0]))}
+                            spec: dict[str, Any] = {"id": int(float(parts[0]))}
                             if len(parts) > 1:
                                 spec["layer"] = int(float(parts[1]))
                             if len(parts) > 2:

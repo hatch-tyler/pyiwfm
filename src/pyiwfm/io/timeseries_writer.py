@@ -20,9 +20,12 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import IO, Any
+from typing import IO, TYPE_CHECKING, Any
 
 from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    import numpy as np
 
 from pyiwfm.templates.engine import TemplateEngine
 
@@ -72,7 +75,7 @@ class TimeSeriesDataConfig:
 
     # Data
     dates: list[str] | None = None
-    data: NDArray | None = None
+    data: NDArray[np.float64] | None = None
     data_header: str = "Time Series Data"
     data_fmt: str = "%14.6f"
 
@@ -208,7 +211,7 @@ class IWFMTimeSeriesDataWriter:
     def _write_data_rows(
         f: IO[str],
         dates: list[str],
-        data: NDArray,
+        data: NDArray[np.float64],
         fmt: str = "%14.6f",
     ) -> None:
         """Write date-indexed data rows efficiently using numpy.
@@ -219,7 +222,7 @@ class IWFMTimeSeriesDataWriter:
             Open file for writing
         dates : list[str]
             IWFM timestamp strings (e.g. "10/01/1990_24:00")
-        data : NDArray
+        data : NDArray[np.float64]
             Data array, shape (n_times,) or (n_times, n_cols)
         fmt : str
             Printf-style format for data values

@@ -35,19 +35,19 @@ class TestExtractionResult:
     def test_empty(self) -> None:
         times = np.array([], dtype="datetime64[s]")
         r = ExtractionResult(times=times)
-        assert len(r.well_names) == 0
-        assert len(r.per_layer_heads) == 0
-        assert len(r.multi_layer_heads) == 0
+        assert len(r.names) == 0
+        assert len(r.per_layer) == 0
+        assert len(r.values) == 0
 
     def test_with_data(self) -> None:
         times = np.array(
             [np.datetime64("2020-01-31"), np.datetime64("2020-02-29")],
             dtype="datetime64[D]",
         )
-        r = ExtractionResult(times=times, well_names=["W1"])
-        r.per_layer_heads["W1"] = np.array([[100.0, 90.0], [101.0, 91.0]])
-        r.multi_layer_heads["W1"] = np.array([95.0, 96.0])
+        r = ExtractionResult(times=times, names=["W1"])
+        r.per_layer["W1"] = np.array([[100.0, 90.0], [101.0, 91.0]])
+        r.values["W1"] = np.array([95.0, 96.0])
 
         assert len(r.times) == 2
-        assert r.per_layer_heads["W1"].shape == (2, 2)
-        assert r.multi_layer_heads["W1"][0] == pytest.approx(95.0)
+        assert r.per_layer["W1"].shape == (2, 2)
+        assert r.values["W1"][0] == pytest.approx(95.0)

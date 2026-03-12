@@ -117,17 +117,17 @@ class Variogram:
             return float(np.sqrt(3.0) * self.a)
         return self.a
 
-    def evaluate(self, h: NDArray | float) -> NDArray | float:
+    def evaluate(self, h: NDArray[np.float64] | float) -> NDArray[np.float64] | float:
         """Evaluate variogram at lag distances h.
 
         Parameters
         ----------
-        h : NDArray | float
+        h : NDArray[np.float64] | float
             Lag distance(s).
 
         Returns
         -------
-        NDArray | float
+        NDArray[np.float64] | float
             Variogram value(s) gamma(h).
         """
         h = np.asarray(h)
@@ -155,7 +155,7 @@ class Variogram:
             return float(gamma[0])
         return gamma
 
-    def _spherical(self, h: NDArray) -> NDArray:
+    def _spherical(self, h: NDArray[np.float64]) -> NDArray[np.float64]:
         """Spherical variogram model."""
         hr = h / self.a
         gamma = np.where(
@@ -169,7 +169,7 @@ class Variogram:
         )
         return gamma
 
-    def _exponential(self, h: NDArray) -> NDArray:
+    def _exponential(self, h: NDArray[np.float64]) -> NDArray[np.float64]:
         """Exponential variogram model."""
         gamma = np.where(
             h == 0,
@@ -178,7 +178,7 @@ class Variogram:
         )
         return gamma
 
-    def _gaussian(self, h: NDArray) -> NDArray:
+    def _gaussian(self, h: NDArray[np.float64]) -> NDArray[np.float64]:
         """Gaussian variogram model."""
         gamma = np.where(
             h == 0,
@@ -187,7 +187,7 @@ class Variogram:
         )
         return gamma
 
-    def _matern(self, h: NDArray, nu: float = 1.5) -> NDArray:
+    def _matern(self, h: NDArray[np.float64], nu: float = 1.5) -> NDArray[np.float64]:
         """Matern variogram model with smoothness parameter nu."""
         # Simplified Matern for nu=1.5 (common case)
         hr = h / self.a
@@ -198,7 +198,7 @@ class Variogram:
         )
         return gamma
 
-    def _linear(self, h: NDArray) -> NDArray:
+    def _linear(self, h: NDArray[np.float64]) -> NDArray[np.float64]:
         """Linear variogram model (unbounded)."""
         gamma = np.where(
             h == 0,
@@ -207,7 +207,7 @@ class Variogram:
         )
         return gamma
 
-    def _power(self, h: NDArray) -> NDArray:
+    def _power(self, h: NDArray[np.float64]) -> NDArray[np.float64]:
         """Power variogram model."""
         gamma = np.where(
             h == 0,
@@ -216,33 +216,33 @@ class Variogram:
         )
         return gamma
 
-    def _nugget_model(self, h: NDArray) -> NDArray:
+    def _nugget_model(self, h: NDArray[np.float64]) -> NDArray[np.float64]:
         """Pure nugget model."""
         gamma = np.where(h == 0, 0.0, self.nugget + self.sill)
         return gamma
 
-    def covariance(self, h: NDArray | float) -> NDArray | float:
+    def covariance(self, h: NDArray[np.float64] | float) -> NDArray[np.float64] | float:
         """Compute covariance from variogram.
 
         C(h) = sill - gamma(h) for stationary variograms.
 
         Parameters
         ----------
-        h : NDArray | float
+        h : NDArray[np.float64] | float
             Lag distance(s).
 
         Returns
         -------
-        NDArray | float
+        NDArray[np.float64] | float
             Covariance value(s).
         """
         return self.total_sill - self.evaluate(h)
 
     def transform_coordinates(
         self,
-        x: NDArray,
-        y: NDArray,
-    ) -> tuple[NDArray, NDArray]:
+        x: NDArray[np.float64],
+        y: NDArray[np.float64],
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Transform coordinates for anisotropy.
 
         Parameters
@@ -274,11 +274,11 @@ class Variogram:
 
     def compute_distance_matrix(
         self,
-        x1: NDArray,
-        y1: NDArray,
-        x2: NDArray | None = None,
-        y2: NDArray | None = None,
-    ) -> NDArray:
+        x1: NDArray[np.float64],
+        y1: NDArray[np.float64],
+        x2: NDArray[np.float64] | None = None,
+        y2: NDArray[np.float64] | None = None,
+    ) -> NDArray[np.float64]:
         """Compute distance matrix with anisotropy.
 
         Parameters
@@ -313,9 +313,9 @@ class Variogram:
     @classmethod
     def from_data(
         cls,
-        x: NDArray,
-        y: NDArray,
-        values: NDArray,
+        x: NDArray[np.float64],
+        y: NDArray[np.float64],
+        values: NDArray[np.float64],
         variogram_type: str = "exponential",
         n_lags: int = 15,
         max_lag: float | None = None,
@@ -386,7 +386,9 @@ class Variogram:
         nugget_init = 0.0
 
         # Define model function
-        def model_func(h: NDArray, nugget: float, sill: float, a: float) -> NDArray | float:
+        def model_func(
+            h: NDArray[np.float64], nugget: float, sill: float, a: float
+        ) -> NDArray[np.float64] | float:
             v = cls(variogram_type, a=a, sill=sill, nugget=nugget)
             return v.evaluate(h)
 
@@ -485,10 +487,10 @@ class GeostatManager:
 
     def compute_covariance_matrix(
         self,
-        x: NDArray,
-        y: NDArray,
+        x: NDArray[np.float64],
+        y: NDArray[np.float64],
         variogram: Variogram,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Compute covariance matrix between points.
 
         Parameters
@@ -508,10 +510,10 @@ class GeostatManager:
 
     def compute_variogram_matrix(
         self,
-        x: NDArray,
-        y: NDArray,
+        x: NDArray[np.float64],
+        y: NDArray[np.float64],
         variogram: Variogram,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Compute variogram matrix between points.
 
         Parameters
@@ -531,15 +533,15 @@ class GeostatManager:
 
     def krige(
         self,
-        pilot_x: NDArray,
-        pilot_y: NDArray,
-        pilot_values: NDArray,
-        target_x: NDArray,
-        target_y: NDArray,
+        pilot_x: NDArray[np.float64],
+        pilot_y: NDArray[np.float64],
+        pilot_values: NDArray[np.float64],
+        target_x: NDArray[np.float64],
+        target_y: NDArray[np.float64],
         variogram: Variogram,
         kriging_type: str = "ordinary",
         return_variance: bool = False,
-    ) -> NDArray | tuple[NDArray, NDArray]:
+    ) -> NDArray[np.float64] | tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Interpolate values using kriging.
 
         Parameters
@@ -647,13 +649,13 @@ class GeostatManager:
 
     def compute_kriging_factors(
         self,
-        pilot_x: NDArray,
-        pilot_y: NDArray,
-        target_x: NDArray,
-        target_y: NDArray,
+        pilot_x: NDArray[np.float64],
+        pilot_y: NDArray[np.float64],
+        target_x: NDArray[np.float64],
+        target_y: NDArray[np.float64],
         variogram: Variogram,
         kriging_type: str = "ordinary",
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Compute kriging interpolation factors.
 
         These factors can be saved and applied multiple times without
@@ -722,14 +724,15 @@ class GeostatManager:
 
     def generate_realizations(
         self,
-        x: NDArray,
-        y: NDArray,
+        x: NDArray[np.float64],
+        y: NDArray[np.float64],
         variogram: Variogram,
         n_realizations: int = 100,
         mean: float = 0.0,
-        conditioning_data: tuple[NDArray, NDArray, NDArray] | None = None,
+        conditioning_data: tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]
+        | None = None,
         seed: int | None = None,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Generate geostatistical realizations.
 
         Generates spatially correlated random fields using the covariance
@@ -834,12 +837,12 @@ class GeostatManager:
 
     def generate_prior_ensemble(
         self,
-        parameters: list,
+        parameters: list[Any],
         n_realizations: int = 100,
         variogram: Variogram | None = None,
         seed: int | None = None,
         method: str = "lhs",
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Generate prior parameter ensemble.
 
         For parameters with spatial locations (pilot points), generates
@@ -931,7 +934,9 @@ class GeostatManager:
 
         return ensemble
 
-    def _latin_hypercube(self, n: int, d: int, rng: np.random.Generator | None = None) -> NDArray:
+    def _latin_hypercube(
+        self, n: int, d: int, rng: np.random.Generator | None = None
+    ) -> NDArray[np.float64]:
         """Generate Latin Hypercube samples.
 
         Parameters
@@ -960,11 +965,11 @@ class GeostatManager:
 
     def write_kriging_factors(
         self,
-        pilot_x: NDArray,
-        pilot_y: NDArray,
+        pilot_x: NDArray[np.float64],
+        pilot_y: NDArray[np.float64],
         pilot_names: list[str],
-        target_x: NDArray,
-        target_y: NDArray,
+        target_x: NDArray[np.float64],
+        target_y: NDArray[np.float64],
         target_ids: list[int | str],
         variogram: Variogram,
         filepath: Path | str,
@@ -1089,12 +1094,12 @@ class GeostatManager:
 
 
 def compute_empirical_variogram(
-    x: NDArray,
-    y: NDArray,
-    values: NDArray,
+    x: NDArray[np.float64],
+    y: NDArray[np.float64],
+    values: NDArray[np.float64],
     n_lags: int = 15,
     max_lag: float | None = None,
-) -> tuple[NDArray, NDArray, NDArray]:
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Compute empirical variogram from data.
 
     Parameters

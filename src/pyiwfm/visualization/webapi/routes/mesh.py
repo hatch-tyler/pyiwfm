@@ -5,6 +5,7 @@ Mesh data API routes.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
@@ -117,7 +118,7 @@ def get_mesh_json(
 @router.get("/geojson")
 def get_mesh_geojson(
     layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get the mesh as GeoJSON FeatureCollection with WGS84 coordinates.
 
@@ -135,7 +136,7 @@ def get_mesh_geojson(
 def get_head_map(
     timestep: int = Query(default=0, ge=0, description="Timestep index"),
     layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get head values mapped to mesh elements as GeoJSON.
 
@@ -212,7 +213,7 @@ def get_head_map(
 
 
 @router.get("/subregions")
-def get_subregions() -> dict:
+def get_subregions() -> dict[str, Any]:
     """
     Get subregion boundary polygons as GeoJSON in WGS84.
 
@@ -238,7 +239,7 @@ def get_subregions() -> dict:
     if not elements_by_sub:
         return {"type": "FeatureCollection", "features": []}
 
-    features: list[dict] = []
+    features: list[dict[str, Any]] = []
 
     for sub_id, elem_ids in sorted(elements_by_sub.items()):
         sub_info = grid.subregions.get(sub_id)
@@ -358,7 +359,7 @@ def get_subregions() -> dict:
 def get_property_map(
     property: str = Query(description="Property ID (e.g., kh, sy, thickness)"),
     layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get per-element property values mapped to GeoJSON for 2D map coloring.
 
@@ -435,7 +436,7 @@ def get_property_map(
 def get_element_detail(
     element_id: int,
     timestep: int = Query(default=-1, description="Land-use timestep (-1=last available)"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get detailed information for a single mesh element.
 
@@ -482,12 +483,12 @@ def get_element_detail(
     node_id_to_idx = model_state.get_node_id_to_idx()
 
     # Per-layer aquifer properties
-    layer_properties: list[dict] = []
+    layer_properties: list[dict[str, Any]] = []
     n_layers = strat.n_layers if strat else 1
 
     for lay in range(1, n_layers + 1):
         lay_idx = lay - 1
-        layer_info: dict = {"layer": lay}
+        layer_info: dict[str, Any] = {"layer": lay}
 
         # Stratigraphy
         if strat is not None:
@@ -532,7 +533,7 @@ def get_element_detail(
         layer_properties.append(layer_info)
 
     # Wells in this element
-    wells: list[dict] = []
+    wells: list[dict[str, Any]] = []
     if model.groundwater:
         for well in model.groundwater.iter_wells():
             if well.element == element_id:
@@ -558,7 +559,7 @@ def get_element_detail(
                 ]
 
     # Land use breakdown — use HDF5 area manager for per-column detail
-    land_use: dict | None = None
+    land_use: dict[str, Any] | None = None
     rz = model.rootzone if hasattr(model, "rootzone") else None
     if rz is not None:
         mgr = model_state.get_area_manager()
@@ -570,7 +571,7 @@ def get_element_detail(
                 breakdown = mgr.get_element_breakdown(element_id, timestep=ts)
                 if breakdown:
                     # Build per-crop categories from HDF5 column data
-                    categories: list[dict] = []
+                    categories: list[dict[str, Any]] = []
                     total_area = 0.0
 
                     n_nonponded = 0
@@ -681,7 +682,7 @@ def get_element_detail(
 @router.get("/nodes")
 def get_mesh_nodes(
     layer: int = Query(default=1, ge=1, description="Layer number (unused, for future filtering)"),
-) -> dict:
+) -> dict[str, Any]:
     """Get all mesh nodes as point features in WGS84.
 
     Returns node IDs and WGS84 coordinates for rendering as a dot layer.
@@ -691,7 +692,7 @@ def get_mesh_nodes(
     if grid is None:
         raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
-    nodes: list[dict] = []
+    nodes: list[dict[str, Any]] = []
     for n in grid.iter_nodes():
         lng, lat = model_state.reproject_coords(n.x, n.y)
         nodes.append({"id": n.id, "lng": lng, "lat": lat})

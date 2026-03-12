@@ -137,7 +137,7 @@ def filter_time_range(
         end_dt = parse_iwfm_datetime(end_date)
 
     if start_dt is not None:
-        df = df[df.index >= start_dt]  # type: ignore[index]
+        df = df[df.index >= start_dt]
     if end_dt is not None:
-        df = df[df.index <= end_dt]  # type: ignore[index]
+        df = df[df.index <= end_dt]
     return df

@@ -1520,14 +1520,15 @@ class TestPropertyValues:
         """Layer property with layer filter.
 
         When layer filter is used, cells outside the selected layer get NaN
-        values. The route serializes all values including NaN, which causes
-        a JSON serialization error (NaN is not valid JSON). This results
-        in a 500 server error -- a known limitation of the current API.
+        values. These are sanitized to None for valid JSON serialization.
         """
         client, model = client_with_model
-        # NaN values from layer masking cause JSON serialization failure
-        with pytest.raises(ValueError, match="Out of range float values"):
-            client.get("/api/properties/layer?layer=1")
+        resp = client.get("/api/properties/layer?layer=1")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["property_id"] == "layer"
+        # NaN values should be converted to None
+        assert None in data["values"]
 
     def test_property_unknown(self, client_with_model):
         """404 for unknown property."""
@@ -2527,12 +2528,11 @@ class TestPropertiesLayerFilter:
         finally:
             _reset_model_state()
 
-    def test_property_values_all_nan_causes_serialization_error(self):
-        """When all property values are NaN, JSON serialization fails.
+    def test_property_values_all_nan_sanitized_to_none(self):
+        """When all property values are NaN, they are sanitized to None.
 
-        NaN values in the `values` list cause a ValueError because NaN is
-        not valid JSON. This is the same known limitation as layer filtering
-        (see test_property_layer_with_filter).
+        NaN values in the `values` list are replaced with None for valid
+        JSON serialization.
         """
         _reset_model_state()
         model = _make_mock_model(with_stratigraphy=True)
@@ -2544,8 +2544,10 @@ class TestPropertiesLayerFilter:
                 "pyiwfm.visualization.webapi.routes.properties._compute_property_values",
                 return_value=np.array([np.nan, np.nan]),
             ):
-                with pytest.raises(ValueError, match="Out of range float values"):
-                    client.get("/api/properties/layer")
+                resp = client.get("/api/properties/layer")
+                assert resp.status_code == 200
+                data = resp.json()
+                assert data["values"] == [None, None]
         finally:
             _reset_model_state()
 

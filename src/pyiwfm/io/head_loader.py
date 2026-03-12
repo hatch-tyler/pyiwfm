@@ -371,7 +371,7 @@ class LazyHeadDataLoader:
 
         Returns
         -------
-        dict[datetime, NDArray]
+        dict[datetime, NDArray[np.float64]]
             All data keyed by datetime.
         """
         result = {}

@@ -141,7 +141,7 @@ def max_residuals(df: pd.DataFrame) -> pd.DataFrame:
         One row per well with ``well_id`` and ``max_abs_residual``.
     """
 
-    def _max_abs(s: pd.Series) -> float:  # type: ignore[type-arg]
+    def _max_abs(s: pd.Series) -> float:
         return float(np.max(np.abs(s.values)))
 
     grouped: pd.DataFrame = df.groupby("well_id")["residual"].agg(_max_abs).reset_index()

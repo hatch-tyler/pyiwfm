@@ -30,6 +30,8 @@ from typing import TYPE_CHECKING, Any
 from pyiwfm.io.config import ModelWriteConfig, OutputFormat
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from pyiwfm.core.model import IWFMModel
     from pyiwfm.io.comment_metadata import CommentMetadata
 
@@ -69,7 +71,7 @@ TS_DSS_PARAMS: dict[str, str] = {
 }
 
 
-def _compute_dss_interval(times: list) -> str:
+def _compute_dss_interval(times: list[datetime]) -> str:
     """Compute DSS interval string from a list of datetime objects."""
     if len(times) < 2:
         return "1MON"
@@ -974,7 +976,7 @@ def write_model(
         output_dir=Path(output_dir),
         file_paths=file_paths or {},
         ts_format=fmt,
-        **{**version_defaults, **kwargs},  # type: ignore[arg-type]
+        **{**version_defaults, **kwargs},
     )
     writer = CompleteModelWriter(model, config)
     return writer.write_all()
@@ -1043,7 +1045,7 @@ def write_model_with_comments(
         output_dir=Path(output_dir),
         file_paths=file_paths or {},
         ts_format=fmt,
-        **{**version_defaults, **kwargs},  # type: ignore[arg-type]
+        **{**version_defaults, **kwargs},
     )
 
     writer = CompleteModelWriter(

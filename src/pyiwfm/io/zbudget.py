@@ -495,7 +495,7 @@ class ZBudgetReader:
 
         Returns
         -------
-        tuple[NDArray, NDArray]
+        tuple[NDArray[np.float64], NDArray[np.float64]]
             Tuple of (times, values) where:
             - times: 1D array of time values
             - values: 1D or 2D array of zone budget values
@@ -629,7 +629,7 @@ class ZBudgetReader:
 
         # Create datetime index
         ts = self.header
-        index: pd.Index  # type: ignore[type-arg]
+        index: pd.Index
         if ts.start_datetime:
             index = pd.to_datetime(times, unit="s")
         else:
@@ -675,7 +675,7 @@ class ZBudgetReader:
 
         # Create datetime index
         ts = self.header
-        zindex: pd.Index  # type: ignore[type-arg]
+        zindex: pd.Index
         if ts.start_datetime:
             zindex = pd.to_datetime(times, unit="s")
         else:

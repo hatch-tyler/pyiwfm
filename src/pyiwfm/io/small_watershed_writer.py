@@ -149,7 +149,7 @@ class SmallWatershedComponentWriter(TemplateWriter):
     def _render_main(
         self,
         sw: AppSmallWatershed | None,
-        ws_list: list,
+        ws_list: list[Any],
         n_watersheds: int,
     ) -> str:
         """Render the main small watershed file using Jinja2 template."""

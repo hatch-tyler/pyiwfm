@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import struct
 from pathlib import Path
-from typing import BinaryIO
+from typing import Any, BinaryIO
 
 import numpy as np
 from numpy.typing import NDArray
@@ -190,7 +190,7 @@ class FortranBinaryReader:
             raise RuntimeError("File not open")
         self._file.seek(pos)
 
-    def read_mixed_record(self, dtype_spec: list[tuple[str, int]]) -> tuple:
+    def read_mixed_record(self, dtype_spec: list[tuple[str, int]]) -> tuple[Any, ...]:
         """
         Read a record containing mixed data types.
 

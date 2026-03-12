@@ -5,6 +5,7 @@ Model information API routes.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -502,7 +503,7 @@ def get_model_summary() -> ModelSummary:
 
 
 @router.get("/cache-status")
-def get_cache_status() -> dict:
+def get_cache_status() -> dict[str, Any]:
     """Get SQLite cache status and diagnostics."""
     loader = model_state.get_cache_loader()
     if loader is None:
@@ -520,7 +521,7 @@ def get_cache_status() -> dict:
 
 
 @router.post("/compare")
-def compare_models(body: dict) -> dict:
+def compare_models(body: dict[str, Any]) -> dict[str, Any]:
     """Compare the loaded model mesh with another model.
 
     Accepts a JSON body with ``path`` pointing to the second model's

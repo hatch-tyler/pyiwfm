@@ -5,7 +5,7 @@ Budget data API routes.
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
@@ -184,7 +184,7 @@ def _safe_float(val: float) -> float | None:
     return val
 
 
-def _sanitize_values(values: list) -> list:
+def _sanitize_values(values: list[float | None]) -> list[float | None]:
     """Replace NaN/Inf with None in a list of numeric values."""
     return [
         None if (isinstance(v, float) and (math.isnan(v) or math.isinf(v))) else v for v in values
@@ -249,7 +249,7 @@ def _detect_budget_category(budget_type: str) -> str:
     return "other"
 
 
-def _get_budget_units_metadata(budget_type: str, reader: BudgetReader) -> dict:
+def _get_budget_units_metadata(budget_type: str, reader: BudgetReader) -> dict[str, Any]:
     """Build units metadata for a budget type based on model metadata and column types."""
     model = model_state.model
     meta = model.metadata if model else {}
@@ -332,13 +332,13 @@ def get_budget_types() -> list[str]:
 
 
 @router.get("/glossary")
-def get_budget_glossary() -> dict:
+def get_budget_glossary() -> dict[str, Any]:
     """Get definitions of budget column names for all budget types."""
     return BUDGET_GLOSSARY
 
 
 @router.get("/{budget_type}/locations")
-def get_budget_locations(budget_type: str) -> dict:
+def get_budget_locations(budget_type: str) -> dict[str, Any]:
     """Get locations/subregions for a budget type."""
     reader = model_state.get_budget_reader(budget_type)
     if reader is None:
@@ -356,7 +356,7 @@ def get_budget_locations(budget_type: str) -> dict:
 def get_budget_columns(
     budget_type: str,
     location: str = Query(default="", description="Location name or index"),
-) -> dict:
+) -> dict[str, Any]:
     """Get column headers for a budget location."""
     reader = model_state.get_budget_reader(budget_type)
     if reader is None:
@@ -385,7 +385,7 @@ def get_budget_data(
     budget_type: str,
     location: str = Query(default="", description="Location name or index"),
     columns: str = Query(default="all", description="Column indices (comma-separated) or 'all'"),
-) -> dict:
+) -> dict[str, Any]:
     """Get budget time series data for a location."""
     reader = model_state.get_budget_reader(budget_type)
     if reader is None:
@@ -464,7 +464,7 @@ def get_budget_data(
 def get_budget_summary(
     budget_type: str,
     location: str = Query(default="", description="Location name or index"),
-) -> dict:
+) -> dict[str, Any]:
     """Get budget summary statistics for a location."""
     reader = model_state.get_budget_reader(budget_type)
     if reader is None:
@@ -501,7 +501,7 @@ def get_budget_spatial(
     budget_type: str,
     column: str = Query(default="", description="Column name to map"),
     stat: str = Query(default="total", description="Statistic: 'total', 'average', or 'last'"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get per-location (subregion) budget values for spatial mapping.
 
@@ -532,7 +532,7 @@ def get_budget_spatial(
         # Default to first column
         col_idx = 0
 
-    locations: list[dict] = []
+    locations: list[dict[str, Any]] = []
     for loc_i, loc_name in enumerate(reader.locations):
         try:
             times_arr, values_arr = reader.get_values(loc_i, [col_idx])
@@ -584,7 +584,7 @@ def get_budget_spatial(
 def get_budget_location_geometry(
     budget_type: str,
     location: str = Query(default="", description="Location name or index"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Return spatial metadata for a budget location so the frontend can
     highlight the correct feature on a mini-map.
@@ -628,7 +628,7 @@ def get_budget_location_geometry(
         kw in loc_name.upper() for kw in ("ENTIRE MODEL", "ENTIRE AREA", "TOTAL MODEL")
     )
 
-    result: dict = {
+    result: dict[str, Any] = {
         "spatial_type": "entire_model"
         if is_entire_model
         else spatial_type_map.get(category, "unknown"),
@@ -717,7 +717,7 @@ def export_budget_excel(
 
 
 @router.get("/water-balance")
-def get_water_balance() -> dict:
+def get_water_balance() -> dict[str, Any]:
     """
     Get aggregated water balance across all budget types for Sankey diagram.
 
@@ -759,7 +759,7 @@ def get_water_balance() -> dict:
             node_names.append(name)
         return node_set[name]
 
-    links: list[dict] = []
+    links: list[dict[str, Any]] = []
 
     # Map common budget column names to Sankey flows
     flow_mappings = {

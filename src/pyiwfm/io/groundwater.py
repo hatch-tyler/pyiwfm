@@ -12,7 +12,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 import numpy as np
 from numpy.typing import NDArray
@@ -393,7 +393,7 @@ class GroundwaterWriter:
             # Group BCs by type in a single pass
             from collections import defaultdict
 
-            bc_groups: dict[str, list] = defaultdict(list)
+            bc_groups: dict[str, list[Any]] = defaultdict(list)
             for bc in gw.boundary_conditions:
                 bc_groups[bc.bc_type].append(bc)
             specified_head = bc_groups["specified_head"]

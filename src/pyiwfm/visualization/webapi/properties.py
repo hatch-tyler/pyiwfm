@@ -556,7 +556,7 @@ class PropertyVisualizer:
             if key.startswith("head"):
                 del self._property_cache[key]
 
-    def get_property_info(self, name: str | None = None) -> dict:
+    def get_property_info(self, name: str | None = None) -> dict[str, Any]:
         """
         Get metadata about a property.
 
@@ -600,7 +600,7 @@ class PropertyVisualizer:
 
         return info
 
-    def get_colorbar_settings(self) -> dict:
+    def get_colorbar_settings(self) -> dict[str, Any]:
         """
         Get settings for the colorbar display.
 

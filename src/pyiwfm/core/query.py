@@ -350,7 +350,7 @@ class ModelQueryAPI:
         import pandas as pd
 
         # Collect all values
-        data: dict[str, list] = {"id": [], "name": []}
+        data: dict[str, list[Any]] = {"id": [], "name": []}
 
         # Get location IDs and names
         zone_def = self.get_zone_definition(scale)
@@ -441,7 +441,7 @@ class ModelQueryAPI:
         """
         import pandas as pd
 
-        data: dict[str, list] = {"time": []}
+        data: dict[str, list[Any]] = {"time": []}
         ts_dict: dict[int, TimeSeries] = {}
 
         # Get time series for each location

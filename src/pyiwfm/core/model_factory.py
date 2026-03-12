@@ -103,7 +103,7 @@ def apply_kh_anomalies(
 
 def apply_parametric_grids(
     gw: AppGW,
-    parametric_grids: list,
+    parametric_grids: list[Any],
     mesh: AppGrid,
 ) -> bool:
     """Interpolate aquifer parameters from parametric grids onto model nodes.
@@ -208,7 +208,7 @@ def apply_parametric_subsidence(
     mesh: AppGrid,
     n_nodes: int,
     n_layers: int,
-) -> list:
+) -> list[Any]:
     """Interpolate subsidence parameters from parametric grids onto model nodes.
 
     Returns a list of SubsidenceNodeParams objects.

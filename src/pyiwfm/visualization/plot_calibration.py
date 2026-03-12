@@ -115,7 +115,7 @@ def plot_streams_colored(
     ax.add_collection(lc)
 
     if show_colorbar:
-        cb = fig.colorbar(lc, ax=ax)  # type: ignore[arg-type]
+        cb = fig.colorbar(lc, ax=ax)
         cb.set_label(colorbar_label)
 
     ax.autoscale_view()

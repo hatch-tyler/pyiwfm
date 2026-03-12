@@ -279,7 +279,7 @@ class IWFMObservation:
     simulated_name: str | None = None
     error_std: float | None = None
     transform: str = "none"
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate observation."""
@@ -428,7 +428,7 @@ class IWFMObservationGroup:
     obs_type: IWFMObservationType | None = None
     observations: list[IWFMObservation] = field(default_factory=list)
     target_contribution: float | None = None
-    covariance_matrix: NDArray | None = None
+    covariance_matrix: NDArray[np.float64] | None = None
 
     def __post_init__(self) -> None:
         """Validate group."""
@@ -441,7 +441,7 @@ class IWFMObservationGroup:
         return len(self.observations)
 
     @property
-    def values(self) -> NDArray:
+    def values(self) -> NDArray[np.float64]:
         """Get array of observation values.
 
         Returns
@@ -452,7 +452,7 @@ class IWFMObservationGroup:
         return np.array([obs.value for obs in self.observations])
 
     @property
-    def weights(self) -> NDArray:
+    def weights(self) -> NDArray[np.float64]:
         """Get array of observation weights.
 
         Returns

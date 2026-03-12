@@ -50,11 +50,11 @@ class EnsembleStatistics:
         Parameter names.
     """
 
-    mean: NDArray
-    std: NDArray
-    median: NDArray
-    q05: NDArray
-    q95: NDArray
+    mean: NDArray[np.float64]
+    std: NDArray[np.float64]
+    median: NDArray[np.float64]
+    q05: NDArray[np.float64]
+    q95: NDArray[np.float64]
     n_realizations: int
     n_parameters: int
     parameter_names: list[str]
@@ -114,8 +114,8 @@ class IWFMEnsembleManager:
         """
         self._parameters = parameters or []
         self._geostat = geostat or GeostatManager()
-        self._prior_ensemble: NDArray | None = None
-        self._posterior_ensemble: NDArray | None = None
+        self._prior_ensemble: NDArray[np.float64] | None = None
+        self._posterior_ensemble: NDArray[np.float64] | None = None
 
     @property
     def parameter_names(self) -> list[str]:
@@ -133,7 +133,7 @@ class IWFMEnsembleManager:
         method: str = "lhs",
         variogram: Variogram | None = None,
         seed: int | None = None,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Generate prior parameter ensemble.
 
         For parameters with spatial locations (pilot points), generates
@@ -173,12 +173,12 @@ class IWFMEnsembleManager:
 
     def generate_observation_ensemble(
         self,
-        observation_values: NDArray,
-        observation_weights: NDArray,
+        observation_values: NDArray[np.float64],
+        observation_weights: NDArray[np.float64],
         n_realizations: int = 100,
         noise_type: str = "gaussian",
         seed: int | None = None,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Generate observation noise ensemble.
 
         Adds noise to observation values based on their weights
@@ -223,7 +223,7 @@ class IWFMEnsembleManager:
 
     def write_parameter_ensemble(
         self,
-        ensemble: NDArray,
+        ensemble: NDArray[np.float64],
         filepath: Path | str,
     ) -> Path:
         """Write parameter ensemble to CSV file.
@@ -257,7 +257,7 @@ class IWFMEnsembleManager:
 
     def write_observation_ensemble(
         self,
-        ensemble: NDArray,
+        ensemble: NDArray[np.float64],
         observation_names: list[str],
         filepath: Path | str,
     ) -> Path:
@@ -291,7 +291,7 @@ class IWFMEnsembleManager:
     def load_posterior_ensemble(
         self,
         filepath: Path | str,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Load posterior parameter ensemble from pestpp-ies output.
 
         Parameters
@@ -329,7 +329,7 @@ class IWFMEnsembleManager:
 
     def analyze_ensemble(
         self,
-        ensemble: NDArray,
+        ensemble: NDArray[np.float64],
     ) -> EnsembleStatistics:
         """Compute ensemble statistics.
 
@@ -356,9 +356,9 @@ class IWFMEnsembleManager:
 
     def compute_reduction_factor(
         self,
-        prior: NDArray,
-        posterior: NDArray,
-    ) -> NDArray:
+        prior: NDArray[np.float64],
+        posterior: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
         """Compute uncertainty reduction factor.
 
         Measures how much the posterior uncertainty is reduced
@@ -389,9 +389,9 @@ class IWFMEnsembleManager:
 
     def get_best_realization(
         self,
-        ensemble: NDArray,
-        objective_values: NDArray,
-    ) -> tuple[int, NDArray]:
+        ensemble: NDArray[np.float64],
+        objective_values: NDArray[np.float64],
+    ) -> tuple[int, NDArray[np.float64]]:
         """Get the best realization based on objective function.
 
         Parameters

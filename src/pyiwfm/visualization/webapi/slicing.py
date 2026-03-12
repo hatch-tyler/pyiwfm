@@ -7,7 +7,7 @@ slicing of 3D meshes along various planes.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -453,7 +453,7 @@ class SlicingController:
 
         return [self.slice_z(pos) for pos in positions]
 
-    def get_slice_properties(self, slice_mesh: pv.PolyData) -> dict:
+    def get_slice_properties(self, slice_mesh: pv.PolyData) -> dict[str, Any]:
         """
         Get properties of a slice result.
 

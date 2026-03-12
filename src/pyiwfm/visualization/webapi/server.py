@@ -8,7 +8,7 @@ import logging
 import webbrowser
 from pathlib import Path
 from threading import Timer
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -97,7 +97,7 @@ def create_app(
     else:
 
         @app.get("/")
-        def root() -> dict:
+        def root() -> dict[str, Any]:
             return {
                 "message": "IWFM Viewer API",
                 "docs": "/api/docs",

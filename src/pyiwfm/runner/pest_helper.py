@@ -244,7 +244,7 @@ class IWFMPestHelper:
         layer: int = 1,
         initial_value: float = 1.0,
         bounds: tuple[float, float] = (0.01, 100.0),
-        variogram: Variogram | dict | None = None,
+        variogram: Variogram | dict[str, Any] | None = None,
         transform: str = "log",
         prefix: str | None = None,
     ) -> list[Parameter]:
@@ -916,7 +916,7 @@ if __name__ == "__main__":
         program: str = "pestpp-glm",
         n_workers: int = 1,
         extra_args: list[str] | None = None,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str]:
         """Run a PEST++ program.
 
         Parameters
@@ -930,7 +930,7 @@ if __name__ == "__main__":
 
         Returns
         -------
-        subprocess.CompletedProcess
+        subprocess.CompletedProcess[str]
             Process result.
 
         Raises
@@ -965,7 +965,7 @@ if __name__ == "__main__":
             text=True,
         )
 
-    def run_pestpp_glm(self, n_workers: int = 1, **kwargs: Any) -> subprocess.CompletedProcess:
+    def run_pestpp_glm(self, n_workers: int = 1, **kwargs: Any) -> subprocess.CompletedProcess[str]:
         """Run pestpp-glm for parameter estimation.
 
         Parameters
@@ -977,7 +977,7 @@ if __name__ == "__main__":
 
         Returns
         -------
-        subprocess.CompletedProcess
+        subprocess.CompletedProcess[str]
             Process result.
         """
         if kwargs:
@@ -991,7 +991,7 @@ if __name__ == "__main__":
         n_realizations: int = 100,
         n_workers: int = 1,
         **kwargs: Any,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str]:
         """Run pestpp-ies for ensemble calibration.
 
         Parameters
@@ -1005,7 +1005,7 @@ if __name__ == "__main__":
 
         Returns
         -------
-        subprocess.CompletedProcess
+        subprocess.CompletedProcess[str]
             Process result.
         """
         self.set_pestpp_options(ies_num_reals=n_realizations, **kwargs)
@@ -1017,7 +1017,7 @@ if __name__ == "__main__":
         method: str = "sobol",
         n_samples: int = 1000,
         **kwargs: Any,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str]:
         """Run pestpp-sen for sensitivity analysis.
 
         Parameters
@@ -1031,7 +1031,7 @@ if __name__ == "__main__":
 
         Returns
         -------
-        subprocess.CompletedProcess
+        subprocess.CompletedProcess[str]
             Process result.
         """
         self.set_pestpp_options(

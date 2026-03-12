@@ -9,7 +9,7 @@ Triangle is a high-quality mesh generator and Delaunay triangulator.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -95,7 +95,7 @@ class TriangleMeshGenerator(MeshGenerator):
         boundary: Boundary,
         streams: list[StreamConstraint] | None = None,
         points: list[PointConstraint] | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Build input dictionary for Triangle."""
         # Start with boundary vertices
         vertices = list(boundary.vertices)
@@ -171,10 +171,10 @@ class TriangleMeshGenerator(MeshGenerator):
 
     def _apply_refinement(
         self,
-        tri_output: dict,
+        tri_output: dict[str, Any],
         refinement_zones: list[RefinementZone],
         min_angle: float | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Apply local refinement to mesh."""
         import triangle
 
@@ -233,7 +233,7 @@ class TriangleMeshGenerator(MeshGenerator):
 
         return tri_output
 
-    def _convert_output(self, tri_output: dict) -> MeshResult:
+    def _convert_output(self, tri_output: dict[str, Any]) -> MeshResult:
         """Convert Triangle output to MeshResult."""
         nodes = tri_output["vertices"]
         triangles = tri_output["triangles"]

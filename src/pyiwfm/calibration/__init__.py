@@ -38,7 +38,6 @@ from pyiwfm.calibration.head_differences import (
     read_pairs_file,
 )
 from pyiwfm.calibration.headall_extraction import (
-    ExtractionResult,
     HeadAllExtractor,
     WellSpec,
 )
@@ -87,6 +86,7 @@ from pyiwfm.calibration.residuals import (
     residual_summary,
 )
 from pyiwfm.calibration.results_extraction import (
+    ExtractionResult,
     ExtractionSpec,
     ResultsExtractor,
 )
@@ -146,7 +146,6 @@ __all__ = [
     # headall_extraction
     "HeadAllExtractor",
     "WellSpec",
-    "ExtractionResult",
     # head_differences
     "HeadDiffPair",
     "compute_head_differences",
@@ -158,6 +157,7 @@ __all__ = [
     # results_extraction
     "ResultsExtractor",
     "ExtractionSpec",
+    "ExtractionResult",
     # texture2par
     "Texture2Par",
     "MixingConfig",

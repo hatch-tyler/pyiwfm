@@ -306,7 +306,7 @@ class AppLake(BaseComponent):
                             f"non-existent lake {lake.outflow.destination_id}"
                         )
 
-    def to_arrays(self) -> dict[str, NDArray]:
+    def to_arrays(self) -> dict[str, NDArray[np.float64]]:
         """
         Convert lake data to numpy arrays.
 

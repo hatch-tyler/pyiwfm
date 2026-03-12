@@ -574,14 +574,14 @@ class AppGW(BaseComponent):
                         f"Boundary condition {bc.id} references invalid node {nid}"
                     )
 
-    def to_arrays(self) -> dict[str, NDArray]:
+    def to_arrays(self) -> dict[str, NDArray[np.float64]]:
         """
         Convert groundwater data to numpy arrays.
 
         Returns:
             Dictionary of arrays
         """
-        result: dict[str, NDArray] = {}
+        result: dict[str, NDArray[np.float64]] = {}
 
         if self.heads is not None:
             result["heads"] = self.heads.copy()

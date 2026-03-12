@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from collections import OrderedDict
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import h5py
 import numpy as np
@@ -301,7 +301,7 @@ class AreaDataManager:
                 result.append((lbl, loader))
         return result
 
-    def get_snapshot(self, timestep: int) -> dict[int, dict]:
+    def get_snapshot(self, timestep: int) -> dict[int, dict[str, Any]]:
         """Get aggregated land-use data for all elements at one timestep.
 
         Returns a dict mapping element_id to a dict with keys:
@@ -334,7 +334,7 @@ class AreaDataManager:
                     elem_data[eid]["native_riparian"] += total
 
         # Compute fractions + dominant type
-        result: dict[int, dict] = {}
+        result: dict[int, dict[str, Any]] = {}
         for eid, areas in elem_data.items():
             total = sum(areas.values())
             fractions = {k: round(v / total, 4) if total > 0 else 0.0 for k, v in areas.items()}
@@ -369,13 +369,13 @@ class AreaDataManager:
 
         return result
 
-    def get_element_timeseries(self, element_id: int) -> dict:
+    def get_element_timeseries(self, element_id: int) -> dict[str, Any]:
         """Get all-timestep timeseries for one element across all land-use types.
 
         Returns a dict with keys per land-use type, each containing
         ``areas`` (list of per-timestep values) and column count info.
         """
-        result: dict = {"element_id": element_id, "dates": self.get_dates()}
+        result: dict[str, Any] = {"element_id": element_id, "dates": self.get_dates()}
 
         for lbl, loader in self._loaders():
             eids = loader.element_ids

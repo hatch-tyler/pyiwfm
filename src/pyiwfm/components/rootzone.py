@@ -242,7 +242,7 @@ class RootZone(BaseComponent):
 
     def load_land_use_from_arrays(
         self,
-        snapshot: dict[int, dict],
+        snapshot: dict[int, dict[str, Any]],
     ) -> None:
         """Populate ``element_landuse`` from pre-aggregated snapshot data.
 
@@ -397,14 +397,14 @@ class RootZone(BaseComponent):
                             f"Element {elu.element_id} references undefined crop type {crop_id}"
                         )
 
-    def to_arrays(self) -> dict[str, NDArray]:
+    def to_arrays(self) -> dict[str, NDArray[np.float64]]:
         """
         Convert root zone data to numpy arrays.
 
         Returns:
             Dictionary of arrays
         """
-        result: dict[str, NDArray] = {}
+        result: dict[str, NDArray[np.float64]] = {}
 
         if self.soil_moisture is not None:
             result["soil_moisture"] = self.soil_moisture.copy()

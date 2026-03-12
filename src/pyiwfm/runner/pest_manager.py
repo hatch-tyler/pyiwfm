@@ -10,6 +10,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
@@ -271,11 +272,11 @@ class IWFMParameterManager:
         spacing: float | None = None,
         points: list[tuple[float, float]] | None = None,
         layer: int = 1,
-        initial_value: float | NDArray = 1.0,
+        initial_value: float | NDArray[np.float64] = 1.0,
         bounds: tuple[float, float] | None = None,
         transform: str | ParameterTransform = "auto",
         group: str | None = None,
-        variogram: dict | None = None,
+        variogram: dict[str, Any] | None = None,
         kriging_type: str = "ordinary",
         prefix: str | None = None,
     ) -> list[Parameter]:
@@ -294,7 +295,7 @@ class IWFMParameterManager:
             Explicit pilot point (x, y) coordinates.
         layer : int
             Model layer for these parameters.
-        initial_value : float | NDArray
+        initial_value : float | NDArray[np.float64]
             Initial value(s) at pilot points.
         bounds : tuple[float, float] | None
             Parameter bounds.

@@ -692,7 +692,7 @@ class BudgetReader:
 
         Returns
         -------
-        tuple[NDArray, NDArray]
+        tuple[NDArray[np.float64], NDArray[np.float64]]
             Tuple of (times, values) where:
             - times: 1D array of time values (or datetimes as floats)
             - values: 2D array of shape (n_timesteps, n_columns)

@@ -4,6 +4,8 @@ Small watershed data API routes.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 
 from pyiwfm.visualization.webapi.config import model_state, require_model
@@ -12,7 +14,7 @@ router = APIRouter(prefix="/api/small-watersheds", tags=["small_watersheds"])
 
 
 @router.get("")
-def get_small_watersheds() -> dict:
+def get_small_watersheds() -> dict[str, Any]:
     """
     Get all small watersheds with connectivity info.
 
@@ -27,11 +29,11 @@ def get_small_watersheds() -> dict:
     grid = model.grid
     if grid is None:
         return {"n_watersheds": 0, "watersheds": []}
-    watersheds: list[dict] = []
+    watersheds: list[dict[str, Any]] = []
 
     for ws in model.small_watersheds.iter_watersheds():
         # Collect GW node positions for this watershed
-        gw_coords: list[dict] = []
+        gw_coords: list[dict[str, Any]] = []
         for gwn in ws.gw_nodes:
             node = grid.nodes.get(gwn.gw_node_id)
             if node is None:

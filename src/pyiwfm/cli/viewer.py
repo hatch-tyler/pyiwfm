@@ -13,7 +13,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def add_viewer_parser(subparsers: argparse._SubParsersAction) -> None:
+def add_viewer_parser(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     """Register the ``viewer`` subcommand."""
     p = subparsers.add_parser(
         "viewer",

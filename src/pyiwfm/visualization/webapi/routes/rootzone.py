@@ -5,6 +5,7 @@ Root zone / land use data API routes.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Path, Query
 
@@ -109,7 +110,7 @@ def _ensure_land_use_loaded() -> None:
 
 
 @router.get("/status")
-def get_rootzone_status() -> dict:
+def get_rootzone_status() -> dict[str, Any]:
     """Diagnostic endpoint showing land-use loading status."""
     model = require_model()
     if model.rootzone is None:
@@ -117,7 +118,7 @@ def get_rootzone_status() -> dict:
 
     rz = model.rootzone
 
-    area_files: dict[str, dict] = {}
+    area_files: dict[str, dict[str, Any]] = {}
     for label, attr in [
         ("nonponded", "nonponded_area_file"),
         ("ponded", "ponded_area_file"),
@@ -171,7 +172,7 @@ def get_rootzone_status() -> dict:
 @router.get("/land-use")
 def get_land_use(
     timestep: int = Query(0, ge=0, description="Zero-based timestep index"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get per-element land use fractions and dominant type.
 
@@ -193,7 +194,7 @@ def get_land_use(
         if timestep >= mgr.n_timesteps:
             timestep = mgr.n_timesteps - 1
         snapshot = mgr.get_snapshot(timestep)
-        elements: list[dict] = []
+        elements: list[dict[str, Any]] = []
         for eid, data in snapshot.items():
             elements.append(
                 {
@@ -250,7 +251,7 @@ def get_land_use(
 
 
 @router.get("/timesteps")
-def get_land_use_timesteps() -> dict:
+def get_land_use_timesteps() -> dict[str, Any]:
     """
     Get available timestep dates for land-use area data.
     """
@@ -269,7 +270,7 @@ def get_land_use_timesteps() -> dict:
 @router.get("/land-use/{element_id}/timeseries")
 def get_element_land_use_timeseries(
     element_id: int = Path(description="Element ID"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get full timeseries of land-use areas for a single element.
 
@@ -300,7 +301,7 @@ def get_element_land_use_timeseries(
 @router.get("/land-use/{element_id}/crops")
 def get_element_crops(
     element_id: int = Path(description="Element ID"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get crop breakdown for a specific element.
 
@@ -321,7 +322,7 @@ def get_element_crops(
             detail=f"No land use data for element {element_id}",
         )
 
-    crops: list[dict] = []
+    crops: list[dict[str, Any]] = []
     urban_impervious = 0.0
 
     for elu in land_uses:
@@ -340,7 +341,7 @@ def get_element_crops(
             urban_impervious = elu.impervious_fraction
 
     # Soil parameters if available
-    soil: dict | None = None
+    soil: dict[str, Any] | None = None
     sp = rz.soil_params.get(element_id)
     if sp:
         soil = {
@@ -360,7 +361,7 @@ def get_element_crops(
 
 
 @router.get("/crops")
-def get_crops() -> dict:
+def get_crops() -> dict[str, Any]:
     """
     List all crop types with names, IDs, and root depths.
     """
@@ -388,7 +389,7 @@ def get_crops() -> dict:
 @router.get("/soil-params/{element_id}")
 def get_soil_params(
     element_id: int = Path(description="Element ID"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get full soil parameters for an element.
     """

@@ -23,17 +23,17 @@ class ResultsStateMixin:
     _results_dir: Path | None
     _crs: str
     _transformer: Any
-    _geojson_cache: dict[int, dict]
+    _geojson_cache: dict[int, dict[str, Any]]
     _head_loader: LazyHeadDataLoader | None
     _gw_hydrograph_reader: IWFMHydrographReader | None
     _stream_hydrograph_reader: IWFMHydrographReader | None
     _subsidence_reader: IWFMHydrographReader | None
     _tile_drain_reader: IWFMHydrographReader | None
     _area_manager: AreaDataManager | None
-    _hydrograph_locations_cache: dict[str, list[dict]] | None
+    _hydrograph_locations_cache: dict[str, list[dict[str, Any]]] | None
     _stream_reach_boundaries: list[tuple[int, int, int]] | None
-    _diversion_ts_data: tuple | None
-    _budget_readers: dict
+    _diversion_ts_data: tuple[Any, ...] | None
+    _budget_readers: dict[str, Any]
 
     # ------------------------------------------------------------------
     # Head data access
@@ -382,7 +382,7 @@ class ResultsStateMixin:
     # Hydrograph locations
     # ------------------------------------------------------------------
 
-    def get_gw_physical_locations(self) -> list[dict]:
+    def get_gw_physical_locations(self) -> list[dict[str, Any]]:
         """Group GW hydrograph specs into unique physical locations.
 
         IWFM stores one spec per (location, layer) pair, so C2VSimFG with
@@ -400,15 +400,15 @@ class ResultsStateMixin:
 
         The ``columns`` list maps directly to hydrograph output file columns.
         """
-        groups: dict[tuple, dict] = {}
-        order: list[tuple] = []
+        groups: dict[tuple[Any, ...], dict[str, Any]] = {}
+        order: list[tuple[Any, ...]] = []
 
         if self._model is not None and self._model.groundwater:
             for idx, loc in enumerate(self._model.groundwater.hydrograph_locations):
                 raw_nid = getattr(loc, "node_id", 0) or getattr(loc, "gw_node", 0)
                 nid = int(raw_nid) if isinstance(raw_nid, (int, float)) else 0
                 # Group key: node_id when available, else exact (x, y)
-                key: tuple
+                key: tuple[Any, ...]
                 if nid > 0:
                     key = ("node", nid)
                 else:
@@ -430,12 +430,12 @@ class ResultsStateMixin:
 
         return [groups[k] for k in order]
 
-    def get_hydrograph_locations(self) -> dict[str, list[dict]]:
+    def get_hydrograph_locations(self) -> dict[str, list[dict[str, Any]]]:
         """Get all hydrograph locations reprojected to WGS84 (cached)."""
         if self._hydrograph_locations_cache is not None:
             return self._hydrograph_locations_cache
 
-        result: dict[str, list[dict]] = {
+        result: dict[str, list[dict[str, Any]]] = {
             "gw": [],
             "stream": [],
             "subsidence": [],
@@ -608,7 +608,7 @@ class ResultsStateMixin:
     # GeoJSON mesh (for deck.gl 2D map)
     # ------------------------------------------------------------------
 
-    def get_mesh_geojson(self, layer: int = 1) -> dict:
+    def get_mesh_geojson(self, layer: int = 1) -> dict[str, Any]:
         """Get the mesh as GeoJSON FeatureCollection in WGS84.
 
         Parameters
@@ -624,13 +624,13 @@ class ResultsStateMixin:
         self._geojson_cache[layer] = geojson
         return geojson
 
-    def _compute_mesh_geojson(self, layer: int) -> dict:
+    def _compute_mesh_geojson(self, layer: int) -> dict[str, Any]:
         """Build GeoJSON FeatureCollection from the mesh plan view."""
         if self._model is None or self._model.grid is None:
             return {"type": "FeatureCollection", "features": []}
 
         grid = self._model.grid
-        features: list[dict] = []
+        features: list[dict[str, Any]] = []
 
         for elem in grid.iter_elements():
             ring: list[list[float]] = []
@@ -765,7 +765,7 @@ class ResultsStateMixin:
     # Diversion timeseries
     # ------------------------------------------------------------------
 
-    def get_diversion_timeseries(self) -> tuple | None:
+    def get_diversion_timeseries(self) -> tuple[Any, ...] | None:
         """Get cached diversion timeseries data (times, values, metadata).
 
         Reads the stream_diversion_ts file once via UnifiedTimeSeriesReader
@@ -809,7 +809,7 @@ class ResultsStateMixin:
     # Results info
     # ------------------------------------------------------------------
 
-    def get_results_info(self) -> dict:
+    def get_results_info(self) -> dict[str, Any]:
         """Get summary of available results."""
         info: dict[str, Any] = {
             "has_results": False,

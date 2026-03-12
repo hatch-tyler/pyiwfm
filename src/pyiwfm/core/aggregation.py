@@ -79,11 +79,11 @@ class DataAggregator:
     >>> zone_heads = aggregator.aggregate(head_values, zone_def, method="area_weighted_mean")
     """
 
-    METHODS: dict[str, Callable] = {}
+    METHODS: dict[str, Callable[..., float]] = {}
 
     def __init__(self, element_areas: NDArray[np.float64] | None = None):
         self.element_areas = element_areas
-        self._method_funcs: dict[str, Callable] = {
+        self._method_funcs: dict[str, Callable[..., float]] = {
             "sum": self._agg_sum,
             "mean": self._agg_mean,
             "area_weighted_mean": self._agg_area_weighted_mean,

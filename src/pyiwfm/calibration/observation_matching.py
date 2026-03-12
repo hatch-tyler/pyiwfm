@@ -150,9 +150,9 @@ class ObservationMatcher:
 
     def match_by_date(
         self,
-        sim_times: NDArray,
+        sim_times: NDArray[np.datetime64],
         sim_values: NDArray[np.float64],
-        obs_times: NDArray,
+        obs_times: NDArray[np.datetime64],
         obs_values: NDArray[np.float64],
     ) -> MatchResult:
         """Date-match simulated to observed values and compute statistics.

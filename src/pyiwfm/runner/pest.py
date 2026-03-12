@@ -1072,7 +1072,7 @@ class PESTInterface:
         return filepath
 
     @staticmethod
-    def _write_csv(filepath: Path, rows: list[dict], fieldnames: list[str]) -> Path:
+    def _write_csv(filepath: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> Path:
         """Write a list of dicts to a CSV file and return the path."""
         with open(filepath, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)

@@ -170,7 +170,7 @@ class TemplateWriter(ABC):
     def write_data_block(
         self,
         file: TextIO,
-        data: NDArray,
+        data: NDArray[np.float64],
         fmt: str | Sequence[str] = "%14.6f",
         header_comment: str | None = None,
     ) -> None:
@@ -197,7 +197,7 @@ class TemplateWriter(ABC):
         self,
         file: TextIO,
         ids: NDArray[np.int32],
-        data: NDArray,
+        data: NDArray[np.float64],
         id_fmt: str = "%5d",
         data_fmt: str = "%14.6f",
     ) -> None:
@@ -246,8 +246,8 @@ class TimeSeriesSpec:
     """Specification for a time series to write."""
 
     name: str
-    dates: Sequence[datetime] | NDArray
-    values: Sequence[float] | NDArray
+    dates: Sequence[datetime] | NDArray[np.datetime64]
+    values: Sequence[float] | NDArray[np.float64]
     units: str = ""
     location: str = ""
     parameter: str = ""
@@ -302,8 +302,8 @@ class TimeSeriesWriter:
 
     def write_timeseries_table(
         self,
-        dates: Sequence[datetime] | NDArray,
-        columns: dict[str, NDArray],
+        dates: Sequence[datetime] | NDArray[np.datetime64],
+        columns: dict[str, NDArray[np.float64]],
         text_file: str | Path,
         header_lines: list[str] | None = None,
     ) -> None:
@@ -403,7 +403,7 @@ class TimeSeriesWriter:
             times=np.asarray(dates, dtype="datetime64[ns]"),
             values=values,
         )
-        write_timeseries_to_dss(  # type: ignore[arg-type]
+        write_timeseries_to_dss(
             str(dss_path),
             ts_obj,
             pathname,

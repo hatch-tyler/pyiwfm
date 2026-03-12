@@ -25,6 +25,8 @@ from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from pyiwfm.components.lake import AppLake
     from pyiwfm.core.model import IWFMModel
 
@@ -202,7 +204,7 @@ class LakeComponentWriter(TemplateWriter):
     def _render_lake_main(
         self,
         lakes: AppLake,
-        lake_list: list,
+        lake_list: list[Any],
         n_lakes: int,
     ) -> str:
         """Render the main lake file using Jinja2 template."""
@@ -278,7 +280,7 @@ class LakeComponentWriter(TemplateWriter):
     def write_max_lake_elev_ts(
         self,
         dates: list[str] | None = None,
-        data: NDArray | None = None,
+        data: NDArray[np.float64] | None = None,
     ) -> Path:
         """
         Write the maximum lake elevation time series file (v4.0).
@@ -287,7 +289,7 @@ class LakeComponentWriter(TemplateWriter):
         ----------
         dates : list[str], optional
             IWFM timestamps
-        data : NDArray, optional
+        data : NDArray[np.float64], optional
             Max elevation data array (n_times, n_lakes)
 
         Returns

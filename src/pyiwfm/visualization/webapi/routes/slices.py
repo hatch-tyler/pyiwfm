@@ -4,7 +4,7 @@ Cross-section slice API routes.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from fastapi import APIRouter, HTTPException, Query
@@ -182,7 +182,7 @@ def get_cross_section_json(
     start_lat: float = Query(..., description="Start latitude (WGS84)"),
     end_lng: float = Query(..., description="End longitude (WGS84)"),
     end_lat: float = Query(..., description="End latitude (WGS84)"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get a vertical cross-section between two WGS84 map points as JSON.
 
@@ -274,7 +274,7 @@ def get_cross_section_heads(
     end_lat: float = Query(..., description="End latitude (WGS84)"),
     timestep: int = Query(default=0, ge=0, description="Timestep index"),
     n_samples: int = Query(default=100, ge=10, le=500, description="Sample points"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get interpolated groundwater head levels along a cross-section.
 
@@ -329,7 +329,7 @@ def get_cross_section_heads(
     n_layers = xs.n_layers
     dt = loader.times[timestep] if timestep < len(loader.times) else None
 
-    layers_out: list[dict] = []
+    layers_out: list[dict[str, Any]] = []
     for layer_idx in range(n_layers):
         top_vals = xs.top_elev[:, layer_idx].copy()
         bot_vals = xs.bottom_elev[:, layer_idx].copy()

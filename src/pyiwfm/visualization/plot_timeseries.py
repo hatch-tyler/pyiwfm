@@ -99,7 +99,7 @@ def plot_timeseries(
     if hasattr(timeseries, "times"):  # Single TimeSeries
         series_list = [timeseries]  # type: ignore[list-item]
     else:
-        series_list = list(timeseries)  # type: ignore[arg-type]
+        series_list = list(timeseries)
 
     # Default styling
     if colors is None:

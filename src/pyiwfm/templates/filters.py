@@ -306,7 +306,7 @@ def dss_interval(interval: str) -> str:
 
 
 def iwfm_array_row(
-    values: Sequence | NDArray,
+    values: Sequence[float] | NDArray[np.float64],
     fmt: str = "%14.6f",
     sep: str = " ",
     prefix: str = "",
@@ -334,7 +334,7 @@ def iwfm_array_row(
 
 def iwfm_data_row(
     row_id: int,
-    values: Sequence | NDArray,
+    values: Sequence[float] | NDArray[np.float64],
     int_fmt: str = "%5d",
     float_fmt: str = "%14.6f",
 ) -> str:

@@ -26,6 +26,8 @@ from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from pyiwfm.components.stream import AppStream
     from pyiwfm.core.model import IWFMModel
 
@@ -648,7 +650,7 @@ C------------------------------------------------------------------------------
 C    IR    ICETST    ICARST
 C------------------------------------------------------------------------------
 """
-        evap_specs: list = []
+        evap_specs: list[Any] = []
         if streams is not None:
             try:
                 evap_specs = streams.evap_node_specs
@@ -950,7 +952,7 @@ C-------------------------------------------------------------------------------
     def write_stream_inflow_ts(
         self,
         dates: list[str] | None = None,
-        data: NDArray | None = None,
+        data: NDArray[np.float64] | None = None,
         column_mapping: list[str] | None = None,
     ) -> Path:
         """
@@ -960,7 +962,7 @@ C-------------------------------------------------------------------------------
         ----------
         dates : list[str], optional
             IWFM timestamps
-        data : NDArray, optional
+        data : NDArray[np.float64], optional
             Inflow data array (n_times, n_cols)
         column_mapping : list[str], optional
             Column mapping rows (ID, IRST)
@@ -993,7 +995,7 @@ C-------------------------------------------------------------------------------
     def write_diversion_data_ts(
         self,
         dates: list[str] | None = None,
-        data: NDArray | None = None,
+        data: NDArray[np.float64] | None = None,
     ) -> Path:
         """
         Write the diversion data time series file.
@@ -1002,7 +1004,7 @@ C-------------------------------------------------------------------------------
         ----------
         dates : list[str], optional
             IWFM timestamps
-        data : NDArray, optional
+        data : NDArray[np.float64], optional
             Diversion data array (n_times, n_cols)
 
         Returns
@@ -1031,7 +1033,7 @@ C-------------------------------------------------------------------------------
     def write_surface_area_ts(
         self,
         dates: list[str] | None = None,
-        data: NDArray | None = None,
+        data: NDArray[np.float64] | None = None,
     ) -> Path:
         """
         Write the stream surface area time series file.
@@ -1040,7 +1042,7 @@ C-------------------------------------------------------------------------------
         ----------
         dates : list[str], optional
             IWFM timestamps
-        data : NDArray, optional
+        data : NDArray[np.float64], optional
             Surface area data array (n_times, n_cols)
 
         Returns

@@ -4,6 +4,8 @@ Lake data API routes.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, Path
 
 from pyiwfm.visualization.webapi.config import model_state, require_model
@@ -12,7 +14,7 @@ router = APIRouter(prefix="/api/lakes", tags=["lakes"])
 
 
 @router.get("/geojson")
-def get_lakes_geojson() -> dict:
+def get_lakes_geojson() -> dict[str, Any]:
     """
     Get lake polygons as GeoJSON in WGS84.
 
@@ -26,7 +28,7 @@ def get_lakes_geojson() -> dict:
     grid = model.grid
     if grid is None:
         return {"type": "FeatureCollection", "features": []}
-    features: list[dict] = []
+    features: list[dict[str, Any]] = []
 
     for lake_id, lake in model.lakes.lakes.items():
         if not lake.elements:
@@ -132,7 +134,7 @@ def get_lakes_geojson() -> dict:
 @router.get("/{lake_id}/rating")
 def get_lake_rating(
     lake_id: int = Path(description="Lake ID"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get elevation-area-volume rating curve for a lake.
 

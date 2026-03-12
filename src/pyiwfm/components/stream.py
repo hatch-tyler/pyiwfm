@@ -776,7 +776,7 @@ class AppStream(BaseComponent):
 
         return crossings
 
-    def to_arrays(self) -> dict[str, NDArray]:
+    def to_arrays(self) -> dict[str, NDArray[np.float64]]:
         """
         Convert stream network to numpy arrays.
 

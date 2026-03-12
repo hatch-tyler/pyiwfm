@@ -9,6 +9,7 @@ interactions. It mirrors IWFM's Package_ComponentConnectors.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -131,7 +132,7 @@ class StreamGWConnector:
         """Validate the connector."""
         pass
 
-    def to_arrays(self) -> dict[str, NDArray]:
+    def to_arrays(self) -> dict[str, NDArray[Any]]:
         """
         Convert connector data to numpy arrays.
 
@@ -273,7 +274,7 @@ class LakeGWConnector:
         """Validate the connector."""
         pass
 
-    def to_arrays(self) -> dict[str, NDArray]:
+    def to_arrays(self) -> dict[str, NDArray[Any]]:
         """
         Convert connector data to numpy arrays.
 
@@ -372,7 +373,7 @@ class StreamLakeConnector:
         """Validate the connector."""
         pass
 
-    def to_arrays(self) -> dict[str, NDArray]:
+    def to_arrays(self) -> dict[str, NDArray[Any]]:
         """
         Convert connector data to numpy arrays.
 

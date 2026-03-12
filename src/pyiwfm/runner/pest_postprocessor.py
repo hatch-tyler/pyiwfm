@@ -45,10 +45,10 @@ class ResidualData:
 
     names: list[str]
     groups: list[str]
-    observed: NDArray
-    simulated: NDArray
-    residuals: NDArray
-    weights: NDArray
+    observed: NDArray[np.float64]
+    simulated: NDArray[np.float64]
+    residuals: NDArray[np.float64]
+    weights: NDArray[np.float64]
 
     @property
     def n_observations(self) -> int:
@@ -56,9 +56,9 @@ class ResidualData:
         return len(self.names)
 
     @property
-    def weighted_residuals(self) -> NDArray:
+    def weighted_residuals(self) -> NDArray[np.float64]:
         """Weighted residuals."""
-        wr: NDArray = self.residuals * self.weights
+        wr: NDArray[np.float64] = self.residuals * self.weights
         return wr
 
     @property
@@ -89,7 +89,7 @@ class SensitivityData:
     """
 
     parameter_names: list[str]
-    composite_sensitivities: NDArray
+    composite_sensitivities: NDArray[np.float64]
 
     @property
     def n_parameters(self) -> int:

@@ -224,7 +224,7 @@ class MeshGenerator(ABC):
 
     def generate_from_shapely(
         self,
-        polygon: Polygon,  # type: ignore
+        polygon: Polygon,
         max_area: float | None = None,
         min_angle: float | None = None,
     ) -> MeshResult:

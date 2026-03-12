@@ -136,7 +136,7 @@ def _safe_float(val: float) -> float | None:
     return val
 
 
-def _sanitize_values(values: list) -> list:
+def _sanitize_values(values: list[float | None]) -> list[float | None]:
     """Replace NaN/Inf with None in a list of numeric values."""
     return [
         None if (isinstance(v, float) and (math.isnan(v) or math.isinf(v))) else v for v in values
@@ -157,7 +157,7 @@ def get_zbudget_types() -> list[str]:
 
 
 @router.get("/elements")
-def get_zbudget_elements() -> list[dict]:
+def get_zbudget_elements() -> list[dict[str, Any]]:
     """Get element list with centroids in WGS84 for zone map coloring."""
     if not model_state.is_loaded or model_state.model is None:
         raise HTTPException(status_code=404, detail="No model loaded")
@@ -176,7 +176,7 @@ def get_zbudget_elements() -> list[dict]:
         except ImportError:
             transformer = None
 
-    elements: list[dict] = []
+    elements: list[dict[str, Any]] = []
     for elem_id in sorted(grid.elements.keys()):
         elem = grid.elements[elem_id]
         # Compute centroid from vertex node IDs
@@ -203,12 +203,12 @@ def get_zbudget_elements() -> list[dict]:
 
 
 @router.get("/presets")
-def get_zbudget_presets() -> list[dict]:
+def get_zbudget_presets() -> list[dict[str, Any]]:
     """Get preset zone definitions (subregions)."""
     if not model_state.is_loaded or model_state.model is None:
         raise HTTPException(status_code=404, detail="No model loaded")
 
-    presets: list[dict] = []
+    presets: list[dict[str, Any]] = []
 
     grid = model_state.model.grid
     if grid is not None and grid.subregions:
@@ -231,7 +231,7 @@ def get_zbudget_presets() -> list[dict]:
 
 
 @router.post("/zones")
-def create_zone_definition(payload: dict) -> dict:
+def create_zone_definition(payload: dict[str, Any]) -> dict[str, Any]:
     """Create or update zone definition from client JSON."""
     if not model_state.is_loaded or model_state.model is None:
         raise HTTPException(status_code=404, detail="No model loaded")
@@ -280,7 +280,7 @@ def create_zone_definition(payload: dict) -> dict:
 
 
 @router.get("/zones")
-def get_zone_definition() -> dict | None:
+def get_zone_definition() -> dict[str, Any] | None:
     """Get the current active zone definition."""
     zone_def = model_state.get_zone_definition()
     if zone_def is None:
@@ -310,7 +310,7 @@ def get_zone_definition() -> dict | None:
 async def upload_zone_file(
     file: UploadFile,
     name_field: str | None = Query(default=None, description="Attribute field to use as zone name"),
-) -> dict:
+) -> dict[str, Any]:
     """Upload a shapefile (.zip) or GeoJSON to define zones via spatial join.
 
     Returns attribute fields and a preview of zones with matched element IDs.
@@ -398,7 +398,7 @@ async def upload_zone_file(
 
     # Spatial join using STRtree for efficiency
     tree = STRtree(elem_points)
-    zones: list[dict] = []
+    zones: list[dict[str, Any]] = []
 
     for idx, row in gdf.iterrows():
         geom = row.geometry
@@ -430,7 +430,7 @@ async def upload_zone_file(
 
 
 @router.get("/{zbudget_type}/columns")
-def get_zbudget_columns(zbudget_type: str) -> dict:
+def get_zbudget_columns(zbudget_type: str) -> dict[str, Any]:
     """Get column headers for a zbudget type."""
     reader = model_state.get_zbudget_reader(zbudget_type)
     if reader is None:
@@ -452,7 +452,7 @@ def get_zbudget_data(
     zone: str = Query(default="", description="Zone name or index"),
     columns: str = Query(default="all", description="Column indices or 'all'"),
     volume_factor: float = Query(default=1.0, description="Volume conversion factor"),
-) -> dict:
+) -> dict[str, Any]:
     """Get zone-aggregated ZBudget data in BudgetData JSON shape."""
     reader = model_state.get_zbudget_reader(zbudget_type)
     if reader is None:
@@ -554,7 +554,7 @@ def get_zbudget_data(
 def get_zbudget_summary(
     zbudget_type: str,
     zone: str = Query(default="", description="Zone name or index"),
-) -> dict:
+) -> dict[str, Any]:
     """Get ZBudget summary statistics for a zone."""
     reader = model_state.get_zbudget_reader(zbudget_type)
     if reader is None:
@@ -591,6 +591,6 @@ def get_zbudget_summary(
 
 
 @router.get("/glossary")
-def get_zbudget_glossary() -> dict:
+def get_zbudget_glossary() -> dict[str, Any]:
     """Get definitions of ZBudget column names."""
     return ZBUDGET_GLOSSARY

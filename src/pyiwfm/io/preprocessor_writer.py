@@ -160,7 +160,7 @@ class PreProcessorWriter(TemplateWriter):
         """Get the path for preprocessor binary output."""
         return self.config.binary_output_file
 
-    def _render_main_inline(self, context: dict) -> str:
+    def _render_main_inline(self, context: dict[str, Any]) -> str:
         """Render main file using inline template matching IWFM format."""
         template = """C*******************************************************************************
 C
@@ -666,11 +666,11 @@ def write_nodes_file(
     ----------
     output_path : Path or str
         Output file path
-    node_ids : NDArray
+    node_ids : NDArray[np.intp]
         Node IDs
-    x_coords : NDArray
+    x_coords : NDArray[np.float64]
         X coordinates
-    y_coords : NDArray
+    y_coords : NDArray[np.float64]
         Y coordinates
     coord_factor : float
         Coordinate conversion factor
@@ -714,11 +714,11 @@ def write_elements_file(
     ----------
     output_path : Path or str
         Output file path
-    element_ids : NDArray
+    element_ids : NDArray[np.int32]
         Element IDs
-    vertices : NDArray
+    vertices : NDArray[np.int32]
         Vertex node IDs (n_elements, 4)
-    subregions : NDArray
+    subregions : NDArray[np.int32]
         Subregion ID for each element
     subregion_names : dict, optional
         Mapping of subregion ID to name
@@ -778,13 +778,13 @@ def write_stratigraphy_file(
     ----------
     output_path : Path or str
         Output file path
-    node_ids : NDArray
+    node_ids : NDArray[np.intp]
         Node IDs
-    ground_surface : NDArray
+    ground_surface : NDArray[np.float64]
         Ground surface elevations (n_nodes,)
-    layer_tops : NDArray
+    layer_tops : NDArray[np.float64]
         Layer top elevations (n_nodes, n_layers)
-    layer_bottoms : NDArray
+    layer_bottoms : NDArray[np.float64]
         Layer bottom elevations (n_nodes, n_layers)
     elev_factor : float
         Elevation conversion factor

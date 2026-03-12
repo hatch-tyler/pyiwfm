@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
@@ -18,10 +18,10 @@ class MeshStateMixin:
     _model: IWFMModel | None
     _mesh_3d: bytes | None
     _mesh_surface: bytes | None
-    _surface_json_data: dict | None
+    _surface_json_data: dict[str, Any] | None
     _bounds: tuple[float, float, float, float, float, float] | None
     _pv_mesh_3d: object | None
-    _layer_surface_cache: dict[int, dict]
+    _layer_surface_cache: dict[int, dict[str, Any]]
 
     def get_mesh_3d(self) -> bytes:
         """Get the 3D mesh as VTU bytes, computing if needed."""
@@ -107,7 +107,7 @@ class MeshStateMixin:
             self._pv_mesh_3d = exporter.to_pyvista_3d()
         return self._pv_mesh_3d
 
-    def get_surface_json(self, layer: int = 0) -> dict:
+    def get_surface_json(self, layer: int = 0) -> dict[str, Any]:
         """Get the extracted surface mesh as flat JSON-serializable dict.
 
         Parameters
@@ -128,7 +128,7 @@ class MeshStateMixin:
             self._surface_json_data = data
         return data
 
-    def _compute_surface_json(self, layer: int = 0) -> dict:
+    def _compute_surface_json(self, layer: int = 0) -> dict[str, Any]:
         """Extract the outer surface of the 3D mesh and return flat arrays.
 
         Parameters
@@ -143,7 +143,7 @@ class MeshStateMixin:
         if layer > 0:
             # Filter to specific layer using threshold
             filtered = pv_mesh.threshold(value=[layer, layer], scalars="layer")  # type: ignore[attr-defined]
-            surface = filtered.extract_surface()  # type: ignore[attr-defined]
+            surface = filtered.extract_surface()
         else:
             surface = pv_mesh.extract_surface()  # type: ignore[attr-defined]
 
@@ -175,7 +175,7 @@ class MeshStateMixin:
             "layer": layer_data,
         }
 
-    def get_slice_json(self, angle: float, position: float) -> dict:
+    def get_slice_json(self, angle: float, position: float) -> dict[str, Any]:
         """Get a cross-section slice as flat JSON-serializable dict.
 
         Parameters

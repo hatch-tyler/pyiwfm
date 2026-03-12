@@ -5,6 +5,7 @@ Groundwater data API routes.
 from __future__ import annotations
 
 import math
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -227,7 +228,7 @@ def get_well_impact(
         ge=0,
         description="Maximum radius (model units). 0 = auto-compute.",
     ),
-) -> dict:
+) -> dict[str, Any]:
     """
     Approximate cone of depression using the Theis analytical solution.
 
@@ -301,7 +302,7 @@ def get_well_impact(
         max_radius = math.sqrt(4 * T * time_days / S) * 3
 
     # Generate contour rings
-    contours: list[dict] = []
+    contours: list[dict[str, Any]] = []
     well_lng, well_lat = model_state.reproject_coords(target_well.x, target_well.y)
 
     for i in range(1, n_rings + 1):

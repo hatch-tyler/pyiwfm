@@ -648,7 +648,7 @@ class PilotPointParameterization(ParameterizationStrategy):
         Regular grid spacing (if points not specified).
     layer : int
         Model layer for these parameters.
-    initial_value : float | NDArray
+    initial_value : float | NDArray[np.float64]
         Initial value(s) at pilot points.
     variogram : dict | None
         Variogram specification for kriging.
@@ -665,8 +665,8 @@ class PilotPointParameterization(ParameterizationStrategy):
     points: list[tuple[float, float]] | None = None
     spacing: float | None = None
     layer: int = 1
-    initial_value: float | NDArray = 1.0
-    variogram: dict | None = None
+    initial_value: float | NDArray[np.float64] = 1.0
+    variogram: dict[str, Any] | None = None
     kriging_type: str = "ordinary"
     search_radius: float | None = None
     min_points: int = 1

@@ -483,7 +483,7 @@ class AppGrid:
             areas[sr_id] += elem.area
         return areas
 
-    def get_element_areas_array(self) -> NDArray:
+    def get_element_areas_array(self) -> NDArray[np.float64]:
         """
         Get array of element areas in element ID order.
 

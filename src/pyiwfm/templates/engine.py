@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, TextIO
+from typing import TYPE_CHECKING, Any, TextIO
 
 import numpy as np
 from numpy.typing import NDArray
@@ -202,7 +202,7 @@ class TemplateEngine:
         self,
         header_template: str,
         output_path: Path | str,
-        arrays: dict[str, tuple[NDArray, str]] | None = None,
+        arrays: dict[str, tuple[NDArray[np.float64], str]] | None = None,
         **context: object,
     ) -> None:
         """
@@ -235,7 +235,7 @@ class TemplateEngine:
                 for _name, (data, fmt) in arrays.items():
                     self._write_array(f, data, fmt)
 
-    def _write_array(self, f: TextIO, data: NDArray, fmt: str) -> None:
+    def _write_array(self, f: TextIO, data: NDArray[np.float64], fmt: str) -> None:
         """
         Write a numpy array to file efficiently.
 
@@ -260,7 +260,7 @@ class TemplateEngine:
         header_template: str,
         output_path: Path | str,
         comment_metadata: CommentMetadata | None = None,
-        arrays: dict[str, tuple[NDArray, str]] | None = None,
+        arrays: dict[str, tuple[NDArray[np.float64], str]] | None = None,
         **context: object,
     ) -> None:
         """
@@ -550,7 +550,7 @@ def _timeseries_ref(
 
 
 def _iwfm_array_row(
-    values: list | np.ndarray,
+    values: list[Any] | np.ndarray,
     fmt: str = "%14.6f",
     sep: str = "  ",
 ) -> str:

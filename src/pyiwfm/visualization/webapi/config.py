@@ -53,16 +53,16 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         self._model: IWFMModel | None = None
         self._mesh_3d: bytes | None = None
         self._mesh_surface: bytes | None = None
-        self._surface_json_data: dict | None = None
+        self._surface_json_data: dict[str, Any] | None = None
         self._bounds: tuple[float, float, float, float, float, float] | None = None
         self._pv_mesh_3d: object | None = None  # Cached PyVista UnstructuredGrid
-        self._layer_surface_cache: dict[int, dict] = {}  # Per-layer surface cache
+        self._layer_surface_cache: dict[int, dict[str, Any]] = {}  # Per-layer surface cache
 
         # Stream reach boundaries from preprocessor binary
         self._stream_reach_boundaries: list[tuple[int, int, int]] | None = None
 
         # Diversion timeseries cache
-        self._diversion_ts_data: tuple | None = None
+        self._diversion_ts_data: tuple[Any, ...] | None = None
 
         # Cached grid index maps (populated lazily, cleared on set_model)
         self._node_id_to_idx: dict[int, int] | None = None
@@ -70,12 +70,12 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         self._elem_id_to_idx: dict[int, int] | None = None
 
         # Cached hydrograph locations (reprojected to WGS84)
-        self._hydrograph_locations_cache: dict[str, list[dict]] | None = None
+        self._hydrograph_locations_cache: dict[str, list[dict[str, Any]]] | None = None
 
         # Results-related state
         self._crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
         self._transformer: Any = None  # pyproj Transformer (lazy)
-        self._geojson_cache: dict[int, dict] = {}  # layer -> GeoJSON in WGS84
+        self._geojson_cache: dict[int, dict[str, Any]] = {}  # layer -> GeoJSON in WGS84
         self._head_loader: LazyHeadDataLoader | None = None
         self._gw_hydrograph_reader: IWFMHydrographReader | None = None
         self._stream_hydrograph_reader: IWFMHydrographReader | None = None
@@ -86,7 +86,7 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         self._active_zone_def: ZoneDefinition | None = None
         self._results_dir: Path | None = None
         self._area_manager: AreaDataManager | None = None
-        self._observations: dict[str, dict] = {}  # id -> observation data
+        self._observations: dict[str, dict[str, Any]] = {}  # id -> observation data
 
         # SQLite cache
         self._cache_loader: SqliteCacheLoader | None = None
@@ -167,15 +167,15 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
     # Observations (session-scoped, in-memory)
     # ------------------------------------------------------------------
 
-    def add_observation(self, obs_id: str, data: dict) -> None:
+    def add_observation(self, obs_id: str, data: dict[str, Any]) -> None:
         """Store an uploaded observation dataset."""
         self._observations[obs_id] = data
 
-    def get_observation(self, obs_id: str) -> dict | None:
+    def get_observation(self, obs_id: str) -> dict[str, Any] | None:
         """Get observation data by ID."""
         return self._observations.get(obs_id)
 
-    def list_observations(self) -> list[dict]:
+    def list_observations(self) -> list[dict[str, Any]]:
         """List all uploaded observations."""
         return [
             {

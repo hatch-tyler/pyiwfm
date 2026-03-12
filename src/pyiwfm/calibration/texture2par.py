@@ -49,10 +49,10 @@ class WellLog:
 class PilotPointSet:
     """Set of pilot points for a parameter domain."""
 
-    x: NDArray  # (n_pp,) feet
-    y: NDArray  # (n_pp,) feet
-    values: dict[str, NDArray]  # param_name -> (n_pp,) or (n_pp, n_layers)
-    zones: NDArray | None = None  # (n_pp,) zone IDs
+    x: NDArray[np.float64]  # (n_pp,) feet
+    y: NDArray[np.float64]  # (n_pp,) feet
+    values: dict[str, NDArray[np.float64]]  # param_name -> (n_pp,) or (n_pp, n_layers)
+    zones: NDArray[np.intp] | None = None  # (n_pp,) zone IDs
 
 
 @dataclass
@@ -122,18 +122,20 @@ class Texture2Par:
 
         # Well log data
         self._well_logs: list[WellLog] = []
-        self._layer_texture: dict[int, NDArray] = {}  # well_idx -> (n_layers,) pct_coarse
+        self._layer_texture: dict[
+            int, NDArray[np.float64]
+        ] = {}  # well_idx -> (n_layers,) pct_coarse
 
         # Kriged texture field (populated by krige_texture_to_nodes)
-        self._pc_node: NDArray | None = None  # (n_nodes, n_layers)
-        self._pc_elem: NDArray | None = None  # (n_elements, n_layers)
+        self._pc_node: NDArray[np.float64] | None = None  # (n_nodes, n_layers)
+        self._pc_elem: NDArray[np.float64] | None = None  # (n_elements, n_layers)
 
         # Pilot point sets
         self._pilot_points: dict[str, PilotPointSet] = {}
 
         # Kriging factors (cached)
-        self._factors_node: NDArray | None = None  # (n_nodes, n_pp)
-        self._factors_elem: NDArray | None = None  # (n_elements, n_pp)
+        self._factors_node: NDArray[np.float64] | None = None  # (n_nodes, n_pp)
+        self._factors_elem: NDArray[np.float64] | None = None  # (n_elements, n_pp)
 
         # Global params (KCk, KFk from original T2P)
         self.kck: float = 0.007
@@ -143,7 +145,7 @@ class Texture2Par:
     # Element centroid computation
     # ------------------------------------------------------------------
 
-    def _compute_element_centroids(self) -> tuple[NDArray, NDArray]:
+    def _compute_element_centroids(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Compute element centroid coordinates in feet."""
         elements = self.model.mesh.elements  # type: ignore[union-attr]
         nodes = self.model.mesh.nodes  # type: ignore[union-attr]
@@ -286,7 +288,7 @@ class Texture2Par:
 
         logger.info("Computed layer texture for %d wells", len(self._layer_texture))
 
-    def krige_texture_to_nodes(self) -> NDArray:
+    def krige_texture_to_nodes(self) -> NDArray[np.float64]:
         """Krige % coarse from wells to all model nodes.
 
         Returns PcNode array of shape (n_nodes, n_layers).
@@ -368,12 +370,12 @@ class Texture2Par:
 
     def _krige_local(
         self,
-        source_x: NDArray,
-        source_y: NDArray,
-        source_vals: NDArray,
-        target_x: NDArray,
-        target_y: NDArray,
-    ) -> NDArray:
+        source_x: NDArray[np.float64],
+        source_y: NDArray[np.float64],
+        source_vals: NDArray[np.float64],
+        target_x: NDArray[np.float64],
+        target_y: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
         """Krige using only the nearest n_nearest source points for each target.
 
         Replicates T2P's spkrige_tree approach with KD-tree local neighborhood.
@@ -437,7 +439,7 @@ class Texture2Par:
         return result
 
     @staticmethod
-    def _correct_negative_weights(weights: NDArray) -> NDArray:
+    def _correct_negative_weights(weights: NDArray[np.float64]) -> NDArray[np.float64]:
         """Correct negative kriging weights (Deutsch 1995).
 
         Sets negative weights to 0 and renormalizes remaining to sum to 1.
@@ -449,7 +451,7 @@ class Texture2Par:
         else:
             # All weights were negative — use uniform
             corrected = np.ones_like(weights) / len(weights)
-        return corrected  # type: ignore[no-any-return]
+        return corrected
 
     # ------------------------------------------------------------------
     # Pilot point I/O
@@ -692,7 +694,7 @@ class Texture2Par:
         self,
         domain: str,
         target: str = "nodes",
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Precompute kriging factors for a pilot point domain.
 
         Parameters
@@ -742,7 +744,7 @@ class Texture2Par:
         self,
         domain: str,
         target: str = "nodes",
-    ) -> dict[str, NDArray]:
+    ) -> dict[str, NDArray[np.float64]]:
         """Krige all pilot point parameters for a domain to target locations.
 
         Parameters
@@ -785,11 +787,11 @@ class Texture2Par:
 
     @staticmethod
     def mix_power_law(
-        pc: NDArray,
-        coarse: NDArray,
-        fine: NDArray,
+        pc: NDArray[np.float64],
+        coarse: NDArray[np.float64],
+        fine: NDArray[np.float64],
         power: float,
-    ) -> NDArray:
+    ) -> NDArray[np.float64]:
         """Power-law mixing model.
 
         param = (pc * coarse^p + (1-pc) * fine^p) ^ (1/p)
@@ -798,7 +800,7 @@ class Texture2Par:
         """
         if abs(power) < 1e-10:
             # Geometric mean
-            return np.where(  # type: ignore[no-any-return]
+            return np.where(
                 (coarse > 0) & (fine > 0),
                 coarse**pc * fine ** (1.0 - pc),
                 pc * coarse + (1.0 - pc) * fine,  # fallback to linear
@@ -810,10 +812,12 @@ class Texture2Par:
 
         mixed = pc * coarse_safe**power + (1.0 - pc) * fine_safe**power
         mixed = np.maximum(mixed, 1e-30)
-        return mixed ** (1.0 / power)  # type: ignore[no-any-return]
+        return mixed ** (1.0 / power)
 
     @staticmethod
-    def mix_fine_only(pc: NDArray, fine_val: NDArray) -> NDArray:
+    def mix_fine_only(
+        pc: NDArray[np.float64], fine_val: NDArray[np.float64]
+    ) -> NDArray[np.float64]:
         """Fine-only mixing: param = fine_val * (1 - pc).
 
         Used for inelastic compaction (SCI) which only occurs in fine sediment.
@@ -824,7 +828,7 @@ class Texture2Par:
     # Domain-specific parameter computation
     # ------------------------------------------------------------------
 
-    def compute_aquifer_params(self) -> dict[str, NDArray]:
+    def compute_aquifer_params(self) -> dict[str, NDArray[np.float64]]:
         """Compute aquifer parameters via texture mixing at nodes.
 
         Returns dict with keys: Kh, Kv, Ss, Sy, Aniso — each (n_nodes, n_layers).
@@ -893,7 +897,7 @@ class Texture2Par:
         )
         return result
 
-    def compute_subsidence_params(self) -> dict[str, NDArray]:
+    def compute_subsidence_params(self) -> dict[str, NDArray[np.float64]]:
         """Compute subsidence parameters via texture mixing at nodes.
 
         Returns dict with keys: SCE, SCI — each (n_nodes, n_layers).
@@ -938,7 +942,7 @@ class Texture2Par:
         )
         return result
 
-    def compute_unsat_params(self) -> dict[str, NDArray]:
+    def compute_unsat_params(self) -> dict[str, NDArray[np.float64]]:
         """Compute unsaturated zone parameters at element centroids.
 
         Returns dict with keys: PK, PN, PI — each (n_elements, n_uz_layers).
@@ -989,7 +993,7 @@ class Texture2Par:
         logger.info("Computed UZ parameters at %d elements x %d layers", self._n_elements, n_uz)
         return result
 
-    def compute_rootzone_params(self) -> dict[str, NDArray]:
+    def compute_rootzone_params(self) -> dict[str, NDArray[np.float64]]:
         """Compute root zone parameters at element centroids.
 
         Returns dict with keys: K, PondedK, FC, WP — each (n_elements,).

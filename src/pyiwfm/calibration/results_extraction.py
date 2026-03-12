@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -87,7 +87,7 @@ class ExtractionResult:
         If True, values are incremental (diff between timesteps).
     """
 
-    times: NDArray
+    times: NDArray[np.datetime64]
     names: list[str] = field(default_factory=list)
     values: dict[str, NDArray[np.float64]] = field(default_factory=dict)
     per_layer: dict[str, NDArray[np.float64]] = field(default_factory=dict)
@@ -123,7 +123,7 @@ class ResultsExtractor:
         self._data_type = data_type.upper()
         self._incremental = incremental if self._data_type == "SUBSIDENCE" else False
         self._specs: list[ExtractionSpec] = []
-        self._fe_weights: dict[str, dict] = {}
+        self._fe_weights: dict[str, dict[str, Any]] = {}
         self._t_weights: dict[str, NDArray[np.float64]] = {}
 
     def prepare(self, specs: list[ExtractionSpec]) -> None:
@@ -138,7 +138,10 @@ class ResultsExtractor:
 
         self._specs = specs
 
-        interp = FEInterpolator(self._model)  # type: ignore[arg-type]
+        grid = self._model.grid
+        assert grid is not None, "Model must have a grid loaded"
+        strat = self._model.stratigraphy
+        interp = FEInterpolator(grid)
         n_layers = self._model.n_layers
         n_outside = 0
 
@@ -157,16 +160,37 @@ class ResultsExtractor:
             # T-weights for multi-layer averaging (HEAD only, layer=-1)
             if self._data_type == "HEAD" and spec.layer == -1:
                 if not np.isnan(spec.bos) and not np.isnan(spec.tos):
-                    from pyiwfm.calibration.iwfm2obs import compute_multilayer_weights
-
-                    t_weights = compute_multilayer_weights(  # type: ignore[call-arg]
-                        self._model,  # type: ignore[arg-type]
-                        elem_id,  # type: ignore[arg-type]
-                        spec.bos,  # type: ignore[arg-type]
-                        spec.tos,  # type: ignore[arg-type]
-                        n_layers,
+                    from pyiwfm.calibration.iwfm2obs import (
+                        MultiLayerWellSpec,
+                        compute_multilayer_weights,
                     )
-                    self._t_weights[spec.name] = t_weights
+
+                    ml_well = MultiLayerWellSpec(
+                        name=spec.name,
+                        x=spec.x,
+                        y=spec.y,
+                        element_id=elem_id,
+                        bottom_of_screen=spec.bos,
+                        top_of_screen=spec.tos,
+                    )
+                    kh = None
+                    if (
+                        self._model.groundwater
+                        and self._model.groundwater.aquifer_params
+                        and self._model.groundwater.aquifer_params.kh is not None
+                    ):
+                        kh = self._model.groundwater.aquifer_params.kh.T
+
+                    if kh is not None and strat is not None:
+                        t_weights = compute_multilayer_weights(
+                            ml_well,
+                            grid,
+                            strat,
+                            kh,
+                        )
+                        self._t_weights[spec.name] = t_weights
+                    else:
+                        self._t_weights[spec.name] = np.ones(n_layers) / n_layers
                 else:
                     self._t_weights[spec.name] = np.ones(n_layers) / n_layers
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
@@ -26,7 +26,7 @@ class CacheStateMixin:
     _cache_loader: SqliteCacheLoader | None
     _no_cache: bool
     _rebuild_cache: bool
-    _budget_readers: dict
+    _budget_readers: dict[str, Any]
     _area_manager: AreaDataManager | None
 
     # ------------------------------------------------------------------
@@ -167,7 +167,7 @@ class CacheStateMixin:
         values: list[float | None] = [None if np.isnan(v) else round(float(v), 3) for v in arr]
         return values, min_val, max_val
 
-    def get_cached_head_range(self, layer: int) -> dict | None:
+    def get_cached_head_range(self, layer: int) -> dict[str, float] | None:
         """Try to get head range from cache."""
         loader = self.get_cache_loader()
         if loader is None:

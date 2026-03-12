@@ -30,6 +30,8 @@ from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from pyiwfm.components.groundwater import AppGW
     from pyiwfm.core.model import IWFMModel
 
@@ -1061,7 +1063,7 @@ class GWComponentWriter(TemplateWriter):
     def write_ts_pumping(
         self,
         dates: list[str] | None = None,
-        data: NDArray | None = None,
+        data: NDArray[np.float64] | None = None,
     ) -> Path:
         """
         Write the pumping time series data file using IWFMTimeSeriesDataWriter.
@@ -1070,7 +1072,7 @@ class GWComponentWriter(TemplateWriter):
         ----------
         dates : list[str], optional
             IWFM timestamps
-        data : NDArray, optional
+        data : NDArray[np.float64], optional
             Pumping data array (n_times, n_cols)
 
         Returns

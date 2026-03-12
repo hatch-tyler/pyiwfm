@@ -5,8 +5,13 @@ Results data API routes: heads, hydrographs, locations.
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException, Query
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy.typing import NDArray
 
 from pyiwfm.visualization.webapi.config import model_state
 from pyiwfm.visualization.webapi.utils import sanitize_values as _sanitize_values
@@ -17,7 +22,7 @@ router = APIRouter(prefix="/api/results", tags=["results"])
 
 
 @router.get("/info")
-def get_results_info() -> dict:
+def get_results_info() -> dict[str, Any]:
     """Get summary of available results data."""
     if not model_state.is_loaded:
         raise HTTPException(status_code=404, detail="No model loaded")
@@ -28,7 +33,7 @@ def get_results_info() -> dict:
 def get_heads(
     timestep: int = Query(default=0, ge=0, description="Timestep index"),
     layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
-) -> dict:
+) -> dict[str, Any]:
     """Get head values for all nodes at a given timestep and layer."""
     loader = model_state.get_head_loader()
     if loader is None:
@@ -65,7 +70,7 @@ def get_head_diff(
     timestep_a: int = Query(default=0, ge=0, description="First timestep index"),
     timestep_b: int = Query(default=0, ge=0, description="Second timestep index"),
     layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Compute head difference between two timesteps.
 
@@ -124,7 +129,7 @@ def get_head_diff(
 
 
 @router.get("/head-times")
-def get_head_times() -> dict:
+def get_head_times() -> dict[str, Any]:
     """Get list of all available head timestep datetimes."""
     loader = model_state.get_head_loader()
     if loader is None:
@@ -140,7 +145,7 @@ def get_head_times() -> dict:
 def get_head_range(
     layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
     max_frames: int = Query(default=50, ge=0, description="Max frames to sample (0=all)"),
-) -> dict:
+) -> dict[str, Any]:
     """Get the global head value range across all timesteps for a layer.
 
     Returns 2nd–98th percentile range for stable color scale rendering.
@@ -175,7 +180,7 @@ def get_head_range(
 
 
 @router.get("/hydrograph-locations")
-def get_hydrograph_locations() -> dict:
+def get_hydrograph_locations() -> dict[str, Any]:
     """Get all hydrograph locations with WGS84 coordinates."""
     if not model_state.is_loaded:
         raise HTTPException(status_code=404, detail="No model loaded")
@@ -186,7 +191,7 @@ def get_hydrograph_locations() -> dict:
 def get_hydrograph(
     type: str = Query(description="Type: gw, stream, subsidence, or tile_drain"),
     location_id: int = Query(description="Location/node ID"),
-) -> dict:
+) -> dict[str, Any]:
     """Get hydrograph time series for a specific location.
 
     For GW: location_id is the 1-based hydrograph index (column in output file).
@@ -343,7 +348,7 @@ def get_hydrograph(
 
         times, flow_values = reader.get_time_series(col_idx)
 
-        result: dict = {
+        result: dict[str, Any] = {
             "location_id": location_id,
             "name": name,
             "type": "stream",
@@ -431,7 +436,7 @@ def get_hydrograph(
         # location_id matches the tile drain/sub-irrigation ID from td_hydro_specs
         td_col_idx: int | None = None
 
-        td_specs: list[dict] = []
+        td_specs: list[dict[str, Any]] = []
         if model and model.groundwater:
             td_specs = getattr(model.groundwater, "td_hydro_specs", [])
 
@@ -479,7 +484,7 @@ def get_hydrograph(
 @router.get("/gw-hydrograph-all-layers")
 def get_gw_hydrograph_all_layers(
     location_id: int = Query(description="1-based GW hydrograph location ID"),
-) -> dict:
+) -> dict[str, Any]:
     """Get head time series at a GW hydrograph location for ALL layers.
 
     Prefers the IWFM GW hydrograph output file (which stores IWFM-computed
@@ -531,7 +536,7 @@ def get_gw_hydrograph_all_layers(
     # ------------------------------------------------------------------
     cache = model_state.get_cache_loader()
     if cache is not None and columns:
-        cached_layers: list[tuple] = []
+        cached_layers: list[tuple[int, NDArray[np.float64]]] = []
         times_list: list[str] = []
         for col_idx, layer in columns:
             result = cache.get_hydrograph("gw", col_idx)
@@ -561,7 +566,7 @@ def get_gw_hydrograph_all_layers(
         all_valid = all(0 <= ci < reader.n_columns for ci, _ in columns)
         if all_valid:
             times_raw: list[str] = []
-            layers_data: list[dict] = []
+            layers_data: list[dict[str, Any]] = []
             for col_idx, layer in columns:
                 times_raw, values_raw = reader.get_time_series(col_idx)
                 layers_data.append({"layer": layer, "values": _sanitize_values(values_raw)})
@@ -608,7 +613,7 @@ def get_gw_hydrograph_all_layers(
             else:
                 layer_values[layer_idx].append(round(v, 3))
 
-    layers_data_fb: list[dict] = []
+    layers_data_fb: list[dict[str, Any]] = []
     for layer_idx in range(n_layers):
         layers_data_fb.append(
             {
@@ -630,7 +635,7 @@ def get_gw_hydrograph_all_layers(
 @router.get("/subsidence-all-layers")
 def get_subsidence_all_layers(
     location_id: int = Query(description="Subsidence hydrograph location ID"),
-) -> dict:
+) -> dict[str, Any]:
     """Get subsidence time series at a location for ALL layers.
 
     Groups subsidence specs by physical location (matching node_id) and
@@ -705,7 +710,7 @@ def get_subsidence_all_layers(
     matched_specs.sort(key=lambda t: t[1])
 
     # Extract time series for each matched layer
-    layers_data: list[dict] = []
+    layers_data: list[dict[str, Any]] = []
     times_raw: list[str] = []
     for col_idx, layer_num, _spec in matched_specs:
         times, values = reader.get_time_series(col_idx)
@@ -732,7 +737,7 @@ def get_subsidence_all_layers(
 def get_hydrographs_multi(
     type: str = Query(description="Type: gw or stream"),
     ids: str = Query(description="Comma-separated location IDs"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get multiple hydrograph time series for comparison overlay.
 
@@ -752,7 +757,7 @@ def get_hydrographs_multi(
         raise HTTPException(status_code=400, detail="No IDs provided")
 
     model = model_state.model
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
 
     if type == "gw":
         phys_locs = model_state.get_gw_physical_locations()
@@ -914,7 +919,7 @@ def get_drawdown(
     offset: int = Query(default=0, ge=0, description="Skip first N timesteps"),
     limit: int = Query(default=0, ge=0, description="Max timesteps to return (0=all)"),
     skip: int = Query(default=1, ge=1, description="Return every Nth timestep (for animation)"),
-) -> dict:
+) -> dict[str, Any]:
     """
     Get drawdown (head change relative to reference timestep).
 
@@ -951,7 +956,7 @@ def get_drawdown(
         all_indices = all_indices[:limit]
 
     # Compute drawdown for selected timesteps
-    timesteps: list[dict] = []
+    timesteps: list[dict[str, Any]] = []
     for ts in all_indices:
         frame = loader.get_frame(ts)
         vals = frame[:, layer_idx]
@@ -990,7 +995,7 @@ def get_drawdown(
 def get_heads_by_element(
     timestep: int = Query(default=0, ge=0, description="Timestep index"),
     layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
-) -> dict:
+) -> dict[str, Any]:
     """Get per-element head values (vertex-averaged) for a timestep and layer.
 
     Returns a lightweight array of head values indexed by element position
@@ -1086,7 +1091,7 @@ def get_heads_by_element(
 def get_head_statistics(
     layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
     max_frames: int = Query(default=0, ge=0, description="Max frames to sample (0=all)"),
-) -> dict:
+) -> dict[str, Any]:
     """Get time-aggregated statistics for head values.
 
     Computes min, max, mean, and standard deviation across all (or sampled)

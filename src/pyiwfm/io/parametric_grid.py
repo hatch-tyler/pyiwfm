@@ -79,7 +79,7 @@ class ParametricGrid:
 
         Returns
         -------
-        NDArray or None
+        NDArray[np.float64] or None
             Array of shape ``(n_layers, n_params)`` with interpolated
             values, or ``None`` if the point is outside the grid.
         """

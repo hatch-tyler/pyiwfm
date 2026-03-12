@@ -19,12 +19,14 @@ Example
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from numpy.typing import NDArray
+
+from pyiwfm.calibration.results_extraction import ExtractionResult
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
@@ -63,28 +65,6 @@ class WellSpec:
     tos: float = float("nan")
 
 
-@dataclass
-class ExtractionResult:
-    """Results of HeadAll extraction.
-
-    Attributes
-    ----------
-    times : NDArray
-        Array of timestamps (datetime64).
-    well_names : list[str]
-        Names of wells in order.
-    per_layer_heads : dict[str, NDArray[np.float64]]
-        Per-well per-layer heads: {well_name: array of shape (n_times, n_layers)}.
-    multi_layer_heads : dict[str, NDArray[np.float64]]
-        T-weighted multi-layer heads: {well_name: array of shape (n_times,)}.
-    """
-
-    times: NDArray
-    well_names: list[str] = field(default_factory=list)
-    per_layer_heads: dict[str, NDArray[np.float64]] = field(default_factory=dict)
-    multi_layer_heads: dict[str, NDArray[np.float64]] = field(default_factory=dict)
-
-
 class HeadAllExtractor:
     """Extract head time series at arbitrary well locations from HeadAll HDF5.
 
@@ -100,7 +80,7 @@ class HeadAllExtractor:
         self._model = model
         self._headall_path = Path(headall_path)
         self._wells: list[WellSpec] = []
-        self._fe_weights: dict[str, dict] = {}
+        self._fe_weights: dict[str, dict[str, Any]] = {}
         self._t_weights: dict[str, NDArray[np.float64]] = {}
         self._head_loader = None
 
@@ -117,14 +97,30 @@ class HeadAllExtractor:
         self._wells = wells
 
         # Build FE interpolator from model mesh
-        interp = FEInterpolator(self._model)  # type: ignore[arg-type]
+        grid = self._model.grid
+        assert grid is not None, "Model must have a grid loaded"
+        strat = self._model.stratigraphy
+        interp = FEInterpolator(grid)
 
         n_layers = self._model.n_layers
         n_outside = 0
 
         for well in wells:
-            # Find containing element and compute FE interpolation weights
-            elem_id, node_ids, coeffs = interp.interpolate(well.x, well.y)
+            # Use element hint if provided (fast path avoids brute-force search)
+            used_hint = False
+            if well.element > 0:
+                try:
+                    coeffs = interp.interpolate_at_element(well.x, well.y, well.element)
+                    if np.all(coeffs >= -0.1):
+                        elem_id = well.element
+                        node_ids = interp.grid.elements[well.element].vertices
+                        used_hint = True
+                except (KeyError, AttributeError):
+                    pass
+
+            if not used_hint:
+                elem_id, node_ids, coeffs = interp.interpolate(well.x, well.y)
+
             if elem_id == 0:
                 n_outside += 1
                 continue
@@ -136,16 +132,39 @@ class HeadAllExtractor:
 
             # Compute T-weights for multi-layer averaging
             if not np.isnan(well.bos) and not np.isnan(well.tos):
-                from pyiwfm.calibration.iwfm2obs import compute_multilayer_weights
-
-                t_weights = compute_multilayer_weights(  # type: ignore[call-arg]
-                    self._model,  # type: ignore[arg-type]
-                    elem_id,  # type: ignore[arg-type]
-                    well.bos,  # type: ignore[arg-type]
-                    well.tos,  # type: ignore[arg-type]
-                    n_layers,
+                from pyiwfm.calibration.iwfm2obs import (
+                    MultiLayerWellSpec,
+                    compute_multilayer_weights,
                 )
-                self._t_weights[well.name] = t_weights
+
+                ml_well = MultiLayerWellSpec(
+                    name=well.name,
+                    x=well.x,
+                    y=well.y,
+                    element_id=elem_id,
+                    bottom_of_screen=well.bos,
+                    top_of_screen=well.tos,
+                )
+                # Get Kh from model; fall back to equal weights if unavailable
+                kh = None
+                if (
+                    self._model.groundwater
+                    and self._model.groundwater.aquifer_params
+                    and self._model.groundwater.aquifer_params.kh is not None
+                ):
+                    # AquiferParameters.kh is (n_nodes, n_layers); function expects (n_layers, n_nodes)
+                    kh = self._model.groundwater.aquifer_params.kh.T
+
+                if kh is not None and strat is not None:
+                    t_weights = compute_multilayer_weights(
+                        ml_well,
+                        grid,
+                        strat,
+                        kh,
+                    )
+                    self._t_weights[well.name] = t_weights
+                else:
+                    self._t_weights[well.name] = np.ones(n_layers) / n_layers
             else:
                 # Default: equal weights across all layers
                 self._t_weights[well.name] = np.ones(n_layers) / n_layers
@@ -185,7 +204,7 @@ class HeadAllExtractor:
         times = np.array([all_times[i] for i in time_indices])
         n_times = len(time_indices)
 
-        result = ExtractionResult(times=times)
+        result = ExtractionResult(times=times, data_type="HEAD")
 
         for well in self._wells:
             if well.name not in self._fe_weights:
@@ -206,8 +225,8 @@ class HeadAllExtractor:
                     if not np.any(np.isnan(vals)):
                         per_layer[ti, layer] = float(np.dot(coeffs, vals))
 
-            result.per_layer_heads[well.name] = per_layer
-            result.well_names.append(well.name)
+            result.per_layer[well.name] = per_layer
+            result.names.append(well.name)
 
             # Compute T-weighted multi-layer head
             t_weights = self._t_weights.get(well.name)
@@ -221,11 +240,11 @@ class HeadAllExtractor:
                         w_sum = w.sum()
                         if w_sum > 0:
                             ml_heads[ti] = float(np.dot(w, layer_heads[valid]) / w_sum)
-                result.multi_layer_heads[well.name] = ml_heads
+                result.values[well.name] = ml_heads
 
         logger.info(
             "Extracted heads for %d wells across %d timesteps",
-            len(result.well_names),
+            len(result.names),
             n_times,
         )
         return result
@@ -233,8 +252,8 @@ class HeadAllExtractor:
     def write_cache(self, output_path: Path, result: ExtractionResult) -> None:
         """Write extraction results to HDF5 cache.
 
-        Layout: ``/times``, ``/per_layer/heads``, ``/multi_layer/heads``,
-        ``/well_names``.
+        Layout: ``/times``, ``/per_layer``, ``/values``,
+        ``/names``.
 
         Parameters
         ----------
@@ -255,30 +274,30 @@ class HeadAllExtractor:
 
             # Well names
             hf.create_dataset(
-                "well_names",
-                data=np.array(result.well_names, dtype="S50"),
+                "names",
+                data=np.array(result.names, dtype="S50"),
             )
 
             # Per-layer heads: (n_times, n_wells, n_layers)
-            if result.per_layer_heads:
+            if result.per_layer:
                 n_times = len(result.times)
-                n_wells = len(result.well_names)
-                n_layers = next(iter(result.per_layer_heads.values())).shape[1]
+                n_wells = len(result.names)
+                n_layers = next(iter(result.per_layer.values())).shape[1]
                 pl_arr = np.full((n_times, n_wells, n_layers), np.nan)
-                for wi, name in enumerate(result.well_names):
-                    if name in result.per_layer_heads:
-                        pl_arr[:, wi, :] = result.per_layer_heads[name]
-                hf.create_dataset("per_layer/heads", data=pl_arr, compression="gzip")
+                for wi, name in enumerate(result.names):
+                    if name in result.per_layer:
+                        pl_arr[:, wi, :] = result.per_layer[name]
+                hf.create_dataset("per_layer", data=pl_arr, compression="gzip")
 
             # Multi-layer heads: (n_times, n_wells)
-            if result.multi_layer_heads:
+            if result.values:
                 n_times = len(result.times)
-                n_wells = len(result.well_names)
+                n_wells = len(result.names)
                 ml_arr = np.full((n_times, n_wells), np.nan)
-                for wi, name in enumerate(result.well_names):
-                    if name in result.multi_layer_heads:
-                        ml_arr[:, wi] = result.multi_layer_heads[name]
-                hf.create_dataset("multi_layer/heads", data=ml_arr, compression="gzip")
+                for wi, name in enumerate(result.names):
+                    if name in result.values:
+                        ml_arr[:, wi] = result.values[name]
+                hf.create_dataset("values", data=ml_arr, compression="gzip")
 
         logger.info("Wrote cache to %s", output_path)
 
@@ -300,18 +319,18 @@ class HeadAllExtractor:
         with h5py.File(cache_path, "r") as hf:
             times = np.array([np.datetime64(s.decode()) for s in hf["times"][:]])
 
-            well_names = [s.decode().strip() for s in hf["well_names"][:]]
+            names = [s.decode().strip() for s in hf["names"][:]]
 
-            result = ExtractionResult(times=times, well_names=well_names)
+            result = ExtractionResult(times=times, names=names, data_type="HEAD")
 
-            if "per_layer/heads" in hf:
-                pl_arr = hf["per_layer/heads"][:]
-                for wi, name in enumerate(well_names):
-                    result.per_layer_heads[name] = pl_arr[:, wi, :]
+            if "per_layer" in hf:
+                pl_arr = hf["per_layer"][:]
+                for wi, name in enumerate(names):
+                    result.per_layer[name] = pl_arr[:, wi, :]
 
-            if "multi_layer/heads" in hf:
-                ml_arr = hf["multi_layer/heads"][:]
-                for wi, name in enumerate(well_names):
-                    result.multi_layer_heads[name] = ml_arr[:, wi]
+            if "values" in hf:
+                ml_arr = hf["values"][:]
+                for wi, name in enumerate(names):
+                    result.values[name] = ml_arr[:, wi]
 
         return result

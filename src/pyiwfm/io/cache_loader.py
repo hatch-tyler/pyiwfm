@@ -13,6 +13,7 @@ import sqlite3
 import threading
 import zlib
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,10 +21,10 @@ from numpy.typing import NDArray
 logger = logging.getLogger(__name__)
 
 
-def _decompress_array(blob: bytes, dtype: type = np.float64) -> NDArray:  # type: ignore[type-arg]
+def _decompress_array(blob: bytes, dtype: type = np.float64) -> NDArray[np.float64]:
     """Decompress a zlib-compressed numpy array."""
     raw = zlib.decompress(blob)
-    arr: NDArray = np.frombuffer(raw, dtype=dtype).copy()  # type: ignore[type-arg]
+    arr: NDArray[np.float64] = np.frombuffer(raw, dtype=dtype).copy()
     return arr
 
 
@@ -91,7 +92,7 @@ class SqliteCacheLoader:
     # Head data
     # ------------------------------------------------------------------
 
-    def get_head_frame(self, frame_idx: int) -> NDArray | None:
+    def get_head_frame(self, frame_idx: int) -> NDArray[np.float64] | None:
         """Get a raw head frame (n_nodes, n_layers).
 
         Returns None if frame not cached.
@@ -109,7 +110,7 @@ class SqliteCacheLoader:
 
     def get_head_by_element(
         self, frame_idx: int, layer: int
-    ) -> tuple[NDArray, float, float] | None:
+    ) -> tuple[NDArray[np.float64], float, float] | None:
         """Get pre-computed element-averaged heads.
 
         Returns (values_array, min_val, max_val) or None.
@@ -125,7 +126,7 @@ class SqliteCacheLoader:
         blob, min_val, max_val = row
         return _decompress_array(blob), float(min_val), float(max_val)
 
-    def get_head_range(self, layer: int) -> dict | None:
+    def get_head_range(self, layer: int) -> dict[str, float] | None:
         """Get the pre-computed head range for a layer.
 
         Returns dict with percentile_02, percentile_98, abs_min, abs_max.
@@ -177,7 +178,7 @@ class SqliteCacheLoader:
         )
         return [(r[0], r[1], r[2]) for r in cur.fetchall()]
 
-    def get_budget_data(self, budget_type: str, location_idx: int) -> NDArray | None:
+    def get_budget_data(self, budget_type: str, location_idx: int) -> NDArray[np.float64] | None:
         """Get budget data for a location as (n_timesteps, n_cols) array."""
         cur = self._conn().execute(
             "SELECT values_blob FROM budget_data "
@@ -205,7 +206,9 @@ class SqliteCacheLoader:
     # Hydrographs
     # ------------------------------------------------------------------
 
-    def get_hydrograph(self, hydro_type: str, column_idx: int) -> tuple[list[str], NDArray] | None:
+    def get_hydrograph(
+        self, hydro_type: str, column_idx: int
+    ) -> tuple[list[str], NDArray[np.float64]] | None:
         """Get a hydrograph timeseries.
 
         Returns (times_list, values_array) or None.
@@ -233,7 +236,7 @@ class SqliteCacheLoader:
 
     def get_gw_hydrograph_all_layers(
         self, node_id: int
-    ) -> list[tuple[int, list[str], NDArray]] | None:
+    ) -> list[tuple[int, list[str], NDArray[np.float64]]] | None:
         """Get all GW hydrograph layers for a node.
 
         Returns list of (layer, times, values) tuples, or None.
@@ -250,7 +253,7 @@ class SqliteCacheLoader:
         rows = cur.fetchall()
         if not rows:
             return None
-        result: list[tuple[int, list[str], NDArray]] = []
+        result: list[tuple[int, list[str], NDArray[np.float64]]] = []
         for layer, times_blob, values_blob in rows:
             times = _decompress_strings(times_blob)
             values = _decompress_array(values_blob)
@@ -259,7 +262,7 @@ class SqliteCacheLoader:
 
     def get_gw_hydrograph_by_columns(
         self, base_col: int, n_layers: int
-    ) -> list[tuple[int, list[str], NDArray]] | None:
+    ) -> list[tuple[int, list[str], NDArray[np.float64]]] | None:
         """Get GW hydrograph layers by consecutive column range.
 
         IWFM GW hydrograph output files store n_layers consecutive columns
@@ -267,7 +270,7 @@ class SqliteCacheLoader:
 
         Returns list of (layer, times, values) tuples, or None.
         """
-        result: list[tuple[int, list[str], NDArray]] = []
+        result: list[tuple[int, list[str], NDArray[np.float64]]] = []
         for offset in range(n_layers):
             col = base_col + offset
             cur = self._conn().execute(
@@ -291,7 +294,9 @@ class SqliteCacheLoader:
     # Stream ratings
     # ------------------------------------------------------------------
 
-    def get_stream_rating(self, stream_node_id: int) -> tuple[float, NDArray, NDArray] | None:
+    def get_stream_rating(
+        self, stream_node_id: int
+    ) -> tuple[float, NDArray[np.float64], NDArray[np.float64]] | None:
         """Get a stream node's rating table.
 
         Returns (bottom_elev, stages, flows) or None.
@@ -314,7 +319,7 @@ class SqliteCacheLoader:
     # Area / land-use
     # ------------------------------------------------------------------
 
-    def get_area_snapshot(self, frame_idx: int) -> list[dict] | None:
+    def get_area_snapshot(self, frame_idx: int) -> list[dict[str, Any]] | None:
         """Get a land-use snapshot for a timestep.
 
         Returns list of element dicts or None.
@@ -352,10 +357,10 @@ class SqliteCacheLoader:
     # Diagnostics
     # ------------------------------------------------------------------
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, int]:
         """Get cache statistics for diagnostics."""
         conn = self._conn()
-        stats: dict = {}
+        stats: dict[str, int] = {}
 
         for table in (
             "head_frames",
@@ -377,7 +382,7 @@ class SqliteCacheLoader:
 
         # File size
         try:
-            stats["file_size_mb"] = round(self.cache_path.stat().st_size / (1024 * 1024), 1)
+            stats["file_size_mb"] = round(self.cache_path.stat().st_size / (1024 * 1024), 1)  # type: ignore[assignment]
         except Exception:
             stats["file_size_mb"] = 0
 

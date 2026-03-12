@@ -10,6 +10,7 @@ import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Body, File, HTTPException, Query, UploadFile
 
@@ -27,7 +28,7 @@ async def upload_observation(
     location_col: int = Query(
         default=-1, description="0-indexed column for location ID, -1 = none"
     ),
-) -> dict:
+) -> dict[str, Any]:
     """Upload an observation file (CSV or SMP format).
 
     For CSV files, specify which columns contain dates, values, and optionally
@@ -48,7 +49,7 @@ async def upload_observation(
     return _handle_csv_upload(content, filename, obs_type, date_col, value_col, location_col)
 
 
-def _handle_smp_upload(content: bytes, filename: str, obs_type: str) -> dict:
+def _handle_smp_upload(content: bytes, filename: str, obs_type: str) -> dict[str, Any]:
     """Parse an uploaded SMP file and create one observation per bore."""
     import re
 
@@ -123,7 +124,7 @@ def _handle_csv_upload(
     date_col: int,
     value_col: int,
     location_col: int,
-) -> dict:
+) -> dict[str, Any]:
     """Parse an uploaded CSV file using specified column indices."""
     text = content.decode("utf-8", errors="replace")
     reader = csv.reader(io.StringIO(text))
@@ -251,7 +252,7 @@ async def scan_directory_endpoint(
     directory: str = Query(..., description="Path to scan for observation files"),
     load: bool = Query(default=False, description="If true, load all found files"),
     recursive: bool = Query(default=False, description="Scan subdirectories"),
-) -> dict:
+) -> dict[str, Any]:
     """Scan a directory for loadable observation files (.smp, .csv)."""
     if not model_state.is_loaded:
         raise HTTPException(status_code=404, detail="No model loaded")
@@ -293,8 +294,8 @@ async def scan_directory_endpoint(
 
 @router.post("/load-files")
 async def load_files_endpoint(
-    files: list[dict] = Body(..., description="List of {path, type} to load"),  # noqa: B008
-) -> dict:
+    files: list[dict[str, Any]] = Body(..., description="List of {path, type} to load"),  # noqa: B008
+) -> dict[str, Any]:
     """Load specific observation files by path and type."""
     if not model_state.is_loaded:
         raise HTTPException(status_code=404, detail="No model loaded")
@@ -326,13 +327,13 @@ async def load_files_endpoint(
 
 
 @router.get("")
-def list_observations() -> list[dict]:
+def list_observations() -> list[dict[str, Any]]:
     """List all uploaded observations."""
     return model_state.list_observations()
 
 
 @router.get("/{obs_id}/data")
-def get_observation_data(obs_id: str) -> dict:
+def get_observation_data(obs_id: str) -> dict[str, Any]:
     """Get observation time series data."""
     obs = model_state.get_observation(obs_id)
     if obs is None:
@@ -350,7 +351,7 @@ def set_observation_location(
     obs_id: str,
     location_id: int,
     location_type: str = "gw",
-) -> dict:
+) -> dict[str, Any]:
     """Associate an observation with a hydrograph location."""
     obs = model_state.get_observation(obs_id)
     if obs is None:
@@ -362,7 +363,7 @@ def set_observation_location(
 
 
 @router.delete("/{obs_id}")
-def delete_observation(obs_id: str) -> dict:
+def delete_observation(obs_id: str) -> dict[str, Any]:
     """Delete an observation."""
     if model_state.delete_observation(obs_id):
         return {"status": "deleted", "observation_id": obs_id}

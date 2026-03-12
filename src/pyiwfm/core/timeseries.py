@@ -199,7 +199,7 @@ class TimeSeries:
     name: str = ""
     units: str = ""
     location: str = ""
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate time series data."""

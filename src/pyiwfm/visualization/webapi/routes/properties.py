@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from pyiwfm.visualization.webapi.config import model_state, require_model
 from pyiwfm.visualization.webapi.properties import PROPERTY_INFO
+from pyiwfm.visualization.webapi.utils import sanitize_values
 
 router = APIRouter(prefix="/api/properties", tags=["properties"])
 
@@ -33,7 +34,7 @@ class PropertyData(BaseModel):
     property_id: str
     name: str
     units: str
-    values: list[float]
+    values: list[float | None]
     min: float
     max: float
     mean: float
@@ -113,7 +114,7 @@ def get_property(
         property_id=property_id,
         name=str(info["name"]),
         units=str(info.get("units", "")),
-        values=values.tolist(),
+        values=sanitize_values(values.tolist()),
         min=float(np.min(valid)),
         max=float(np.max(valid)),
         mean=float(np.mean(valid)),
