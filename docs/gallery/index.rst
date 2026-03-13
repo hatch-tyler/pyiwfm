@@ -14,6 +14,9 @@ Each example includes the code used to generate the visualization.
    stratigraphy
    timeseries
    budget_plots
+   mesh_quality
+   drawdown_maps
+   convergence
 
 Overview
 --------
@@ -26,6 +29,9 @@ pyiwfm provides comprehensive visualization tools for:
 - **Stratigraphy**: Visualize vertical layer structure and aquifer geometry
 - **Time Series**: Plot temporal data from wells, streams, and other monitoring points
 - **Budget Plots**: Display water budget components as bar charts, pie charts, and stacked plots
+- **Mesh Quality**: Visualize element aspect ratios, skewness, and angle distributions
+- **Drawdown Maps**: Diverging colormap drawdown visualization with contours
+- **Convergence**: Iteration count timeseries and mass balance error charts
 
 Quick Start
 -----------

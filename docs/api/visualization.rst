@@ -103,8 +103,30 @@ The web viewer backend exposes a REST API under ``/api/``. Key route groups:
 
 - **Model** (``/api/model``): Load model info, compare with a second model
 - **Mesh** (``/api/mesh``): GeoJSON mesh, element details, node lookups
-- **Results** (``/api/results``): Head values, drawdown with pagination (``offset``/``limit``/``skip``), head statistics (min/max/mean/std across timesteps)
+- **Results** (``/api/results``): Head values, drawdown with pagination (``offset``/``limit``/``skip``), head statistics (min/max/mean/std across timesteps), subsidence surface
+- **Diagnostics** (``/api/diagnostics``): Simulation messages, convergence tracking, mass balance errors, spatial summary
 - **Budgets** (``/api/budgets``): Water budget time series by type and location
-- **Export** (``/api/export``): CSV downloads (heads, budgets, hydrographs), GeoJSON mesh, GeoPackage (multi-layer), and matplotlib plot generation (PNG/SVG for mesh, elements, streams, heads)
+- **Export** (``/api/export``): CSV downloads (heads, budgets, hydrographs), GeoJSON mesh, GeoPackage (multi-layer), matplotlib plot generation (PNG/SVG), and HTML/JSON diagnostic reports
 - **Observations** (``/api/observations``): Upload observed data for hydrograph comparison
-- **Groundwater, Streams, Lakes, Root Zone** (``/api/groundwater``, ``/api/streams``, etc.): Component-specific endpoints
+- **Groundwater, Streams, Lakes, Root Zone, Small Watersheds, Unsaturated Zone** (``/api/groundwater``, ``/api/streams``, ``/api/small-watersheds``, ``/api/unsaturated-zone``, etc.): Component-specific endpoints
+
+Diagnostics Routes
+~~~~~~~~~~~~~~~~~~
+
+Endpoints for simulation diagnostic analysis including convergence tracking,
+mass balance error timeseries, and spatial message summaries.
+
+.. automodule:: pyiwfm.visualization.webapi.routes.diagnostics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Unsaturated Zone Routes
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Endpoints for unsaturated zone component information and parameter summaries.
+
+.. automodule:: pyiwfm.visualization.webapi.routes.unsaturated_zone
+   :members:
+   :undoc-members:
+   :show-inheritance:

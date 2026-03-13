@@ -117,6 +117,18 @@ values to zone-level statistics using configurable methods.
    :show-inheritance:
 
 
+Mesh Quality
+------------
+
+Compute element-level quality metrics (aspect ratio, skewness, min/max angle)
+and aggregate statistics for the entire mesh.
+
+.. automodule:: pyiwfm.core.mesh_quality
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
 Query Module
 ------------
 

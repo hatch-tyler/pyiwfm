@@ -6,6 +6,86 @@ All notable changes to pyiwfm will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[1.1.0] - 2026-03-13
+--------------------
+
+Drawdown, Diagnostics, Stream Depletion, Mesh Quality, Budget Checks, and PEST++ CLI
+
+Added
+~~~~~
+
+**Drawdown Analysis** (``pyiwfm.io.drawdown``)
+
+- ``DrawdownComputer``: Compute per-node and per-element drawdown relative to
+  a reference timestep
+- ``compute_drawdown_range()``: Robust min/max (2nd–98th percentile) for
+  consistent color scaling across animation frames
+- ``compute_max_drawdown_map()``: Maximum drawdown at each node across all
+  timesteps
+- Web viewer: *Color By: Drawdown* mode in Results Map with diverging color
+  scale and reference timestep slider
+
+**Stream Depletion** (``pyiwfm.io.stream_depletion``)
+
+- ``compute_stream_depletion()``: Compare baseline and pumping-scenario model
+  runs to quantify per-reach stream flow depletion
+- ``StreamDepletionResult``: Per-reach timeseries (baseline, scenario,
+  depletion, cumulative, max, total)
+- ``StreamDepletionReport``: Aggregate report across multiple reaches
+
+**Budget Checks** (``pyiwfm.io.budget_checks``)
+
+- ``check_budget_balance()``: Per-location mass balance sanity check with
+  configurable tolerance
+- ``check_all_budgets()``: Check mass balance across all available budget types
+- ``BudgetSanityReport``: Summary of violations, max/mean percent error
+
+**Mesh Quality** (``pyiwfm.core.mesh_quality``)
+
+- ``compute_mesh_quality()``: Element-level quality metrics (aspect ratio,
+  skewness, min/max angle, area) with aggregate statistics
+- ``MeshQualityReport``: Summary with poor-quality element count and
+  serialization to dict for API responses
+- Web viewer: Mesh quality card on Overview tab
+
+**Simulation Diagnostics** (``pyiwfm.visualization.webapi.routes.diagnostics``)
+
+- ``/api/diagnostics/messages``: Paginated messages with severity filtering
+- ``/api/diagnostics/convergence``: Iteration count timeseries
+- ``/api/diagnostics/mass-balance``: Per-component mass balance error
+- ``/api/diagnostics/summary``: Combined diagnostics summary
+- ``/api/diagnostics/spatial-summary``: Spatial message counts for map overlay
+- Web viewer: Diagnostics tab with interactive charts and message table
+
+**Unsaturated Zone Routes** (``pyiwfm.visualization.webapi.routes.unsaturated_zone``)
+
+- ``/api/unsaturated-zone/``: Component info endpoint
+- ``/api/unsaturated-zone/summary``: Parameter summary endpoint
+
+**PEST++ CLI** (``pyiwfm.cli.pest``)
+
+- ``pyiwfm pest setup``: Generate PEST++ control, template, and instruction
+  files from an IWFM model directory
+- ``pyiwfm pest run``: Execute PEST++ with configurable executable and workers
+- ``pyiwfm pest analyze``: Post-process results in text or JSON format
+
+**Web Viewer Enhancements**
+
+- Subsidence surface visualization on Results Map
+- Model comparison dialog with mesh/stratigraphy diff
+- HTML/JSON report export endpoints
+- Small watersheds and unsaturated zone API routes
+
+**Documentation**
+
+- New tutorials: Drawdown Analysis, Stream Depletion, Simulation Diagnostics,
+  Mesh Quality
+- New gallery pages: Mesh Quality, Drawdown Maps, Convergence
+- Updated API reference with new modules
+- Updated web viewer guide with 6-tab layout and new features
+- PEST++ CLI section in user guide
+- Diagnostics user guide
+
 [1.0.4] - 2026-03-04
 --------------------
 

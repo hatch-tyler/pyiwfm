@@ -13,6 +13,7 @@ This user guide provides comprehensive documentation for using pyiwfm.
    io
    calibration
    web_viewer
+   diagnostics
    pest
 
 Overview

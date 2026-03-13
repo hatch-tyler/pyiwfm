@@ -41,6 +41,29 @@ models developed by the California Department of Water Resources.
         Browse examples showcasing pyiwfm's visualization capabilities
         for meshes, scalar fields, streams, and water budgets.
 
+.. grid:: 3
+
+    .. grid-item-card:: Drawdown Analysis
+        :link: tutorials/drawdown_analysis
+        :link-type: doc
+
+        Compute and visualize groundwater drawdown relative to a
+        reference timestep with diverging colormaps.
+
+    .. grid-item-card:: Simulation Diagnostics
+        :link: tutorials/simulation_diagnostics
+        :link-type: doc
+
+        Parse simulation logs to track convergence, mass balance errors,
+        and identify problem areas.
+
+    .. grid-item-card:: Stream Depletion
+        :link: tutorials/stream_depletion
+        :link-type: doc
+
+        Compare baseline and pumping scenarios to quantify impact on
+        stream flows.
+
 Features
 --------
 
@@ -55,6 +78,12 @@ Features
 - **Plotting**: Matplotlib-based visualization of meshes and scalar fields, including server-side plot generation via the web API
 - **Model Comparison**: Compare models with metrics and generate reports, accessible via web viewer endpoint
 - **Consistent Component Interface**: BaseComponent ABC provides ``validate()`` and ``n_items`` across all 6 model components
+- **Drawdown Analysis**: Compute drawdown relative to reference timesteps with per-node, per-element, max-map, and robust range calculations
+- **Stream Depletion**: Compare baseline and pumping model runs to quantify stream flow depletion at individual reaches
+- **Budget Checks**: Mass balance sanity checks to detect timesteps with inflow/outflow/storage imbalance
+- **Mesh Quality**: Element-level quality metrics (aspect ratio, skewness, min/max angle) with aggregate statistics
+- **Simulation Diagnostics**: Parse SimulationMessages.out for structured messages, convergence tracking, mass balance errors, and spatial hotspots
+- **PEST++ CLI**: ``pyiwfm pest setup/run/analyze`` commands for end-to-end calibration from the command line
 
 Quick Example
 -------------

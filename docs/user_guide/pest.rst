@@ -355,6 +355,89 @@ The ``PestPostProcessor`` loads and analyzes PEST++ output files:
     report = pp.summary_report()
     print(report)
 
+CLI Interface
+-------------
+
+pyiwfm provides a ``pest`` CLI subcommand with three sub-commands for an
+end-to-end PEST++ workflow from the command line.
+
+Setup
+~~~~~
+
+Generate PEST++ control, template, and instruction files from an IWFM model:
+
+.. code-block:: bash
+
+    # Basic setup with default parameter types
+    pyiwfm pest setup --model-dir /path/to/model
+
+    # Specify output directory and case name
+    pyiwfm pest setup --model-dir /path/to/model \
+        --output-dir ./pest_cal --case-name c2vsim_cal
+
+    # Select specific parameter types and zones
+    pyiwfm pest setup --model-dir /path/to/model \
+        --param-types horizontal_k specific_yield \
+        --zones 1 2 3 4 5
+
+    # Include observation file for targets
+    pyiwfm pest setup --model-dir /path/to/model \
+        --obs-file observed_heads.smp
+
+**Flags:**
+
+- ``--model-dir`` — Path to the IWFM model directory (required)
+- ``--output-dir`` — Directory for PEST++ files (default: ``./pest_setup``)
+- ``--case-name`` — PEST++ case name (default: ``iwfm_cal``)
+- ``--param-types`` — Space-separated parameter types (e.g., ``horizontal_k specific_yield``)
+- ``--zones`` — Space-separated zone IDs to parameterize
+- ``--obs-file`` — SMP observation file for calibration targets
+
+Run
+~~~
+
+Execute PEST++ using the generated control file:
+
+.. code-block:: bash
+
+    # Run with default settings (pestpp-glm)
+    pyiwfm pest run --pst-file ./pest_cal/c2vsim_cal.pst
+
+    # Specify executable and number of workers
+    pyiwfm pest run --pst-file ./pest_cal/c2vsim_cal.pst \
+        --executable pestpp-ies --num-workers 8
+
+    # Set working directory
+    pyiwfm pest run --pst-file ./pest_cal/c2vsim_cal.pst \
+        --working-dir ./pest_run
+
+**Flags:**
+
+- ``--pst-file`` — Path to the PEST++ control file (required)
+- ``--executable`` — PEST++ executable name (default: ``pestpp-glm``)
+- ``--num-workers`` — Number of parallel workers (default: 1)
+- ``--working-dir`` — Working directory for the run
+
+Analyze
+~~~~~~~
+
+Post-process PEST++ results and generate summary reports:
+
+.. code-block:: bash
+
+    # Text summary
+    pyiwfm pest analyze --pst-file ./pest_cal/c2vsim_cal.pst
+
+    # JSON output for programmatic use
+    pyiwfm pest analyze --pst-file ./pest_cal/c2vsim_cal.pst \
+        --format json --output-dir ./results
+
+**Flags:**
+
+- ``--pst-file`` — Path to the PEST++ control file (required)
+- ``--output-dir`` — Directory for output files
+- ``--format`` — Output format: ``text`` (default) or ``json``
+
 Complete Workflow Example
 -------------------------
 

@@ -14,6 +14,10 @@ Step-by-step tutorials for common pyiwfm workflows.
    model_comparison
    calibration
    packaging_models
+   drawdown_analysis
+   stream_depletion
+   simulation_diagnostics
+   mesh_quality
 
 Overview
 --------
@@ -57,6 +61,22 @@ These tutorials walk you through complete workflows using pyiwfm:
     Package an IWFM model directory into a distributable ZIP archive,
     generate platform-appropriate run scripts (.bat, .ps1, .sh), and
     use the ``pyiwfm package`` and ``pyiwfm run`` CLI commands.
+
+**Drawdown Analysis**
+    Compute drawdown relative to a reference timestep, visualize spatially
+    with diverging colormaps, and use the web viewer's drawdown mode.
+
+**Stream Depletion Analysis**
+    Compare baseline and pumping scenario model runs to quantify stream
+    flow depletion, plot timeseries, and interpret cumulative depletion.
+
+**Simulation Diagnostics**
+    Parse IWFM ``SimulationMessages.out`` files, track convergence
+    iterations, identify mass balance errors, and locate problem areas.
+
+**Mesh Quality Analysis**
+    Compute element quality metrics (aspect ratio, skewness, angles),
+    identify problematic elements, and visualize quality spatially.
 
 Prerequisites
 -------------

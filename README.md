@@ -114,11 +114,13 @@ pyiwfm viewer --model-dir /path/to/model
 pyiwfm viewer --model-dir /path/to/model --crs "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
 ```
 
-The viewer provides four tabs:
-- **Overview**: Model summary and metadata
+The viewer provides six tabs:
+- **Overview**: Model summary, metadata, and mesh quality metrics
 - **3D Mesh**: Interactive vtk.js 3D rendering with layer visibility, cross-section slicing, stream network overlay, and z-exaggeration
-- **Results Map**: deck.gl + MapLibre map showing head contours, drawdown with pagination/animation support, hydrograph locations, head statistics, and observation upload/comparison
+- **Results Map**: deck.gl + MapLibre map showing head contours, drawdown with diverging color scale, subsidence surface, hydrograph locations, head statistics, and observation upload/comparison
+- **Diagnostics**: Convergence iteration charts, mass balance error timeseries, filterable message table
 - **Budgets**: Plotly charts of water budget time series with location/column selection
+- **Z-Budgets**: Zone budget visualization organized by spatial zones
 
 Additional API endpoints:
 - **Data Export**: CSV (heads, budgets, hydrographs), GeoJSON mesh, GeoPackage (multi-layer), and publication-quality matplotlib plots (PNG/SVG)
@@ -171,6 +173,21 @@ results = iwfm2obs_from_model(
 )
 ```
 
+## PEST++ Calibration CLI
+
+Set up, run, and analyze PEST++ calibration from the command line:
+
+```bash
+# Generate PEST++ files from an IWFM model
+pyiwfm pest setup --model-dir /path/to/model --case-name c2vsim_cal
+
+# Run PEST++ (requires pestpp-glm or pestpp-ies on PATH)
+pyiwfm pest run --pst-file ./pest_setup/c2vsim_cal.pst --num-workers 8
+
+# Analyze results
+pyiwfm pest analyze --pst-file ./pest_setup/c2vsim_cal.pst --format json
+```
+
 ## Features
 
 - **Core Data Structures**: Node, Element, Face, AppGrid, Stratigraphy, TimeSeries
@@ -198,6 +215,12 @@ results = iwfm2obs_from_model(
 - **Calibration Tools**: IWFM2OBS time interpolation with automatic model file discovery and Fortran-verified timestamp alignment, multi-layer T-weighted observation well processing (GW_MultiLayer.out + PEST .ins), fuzzy c-means well clustering, typical hydrograph computation (CalcTypHyd) with Fortran-format config file parsing and PEST output, and publication-quality calibration figures
 - **Visualization**: GIS export (GeoPackage download), VTK 3D export, matplotlib plot generation (PNG/SVG), interactive web viewer with budget charts, head maps, hydrograph comparison, drawdown animation, and head statistics
 - **Model Comparison**: Diff and comparison metrics, including web viewer comparison endpoint
+- **Drawdown Analysis**: Compute drawdown relative to reference timesteps with per-node, per-element, max-map, and robust range calculations
+- **Stream Depletion**: Compare baseline and pumping model runs to quantify stream flow depletion per reach
+- **Budget Checks**: Mass balance sanity checks to detect timestep-level inflow/outflow/storage imbalance
+- **Mesh Quality**: Element-level quality metrics (aspect ratio, skewness, min/max angle) with aggregate statistics
+- **Simulation Diagnostics**: Parse SimulationMessages.out for convergence tracking, mass balance errors, and spatial hotspot analysis
+- **PEST++ CLI**: ``pyiwfm pest setup/run/analyze`` for end-to-end calibration from the command line
 
 ## Versioning
 

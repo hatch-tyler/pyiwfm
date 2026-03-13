@@ -739,6 +739,39 @@ layer) via regex patterns.
    :undoc-members:
    :show-inheritance:
 
+Drawdown
+~~~~~~~~
+
+Compute drawdown (head change) relative to a reference timestep, with support
+for per-node, per-element, robust range, and maximum drawdown map computations.
+
+.. automodule:: pyiwfm.io.drawdown
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Stream Depletion
+~~~~~~~~~~~~~~~~
+
+Compare baseline and pumping-scenario model runs to quantify stream flow
+depletion at individual reaches.
+
+.. automodule:: pyiwfm.io.stream_depletion
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Budget Checks
+~~~~~~~~~~~~~
+
+Mass balance sanity checks for IWFM budget data — detect timesteps where
+inflows, outflows, and storage change are out of balance.
+
+.. automodule:: pyiwfm.io.budget_checks
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Zone File I/O
 -------------
 

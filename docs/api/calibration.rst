@@ -73,6 +73,26 @@ spatial and temporal features.
    :undoc-members:
    :show-inheritance:
 
+Headall Extraction
+------------------
+
+Extract and process ``HeadAll`` HDF5 output data for calibration workflows.
+
+.. automodule:: pyiwfm.calibration.headall_extraction
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Results Extraction
+------------------
+
+Extract and process model results for calibration comparison and analysis.
+
+.. automodule:: pyiwfm.calibration.results_extraction
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Calibration Plots
 -----------------
 
@@ -81,6 +101,16 @@ residual histograms, hydrograph panels, metrics tables, water budget
 summaries, cluster maps, and typical hydrograph curves.
 
 .. automodule:: pyiwfm.visualization.calibration_plots
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+PEST CLI
+--------
+
+Command-line interface for PEST++ calibration workflows (setup, run, analyze).
+
+.. automodule:: pyiwfm.cli.pest
    :members:
    :undoc-members:
    :show-inheritance:

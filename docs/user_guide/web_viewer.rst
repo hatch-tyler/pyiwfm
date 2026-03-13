@@ -59,13 +59,24 @@ Missing components are handled gracefully:
 Viewer Tabs
 -----------
 
-The viewer provides four tabs, each focused on a different aspect of the model.
+The viewer provides six tabs, each focused on a different aspect of the model.
 
 Overview
 ~~~~~~~~
 
 Model summary and metadata including node/element counts, component
 availability, simulation time range, and coordinate reference system.
+
+**Mesh Quality Card:**
+
+The Overview tab includes a mesh quality summary card showing aggregate
+statistics computed by :func:`~pyiwfm.core.mesh_quality.compute_mesh_quality`:
+
+- Element count breakdown (triangles vs quads)
+- Aspect ratio statistics (min, max, mean)
+- Skewness (mean)
+- Min/max angle across all elements
+- Count of poor-quality elements (aspect ratio > 5 or skewness > 0.8)
 
 3D Mesh
 ~~~~~~~
@@ -97,8 +108,13 @@ Results Map
 - Head values displayed as color-coded elements
 - Timestep and layer selection
 - Head difference (change) between two timesteps
-- Drawdown computation with pagination (``offset``, ``limit``, ``skip``) for animation playback
+- **Drawdown mode**: Select *Color By: Drawdown* to visualize drawdown relative
+  to a reference timestep. A reference timestep slider appears, and a diverging
+  color scale (blue = rising, red = falling) is applied. Supports pagination
+  (``offset``, ``limit``, ``skip``) for animation playback.
 - Head statistics (min/max/mean/std per node across all timesteps)
+- **Subsidence surface**: When subsidence data is available, display subsidence
+  values as a color-coded surface layer
 - Hydrograph locations displayed as markers (cached for fast response)
 - Click a hydrograph marker to view time series chart
 - Upload observed data (CSV) for comparison overlay
@@ -114,6 +130,27 @@ Plotly-based charts for water budget time series.
 - Groundwater, stream, lake, root zone, and other budget types
 - Location and column selection
 - Monthly budget timestep support
+
+Diagnostics
+~~~~~~~~~~~
+
+Simulation diagnostics tab for analyzing convergence and errors.
+See :doc:`diagnostics` for a detailed walkthrough.
+
+**Features:**
+
+- **Messages table**: Paginated list of simulation messages with severity
+  filtering (INFO, WARN, FATAL)
+- **Convergence chart**: Iteration counts per timestep plotted as a time series
+- **Mass balance error chart**: Per-component mass balance error over time
+- **Summary statistics**: Total warnings, errors, max iterations, average
+  iterations, and total runtime
+
+Z-Budgets
+~~~~~~~~~
+
+Zone budget visualization, similar to the Budgets tab but organized by
+spatial zones defined in zone definition files.
 
 Docker Deployment
 -----------------
@@ -172,6 +209,26 @@ Load a second IWFM model and compare it with the currently loaded model:
          -d '{"preprocessor_file": "/path/to/other/Preprocessor.in"}'
 
 Returns mesh and stratigraphy differences computed by ``ModelDiffer``.
+
+The comparison dialog in the web viewer allows you to:
+
+1. Select a second model directory via a file path input
+2. View side-by-side mesh differences (added/removed nodes and elements)
+3. Compare stratigraphy layer structure changes
+4. See summary metrics (node count diff, element count diff, area changes)
+
+Report Export
+~~~~~~~~~~~~~
+
+The viewer supports exporting diagnostic and summary reports:
+
+- **HTML report**: ``GET /api/export/report?format=html`` — formatted HTML
+  document with model summary, mesh quality, budget summaries, and diagnostics
+- **JSON report**: ``GET /api/export/report?format=json`` — machine-readable
+  JSON for programmatic consumption
+
+These endpoints aggregate data from multiple sources into a single downloadable
+report suitable for review or archiving.
 
 Performance
 -----------
