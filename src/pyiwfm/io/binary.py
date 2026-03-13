@@ -1,7 +1,7 @@
-"""
-Binary file I/O handlers for IWFM model files.
+"""Binary file I/O handlers for IWFM model files.
 
 This module provides classes for reading and writing IWFM binary files:
+
 - ``FortranBinaryReader`` / ``FortranBinaryWriter``: Fortran unformatted
   sequential-access files (record markers around each write).
 - ``StreamAccessBinaryReader``: Raw byte-stream files matching IWFM's

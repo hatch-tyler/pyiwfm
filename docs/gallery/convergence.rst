@@ -32,7 +32,6 @@ Plot the number of solver iterations per timestep:
    ax.set_ylabel('Iterations')
    ax.set_title(f'Convergence Iterations (avg={base_iters.mean():.1f}, max={base_iters.max()})')
    ax.legend()
-   plt.tight_layout()
    plt.show()
 
 Mass Balance Error Over Time
@@ -68,7 +67,6 @@ Track mass balance discrepancy across multiple model components:
    ax.set_ylabel('Mass Balance Error (%)')
    ax.set_title('Mass Balance Error by Component')
    ax.legend()
-   plt.tight_layout()
    plt.show()
 
 Combined Diagnostics Dashboard
@@ -123,5 +121,4 @@ A multi-panel summary of simulation health:
    ax.set_ylabel('Frequency')
 
    plt.suptitle('Simulation Diagnostics Summary', fontsize=14, fontweight='bold')
-   plt.tight_layout()
    plt.show()

@@ -246,7 +246,7 @@ def index_of_agreement(
     """
     Calculate Willmott Index of Agreement (d).
 
-    d = 1 - [sum((sim - obs)^2) / sum((|sim - mean(obs)| + |obs - mean(obs)|)^2)]
+    ``d = 1 - [sum((sim - obs)^2) / sum((|sim - mean(obs)| + |obs - mean(obs)|)^2)]``
 
     Values range from 0 to 1.0:
     - d = 1: Perfect agreement

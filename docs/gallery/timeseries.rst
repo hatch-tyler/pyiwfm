@@ -154,7 +154,6 @@ Raw matplotlib alternative for more control:
    ax2.legend(loc='upper right')
    ax2.grid(True, alpha=0.3)
 
-   plt.tight_layout()
    plt.show()
 
 Streamflow Hydrograph

@@ -40,7 +40,6 @@ Color elements by aspect ratio to find elongated cells:
    ax2.set_title('Aspect Ratio Distribution')
    ax2.legend()
 
-   plt.tight_layout()
    plt.show()
 
 Skewness Map
@@ -68,7 +67,6 @@ Skewness measures deviation from ideal element shape (0 = perfect, 1 = degenerat
    ax.set_title(f'Element Skewness (mean={report.skewness_mean:.3f})')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 Minimum Angle Distribution
@@ -106,5 +104,4 @@ Elements with very small angles can cause numerical instability:
    ax2.set_title(f'Maximum Angles (global max={report.max_angle_global:.1f}°)')
    ax2.legend()
 
-   plt.tight_layout()
    plt.show()

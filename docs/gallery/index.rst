@@ -51,7 +51,6 @@ Here's a quick example showing how to create and visualize a sample mesh:
    # Plot mesh
    fig, ax = plot_mesh(mesh, show_edges=True, fill_color='lightblue', alpha=0.5)
    ax.set_title(f'Sample IWFM Mesh\n({mesh.n_nodes} nodes, {mesh.n_elements} elements)')
-   plt.tight_layout()
    plt.show()
 
 All visualizations in pyiwfm are built on matplotlib and return matplotlib

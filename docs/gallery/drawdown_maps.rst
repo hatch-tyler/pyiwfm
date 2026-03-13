@@ -35,7 +35,6 @@ color scale:
    y_c = 0.5 * max(n.y for n in mesh.nodes.values())
    ax.plot(x_c, y_c, 'kv', markersize=15, label='Pumping Well')
    ax.legend()
-   plt.tight_layout()
    plt.show()
 
 Drawdown with Contours
@@ -67,7 +66,6 @@ Combine filled drawdown with contour lines:
    ax.set_title('Drawdown with Contour Lines')
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
-   plt.tight_layout()
    plt.show()
 
 Before vs After Comparison
@@ -103,5 +101,4 @@ Side-by-side comparison of head distribution before and after pumping:
        ax.set_xlabel('X (feet)')
        ax.set_ylabel('Y (feet)')
 
-   plt.tight_layout()
    plt.show()

@@ -89,7 +89,6 @@ Visualize the boundary polygon:
    ax.set_ylabel('Y (feet)')
    ax.set_title('Model Boundary Polygon (8 vertices)')
    ax.grid(True, alpha=0.3)
-   plt.tight_layout()
    plt.show()
 
 Step 3: Add Stream Constraints
@@ -191,7 +190,6 @@ Visualize all constraints together before mesh generation:
    ax.set_title('Mesh Constraints: Boundary, Streams, Wells, and Refinement Zone')
    ax.legend(loc='lower right')
    ax.grid(True, alpha=0.3)
-   plt.tight_layout()
    plt.show()
 
 Step 5: Define Refinement Zones
@@ -363,7 +361,6 @@ constraints defined above:
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
    ax.legend()
-   plt.tight_layout()
    plt.show()
 
 Step 9: Export to GIS
@@ -508,7 +505,6 @@ Visualize the element area distribution:
    axes[1].set_title('Element Areas (sq ft)')
    plt.colorbar(pc, ax=axes[1])
 
-   plt.tight_layout()
    plt.show()
 
 Complete Script

@@ -528,7 +528,6 @@ Visualize the comparison results:
    plot_mesh(grid2, ax=axes[1], show_edges=True, fill_color="lightgreen")
    axes[1].set_title("Modified Model")
 
-   plt.tight_layout()
    plt.show()
 
 Plotting Residuals
@@ -556,7 +555,6 @@ Plotting Residuals
    axes[1].set_ylabel('Residual (ft)')
    axes[1].set_title('Residuals (Simulated - Observed)')
 
-   plt.tight_layout()
    plt.show()
 
 Summary

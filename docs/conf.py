@@ -100,9 +100,6 @@ autodoc_default_options = {
 autodoc_typehints = "description"
 autodoc_typehints_description_target = "documented"
 
-# Suppress docutils formatting warnings from autodoc type rendering
-# (e.g., np.bool_ trailing underscore treated as RST reference marker)
-suppress_warnings = ["docutils"]
 
 # Intersphinx mapping
 intersphinx_mapping = {
@@ -114,7 +111,7 @@ intersphinx_mapping = {
 }
 
 # Don't fail the build when an intersphinx inventory is temporarily unreachable
-suppress_warnings = ["intersphinx.external"]
+suppress_warnings = ["docutils", "intersphinx.external"]
 
 # Templates path
 templates_path = ["_templates"]

@@ -78,7 +78,6 @@ Raw matplotlib alternative for full customization:
        ax.text(v + offset, i, f'{v:,.0f}', va='center', ha=ha, fontsize=9)
 
    ax.grid(True, axis='x', alpha=0.3)
-   plt.tight_layout()
    plt.show()
 
 Pie Chart Budget
@@ -213,7 +212,6 @@ Raw matplotlib conceptual diagram for full visual control:
    ax.set_aspect('equal')
    ax.axis('off')
    ax.set_title('Conceptual Water Balance Diagram', fontsize=14, fontweight='bold')
-   plt.tight_layout()
    plt.show()
 
 Zone Budget Comparison

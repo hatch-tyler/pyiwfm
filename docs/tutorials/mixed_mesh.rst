@@ -174,7 +174,6 @@ Step 3: Visualize All Three Modes Side by Side
        ax.set_ylabel('Y (feet)')
 
    plt.suptitle('Gmsh Element Modes: Triangle vs Mixed vs Quad', fontsize=13, y=1.02)
-   plt.tight_layout()
    plt.show()
 
 Step 4: Color Elements by Type in a Mixed Mesh
@@ -283,7 +282,6 @@ quads.  We color each element by its vertex count.
    ax.set_xlabel('X (feet)')
    ax.set_ylabel('Y (feet)')
    ax.set_title('Mixed Mesh: Triangles (salmon) and Quads (green)')
-   plt.tight_layout()
    plt.show()
 
 Step 5: Compare Element Area Distributions
@@ -333,7 +331,6 @@ Step 5: Compare Element Area Distributions
        ax.legend(fontsize=9)
 
    plt.suptitle('Element Area Distributions by Mesh Type', fontsize=13, y=1.02)
-   plt.tight_layout()
    plt.show()
 
 Step 6: Convert and Export

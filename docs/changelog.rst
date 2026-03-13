@@ -101,7 +101,7 @@ Added
 - ``expand_obs_to_layers()``: Auto-expand base observation IDs to per-layer variants
 - ``deduplicate_smp()``: Strip ``%N`` layer suffixes from SMP files
 - CLI: ``--deduplicate-smp`` mode
-- Verified: max |diff| = 0.000060 ft vs Fortran on C2VSimFG (48,816 GW bore IDs)
+- Verified: max ``|diff|`` = 0.000060 ft vs Fortran on C2VSimFG (48,816 GW bore IDs)
 
 **CalcTypHyd Fortran-Matching Features** (``pyiwfm.calibration.calctyphyd``)
 

@@ -363,7 +363,6 @@ Multiple Plots
    plot_scalar_field(grid, head_values, ax=axes[2], field_type="node")
    axes[2].set_title("Head (ft)")
 
-   plt.tight_layout()
    plt.show()
 
 Using MeshPlotter Class

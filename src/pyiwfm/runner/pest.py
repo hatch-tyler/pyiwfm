@@ -1,12 +1,14 @@
 """PEST++ integration for IWFM calibration and uncertainty analysis.
 
 This module provides utilities for:
+
 - Creating PEST++ template (.tpl) and instruction (.ins) files
 - Writing PEST++ control files (.pst) in v1 or v2 (keyword/external) format
 - Running IWFM as a PEST++ model
 - Parsing PEST++ output
 
 PEST++ suite includes:
+
 - pestpp-glm: Gauss-Levenberg-Marquardt parameter estimation
 - pestpp-ies: Iterative ensemble smoother (uncertainty analysis)
 - pestpp-opt: Optimization under uncertainty
@@ -14,6 +16,7 @@ PEST++ suite includes:
 - pestpp-sqp: Sequential quadratic programming
 
 Control file formats:
+
 - v1 (traditional): Positional control data, inline parameter/observation data
 - v2 (keyword/external): ``* control data keyword`` section with key-value pairs,
   external CSV files for parameter data, observation data, and model I/O.
