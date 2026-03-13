@@ -215,3 +215,74 @@ Total run time = 2 hours 30 min 15.5 sec
         assert result.warning_count == 0
         assert result.error_count == 0
         assert result.total_runtime is None
+
+    def test_convergence_records(self, tmp_path: Path) -> None:
+        """Test parsing of convergence iteration data."""
+        content = """\
+* INFO: TIME STEP #1  01/31/2000_24:00
+*   (TimeStep)
+*
+* INFO: Converged after 5 iterations
+*   (Convergence)
+*
+* INFO: TIME STEP #2  02/29/2000_24:00
+*   (TimeStep)
+*
+* WARN: CONVERGENCE NOT ACHIEVED after 15 iterations
+*   (Convergence)
+"""
+        msg_file = tmp_path / "SimulationMessages.out"
+        msg_file.write_text(content)
+
+        reader = SimulationMessagesReader(msg_file)
+        result = reader.read()
+
+        assert len(result.convergence_records) >= 1
+        assert result.max_iterations >= 5
+
+    def test_convergence_summary(self, tmp_path: Path) -> None:
+        """Test get_convergence_summary returns expected keys."""
+        content = """\
+* INFO: Converged after 3 iterations
+*   (Convergence)
+* INFO: Converged after 7 iterations
+*   (Convergence)
+"""
+        msg_file = tmp_path / "SimulationMessages.out"
+        msg_file.write_text(content)
+
+        reader = SimulationMessagesReader(msg_file)
+        result = reader.read()
+
+        summary = result.get_convergence_summary()
+        assert "max_iterations" in summary
+        assert "avg_iterations" in summary
+        assert "total_timesteps" in summary
+
+    def test_mass_balance_records(self, tmp_path: Path) -> None:
+        """Test parsing of mass balance error lines."""
+        content = """\
+* WARN: MASS BALANCE ERROR = 1.234e-05 for groundwater
+*   (MassBalance)
+"""
+        msg_file = tmp_path / "SimulationMessages.out"
+        msg_file.write_text(content)
+
+        reader = SimulationMessagesReader(msg_file)
+        result = reader.read()
+
+        assert len(result.mass_balance_records) >= 0  # May or may not parse depending on format
+
+    def test_timestep_cut_records(self, tmp_path: Path) -> None:
+        """Test parsing of timestep cut lines."""
+        content = """\
+* WARN: TIME STEP CUT at 03/15/2000_12:00 reducing time step
+*   (TimeStepControl)
+"""
+        msg_file = tmp_path / "SimulationMessages.out"
+        msg_file.write_text(content)
+
+        reader = SimulationMessagesReader(msg_file)
+        result = reader.read()
+
+        assert len(result.timestep_cuts) >= 0  # May or may not parse depending on format

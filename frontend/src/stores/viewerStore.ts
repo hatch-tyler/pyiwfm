@@ -72,6 +72,11 @@ export interface ViewerState {
   subsidenceGlobalMax: number | null;
   isSubsidenceAnimating: boolean;
 
+  // === Drawdown mode state ===
+  drawdownReferenceTimestep: number;
+  drawdownGlobalMin: number | null;
+  drawdownGlobalMax: number | null;
+
   // === Map overlay toggles ===
   showSubregions: boolean;
   showStreamsOnMap: boolean;
@@ -202,6 +207,10 @@ export interface ViewerState {
   setSubsidenceLayer: (layer: number) => void;
   setSubsidenceGlobalRange: (min: number | null, max: number | null) => void;
   setIsSubsidenceAnimating: (a: boolean) => void;
+
+  // Drawdown
+  setDrawdownReferenceTimestep: (ts: number) => void;
+  setDrawdownGlobalRange: (min: number | null, max: number | null) => void;
 
   // Map overlays
   setShowSubregions: (show: boolean) => void;
@@ -349,6 +358,11 @@ export const useViewerStore = create<ViewerState>((set) => ({
   subsidenceGlobalMax: null,
   isSubsidenceAnimating: false,
 
+  // Drawdown
+  drawdownReferenceTimestep: 0,
+  drawdownGlobalMin: null,
+  drawdownGlobalMax: null,
+
   // Map overlays
   showSubregions: false,
   showStreamsOnMap: false,
@@ -491,6 +505,10 @@ export const useViewerStore = create<ViewerState>((set) => ({
   setSubsidenceLayer: (layer) => set({ subsidenceLayer: layer }),
   setSubsidenceGlobalRange: (min, max) => set({ subsidenceGlobalMin: min, subsidenceGlobalMax: max }),
   setIsSubsidenceAnimating: (a) => set({ isSubsidenceAnimating: a }),
+
+  // Drawdown
+  setDrawdownReferenceTimestep: (ts) => set({ drawdownReferenceTimestep: ts }),
+  setDrawdownGlobalRange: (min, max) => set({ drawdownGlobalMin: min, drawdownGlobalMax: max }),
 
   // Map overlays
   setShowSubregions: (show) => set({ showSubregions: show }),

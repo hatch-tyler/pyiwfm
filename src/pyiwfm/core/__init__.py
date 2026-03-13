@@ -26,6 +26,12 @@ from pyiwfm.core.interpolation import (
     point_in_element,
 )
 from pyiwfm.core.mesh import AppGrid, Element, Face, Node, Subregion
+from pyiwfm.core.mesh_quality import (
+    ElementQuality,
+    MeshQualityReport,
+    compute_element_quality,
+    compute_mesh_quality,
+)
 from pyiwfm.core.model import IWFMModel
 from pyiwfm.core.query import ModelQueryAPI, TimeSeries
 from pyiwfm.core.stratigraphy import Stratigraphy
@@ -63,6 +69,11 @@ __all__ = [
     # Cross-section
     "CrossSection",
     "CrossSectionExtractor",
+    # Mesh quality
+    "ElementQuality",
+    "MeshQualityReport",
+    "compute_element_quality",
+    "compute_mesh_quality",
     # Exceptions
     "PyIWFMError",
     "MeshError",

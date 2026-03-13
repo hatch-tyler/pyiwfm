@@ -40,6 +40,7 @@ import {
   fetchReachProfile, fetchHydrographsMulti,
   fetchMeshNodes, fetchStreamNodeRating,
   fetchSubsidenceByElement, fetchSubsidenceTimes, fetchSubsidenceRange,
+  fetchDrawdownByElement, fetchDrawdownRange,
 } from '../../api/client';
 import type {
   HydrographLocation, HydrographData, WellInfo,
@@ -98,9 +99,12 @@ export function ResultsMapView() {
     isAnimating, isSubsidenceAnimating,
     subsidenceTimestep, subsidenceLayer,
     subsidenceGlobalMin, subsidenceGlobalMax,
+    drawdownReferenceTimestep,
+    drawdownGlobalMin, drawdownGlobalMax,
     selectedBasemap,
     headGlobalMin, headGlobalMax,
     setHeadGlobalRange,
+    setDrawdownGlobalRange,
     setSubsidenceTimes, setSubsidenceGlobalRange,
     setHeadTimes, setSelectedLocation, setSelectedHydrograph,
     setSelectedElement, setElementDetail,
@@ -160,6 +164,11 @@ export function ResultsMapView() {
   const [subsidenceMin, setSubsidenceMin] = useState(0);
   const [subsidenceMax, setSubsidenceMax] = useState(0);
 
+  // Drawdown data
+  const [drawdownValues, setDrawdownValues] = useState<number[] | null>(null);
+  const [drawdownMin, setDrawdownMin] = useState(0);
+  const [drawdownMax, setDrawdownMax] = useState(0);
+
   // Head difference data
   const [diffValues, setDiffValues] = useState<(number | null)[] | null>(null);
   const [diffMin, setDiffMin] = useState(0);
@@ -175,11 +184,16 @@ export function ResultsMapView() {
   const subsCacheRef = useRef<Record<string, SubsCacheEntry>>({});
   const SUBS_CACHE_LIMIT = 50;
 
+  // Drawdown data cache
+  type DrawdownCacheEntry = { values: number[]; min: number; max: number };
+  const drawdownCacheRef = useRef<Record<string, DrawdownCacheEntry>>({});
+
   const nLayers = modelInfo?.n_layers ?? 1;
   const hasHeads = resultsInfo ? resultsInfo.n_head_timesteps > 0 : false;
   const hasSubsidenceSurface = resultsInfo?.has_subsidence_surface ?? false;
   const colorByHead = mapColorProperty === 'head' && !headDiffMode;
   const colorBySubsidence = mapColorProperty === 'subsidence';
+  const colorByDrawdown = mapColorProperty === 'drawdown';
   const colorByDiff = headDiffMode;
 
   // Basemap style (string URL for vector, object for raster)
@@ -477,9 +491,101 @@ export function ResultsMapView() {
     };
   }, [subsidenceTimestep, subsidenceLayer, hasSubsidenceSurface, colorBySubsidence, isSubsidenceAnimating, resultsInfo]);
 
+  // Fetch drawdown global range when drawdown mode activates or reference changes
+  useEffect(() => {
+    if (!colorByDrawdown || !hasHeads) return;
+    fetchDrawdownRange(drawdownReferenceTimestep, headLayer)
+      .then((r) => setDrawdownGlobalRange(r.min, r.max))
+      .catch(() => {});
+  }, [colorByDrawdown, drawdownReferenceTimestep, headLayer, hasHeads, setDrawdownGlobalRange]);
+
+  // Clear drawdown cache when reference timestep or layer changes
+  useEffect(() => {
+    drawdownCacheRef.current = {};
+  }, [drawdownReferenceTimestep, headLayer]);
+
+  // Load drawdown by element
+  useEffect(() => {
+    if (!hasHeads || !colorByDrawdown) return;
+
+    const cacheKey = `${headTimestep}:${drawdownReferenceTimestep}:${headLayer}`;
+    const cached = drawdownCacheRef.current[cacheKey];
+
+    if (cached) {
+      setDrawdownValues(cached.values);
+      setDrawdownMin(cached.min);
+      setDrawdownMax(cached.max);
+    } else if (isAnimating) {
+      const ts = headTimestep;
+      const ref = drawdownReferenceTimestep;
+      const ly = headLayer;
+      fetchDrawdownByElement(ts, ref, ly).then(data => {
+        const vals = data.values.map(v => v ?? NaN);
+        const lo = data.min;
+        const hi = data.max;
+        const cache = drawdownCacheRef.current;
+        const keys = Object.keys(cache);
+        if (keys.length >= HEAD_CACHE_LIMIT) {
+          delete cache[keys[0]];
+        }
+        cache[`${ts}:${ref}:${ly}`] = { values: vals, min: lo, max: hi };
+        setDrawdownValues(vals);
+        setDrawdownMin(lo);
+        setDrawdownMax(hi);
+      }).catch(() => {});
+    } else {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(async () => {
+        try {
+          const data = await fetchDrawdownByElement(headTimestep, drawdownReferenceTimestep, headLayer);
+          const vals = data.values.map(v => v ?? NaN);
+          const lo = data.min;
+          const hi = data.max;
+          const cache = drawdownCacheRef.current;
+          const keys = Object.keys(cache);
+          if (keys.length >= HEAD_CACHE_LIMIT) {
+            delete cache[keys[0]];
+          }
+          cache[cacheKey] = { values: vals, min: lo, max: hi };
+          setDrawdownValues(vals);
+          setDrawdownMin(lo);
+          setDrawdownMax(hi);
+        } catch {
+          // Drawdown data not available
+        }
+      }, 200);
+    }
+
+    // Prefetch next timestep when animating
+    if (isAnimating && headTimestep < (resultsInfo?.n_head_timesteps ?? 0) - 1) {
+      const nextTs = headTimestep + 1;
+      const nextKey = `${nextTs}:${drawdownReferenceTimestep}:${headLayer}`;
+      if (!drawdownCacheRef.current[nextKey]) {
+        fetchDrawdownByElement(nextTs, drawdownReferenceTimestep, headLayer).then(data => {
+          const vals = data.values.map(v => v ?? NaN);
+          const lo = data.min;
+          const hi = data.max;
+          const cache = drawdownCacheRef.current;
+          const keys = Object.keys(cache);
+          if (keys.length >= HEAD_CACHE_LIMIT) {
+            delete cache[keys[0]];
+          }
+          cache[nextKey] = { values: vals, min: lo, max: hi };
+        }).catch(() => {});
+      }
+    }
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+    };
+  }, [headTimestep, drawdownReferenceTimestep, headLayer, hasHeads, colorByDrawdown, isAnimating, resultsInfo]);
+
   // Load property map when coloring by a non-head property
   useEffect(() => {
-    if (colorByHead || colorByDiff || colorBySubsidence) {
+    if (colorByHead || colorByDiff || colorBySubsidence || colorByDrawdown) {
       setPropertyValues(null);
       setPropertyMeta(null);
       return;
@@ -505,7 +611,7 @@ export function ResultsMapView() {
       }
     };
     loadProperty();
-  }, [mapColorProperty, headLayer, colorByHead, colorByDiff, colorBySubsidence]);
+  }, [mapColorProperty, headLayer, colorByHead, colorByDiff, colorBySubsidence, colorByDrawdown]);
 
   // Load head difference data
   useEffect(() => {
@@ -665,22 +771,27 @@ export function ResultsMapView() {
 
     // Determine which color values/range to use
     const useSubsColor = colorBySubsidence && subsidenceValues !== null;
-    const usePropertyColor = !colorByHead && !colorByDiff && !useSubsColor && propertyValues !== null;
+    const useDrawdownColor = colorByDrawdown && drawdownValues !== null;
+    const usePropertyColor = !colorByHead && !colorByDiff && !useSubsColor && !useDrawdownColor && propertyValues !== null;
     const useDiffColor = colorByDiff && diffValues !== null;
     const activeValues = useDiffColor
       ? (diffValues as number[])
-      : useSubsColor
-        ? subsidenceValues
-        : usePropertyColor
-          ? propertyValues
-          : headValues;
+      : useDrawdownColor
+        ? drawdownValues
+        : useSubsColor
+          ? subsidenceValues
+          : usePropertyColor
+            ? propertyValues
+            : headValues;
     // Use global range when available (fixed scale across animation);
     // fall back to per-frame range.
     const activeMin = useDiffColor ? diffMin
+      : useDrawdownColor ? (drawdownGlobalMin ?? drawdownMin)
       : useSubsColor ? (subsidenceGlobalMin ?? subsidenceMin)
       : usePropertyColor ? propertyMin
       : (headGlobalMin ?? headMin);
     const activeMax = useDiffColor ? diffMax
+      : useDrawdownColor ? (drawdownGlobalMax ?? drawdownMax)
       : useSubsColor ? (subsidenceGlobalMax ?? subsidenceMax)
       : usePropertyColor ? propertyMax
       : (headGlobalMax ?? headMax);
@@ -691,6 +802,10 @@ export function ResultsMapView() {
     const subsAbsMax = Math.max(
       Math.abs(subsidenceGlobalMin ?? subsidenceMin),
       Math.abs(subsidenceGlobalMax ?? subsidenceMax),
+    );
+    const drawdownAbsMax = Math.max(
+      Math.abs(drawdownGlobalMin ?? drawdownMin),
+      Math.abs(drawdownGlobalMax ?? drawdownMax),
     );
 
     // Build element_id → feature index map for value lookups.
@@ -722,13 +837,13 @@ export function ResultsMapView() {
           if (val === null || val === undefined || isNaN(val as number)) {
             return [200, 200, 200, 50] as [number, number, number, number];
           }
-          if (!useDiffColor && (val as number) < -9000) {
+          if (!useDiffColor && !useDrawdownColor && (val as number) < -9000) {
             return [200, 200, 200, 50] as [number, number, number, number];
           }
 
-          if (useDiffColor || useSubsColor) {
-            // Diverging scale for diff and subsidence
-            const absMax = useDiffColor ? diffAbsMax : subsAbsMax;
+          if (useDiffColor || useSubsColor || useDrawdownColor) {
+            // Diverging scale for diff, subsidence, and drawdown
+            const absMax = useDiffColor ? diffAbsMax : useDrawdownColor ? drawdownAbsMax : subsAbsMax;
             const t = absMax > 0 ? ((val as number) + absMax) / (2 * absMax) : 0.5;
             return interpolateDivergingColor(t);
           }
@@ -1274,8 +1389,9 @@ export function ResultsMapView() {
   }, [
     geojson, headValues, headMin, headMax, headGlobalMin, headGlobalMax,
     propertyValues, propertyMin, propertyMax, propertyMeta,
-    colorByHead, colorByDiff, mapColorProperty,
+    colorByHead, colorByDiff, colorByDrawdown, mapColorProperty,
     diffValues, diffMin, diffMax,
+    drawdownValues, drawdownMin, drawdownMax, drawdownGlobalMin, drawdownGlobalMax,
     subregionGeoJSON, showSubregions,
     streamGeoJSON, showStreamsOnMap,
     wellData, showWells,
@@ -1295,25 +1411,32 @@ export function ResultsMapView() {
   // Legend props
   const legendLabel = colorByDiff
     ? 'Head Difference (ft)'
-    : colorBySubsidence
-      ? 'Subsidence (ft)'
-      : colorByHead
-        ? 'Head (ft)'
-        : `${propertyMeta?.name ?? mapColorProperty} ${propertyMeta?.units ? `(${propertyMeta.units})` : ''}`;
+    : colorByDrawdown
+      ? 'Drawdown (ft)'
+      : colorBySubsidence
+        ? 'Subsidence (ft)'
+        : colorByHead
+          ? 'Head (ft)'
+          : `${propertyMeta?.name ?? mapColorProperty} ${propertyMeta?.units ? `(${propertyMeta.units})` : ''}`;
+  const drawdownLegendAbsMax = drawdownGlobalMin != null && drawdownGlobalMax != null
+    ? Math.max(Math.abs(drawdownGlobalMin), Math.abs(drawdownGlobalMax))
+    : Math.max(Math.abs(drawdownMin), Math.abs(drawdownMax));
   const legendMin = colorByDiff ? -Math.max(Math.abs(diffMin), Math.abs(diffMax))
+    : colorByDrawdown ? -drawdownLegendAbsMax
     : colorBySubsidence ? -(subsidenceGlobalMin != null && subsidenceGlobalMax != null
         ? Math.max(Math.abs(subsidenceGlobalMin), Math.abs(subsidenceGlobalMax))
         : Math.max(Math.abs(subsidenceMin), Math.abs(subsidenceMax)))
     : colorByHead ? (headGlobalMin ?? headMin)
     : propertyMin;
   const legendMax = colorByDiff ? Math.max(Math.abs(diffMin), Math.abs(diffMax))
+    : colorByDrawdown ? drawdownLegendAbsMax
     : colorBySubsidence ? (subsidenceGlobalMin != null && subsidenceGlobalMax != null
         ? Math.max(Math.abs(subsidenceGlobalMin), Math.abs(subsidenceGlobalMax))
         : Math.max(Math.abs(subsidenceMin), Math.abs(subsidenceMax)))
     : colorByHead ? (headGlobalMax ?? headMax)
     : propertyMax;
-  const showLegend = colorByDiff ? !!diffValues : colorBySubsidence ? !!subsidenceValues : colorByHead ? !!headValues : !!propertyValues;
-  const isDivergingLegend = colorByDiff || colorBySubsidence;
+  const showLegend = colorByDiff ? !!diffValues : colorByDrawdown ? !!drawdownValues : colorBySubsidence ? !!subsidenceValues : colorByHead ? !!headValues : !!propertyValues;
+  const isDivergingLegend = colorByDiff || colorBySubsidence || colorByDrawdown;
 
   if (loading) {
     return (

@@ -679,6 +679,27 @@ def get_element_detail(
     }
 
 
+@router.get("/mesh-quality")
+def get_mesh_quality() -> dict[str, Any]:
+    """
+    Compute and return mesh quality metrics.
+
+    Returns aggregate statistics (area, aspect ratio, skewness, angles)
+    for the loaded model mesh. Per-element details are excluded from the
+    response for performance; use the ``/api/mesh/element/{id}`` endpoint
+    for individual element inspection.
+    """
+    model = require_model()
+    grid = model.grid
+    if grid is None:
+        raise HTTPException(status_code=404, detail="No mesh/grid loaded")
+
+    from pyiwfm.core.mesh_quality import compute_mesh_quality
+
+    report = compute_mesh_quality(grid)
+    return report.to_dict()
+
+
 @router.get("/nodes")
 def get_mesh_nodes(
     layer: int = Query(default=1, ge=1, description="Layer number (unused, for future filtering)"),

@@ -33,6 +33,7 @@ import { useViewerStore } from '../../stores/viewerStore';
 import {
   fetchObservations, deleteObservation,
   getExportHeadsCsvUrl, getExportMeshGeoJsonUrl,
+  fetchDrawdownRange,
 } from '../../api/client';
 import { BASEMAPS } from './mapStyles';
 import { UploadWizard } from '../Observations/UploadWizard';
@@ -58,6 +59,8 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
     selectedBasemap,
     subsidenceTimestep, subsidenceTimes, subsidenceLayer,
     isSubsidenceAnimating,
+    drawdownReferenceTimestep,
+    setDrawdownReferenceTimestep, setDrawdownGlobalRange,
     setHeadTimestep, setHeadLayer,
     setAnimationSpeed,
     setShowGWLocations, setShowStreamLocations, setShowSubsidenceLocations,
@@ -183,6 +186,9 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
   ];
   if (hasSubsidenceSurface) {
     colorOptions.push({ id: 'subsidence', label: 'Subsidence' });
+  }
+  if (hasHeads) {
+    colorOptions.push({ id: 'drawdown', label: 'Drawdown' });
   }
   for (const prop of properties) {
     if (prop.id !== 'layer') {
@@ -338,6 +344,63 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
               ))}
             </Select>
           </FormControl>
+        </Box>
+      )}
+
+      {/* Drawdown Time Slider */}
+      {hasHeads && nTimesteps > 0 && mapColorProperty === 'drawdown' && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            Timestep: {formatTime(currentTime)}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton size="small" onClick={toggleAnimation}>
+              {isAnimating ? <PauseIcon /> : <PlayArrowIcon />}
+            </IconButton>
+            <Slider
+              value={headTimestep}
+              min={0}
+              max={Math.max(0, nTimesteps - 1)}
+              step={1}
+              onChange={(_, v) => setHeadTimestep(v as number)}
+              size="small"
+            />
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {headTimestep + 1} / {nTimesteps}
+          </Typography>
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              Reference: {formatTime(headTimes[drawdownReferenceTimestep] || '')}
+            </Typography>
+            <Slider
+              value={drawdownReferenceTimestep}
+              min={0}
+              max={Math.max(0, nTimesteps - 1)}
+              step={1}
+              onChange={(_, v) => {
+                setDrawdownReferenceTimestep(v as number);
+                fetchDrawdownRange(v as number, headLayer)
+                  .then((r) => setDrawdownGlobalRange(r.min, r.max))
+                  .catch(() => {});
+              }}
+              size="small"
+            />
+          </Box>
+          <Box sx={{ mt: 0.5 }}>
+            <Typography variant="caption" color="text.secondary">
+              Speed: {animationSpeed}ms
+            </Typography>
+            <Slider
+              value={animationSpeed}
+              min={100}
+              max={2000}
+              step={100}
+              onChange={(_, v) => setAnimationSpeed(v as number)}
+              size="small"
+              track="inverted"
+            />
+          </Box>
         </Box>
       )}
 

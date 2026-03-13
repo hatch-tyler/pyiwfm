@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Query
 
 from pyiwfm.visualization.webapi.config import model_state, require_model
 
@@ -102,3 +102,45 @@ def get_small_watersheds() -> dict[str, Any]:
         )
 
     return {"n_watersheds": len(watersheds), "watersheds": watersheds}
+
+
+@router.get("/parameters")
+def get_watershed_parameters(
+    watershed_id: int = Query(..., ge=1, description="Watershed ID (1-based)"),
+) -> dict[str, Any]:
+    """Get detailed parameters for a specific small watershed."""
+    model = require_model()
+    sw = model.small_watersheds
+    if sw is None:
+        raise HTTPException(status_code=404, detail="Small watersheds not loaded")
+
+    if watershed_id > sw.n_items:
+        raise HTTPException(status_code=404, detail=f"Watershed {watershed_id} not found")
+
+    ws = sw.watersheds[watershed_id - 1]
+
+    return {
+        "watershed_id": watershed_id,
+        "gw_node": getattr(ws, "gw_node", None),
+        "area": getattr(ws, "area", None),
+        "max_baseflow": getattr(ws, "max_baseflow", None),
+        "percolation_fraction": getattr(ws, "percolation_fraction", None),
+        "root_depth": getattr(ws, "root_depth", None),
+        "wilting_point": getattr(ws, "wilting_point", None),
+        "field_capacity": getattr(ws, "field_capacity", None),
+        "porosity": getattr(ws, "porosity", None),
+    }
+
+
+@router.get("/summary")
+def get_small_watersheds_summary() -> dict[str, Any]:
+    """Get summary statistics for all small watersheds."""
+    model = require_model()
+    sw = model.small_watersheds
+    if sw is None:
+        raise HTTPException(status_code=404, detail="Small watersheds not loaded")
+
+    return {
+        "n_watersheds": sw.n_items,
+        "loaded": True,
+    }

@@ -401,6 +401,8 @@ def compute_multilayer_weights(
     grid: AppGrid,
     stratigraphy: Stratigraphy,
     hydraulic_conductivity: NDArray[np.float64],
+    fe_node_ids: tuple[int, ...] | None = None,
+    fe_weights: NDArray[np.float64] | None = None,
 ) -> NDArray[np.float64]:
     """Compute transmissivity-weighted layer weights for a well.
 
@@ -415,6 +417,11 @@ def compute_multilayer_weights(
     hydraulic_conductivity : NDArray[np.float64]
         Hydraulic conductivity array, shape ``(n_layers,)`` or
         ``(n_layers, n_nodes)`` for spatially varying HK.
+    fe_node_ids : tuple[int, ...], optional
+        Pre-computed FE interpolation node IDs (1-based). If provided
+        along with ``fe_weights``, skips the expensive FE search.
+    fe_weights : NDArray[np.float64], optional
+        Pre-computed FE interpolation coefficients.
 
     Returns
     -------
@@ -428,13 +435,17 @@ def compute_multilayer_weights(
         w[well.overwrite_layer - 1] = 1.0  # 1-based to 0-based
         return w
 
-    from pyiwfm.core.interpolation import FEInterpolator
-
     n_layers = stratigraphy.n_layers
-    interp = FEInterpolator(grid)
 
-    # Get shape function interpolation at well location
-    elem_id, node_ids, weights = interp.interpolate(well.x, well.y)
+    # Use pre-computed FE data if available, otherwise do full search
+    if fe_node_ids is not None and fe_weights is not None:
+        node_ids = fe_node_ids
+        weights = fe_weights
+    else:
+        from pyiwfm.core.interpolation import FEInterpolator
+
+        interp = FEInterpolator(grid)
+        _elem_id, node_ids, weights = interp.interpolate(well.x, well.y)
 
     # Interpolate layer elevations at well location
     layer_tops = np.zeros(n_layers)

@@ -11,9 +11,13 @@ import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import { fetchModelSummary } from '../../api/client';
-import type { ModelSummary } from '../../api/client';
+import Divider from '@mui/material/Divider';
+import DownloadIcon from '@mui/icons-material/Download';
+import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import { fetchModelSummary, fetchMeshQuality, getReportExportUrl } from '../../api/client';
+import type { ModelSummary, MeshQualityData } from '../../api/client';
 import { useViewerStore } from '../../stores/viewerStore';
+import { ModelComparison } from './ModelComparison';
 
 function StatusChip({ loaded }: { loaded: boolean }) {
   return (
@@ -37,8 +41,10 @@ function StatLine({ label, value }: { label: string; value: string | number | nu
 
 export function ModelOverview() {
   const [summary, setSummary] = useState<ModelSummary | null>(null);
+  const [meshQuality, setMeshQuality] = useState<MeshQualityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
   const setActiveTab = useViewerStore((s) => s.setActiveTab);
 
   useEffect(() => {
@@ -51,6 +57,12 @@ export function ModelOverview() {
         setError(err.message);
         setLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    fetchMeshQuality()
+      .then(setMeshQuality)
+      .catch(() => {}); // silently fail - mesh quality is optional
   }, []);
 
   if (loading) {
@@ -101,6 +113,29 @@ export function ModelOverview() {
             </CardContent>
           </Card>
         </Grid>
+
+        {/* Mesh Quality */}
+        {meshQuality && (
+          <Grid item xs={12} sm={6} md={4}>
+            <Card variant="outlined">
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="subtitle1">Mesh Quality</Typography>
+                  {meshQuality.poor_quality_count > 0 ? (
+                    <Chip label={`${meshQuality.poor_quality_count} poor`} color="warning" size="small" />
+                  ) : (
+                    <Chip label="Good" color="success" size="small" />
+                  )}
+                </Box>
+                <StatLine label="Elements Analyzed" value={meshQuality.n_elements} />
+                <StatLine label="Area Range" value={`${meshQuality.area_min.toFixed(1)} - ${meshQuality.area_max.toFixed(1)}`} />
+                <StatLine label="Aspect Ratio" value={`${meshQuality.aspect_ratio_min.toFixed(2)} - ${meshQuality.aspect_ratio_max.toFixed(2)} (avg ${meshQuality.aspect_ratio_mean.toFixed(2)})`} />
+                <StatLine label="Skewness (avg)" value={meshQuality.skewness_mean.toFixed(3)} />
+                <StatLine label="Angle Range" value={`${meshQuality.min_angle_global.toFixed(1)}\u00B0 - ${meshQuality.max_angle_global.toFixed(1)}\u00B0`} />
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
         {/* Groundwater */}
         <Grid item xs={12} sm={6} md={4}>
@@ -316,6 +351,38 @@ export function ModelOverview() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Actions */}
+      <Divider sx={{ my: 3 }} />
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Button
+          variant="outlined"
+          startIcon={<CompareArrowsIcon />}
+          onClick={() => setCompareOpen(true)}
+        >
+          Compare with Another Model
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<DownloadIcon />}
+          component="a"
+          href={getReportExportUrl('html')}
+          download
+        >
+          Export Report (HTML)
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<DownloadIcon />}
+          component="a"
+          href={getReportExportUrl('json')}
+          download
+        >
+          Export Report (JSON)
+        </Button>
+      </Box>
+
+      <ModelComparison open={compareOpen} onClose={() => setCompareOpen(false)} />
     </Box>
   );
 }

@@ -1025,6 +1025,134 @@ def get_drawdown(
     }
 
 
+@router.get("/drawdown-by-element")
+def get_drawdown_by_element(
+    timestep: int = Query(default=0, ge=0, description="Timestep index"),
+    reference_timestep: int = Query(
+        default=0, ge=0, description="Reference timestep (default: first)"
+    ),
+    layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
+) -> dict[str, Any]:
+    """Compute per-element drawdown (vertex-averaged) relative to a reference timestep.
+
+    Drawdown = head(reference) - head(timestep).
+    Positive values indicate water level decline.
+    """
+    loader = model_state.get_head_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No head data available")
+
+    model = model_state.model
+    if model is None or model.grid is None:
+        raise HTTPException(status_code=404, detail="No model grid available")
+
+    for ts, label in [
+        (timestep, "timestep"),
+        (reference_timestep, "reference_timestep"),
+    ]:
+        if ts >= loader.n_frames:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{label}={ts} out of range [0, {loader.n_frames})",
+            )
+
+    from pyiwfm.io.drawdown import DrawdownComputer
+
+    computer = DrawdownComputer(loader)
+    values = computer.compute_drawdown_by_element(
+        timestep=timestep,
+        reference_timestep=reference_timestep,
+        layer=layer,
+        grid=model.grid,
+    )
+
+    import numpy as np
+
+    values_list: list[float | None] = [None if np.isnan(v) else round(float(v), 3) for v in values]
+
+    dt = loader.times[timestep] if timestep < len(loader.times) else None
+
+    return {
+        "timestep_index": timestep,
+        "reference_timestep": reference_timestep,
+        "datetime": dt.isoformat() if dt else None,
+        "layer": layer,
+        "values": values_list,
+    }
+
+
+@router.get("/drawdown-range")
+def get_drawdown_range(
+    reference_timestep: int = Query(
+        default=0, ge=0, description="Reference timestep (default: first)"
+    ),
+    layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
+) -> dict[str, Any]:
+    """Get robust min/max drawdown across all timesteps (2nd-98th percentile).
+
+    Useful for setting a stable color scale for drawdown maps.
+    """
+    loader = model_state.get_head_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No head data available")
+
+    if reference_timestep >= loader.n_frames:
+        raise HTTPException(
+            status_code=400,
+            detail=f"reference_timestep={reference_timestep} out of range [0, {loader.n_frames})",
+        )
+
+    from pyiwfm.io.drawdown import DrawdownComputer
+
+    computer = DrawdownComputer(loader)
+    lo, hi = computer.compute_drawdown_range(reference_timestep=reference_timestep, layer=layer)
+
+    return {
+        "min": lo,
+        "max": hi,
+        "reference_timestep": reference_timestep,
+        "layer": layer,
+    }
+
+
+@router.get("/max-drawdown")
+def get_max_drawdown(
+    reference_timestep: int = Query(
+        default=0, ge=0, description="Reference timestep (default: first)"
+    ),
+    layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
+) -> dict[str, Any]:
+    """Get maximum drawdown at each node across all timesteps.
+
+    Returns the worst-case drawdown map: for each node, the largest
+    drawdown observed relative to the reference timestep.
+    """
+    loader = model_state.get_head_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No head data available")
+
+    if reference_timestep >= loader.n_frames:
+        raise HTTPException(
+            status_code=400,
+            detail=f"reference_timestep={reference_timestep} out of range [0, {loader.n_frames})",
+        )
+
+    import numpy as np
+
+    from pyiwfm.io.drawdown import DrawdownComputer
+
+    computer = DrawdownComputer(loader)
+    values = computer.compute_max_drawdown_map(reference_timestep=reference_timestep, layer=layer)
+
+    values_list: list[float | None] = [None if np.isnan(v) else round(float(v), 3) for v in values]
+
+    return {
+        "reference_timestep": reference_timestep,
+        "layer": layer,
+        "values": values_list,
+    }
+
+
 @router.get("/heads-by-element")
 def get_heads_by_element(
     timestep: int = Query(default=0, ge=0, description="Timestep index"),

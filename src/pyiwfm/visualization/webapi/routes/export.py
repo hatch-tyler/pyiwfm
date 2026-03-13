@@ -1,5 +1,7 @@
 """
 Data export API routes: CSV, GeoJSON, GeoPackage, and plot downloads.
+
+Includes timeseries export endpoints for head, hydrograph, and budget data.
 """
 
 from __future__ import annotations
@@ -8,12 +10,16 @@ import csv
 import io
 import json
 import logging
+import math
 import tempfile
+from collections.abc import Iterator
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
+from starlette.responses import StreamingResponse
 
-from pyiwfm.visualization.webapi.config import model_state
+from pyiwfm.visualization.webapi.config import model_state, require_model
 
 logger = logging.getLogger(__name__)
 
@@ -511,3 +517,431 @@ def export_plot(
     except Exception as e:
         logger.exception("Plot generation failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ---------------------------------------------------------------------------
+# Helpers for timeseries export
+# ---------------------------------------------------------------------------
+
+
+def _sanitize_value(v: float) -> float | None:
+    """Replace NaN/Inf with ``None`` for JSON or empty string for CSV."""
+    if math.isnan(v) or math.isinf(v):
+        return None
+    return round(v, 4)
+
+
+def _csv_streaming_response(
+    rows: list[list[object]],
+    headers: list[str],
+    filename: str,
+) -> StreamingResponse:
+    """Build a ``StreamingResponse`` for CSV data."""
+
+    def _generate() -> Iterator[str]:
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(headers)
+        buf.seek(0)
+        yield buf.read()
+        for row in rows:
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(row)
+            buf.seek(0)
+            yield buf.read()
+
+    return StreamingResponse(
+        _generate(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /api/export/timeseries/head
+# ---------------------------------------------------------------------------
+
+
+@router.get("/report", response_model=None)
+def export_model_report(
+    format: str = Query(default="html", description="Report format: html or json"),
+) -> Response:
+    """Export a summary report of the loaded model."""
+    model = require_model()
+
+    if format == "json":
+        report_data = _build_report_data(model)
+        content = json.dumps(report_data, indent=2, default=str)
+        return Response(
+            content=content,
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=model_report.json"},
+        )
+
+    # HTML report
+    html = _build_html_report(model)
+    return Response(
+        content=html,
+        media_type="text/html",
+        headers={"Content-Disposition": "attachment; filename=model_report.html"},
+    )
+
+
+def _build_report_data(model: object) -> dict[str, object]:
+    """Build report data dictionary from model."""
+    data: dict[str, object] = {"title": "IWFM Model Summary Report"}
+
+    grid = getattr(model, "grid", None)
+    if grid:
+        data["mesh"] = {
+            "n_nodes": grid.n_nodes,
+            "n_elements": grid.n_elements,
+        }
+
+    strat = getattr(model, "stratigraphy", None)
+    if strat:
+        data["stratigraphy"] = {
+            "n_layers": strat.n_layers,
+        }
+
+    # Add component summaries
+    for comp_name in [
+        "groundwater",
+        "streams",
+        "lakes",
+        "rootzone",
+        "small_watersheds",
+        "unsaturated_zone",
+    ]:
+        comp = getattr(model, comp_name, None)
+        if comp:
+            data[comp_name] = {"loaded": True, "n_items": getattr(comp, "n_items", None)}
+        else:
+            data[comp_name] = {"loaded": False}
+
+    return data
+
+
+def _build_html_report(model: object) -> str:
+    """Build an HTML summary report."""
+    data = _build_report_data(model)
+
+    lines = [
+        "<!DOCTYPE html>",
+        "<html><head>",
+        "<meta charset='utf-8'>",
+        "<title>IWFM Model Report</title>",
+        "<style>",
+        "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,"
+        " sans-serif; margin: 40px; color: #333; }",
+        "h1 { color: #1976d2; border-bottom: 2px solid #1976d2; padding-bottom: 8px; }",
+        "h2 { color: #555; margin-top: 24px; }",
+        "table { border-collapse: collapse; margin: 12px 0; width: 100%; max-width: 600px; }",
+        "td, th { padding: 8px 16px; border: 1px solid #ddd; text-align: left; }",
+        "th { background: #f5f5f5; font-weight: 600; }",
+        ".loaded { color: #2e7d32; } .not-loaded { color: #999; }",
+        ".footer { margin-top: 40px; font-size: 12px; color: #999;"
+        " border-top: 1px solid #eee; padding-top: 8px; }",
+        "</style>",
+        "</head><body>",
+        f"<h1>{data['title']}</h1>",
+    ]
+
+    # Mesh section
+    mesh_data = data.get("mesh")
+    if isinstance(mesh_data, dict):
+        lines.append("<h2>Mesh</h2>")
+        lines.append("<table>")
+        n_nodes = mesh_data.get("n_nodes", "N/A")
+        n_elements = mesh_data.get("n_elements", "N/A")
+        lines.append(f"<tr><th>Nodes</th><td>{n_nodes:,}</td></tr>")
+        lines.append(f"<tr><th>Elements</th><td>{n_elements:,}</td></tr>")
+        lines.append("</table>")
+
+    strat_data = data.get("stratigraphy")
+    if isinstance(strat_data, dict):
+        n_layers = strat_data.get("n_layers", "N/A")
+        lines.append(f"<p>Layers: <strong>{n_layers}</strong></p>")
+
+    # Components
+    lines.append("<h2>Components</h2>")
+    lines.append("<table>")
+    lines.append("<tr><th>Component</th><th>Status</th><th>Items</th></tr>")
+    for comp_name in [
+        "groundwater",
+        "streams",
+        "lakes",
+        "rootzone",
+        "small_watersheds",
+        "unsaturated_zone",
+    ]:
+        comp = data.get(comp_name)
+        if isinstance(comp, dict):
+            loaded = comp.get("loaded", False)
+            if loaded:
+                status = "<span class='loaded'>Loaded</span>"
+                n_items = comp.get("n_items", "-")
+            else:
+                status = "<span class='not-loaded'>Not loaded</span>"
+                n_items = "-"
+            display_name = comp_name.replace("_", " ").title()
+            lines.append(f"<tr><td>{display_name}</td><td>{status}</td><td>{n_items}</td></tr>")
+    lines.append("</table>")
+
+    # Footer
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    lines.append(f"<div class='footer'>Generated by pyiwfm on {now}</div>")
+    lines.append("</body></html>")
+
+    return "\n".join(lines)
+
+
+@router.get("/timeseries/head", response_model=None)
+def export_timeseries_head(
+    node_id: int = Query(..., ge=1, description="Node ID (1-based)"),
+    layer: int = Query(default=1, ge=1, description="Layer number (1-based)"),
+    format: Literal["csv", "json"] = Query(default="csv", description="Output format"),
+) -> Response | StreamingResponse:
+    """Export head timeseries at a specific node as CSV or JSON.
+
+    Iterates over all available timesteps and extracts the head value
+    for the requested node and layer.
+    """
+    loader = model_state.get_head_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No head data available")
+
+    layer_idx = layer - 1
+    if layer_idx >= loader.n_layers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Layer {layer} out of range [1, {loader.n_layers}]",
+        )
+
+    node_idx = node_id - 1
+    if node_idx < 0 or node_idx >= loader.n_nodes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Node {node_id} out of range [1, {loader.n_nodes}]",
+        )
+
+    # Extract timeseries across all frames
+    times = loader.times
+    rows: list[list[object]] = []
+    for i in range(loader.n_frames):
+        frame = loader.get_frame(i)
+        raw_val = float(frame[node_idx, layer_idx])
+        clean = _sanitize_value(raw_val)
+        dt_str = times[i].isoformat() if i < len(times) else str(i)
+        rows.append([dt_str, clean if clean is not None else ""])
+
+    if format == "json":
+        records = []
+        for row in rows:
+            records.append({"datetime": row[0], "head_value": row[1] if row[1] != "" else None})
+        return Response(
+            content=json.dumps(records),
+            media_type="application/json",
+        )
+
+    filename = f"head_node{node_id}_layer{layer}.csv"
+    return _csv_streaming_response(rows, ["datetime", "head_value"], filename)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/export/timeseries/hydrograph
+# ---------------------------------------------------------------------------
+
+
+@router.get("/timeseries/hydrograph", response_model=None)
+def export_timeseries_hydrograph(
+    location_id: int = Query(..., ge=1, description="Location/node ID (1-based)"),
+    type: Literal["gw", "stream", "subsidence", "tile_drain"] = Query(
+        ..., description="Hydrograph type"
+    ),
+    format: Literal["csv", "json"] = Query(default="csv", description="Output format"),
+) -> Response | StreamingResponse:
+    """Export hydrograph timeseries data as CSV or JSON.
+
+    Delegates to the appropriate hydrograph reader based on *type*.
+    """
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    value_label: str
+    if type == "gw":
+        reader = model_state.get_gw_hydrograph_reader()
+        value_label = "head_ft"
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(status_code=404, detail="No GW hydrograph data available")
+
+        phys_locs = model_state.get_gw_physical_locations()
+        location_index = location_id - 1
+
+        if phys_locs:
+            if location_index < 0 or location_index >= len(phys_locs):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"GW hydrograph {location_id} out of range",
+                )
+            col_idx = phys_locs[location_index]["columns"][0][0]
+        else:
+            col_idx = location_index
+
+        if col_idx < 0 or col_idx >= reader.n_columns:
+            raise HTTPException(
+                status_code=404,
+                detail=f"GW hydrograph {location_id} out of range",
+            )
+
+    elif type == "stream":
+        reader = model_state.get_stream_hydrograph_reader()
+        value_label = "flow_cfs"
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="No stream hydrograph data available",
+            )
+
+        col_idx_maybe = reader.find_column_by_node_id(location_id)
+        if col_idx_maybe is None and location_id in reader.hydrograph_ids:
+            col_idx_maybe = reader.hydrograph_ids.index(location_id)
+        if col_idx_maybe is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Stream node {location_id} not found",
+            )
+        col_idx = col_idx_maybe
+
+    elif type == "subsidence":
+        reader = model_state.get_subsidence_reader()
+        value_label = "subsidence_ft"
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="No subsidence hydrograph data available",
+            )
+
+        col_idx = location_id - 1
+        if col_idx < 0 or col_idx >= reader.n_columns:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Subsidence location {location_id} out of range",
+            )
+
+    else:  # tile_drain
+        reader = model_state.get_tile_drain_reader()
+        value_label = "flow_volume"
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="No tile drain hydrograph data available",
+            )
+
+        col_idx = location_id - 1
+        if col_idx < 0 or col_idx >= reader.n_columns:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Tile drain location {location_id} out of range",
+            )
+
+    times_list, values_list = reader.get_time_series(col_idx)
+
+    rows: list[list[object]] = []
+    for t, v in zip(times_list, values_list, strict=False):
+        clean = _sanitize_value(float(v))
+        rows.append([t, clean if clean is not None else ""])
+
+    if format == "json":
+        records = []
+        for row in rows:
+            records.append({"datetime": row[0], value_label: row[1] if row[1] != "" else None})
+        return Response(
+            content=json.dumps(records),
+            media_type="application/json",
+        )
+
+    filename = f"hydrograph_{type}_{location_id}.csv"
+    return _csv_streaming_response(rows, ["datetime", value_label], filename)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/export/timeseries/budget
+# ---------------------------------------------------------------------------
+
+
+@router.get("/timeseries/budget", response_model=None)
+def export_timeseries_budget(
+    budget_type: str = Query(..., description="Budget type"),
+    location: str = Query(default="", description="Location name or index"),
+    format: Literal["csv", "json"] = Query(default="csv", description="Output format"),
+) -> Response | StreamingResponse:
+    """Export budget timeseries data as CSV or JSON.
+
+    Returns all budget columns for the specified budget type and location.
+    """
+    reader = model_state.get_budget_reader(budget_type)
+    if reader is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Budget type '{budget_type}' not available",
+        )
+
+    loc: str | int = location if location else 0
+
+    try:
+        times_arr, values_arr = reader.get_values(loc)
+        col_headers = reader.get_column_headers(loc)
+    except (KeyError, IndexError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    # Build time strings from budget header
+    ts = reader.header.timestep
+    from datetime import timedelta
+
+    use_months = "MON" in ts.unit.upper() if ts.unit else False
+    if use_months:
+        from dateutil.relativedelta import relativedelta
+
+    time_strings: list[str] = []
+    if ts.start_datetime:
+        for i in range(len(times_arr)):
+            if use_months:
+                dt = ts.start_datetime + relativedelta(months=i)
+            else:
+                dt = ts.start_datetime + timedelta(minutes=ts.delta_t_minutes * i)
+            time_strings.append(dt.isoformat())
+    else:
+        time_strings = [str(t) for t in times_arr.tolist()]
+
+    # Build rows with sanitized values
+    rows: list[list[object]] = []
+    for i, ts_str in enumerate(time_strings):
+        row: list[object] = [ts_str]
+        for j in range(values_arr.shape[1]):
+            clean = _sanitize_value(float(values_arr[i, j]))
+            row.append(clean if clean is not None else "")
+        rows.append(row)
+
+    all_headers = ["datetime"] + col_headers
+
+    if format == "json":
+        records = []
+        for row in rows:
+            record: dict[str, object] = {"datetime": row[0]}
+            for k, header in enumerate(col_headers):
+                val = row[k + 1]
+                record[header] = val if val != "" else None
+            records.append(record)
+        return Response(
+            content=json.dumps(records),
+            media_type="application/json",
+        )
+
+    loc_name = location or reader.locations[0]
+    safe_name = str(loc_name).replace(" ", "_").replace("/", "_")
+    filename = f"budget_ts_{budget_type}_{safe_name}.csv"
+    return _csv_streaming_response(rows, all_headers, filename)

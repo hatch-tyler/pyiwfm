@@ -187,6 +187,8 @@ class ResultsExtractor:
                             grid,
                             strat,
                             kh,
+                            fe_node_ids=node_ids,
+                            fe_weights=coeffs,
                         )
                         self._t_weights[spec.name] = t_weights
                     else:
@@ -206,6 +208,9 @@ class ResultsExtractor:
 
     def extract(self, timesteps: list[int] | None = None) -> ExtractionResult:
         """Extract values at all locations.
+
+        Iterates timesteps in the outer loop so each HDF5 frame is read
+        exactly once, regardless of the number of extraction points.
 
         Parameters
         ----------
@@ -236,39 +241,41 @@ class ResultsExtractor:
             incremental=self._incremental,
         )
 
+        # Build list of active specs with pre-computed index arrays
+        active_specs: list[tuple[ExtractionSpec, NDArray, NDArray]] = []
         for spec in self._specs:
             if spec.name not in self._fe_weights:
                 continue
-
             fe_info = self._fe_weights[spec.name]
-            node_ids = fe_info["node_ids"]
+            node_indices = np.array([nid - 1 for nid in fe_info["node_ids"]])
             coeffs = fe_info["weights"]
-            node_indices = np.array([nid - 1 for nid in node_ids])
+            active_specs.append((spec, node_indices, coeffs))
 
-            # Extract per-layer values
-            per_layer = np.full((n_times, n_layers), np.nan, dtype=np.float64)
+        # Pre-allocate per-layer arrays
+        per_layer_arrays: dict[str, NDArray[np.float64]] = {}
+        for spec, _, _ in active_specs:
+            per_layer_arrays[spec.name] = np.full((n_times, n_layers), np.nan, dtype=np.float64)
 
-            for ti, ts_idx in enumerate(time_indices):
-                frame = loader.get_frame(ts_idx)  # (n_nodes, n_layers)
+        # Outer loop: timesteps (each frame read once)
+        for ti, ts_idx in enumerate(time_indices):
+            frame = loader.get_frame(ts_idx)  # (n_nodes, n_layers)
+            for spec, node_indices, coeffs in active_specs:
                 for layer in range(n_layers):
                     vals = frame[node_indices, layer]
                     if not np.any(np.isnan(vals)):
-                        per_layer[ti, layer] = float(np.dot(coeffs, vals))
+                        per_layer_arrays[spec.name][ti, layer] = float(np.dot(coeffs, vals))
 
+        # Populate result and aggregate
+        for spec, _, _ in active_specs:
+            per_layer = per_layer_arrays[spec.name]
             result.per_layer.setdefault(spec.name, per_layer)
             result.names.append(spec.name)
 
-            # Aggregate across layers
-            aggregated = self._aggregate_layers(
-                per_layer,
-                spec,
-                n_layers,
-            )
+            aggregated = self._aggregate_layers(per_layer, spec, n_layers)
 
-            # Incremental conversion for subsidence
             if self._incremental:
                 incr = np.full(n_times, np.nan, dtype=np.float64)
-                incr[0] = 0.0  # No prior timestep
+                incr[0] = 0.0
                 incr[1:] = aggregated[1:] - aggregated[:-1]
                 result.values[spec.name] = incr
             else:

@@ -3,6 +3,7 @@ API route modules for the FastAPI web viewer.
 """
 
 from pyiwfm.visualization.webapi.routes.budgets import router as budgets_router
+from pyiwfm.visualization.webapi.routes.diagnostics import router as diagnostics_router
 from pyiwfm.visualization.webapi.routes.export import router as export_router
 from pyiwfm.visualization.webapi.routes.groundwater import router as groundwater_router
 from pyiwfm.visualization.webapi.routes.lakes import router as lakes_router
@@ -17,6 +18,9 @@ from pyiwfm.visualization.webapi.routes.small_watersheds import (
     router as small_watersheds_router,
 )
 from pyiwfm.visualization.webapi.routes.streams import router as streams_router
+from pyiwfm.visualization.webapi.routes.unsaturated_zone import (
+    router as unsaturated_zone_router,
+)
 from pyiwfm.visualization.webapi.routes.zbudgets import router as zbudgets_router
 
 __all__ = [
@@ -33,5 +37,7 @@ __all__ = [
     "lakes_router",
     "export_router",
     "small_watersheds_router",
+    "unsaturated_zone_router",
     "zbudgets_router",
+    "diagnostics_router",
 ]

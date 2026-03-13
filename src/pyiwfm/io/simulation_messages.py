@@ -3,7 +3,8 @@ Parser for IWFM SimulationMessages.out files.
 
 SimulationMessages.out is produced by IWFM during simulation and contains
 warnings, errors, and informational messages with spatial context (node IDs,
-element IDs, reach IDs, layer IDs).
+element IDs, reach IDs, layer IDs).  Additionally parses convergence iteration
+counts, mass balance errors, and timestep cut / damping factor events.
 
 Example
 -------
@@ -13,6 +14,8 @@ Example
 >>> print(f"Warnings: {result.warning_count}, Errors: {result.error_count}")
 >>> for msg in result.filter_by_severity(MessageSeverity.WARN):
 ...     print(msg.text[:80])
+>>> summary = result.get_convergence_summary()
+>>> print(f"Max iterations: {summary['max_iterations']}")
 """
 
 from __future__ import annotations
@@ -57,6 +60,81 @@ _RUNTIME_RE = re.compile(
 # Pattern to extract warning count from summary
 _WARNING_COUNT_RE = re.compile(r"(\d+)\s+warning", re.IGNORECASE)
 
+# ---------------------------------------------------------------------------
+# Convergence / mass-balance / timestep-cut patterns
+# ---------------------------------------------------------------------------
+
+# Timestep context: "TIME STEP #123" or "TIME STEP 123"
+_TIMESTEP_RE = re.compile(r"TIME\s+STEP\s*#?\s*(\d+)", re.IGNORECASE)
+
+# IWFM date in MM/DD/YYYY_HH:MM format
+_IWFM_DATE_RE = re.compile(r"\b(\d{1,2}/\d{1,2}/\d{4}_\d{2}:\d{2})\b")
+
+# Iteration line: "Iteration #3" or "ITERATION  5"
+_ITERATION_RE = re.compile(r"ITERATION\s*#?\s*(\d+)", re.IGNORECASE)
+
+# Converged: "converged after 4 iterations" or "CONVERGENCE ACHIEVED IN 4 ITERATIONS"
+_CONVERGED_RE = re.compile(
+    r"CONVERG\w*\s+(?:ACHIEVED\s+IN|after)\s+(\d+)\s+ITERATION",
+    re.IGNORECASE,
+)
+
+# Convergence failure: "CONVERGENCE NOT ACHIEVED" or "DID NOT CONVERGE"
+_NO_CONVERGE_RE = re.compile(
+    r"CONVERGENCE\s+NOT\s+ACHIEVED|DID\s+NOT\s+CONVERGE|NOT\s+CONVERGED",
+    re.IGNORECASE,
+)
+
+# Max residual: "MAX RESIDUAL = 1.234E-03" or "maximum residual: 0.0012"
+_MAX_RESIDUAL_RE = re.compile(
+    r"MAX(?:IMUM)?\s+RESIDUAL\s*[=:]\s*([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)",
+    re.IGNORECASE,
+)
+
+# Mass balance error: "MASS BALANCE ERROR" or "mass balance" lines with numeric values
+_MASS_BALANCE_RE = re.compile(
+    r"MASS\s+BALANCE\s*(?:ERROR)?\s*[=:]\s*([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)",
+    re.IGNORECASE,
+)
+
+# Mass balance with percentage: "1.234 (0.05%)" or "error = 1.234, 0.05 %"
+_MASS_BALANCE_PCT_RE = re.compile(
+    r"([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)\s*"
+    r"(?:\(|\s*,\s*|\s+)"
+    r"([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)\s*%",
+    re.IGNORECASE,
+)
+
+# Component in mass balance context: "GROUNDWATER mass balance" etc.
+_MB_COMPONENT_RE = re.compile(
+    r"(GROUNDWATER|STREAM|ROOT\s*ZONE|LAKE|UNSATURATED)\s+MASS\s+BALANCE",
+    re.IGNORECASE,
+)
+
+# Storage change line (alternative mass balance indicator)
+_STORAGE_CHANGE_RE = re.compile(
+    r"STORAGE\s+CHANGE\s*[=:]\s*([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)",
+    re.IGNORECASE,
+)
+
+# Timestep cut: "TIME STEP CUT" or "REDUCING TIME STEP"
+_TIMESTEP_CUT_RE = re.compile(
+    r"TIME\s*STEP\s*CUT|REDUCING\s+TIME\s*STEP|TIME\s*STEP\s+REDUCED",
+    re.IGNORECASE,
+)
+
+# New dt after cut: "new dt = 0.5" or "DT = 3600"
+_NEW_DT_RE = re.compile(
+    r"(?:NEW\s+)?DT\s*[=:]\s*([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)",
+    re.IGNORECASE,
+)
+
+# Damping factor: "DAMPING FACTOR" or "DAMPING = 0.5"
+_DAMPING_RE = re.compile(
+    r"DAMPING(?:\s+FACTOR)?\s*[=:]\s*([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)",
+    re.IGNORECASE,
+)
+
 
 @dataclass
 class SimulationMessage:
@@ -93,6 +171,80 @@ class SimulationMessage:
 
 
 @dataclass
+class ConvergenceRecord:
+    """Record of convergence iteration data for a single timestep.
+
+    Attributes
+    ----------
+    timestep_index : int
+        1-based timestep number.
+    date : str
+        IWFM date string (``MM/DD/YYYY_HH:MM``) for the timestep.
+    iteration_count : int
+        Number of solver iterations for this timestep.
+    max_residual : float | None
+        Maximum residual at final iteration, if reported.
+    convergence_achieved : bool
+        Whether the solver converged within the allowed iterations.
+    """
+
+    timestep_index: int
+    date: str
+    iteration_count: int
+    max_residual: float | None
+    convergence_achieved: bool
+
+
+@dataclass
+class MassBalanceRecord:
+    """Mass balance error record for a single timestep and component.
+
+    Attributes
+    ----------
+    timestep_index : int
+        1-based timestep number.
+    date : str
+        IWFM date string for the timestep.
+    component : str
+        Hydrologic component (e.g. ``"groundwater"``, ``"stream"``,
+        ``"rootzone"``).
+    error_value : float
+        Absolute mass balance error value.
+    error_percent : float | None
+        Mass balance error as a percentage, if reported.
+    """
+
+    timestep_index: int
+    date: str
+    component: str
+    error_value: float
+    error_percent: float | None
+
+
+@dataclass
+class TimestepCutRecord:
+    """Record of a timestep cut or damping factor adjustment.
+
+    Attributes
+    ----------
+    timestep_index : int
+        1-based timestep number where the cut occurred.
+    date : str
+        IWFM date string for the timestep.
+    reason : str
+        Description of why the timestep was cut (e.g. ``"TIME STEP CUT"``,
+        ``"DAMPING"``).
+    new_dt : float | None
+        New timestep size after the cut, if reported.
+    """
+
+    timestep_index: int
+    date: str
+    reason: str
+    new_dt: float | None
+
+
+@dataclass
 class SimulationMessagesResult:
     """Result of parsing a SimulationMessages.out file.
 
@@ -106,12 +258,67 @@ class SimulationMessagesResult:
         Number of warning messages.
     error_count : int
         Number of fatal/error messages.
+    convergence_records : list[ConvergenceRecord]
+        Per-timestep convergence iteration data.
+    mass_balance_records : list[MassBalanceRecord]
+        Per-timestep mass balance error data.
+    timestep_cuts : list[TimestepCutRecord]
+        Timestep cut / damping adjustment events.
+    max_iterations : int
+        Highest iteration count across all timesteps (0 if none parsed).
+    avg_iterations : float
+        Average iteration count across all timesteps (0.0 if none parsed).
     """
 
     messages: list[SimulationMessage]
     total_runtime: timedelta | None
     warning_count: int
     error_count: int
+    convergence_records: list[ConvergenceRecord] = field(default_factory=list)
+    mass_balance_records: list[MassBalanceRecord] = field(default_factory=list)
+    timestep_cuts: list[TimestepCutRecord] = field(default_factory=list)
+    max_iterations: int = 0
+    avg_iterations: float = 0.0
+
+    def get_convergence_summary(self) -> dict[str, Any]:
+        """Return summary statistics for convergence and mass balance.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary with keys:
+
+            - ``max_iterations`` — highest iteration count across all timesteps
+            - ``avg_iterations`` — mean iteration count
+            - ``total_timesteps`` — number of timesteps with convergence data
+            - ``converged_count`` — number of timesteps that converged
+            - ``failed_count`` — number of timesteps that did NOT converge
+            - ``convergence_rate`` — fraction of timesteps that converged
+            - ``timestep_cuts`` — total number of timestep cut events
+            - ``mass_balance_records`` — total number of mass balance records
+            - ``max_mass_balance_error`` — largest absolute mass balance error
+            - ``components_with_errors`` — sorted list of unique component names
+        """
+        total = len(self.convergence_records)
+        converged = sum(1 for r in self.convergence_records if r.convergence_achieved)
+        failed = total - converged
+
+        mb_errors = [abs(r.error_value) for r in self.mass_balance_records]
+        max_mb = max(mb_errors) if mb_errors else 0.0
+        components = sorted({r.component for r in self.mass_balance_records})
+
+        return {
+            "max_iterations": self.max_iterations,
+            "avg_iterations": self.avg_iterations,
+            "total_timesteps": total,
+            "converged_count": converged,
+            "failed_count": failed,
+            "convergence_rate": converged / total if total > 0 else 0.0,
+            "timestep_cuts": len(self.timestep_cuts),
+            "mass_balance_records": len(self.mass_balance_records),
+            "max_mass_balance_error": max_mb,
+            "components_with_errors": components,
+        }
 
     def filter_by_severity(self, severity: MessageSeverity) -> list[SimulationMessage]:
         """Return messages matching the given severity.
@@ -242,6 +449,106 @@ def _extract_procedure(text: str) -> str:
     return match.group(1) if match else ""
 
 
+def _scan_text_for_convergence(
+    text: str,
+    cur_ts: int,
+    cur_date: str,
+    cur_max_iter: int,
+    cur_max_residual: float | None,
+    convergence_records: list[ConvergenceRecord],
+    mass_balance_records: list[MassBalanceRecord],
+    timestep_cuts: list[TimestepCutRecord],
+) -> None:
+    """Scan parsed message text for convergence/mass-balance/timestep-cut patterns.
+
+    Called for messages parsed from ``* INFO:``/``* WARN:`` blocks so that
+    convergence data embedded in severity messages is not missed.
+    """
+    # Converged after N iterations
+    conv_match = _CONVERGED_RE.search(text)
+    if conv_match:
+        n_iters = int(conv_match.group(1))
+        res_match = _MAX_RESIDUAL_RE.search(text)
+        residual = (
+            float(res_match.group(1).replace("D", "E").replace("d", "e"))
+            if res_match
+            else cur_max_residual
+        )
+        convergence_records.append(
+            ConvergenceRecord(
+                timestep_index=cur_ts,
+                date=cur_date,
+                iteration_count=max(cur_max_iter, n_iters),
+                max_residual=residual,
+                convergence_achieved=True,
+            )
+        )
+        return
+
+    # Convergence NOT achieved
+    if _NO_CONVERGE_RE.search(text):
+        # Try to extract iteration count from the text
+        iter_m = _ITERATION_RE.search(text)
+        n_iters = int(iter_m.group(1)) if iter_m else cur_max_iter
+        # Try after N iterations pattern
+        after_m = re.search(r"after\s+(\d+)\s+iteration", text, re.IGNORECASE)
+        if after_m:
+            n_iters = max(n_iters, int(after_m.group(1)))
+        res_match = _MAX_RESIDUAL_RE.search(text)
+        residual = (
+            float(res_match.group(1).replace("D", "E").replace("d", "e"))
+            if res_match
+            else cur_max_residual
+        )
+        convergence_records.append(
+            ConvergenceRecord(
+                timestep_index=cur_ts,
+                date=cur_date,
+                iteration_count=max(n_iters, 1),
+                max_residual=residual,
+                convergence_achieved=False,
+            )
+        )
+        return
+
+    # Mass balance error
+    mb_match = _MASS_BALANCE_RE.search(text)
+    if mb_match:
+        error_val = float(mb_match.group(1).replace("D", "E").replace("d", "e"))
+        # Try to identify component
+        component = "total"
+        for comp_name in ("groundwater", "stream", "rootzone", "lake", "unsaturated"):
+            if comp_name in text.lower():
+                component = comp_name
+                break
+        # Try to extract percent
+        pct_match = re.search(r"(\d+\.?\d*)\s*%", text)
+        pct = float(pct_match.group(1)) if pct_match else None
+        mass_balance_records.append(
+            MassBalanceRecord(
+                timestep_index=cur_ts,
+                date=cur_date,
+                component=component,
+                error_value=error_val,
+                error_percent=pct,
+            )
+        )
+
+    # Timestep cut / damping
+    if _TIMESTEP_CUT_RE.search(text):
+        reason = text[:200]
+        dt_match = re.search(r"(?:new|reduced)\s+(?:dt|time\s*step)\s*[=:]\s*([\d.]+)", text, re.I)
+        new_dt = float(dt_match.group(1)) if dt_match else None
+        timestep_cuts.append(
+            TimestepCutRecord(
+                timestep_index=cur_ts,
+                date=cur_date,
+                reason=reason,
+                new_dt=new_dt,
+            )
+        )
+
+
 class SimulationMessagesReader(BaseReader):
     """Reader for IWFM SimulationMessages.out files.
 
@@ -261,11 +568,22 @@ class SimulationMessagesReader(BaseReader):
         Returns
         -------
         SimulationMessagesResult
-            Parsed messages with spatial context and summary statistics.
+            Parsed messages with spatial context, convergence records,
+            mass balance errors, and timestep cut events.
         """
         messages: list[SimulationMessage] = []
+        convergence_records: list[ConvergenceRecord] = []
+        mass_balance_records: list[MassBalanceRecord] = []
+        timestep_cuts: list[TimestepCutRecord] = []
         total_runtime: timedelta | None = None
         summary_warning_count: int | None = None
+
+        # Running context: current timestep index and date
+        cur_ts: int = 0
+        cur_date: str = ""
+        # Track max iteration seen in current timestep
+        cur_max_iter: int = 0
+        cur_max_residual: float | None = None
 
         with open(self.filepath, encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
@@ -275,7 +593,33 @@ class SimulationMessagesReader(BaseReader):
             line = lines[i]
             stripped = line.rstrip("\n\r")
 
-            # Check for severity block start
+            # ----------------------------------------------------------
+            # Timestep context: update cur_ts and cur_date
+            # ----------------------------------------------------------
+            ts_match = _TIMESTEP_RE.search(stripped)
+            if ts_match:
+                # Flush any pending iteration data from the previous timestep
+                if cur_ts > 0 and cur_max_iter > 0:
+                    convergence_records.append(
+                        ConvergenceRecord(
+                            timestep_index=cur_ts,
+                            date=cur_date,
+                            iteration_count=cur_max_iter,
+                            max_residual=cur_max_residual,
+                            convergence_achieved=True,
+                        )
+                    )
+                cur_ts = int(ts_match.group(1))
+                cur_max_iter = 0
+                cur_max_residual = None
+
+            date_match = _IWFM_DATE_RE.search(stripped)
+            if date_match:
+                cur_date = date_match.group(1)
+
+            # ----------------------------------------------------------
+            # Severity block start (existing logic, unchanged)
+            # ----------------------------------------------------------
             match = _SEVERITY_RE.match(stripped)
             if match:
                 severity = _parse_severity(match.group(1))
@@ -295,7 +639,7 @@ class SimulationMessagesReader(BaseReader):
                         # New severity block or separator (no space after *)
                         break
                     if cont.startswith("*"):
-                        # Check if this is a new severity block (e.g., "* FATAL: ...")
+                        # Check if this is a new severity block
                         if _SEVERITY_RE.match(cont):
                             break
                         # Continuation line: strip leading '* ' or '*   '
@@ -322,9 +666,173 @@ class SimulationMessagesReader(BaseReader):
                         layer_ids=layer_ids,
                     )
                 )
+
+                # Also scan parsed message text for convergence/mass-balance
+                # patterns since these often appear as INFO/WARN messages.
+                _scan_text_for_convergence(
+                    full_text,
+                    cur_ts,
+                    cur_date,
+                    cur_max_iter,
+                    cur_max_residual,
+                    convergence_records,
+                    mass_balance_records,
+                    timestep_cuts,
+                )
+                # Update cur_max_iter from convergence scan
+                conv_match = _CONVERGED_RE.search(full_text)
+                if conv_match:
+                    cur_max_iter = 0
+                    cur_max_residual = None
+                elif _NO_CONVERGE_RE.search(full_text):
+                    cur_max_iter = 0
+                    cur_max_residual = None
+                else:
+                    im = _ITERATION_RE.search(full_text)
+                    if im:
+                        cur_max_iter = max(cur_max_iter, int(im.group(1)))
+
+                # Extract date/timestep context from message text
+                ts_match = _TIMESTEP_RE.search(full_text)
+                if ts_match:
+                    cur_ts = int(ts_match.group(1))
+                date_match = _IWFM_DATE_RE.search(full_text)
+                if date_match:
+                    cur_date = date_match.group(1)
+
                 continue
 
-            # Check for runtime in summary section
+            # ----------------------------------------------------------
+            # Convergence iteration tracking
+            # ----------------------------------------------------------
+            iter_match = _ITERATION_RE.search(stripped)
+            if iter_match:
+                iter_num = int(iter_match.group(1))
+                cur_max_iter = max(cur_max_iter, iter_num)
+                # Check for residual on the same line
+                res_match = _MAX_RESIDUAL_RE.search(stripped)
+                if res_match:
+                    cur_max_residual = float(res_match.group(1).replace("D", "E").replace("d", "e"))
+
+            # "converged after N iterations"
+            conv_match = _CONVERGED_RE.search(stripped)
+            if conv_match:
+                n_iters = int(conv_match.group(1))
+                cur_max_iter = max(cur_max_iter, n_iters)
+                res_match = _MAX_RESIDUAL_RE.search(stripped)
+                if res_match:
+                    cur_max_residual = float(res_match.group(1).replace("D", "E").replace("d", "e"))
+                convergence_records.append(
+                    ConvergenceRecord(
+                        timestep_index=cur_ts,
+                        date=cur_date,
+                        iteration_count=cur_max_iter,
+                        max_residual=cur_max_residual,
+                        convergence_achieved=True,
+                    )
+                )
+                cur_max_iter = 0
+                cur_max_residual = None
+
+            # "CONVERGENCE NOT ACHIEVED"
+            if _NO_CONVERGE_RE.search(stripped):
+                res_match = _MAX_RESIDUAL_RE.search(stripped)
+                if res_match:
+                    cur_max_residual = float(res_match.group(1).replace("D", "E").replace("d", "e"))
+                convergence_records.append(
+                    ConvergenceRecord(
+                        timestep_index=cur_ts,
+                        date=cur_date,
+                        iteration_count=max(cur_max_iter, 1),
+                        max_residual=cur_max_residual,
+                        convergence_achieved=False,
+                    )
+                )
+                cur_max_iter = 0
+                cur_max_residual = None
+
+            # Standalone max residual (not on an iteration line)
+            if not iter_match and not conv_match:
+                res_match = _MAX_RESIDUAL_RE.search(stripped)
+                if res_match:
+                    cur_max_residual = float(res_match.group(1).replace("D", "E").replace("d", "e"))
+
+            # ----------------------------------------------------------
+            # Mass balance error parsing
+            # ----------------------------------------------------------
+            mb_match = _MASS_BALANCE_RE.search(stripped)
+            if mb_match:
+                error_val = float(mb_match.group(1).replace("D", "E").replace("d", "e"))
+                # Determine component
+                comp_match = _MB_COMPONENT_RE.search(stripped)
+                component = (
+                    comp_match.group(1).lower().replace(" ", "") if comp_match else "unknown"
+                )
+                # Check for percentage
+                pct_match = _MASS_BALANCE_PCT_RE.search(stripped)
+                error_pct: float | None = None
+                if pct_match:
+                    error_pct = float(pct_match.group(2).replace("D", "E").replace("d", "e"))
+                mass_balance_records.append(
+                    MassBalanceRecord(
+                        timestep_index=cur_ts,
+                        date=cur_date,
+                        component=component,
+                        error_value=error_val,
+                        error_percent=error_pct,
+                    )
+                )
+
+            # Storage change as alternative mass balance indicator
+            sc_match = _STORAGE_CHANGE_RE.search(stripped)
+            if sc_match and not mb_match:
+                error_val = float(sc_match.group(1).replace("D", "E").replace("d", "e"))
+                comp_match = _MB_COMPONENT_RE.search(stripped)
+                component = (
+                    comp_match.group(1).lower().replace(" ", "") if comp_match else "unknown"
+                )
+                mass_balance_records.append(
+                    MassBalanceRecord(
+                        timestep_index=cur_ts,
+                        date=cur_date,
+                        component=component,
+                        error_value=error_val,
+                        error_percent=None,
+                    )
+                )
+
+            # ----------------------------------------------------------
+            # Timestep cut / damping detection
+            # ----------------------------------------------------------
+            if _TIMESTEP_CUT_RE.search(stripped):
+                dt_match = _NEW_DT_RE.search(stripped)
+                new_dt: float | None = None
+                if dt_match:
+                    new_dt = float(dt_match.group(1).replace("D", "E").replace("d", "e"))
+                timestep_cuts.append(
+                    TimestepCutRecord(
+                        timestep_index=cur_ts,
+                        date=cur_date,
+                        reason="TIME STEP CUT",
+                        new_dt=new_dt,
+                    )
+                )
+
+            damp_match = _DAMPING_RE.search(stripped)
+            if damp_match:
+                damp_val = float(damp_match.group(1).replace("D", "E").replace("d", "e"))
+                timestep_cuts.append(
+                    TimestepCutRecord(
+                        timestep_index=cur_ts,
+                        date=cur_date,
+                        reason="DAMPING",
+                        new_dt=damp_val,
+                    )
+                )
+
+            # ----------------------------------------------------------
+            # Runtime / warning count from summary section
+            # ----------------------------------------------------------
             rt_match = _RUNTIME_RE.search(stripped)
             if rt_match:
                 hours = int(rt_match.group(1))
@@ -332,14 +840,25 @@ class SimulationMessagesReader(BaseReader):
                 seconds = float(rt_match.group(3))
                 total_runtime = timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
-            # Check for warning count in summary
             wc_match = _WARNING_COUNT_RE.search(stripped)
             if wc_match:
                 summary_warning_count = int(wc_match.group(1))
 
             i += 1
 
-        # Compute counts from parsed messages
+        # Flush any trailing iteration data from the last timestep
+        if cur_ts > 0 and cur_max_iter > 0:
+            convergence_records.append(
+                ConvergenceRecord(
+                    timestep_index=cur_ts,
+                    date=cur_date,
+                    iteration_count=cur_max_iter,
+                    max_residual=cur_max_residual,
+                    convergence_achieved=True,
+                )
+            )
+
+        # Compute message counts
         warning_count = sum(1 for m in messages if m.severity == MessageSeverity.WARN)
         error_count = sum(1 for m in messages if m.severity == MessageSeverity.FATAL)
 
@@ -348,9 +867,24 @@ class SimulationMessagesReader(BaseReader):
         if summary_warning_count is not None and summary_warning_count > warning_count:
             warning_count = summary_warning_count
 
+        # Convergence statistics
+        if convergence_records:
+            max_iters = max(r.iteration_count for r in convergence_records)
+            avg_iters = sum(r.iteration_count for r in convergence_records) / len(
+                convergence_records
+            )
+        else:
+            max_iters = 0
+            avg_iters = 0.0
+
         return SimulationMessagesResult(
             messages=messages,
             total_runtime=total_runtime,
             warning_count=warning_count,
             error_count=error_count,
+            convergence_records=convergence_records,
+            mass_balance_records=mass_balance_records,
+            timestep_cuts=timestep_cuts,
+            max_iterations=max_iters,
+            avg_iterations=avg_iters,
         )

@@ -26,6 +26,7 @@ def main(argv: list[str] | None = None) -> int:
     from pyiwfm.cli.export import add_export_parser
     from pyiwfm.cli.iwfm2obs import add_iwfm2obs_parser
     from pyiwfm.cli.package import add_package_parser
+    from pyiwfm.cli.pest import add_pest_parser
     from pyiwfm.cli.run import add_run_parser
     from pyiwfm.cli.viewer import add_viewer_parser
     from pyiwfm.cli.zbudget import add_zbudget_parser
@@ -38,6 +39,7 @@ def main(argv: list[str] | None = None) -> int:
     add_calctyphyd_parser(subparsers)
     add_package_parser(subparsers)
     add_run_parser(subparsers)
+    add_pest_parser(subparsers)
 
     args = parser.parse_args(argv)
 

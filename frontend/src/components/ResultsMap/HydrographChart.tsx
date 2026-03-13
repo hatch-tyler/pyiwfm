@@ -20,8 +20,10 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import CloseIcon from '@mui/icons-material/Close';
+import DownloadIcon from '@mui/icons-material/Download';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import { getHydrographExportUrl } from '../../api/client';
 import Plot from 'react-plotly.js';
 import type { HydrographData, ObservationData, GWAllLayersData, SubsidenceAllLayersData } from '../../api/client';
 import { fetchGWHydrographAllLayers, fetchSubsidenceAllLayers } from '../../api/client';
@@ -273,6 +275,15 @@ export function HydrographChart({ data, observation, onClose }: HydrographChartP
           </ToggleButtonGroup>
         )}
 
+        <IconButton
+          size="small"
+          title="Download CSV"
+          component="a"
+          href={getHydrographExportUrl(data.location_id, data.type as 'gw' | 'stream' | 'subsidence' | 'tile_drain')}
+          download
+        >
+          <DownloadIcon fontSize="small" />
+        </IconButton>
         <IconButton size="small" onClick={() => setExpanded(!expanded)} title={expanded ? 'Exit fullscreen' : 'Fullscreen'}>
           {expanded ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
         </IconButton>

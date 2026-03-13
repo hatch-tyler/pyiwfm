@@ -1274,6 +1274,53 @@ export async function fetchDrawdown(
 }
 
 // ===================================================================
+// Drawdown By Element API (per-timestep, for Results Map coloring)
+// ===================================================================
+
+export interface DrawdownByElementData {
+  timestep: number;
+  reference_timestep: number;
+  layer: number;
+  min: number;
+  max: number;
+  values: (number | null)[];
+}
+
+export async function fetchDrawdownByElement(
+  timestep: number,
+  referenceTimestep: number = 0,
+  layer: number = 1,
+): Promise<DrawdownByElementData> {
+  const response = await fetch(
+    `${API_BASE}/results/drawdown-by-element?timestep=${timestep}&reference_timestep=${referenceTimestep}&layer=${layer}`
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to fetch drawdown by element: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export interface DrawdownRangeData {
+  min: number;
+  max: number;
+  reference_timestep: number;
+  layer: number;
+}
+
+export async function fetchDrawdownRange(
+  referenceTimestep: number = 0,
+  layer: number = 1,
+): Promise<DrawdownRangeData> {
+  const response = await fetch(
+    `${API_BASE}/results/drawdown-range?reference_timestep=${referenceTimestep}&layer=${layer}`
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to fetch drawdown range: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// ===================================================================
 // Stream Reach Profile API
 // ===================================================================
 
@@ -1563,4 +1610,231 @@ export async function uploadZoneFile(
     throw new Error(`Upload failed: ${detail}`);
   }
   return response.json();
+}
+
+// ===================================================================
+// Diagnostics API
+// ===================================================================
+
+export interface DiagnosticMessage {
+  severity: string;
+  text: string;
+  procedure: string;
+  line_number: number;
+  node_ids: number[];
+  element_ids: number[];
+  reach_ids: number[];
+  layer_ids: number[];
+}
+
+export interface DiagnosticsMessagesResponse {
+  messages: DiagnosticMessage[];
+  total: number;
+  warning_count: number;
+  error_count: number;
+  total_runtime_seconds: number | null;
+}
+
+export interface ConvergenceRecord {
+  timestep_index: number;
+  date: string;
+  iteration_count: number;
+  max_residual: number | null;
+  convergence_achieved: boolean;
+}
+
+export interface ConvergenceResponse {
+  records: ConvergenceRecord[];
+  max_iterations: number;
+  avg_iterations: number;
+  total_timesteps: number;
+}
+
+export interface MassBalanceRecord {
+  timestep_index: number;
+  date: string;
+  component: string;
+  error_value: number;
+  error_percent: number | null;
+}
+
+export interface MassBalanceResponse {
+  records: MassBalanceRecord[];
+  components: string[];
+}
+
+export interface DiagnosticsSummary {
+  has_diagnostics: boolean;
+  message_count: number;
+  warning_count: number;
+  error_count: number;
+  total_runtime_seconds: number | null;
+  max_iterations: number;
+  avg_iterations: number;
+  spatial_summary: Record<string, Record<string, number>>;
+}
+
+export async function fetchDiagnosticsSummary(): Promise<DiagnosticsSummary> {
+  const response = await fetch(`${API_BASE}/diagnostics/summary`);
+  if (!response.ok) throw new Error(`Failed to fetch diagnostics summary: ${response.statusText}`);
+  return response.json();
+}
+
+export async function fetchDiagnosticsMessages(
+  severity?: string,
+  limit = 100,
+  offset = 0,
+): Promise<DiagnosticsMessagesResponse> {
+  const params = new URLSearchParams();
+  if (severity) params.set('severity', severity);
+  params.set('limit', String(limit));
+  params.set('offset', String(offset));
+  const response = await fetch(`${API_BASE}/diagnostics/messages?${params}`);
+  if (!response.ok) throw new Error(`Failed to fetch diagnostics messages: ${response.statusText}`);
+  return response.json();
+}
+
+export async function fetchConvergenceData(): Promise<ConvergenceResponse> {
+  const response = await fetch(`${API_BASE}/diagnostics/convergence`);
+  if (!response.ok) throw new Error(`Failed to fetch convergence data: ${response.statusText}`);
+  return response.json();
+}
+
+export async function fetchMassBalanceData(component?: string): Promise<MassBalanceResponse> {
+  const params = new URLSearchParams();
+  if (component) params.set('component', component);
+  const response = await fetch(`${API_BASE}/diagnostics/mass-balance?${params}`);
+  if (!response.ok) throw new Error(`Failed to fetch mass balance data: ${response.statusText}`);
+  return response.json();
+}
+
+// ===================================================================
+// Mesh Quality API
+// ===================================================================
+
+export interface MeshQualityData {
+  n_elements: number;
+  n_triangles: number;
+  n_quads: number;
+  area_min: number;
+  area_max: number;
+  area_mean: number;
+  area_std: number;
+  aspect_ratio_min: number;
+  aspect_ratio_max: number;
+  aspect_ratio_mean: number;
+  skewness_mean: number;
+  min_angle_global: number;
+  max_angle_global: number;
+  poor_quality_count: number;
+}
+
+export async function fetchMeshQuality(): Promise<MeshQualityData> {
+  const response = await fetch(`${API_BASE}/mesh/mesh-quality`);
+  if (!response.ok) throw new Error(`Failed to fetch mesh quality: ${response.statusText}`);
+  return response.json();
+}
+
+// ===================================================================
+// Budget Sanity Check API
+// ===================================================================
+
+export interface BudgetSanityCheckResult {
+  budget_type: string;
+  location: string;
+  n_timesteps: number;
+  n_violations: number;
+  max_percent_error: number;
+  mean_percent_error: number;
+}
+
+export async function fetchBudgetSanityCheck(
+  budgetType: string,
+  location: string,
+  tolerance = 1.0,
+): Promise<BudgetSanityCheckResult> {
+  const params = new URLSearchParams({
+    budget_type: budgetType,
+    location,
+    tolerance: String(tolerance),
+  });
+  const response = await fetch(`${API_BASE}/budgets/sanity-check?${params}`);
+  if (!response.ok) throw new Error(`Failed to fetch sanity check: ${response.statusText}`);
+  return response.json();
+}
+
+// ===================================================================
+// Timeseries Export API
+// ===================================================================
+
+export function getHeadExportUrl(nodeId: number, layer = 1, format = 'csv'): string {
+  return `${API_BASE}/export/timeseries/head?node_id=${nodeId}&layer=${layer}&format=${format}`;
+}
+
+export function getHydrographExportUrl(
+  locationId: number,
+  type: 'gw' | 'stream' | 'subsidence' | 'tile_drain',
+  format = 'csv',
+): string {
+  return `${API_BASE}/export/timeseries/hydrograph?location_id=${locationId}&type=${type}&format=${format}`;
+}
+
+export function getBudgetExportUrl(budgetType: string, location: string, format = 'csv'): string {
+  return `${API_BASE}/export/timeseries/budget?budget_type=${encodeURIComponent(budgetType)}&location=${encodeURIComponent(location)}&format=${format}`;
+}
+
+// ===================================================================
+// Model Comparison API
+// ===================================================================
+
+export interface ModelDiffItem {
+  path: string;
+  diff_type: string;
+  old_value?: unknown;
+  new_value?: unknown;
+}
+
+export interface ModelComparisonResult {
+  is_identical: boolean;
+  mesh_diff?: {
+    is_identical: boolean;
+    nodes_added: number;
+    nodes_removed: number;
+    nodes_modified: number;
+    elements_added: number;
+    elements_removed: number;
+    elements_modified: number;
+  };
+  stratigraphy_diff?: {
+    is_identical: boolean;
+    n_differences: number;
+    items: ModelDiffItem[];
+  };
+  statistics?: {
+    total_differences: number;
+    added: number;
+    removed: number;
+    modified: number;
+  };
+}
+
+export async function compareModels(otherModelPath: string): Promise<ModelComparisonResult> {
+  const response = await fetch(`${API_BASE}/model/compare`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: otherModelPath }),
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Comparison failed: ${detail}`);
+  }
+  return response.json();
+}
+
+// ===================================================================
+// Report Export API
+// ===================================================================
+
+export function getReportExportUrl(format = 'html'): string {
+  return `${API_BASE}/export/report?format=${format}`;
 }

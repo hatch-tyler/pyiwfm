@@ -716,6 +716,59 @@ def export_budget_excel(
     )
 
 
+@router.get("/sanity-check")
+def budget_sanity_check(
+    budget_type: str = Query(...),
+    location: str = Query(default=""),
+    tolerance: float = Query(default=1.0, ge=0.01, le=100),
+) -> dict[str, Any]:
+    """Run mass balance sanity check on a budget."""
+    if not model_state.is_loaded:
+        raise HTTPException(status_code=404, detail="No model loaded")
+
+    reader = model_state.get_budget_reader(budget_type)
+    if reader is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Budget type '{budget_type}' not available",
+        )
+
+    from pyiwfm.io.budget_checks import check_budget_balance
+
+    loc_idx = 0
+    if location:
+        try:
+            loc_idx = reader.get_location_index(location)
+        except (KeyError, IndexError) as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
+    try:
+        report = check_budget_balance(
+            reader,
+            location_index=loc_idx,
+            tolerance_percent=tolerance,
+        )
+    except (KeyError, IndexError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    summary = report.to_summary_dict()
+    # Include worst-offending timesteps (up to 20)
+    violations = [
+        {
+            "timestep_index": r.timestep_index,
+            "date": r.date,
+            "total_inflow": _safe_float(r.total_inflow),
+            "total_outflow": _safe_float(r.total_outflow),
+            "storage_change": _safe_float(r.storage_change),
+            "discrepancy": _safe_float(r.discrepancy),
+            "percent_error": _safe_float(r.percent_error),
+        }
+        for r in sorted(report.records, key=lambda r: abs(r.percent_error), reverse=True)[:20]
+    ]
+    summary["top_violations"] = violations
+    return summary
+
+
 @router.get("/water-balance")
 def get_water_balance() -> dict[str, Any]:
     """

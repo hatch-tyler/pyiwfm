@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from pyiwfm.visualization.webapi.config import ViewerSettings, model_state
 from pyiwfm.visualization.webapi.routes import (
     budgets_router,
+    diagnostics_router,
     export_router,
     groundwater_router,
     lakes_router,
@@ -29,6 +30,7 @@ from pyiwfm.visualization.webapi.routes import (
     slices_router,
     small_watersheds_router,
     streams_router,
+    unsaturated_zone_router,
     zbudgets_router,
 )
 
@@ -89,7 +91,9 @@ def create_app(
     app.include_router(lakes_router)
     app.include_router(export_router)
     app.include_router(small_watersheds_router)
+    app.include_router(unsaturated_zone_router)
     app.include_router(zbudgets_router)
+    app.include_router(diagnostics_router)
 
     static_dir = Path(__file__).parent / "static"
     if static_dir.exists():

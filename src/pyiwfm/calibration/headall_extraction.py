@@ -161,6 +161,8 @@ class HeadAllExtractor:
                         grid,
                         strat,
                         kh,
+                        fe_node_ids=node_ids,
+                        fe_weights=coeffs,
                     )
                     self._t_weights[well.name] = t_weights
                 else:
@@ -180,6 +182,9 @@ class HeadAllExtractor:
 
     def extract(self, timesteps: list[int] | None = None) -> ExtractionResult:
         """Extract per-layer and T-weighted multi-layer heads at all wells.
+
+        Iterates timesteps in the outer loop so each HDF5 frame is read
+        exactly once, regardless of the number of wells.
 
         Parameters
         ----------
@@ -206,30 +211,37 @@ class HeadAllExtractor:
 
         result = ExtractionResult(times=times, data_type="HEAD")
 
+        # Build list of active wells with pre-computed index arrays
+        active_wells: list[tuple[str, NDArray, NDArray]] = []
         for well in self._wells:
             if well.name not in self._fe_weights:
                 continue
-
             fe_info = self._fe_weights[well.name]
-            node_ids = fe_info["node_ids"]
+            node_indices = np.array([nid - 1 for nid in fe_info["node_ids"]])
             coeffs = fe_info["weights"]
-            node_indices = np.array([nid - 1 for nid in node_ids])
+            active_wells.append((well.name, node_indices, coeffs))
 
-            # Extract heads at this well for all timesteps and layers
-            per_layer = np.full((n_times, n_layers), np.nan, dtype=np.float64)
+        # Pre-allocate per-layer arrays for all active wells
+        per_layer_arrays: dict[str, NDArray[np.float64]] = {}
+        for name, _, _ in active_wells:
+            per_layer_arrays[name] = np.full((n_times, n_layers), np.nan, dtype=np.float64)
 
-            for ti, ts_idx in enumerate(time_indices):
-                frame = loader.get_frame(ts_idx)  # (n_nodes, n_layers)
+        # Outer loop: timesteps (each frame read once)
+        for ti, ts_idx in enumerate(time_indices):
+            frame = loader.get_frame(ts_idx)  # (n_nodes, n_layers)
+            for name, node_indices, coeffs in active_wells:
                 for layer in range(n_layers):
                     vals = frame[node_indices, layer]
                     if not np.any(np.isnan(vals)):
-                        per_layer[ti, layer] = float(np.dot(coeffs, vals))
+                        per_layer_arrays[name][ti, layer] = float(np.dot(coeffs, vals))
 
-            result.per_layer[well.name] = per_layer
-            result.names.append(well.name)
+        # Populate result and compute T-weighted multi-layer heads
+        for name, _, _ in active_wells:
+            per_layer = per_layer_arrays[name]
+            result.per_layer[name] = per_layer
+            result.names.append(name)
 
-            # Compute T-weighted multi-layer head
-            t_weights = self._t_weights.get(well.name)
+            t_weights = self._t_weights.get(name)
             if t_weights is not None:
                 ml_heads = np.full(n_times, np.nan, dtype=np.float64)
                 for ti in range(n_times):
@@ -240,7 +252,7 @@ class HeadAllExtractor:
                         w_sum = w.sum()
                         if w_sum > 0:
                             ml_heads[ti] = float(np.dot(w, layer_heads[valid]) / w_sum)
-                result.values[well.name] = ml_heads
+                result.values[name] = ml_heads
 
         logger.info(
             "Extracted heads for %d wells across %d timesteps",

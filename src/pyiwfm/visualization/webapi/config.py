@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from pyiwfm.io.cache_loader import SqliteCacheLoader
     from pyiwfm.io.head_loader import LazyHeadDataLoader
     from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
+    from pyiwfm.io.simulation_messages import SimulationMessagesResult
     from pyiwfm.io.zbudget import ZBudgetReader
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,9 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         self._area_manager: AreaDataManager | None = None
         self._observations: dict[str, dict[str, Any]] = {}  # id -> observation data
 
+        # Diagnostics (simulation messages)
+        self._diagnostics_result: SimulationMessagesResult | None = None
+
         # SQLite cache
         self._cache_loader: SqliteCacheLoader | None = None
         self._no_cache: bool = False  # Set True to disable cache
@@ -144,6 +148,8 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         # Clear cached physical location grouping
         if hasattr(self, "_gw_phys_locs"):
             del self._gw_phys_locs
+
+        self._diagnostics_result = None
 
         # SQLite cache
         if self._cache_loader is not None:

@@ -276,6 +276,10 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
         "pyiwfm.io.small_watershed_writer",
         "write_small_watershed_component",
     ),
+    # Stream Depletion Analysis
+    "StreamDepletionReport": ("pyiwfm.io.stream_depletion", "StreamDepletionReport"),
+    "StreamDepletionResult": ("pyiwfm.io.stream_depletion", "StreamDepletionResult"),
+    "compute_stream_depletion": ("pyiwfm.io.stream_depletion", "compute_stream_depletion"),
     # Stream Bypass Spec Reader
     "BypassRatingTable": ("pyiwfm.io.stream_bypass", "BypassRatingTable"),
     "BypassSpec": ("pyiwfm.io.stream_bypass", "BypassSpec"),
@@ -407,6 +411,11 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "TimeStepInfo": ("pyiwfm.io.budget", "TimeStepInfo"),
     "excel_julian_to_datetime": ("pyiwfm.io.budget", "excel_julian_to_datetime"),
     "julian_to_datetime": ("pyiwfm.io.budget", "julian_to_datetime"),
+    # Budget sanity checks
+    "BalanceCheckResult": ("pyiwfm.io.budget_checks", "BalanceCheckResult"),
+    "BudgetSanityReport": ("pyiwfm.io.budget_checks", "BudgetSanityReport"),
+    "check_budget_balance": ("pyiwfm.io.budget_checks", "check_budget_balance"),
+    "check_all_budgets": ("pyiwfm.io.budget_checks", "check_all_budgets"),
     # Budget PEST export
     "budget_to_pest_text": ("pyiwfm.io.budget_pest", "budget_to_pest_text"),
     "budget_to_pest_instruction": ("pyiwfm.io.budget_pest", "budget_to_pest_instruction"),
@@ -422,14 +431,18 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "SqliteCacheBuilder": ("pyiwfm.io.cache_builder", "SqliteCacheBuilder"),
     "is_cache_stale": ("pyiwfm.io.cache_builder", "is_cache_stale"),
     "SqliteCacheLoader": ("pyiwfm.io.cache_loader", "SqliteCacheLoader"),
+    "DrawdownComputer": ("pyiwfm.io.drawdown", "DrawdownComputer"),
     "LazyHeadDataLoader": ("pyiwfm.io.head_loader", "LazyHeadDataLoader"),
     "LazyHydrographDataLoader": ("pyiwfm.io.hydrograph_loader", "LazyHydrographDataLoader"),
     "IWFMHydrographReader": ("pyiwfm.io.hydrograph_reader", "IWFMHydrographReader"),
     # SimulationMessages.out Parser
+    "ConvergenceRecord": ("pyiwfm.io.simulation_messages", "ConvergenceRecord"),
+    "MassBalanceRecord": ("pyiwfm.io.simulation_messages", "MassBalanceRecord"),
     "MessageSeverity": ("pyiwfm.io.simulation_messages", "MessageSeverity"),
     "SimulationMessage": ("pyiwfm.io.simulation_messages", "SimulationMessage"),
     "SimulationMessagesReader": ("pyiwfm.io.simulation_messages", "SimulationMessagesReader"),
     "SimulationMessagesResult": ("pyiwfm.io.simulation_messages", "SimulationMessagesResult"),
+    "TimestepCutRecord": ("pyiwfm.io.simulation_messages", "TimestepCutRecord"),
     # SMP (Sample/Bore) I/O
     "SMPReader": ("pyiwfm.io.smp", "SMPReader"),
     "SMPRecord": ("pyiwfm.io.smp", "SMPRecord"),
