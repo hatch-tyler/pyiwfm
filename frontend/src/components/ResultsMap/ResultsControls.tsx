@@ -56,6 +56,8 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
     compareMode, comparedLocationIds,
     animationSpeed, observations,
     selectedBasemap,
+    subsidenceTimestep, subsidenceTimes, subsidenceLayer,
+    isSubsidenceAnimating,
     setHeadTimestep, setHeadLayer,
     setAnimationSpeed,
     setShowGWLocations, setShowStreamLocations, setShowSubsidenceLocations,
@@ -69,14 +71,20 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
     setCrossSectionMode, setCrossSectionPoints, setCrossSectionData,
     setCompareMode, setComparedLocationIds,
     setSelectedBasemap,
+    setSubsidenceTimestep, setSubsidenceLayer,
+    setIsSubsidenceAnimating,
   } = useViewerStore();
 
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const subsAnimRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
 
   const nTimesteps = headTimes.length;
   const currentTime = headTimes[headTimestep] || '';
   const hasHeads = resultsInfo ? resultsInfo.n_head_timesteps > 0 : false;
+  const hasSubsidenceSurface = resultsInfo?.has_subsidence_surface ?? false;
+  const nSubsTimesteps = subsidenceTimes.length;
+  const currentSubsTime = subsidenceTimes[subsidenceTimestep] || '';
   const hasStreams = modelInfo?.has_streams ?? false;
   const hasLakes = (modelInfo?.n_lakes ?? 0) > 0;
 
@@ -126,18 +134,56 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
     };
   }, [animationSpeed, isAnimating, nTimesteps, setHeadTimestep]);
 
+  // Subsidence animation control
+  const toggleSubsAnimation = useCallback(() => {
+    if (isSubsidenceAnimating) {
+      if (subsAnimRef.current) clearInterval(subsAnimRef.current);
+      subsAnimRef.current = null;
+      setIsSubsidenceAnimating(false);
+    } else {
+      setIsSubsidenceAnimating(true);
+      subsAnimRef.current = setInterval(() => {
+        setSubsidenceTimestep(
+          useViewerStore.getState().subsidenceTimestep + 1 >= nSubsTimesteps
+            ? 0
+            : useViewerStore.getState().subsidenceTimestep + 1
+        );
+      }, animationSpeed);
+    }
+  }, [isSubsidenceAnimating, nSubsTimesteps, setIsSubsidenceAnimating, setSubsidenceTimestep, animationSpeed]);
+
+  // Restart subsidence animation interval when speed changes
+  useEffect(() => {
+    if (!isSubsidenceAnimating) return;
+    if (subsAnimRef.current) clearInterval(subsAnimRef.current);
+    subsAnimRef.current = setInterval(() => {
+      setSubsidenceTimestep(
+        useViewerStore.getState().subsidenceTimestep + 1 >= nSubsTimesteps
+          ? 0
+          : useViewerStore.getState().subsidenceTimestep + 1
+      );
+    }, animationSpeed);
+    return () => {
+      if (subsAnimRef.current) clearInterval(subsAnimRef.current);
+    };
+  }, [animationSpeed, isSubsidenceAnimating, nSubsTimesteps, setSubsidenceTimestep]);
+
   useEffect(() => {
     return () => {
       if (animRef.current) clearInterval(animRef.current);
+      if (subsAnimRef.current) clearInterval(subsAnimRef.current);
     };
   }, []);
 
   const layerOptions = Array.from({ length: nLayers }, (_, i) => i + 1);
 
-  // Build color-by options: "Head" + available properties
+  // Build color-by options: "Head" + "Subsidence" + available properties
   const colorOptions: Array<{ id: string; label: string; disabled?: boolean }> = [
     { id: 'head', label: hasHeads ? 'Head' : 'Head (no data)', disabled: !hasHeads },
   ];
+  if (hasSubsidenceSurface) {
+    colorOptions.push({ id: 'subsidence', label: 'Subsidence' });
+  }
   for (const prop of properties) {
     if (prop.id !== 'layer') {
       colorOptions.push({ id: prop.id, label: prop.name });
@@ -239,6 +285,59 @@ export function ResultsControls({ nLayers }: ResultsControlsProps) {
               track="inverted"
             />
           </Box>
+        </Box>
+      )}
+
+      {/* Subsidence Time Slider */}
+      {hasSubsidenceSurface && nSubsTimesteps > 0 && mapColorProperty === 'subsidence' && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            Timestep: {formatTime(currentSubsTime)}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton size="small" onClick={toggleSubsAnimation}>
+              {isSubsidenceAnimating ? <PauseIcon /> : <PlayArrowIcon />}
+            </IconButton>
+            <Slider
+              value={subsidenceTimestep}
+              min={0}
+              max={Math.max(0, nSubsTimesteps - 1)}
+              step={1}
+              onChange={(_, v) => setSubsidenceTimestep(v as number)}
+              size="small"
+            />
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {subsidenceTimestep + 1} / {nSubsTimesteps}
+          </Typography>
+          <Box sx={{ mt: 0.5 }}>
+            <Typography variant="caption" color="text.secondary">
+              Speed: {animationSpeed}ms
+            </Typography>
+            <Slider
+              value={animationSpeed}
+              min={100}
+              max={2000}
+              step={100}
+              onChange={(_, v) => setAnimationSpeed(v as number)}
+              size="small"
+              track="inverted"
+            />
+          </Box>
+          {/* Subsidence layer selector */}
+          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+            <InputLabel>Subsidence Layer</InputLabel>
+            <Select
+              value={subsidenceLayer}
+              label="Subsidence Layer"
+              onChange={(e) => setSubsidenceLayer(e.target.value as number)}
+            >
+              <MenuItem value={0}>Composite (all layers)</MenuItem>
+              {layerOptions.map((l) => (
+                <MenuItem key={l} value={l}>Layer {l}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
       )}
 

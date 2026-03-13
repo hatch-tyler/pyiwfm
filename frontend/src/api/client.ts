@@ -285,6 +285,9 @@ export interface ResultsInfo {
   head_time_range: { start: string; end: string } | null;
   n_gw_hydrographs: number;
   n_stream_hydrographs: number;
+  has_subsidence_surface?: boolean;
+  n_subsidence_timesteps?: number;
+  subsidence_time_range?: { start: string; end: string } | null;
 }
 
 export interface HeadData {
@@ -443,6 +446,50 @@ export async function fetchHeadsByElement(timestep: number, layer: number = 1): 
   const response = await fetch(`${API_BASE}/results/heads-by-element?timestep=${timestep}&layer=${layer}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch heads by element: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+// ===================================================================
+// Subsidence Surface API
+// ===================================================================
+
+export async function fetchSubsidenceByElement(timestep: number, layer: number = 0): Promise<HeadByElementData> {
+  const response = await fetch(`${API_BASE}/results/subsidence-by-element?timestep=${timestep}&layer=${layer}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch subsidence by element: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchSubsidenceTimes(): Promise<HeadTimes> {
+  const response = await fetch(`${API_BASE}/results/subsidence-times`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch subsidence times: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchSubsidenceRange(layer: number = 0, maxFrames: number = 50): Promise<HeadRangeData> {
+  const response = await fetch(`${API_BASE}/results/subsidence-range?layer=${layer}&max_frames=${maxFrames}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch subsidence range: ${response.statusText}`);
+  }
+  return response.json();
+}
+
+export async function fetchSubsidenceDiff(
+  timestepA: number, timestepB: number, layer: number = 0
+): Promise<{
+  timestep_a: number; timestep_b: number;
+  datetime_a: string | null; datetime_b: string | null;
+  layer: number; values: (number | null)[]; min: number; max: number;
+}> {
+  const response = await fetch(
+    `${API_BASE}/results/subsidence-diff?timestep_a=${timestepA}&timestep_b=${timestepB}&layer=${layer}`
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to fetch subsidence diff: ${response.statusText}`);
   }
   return response.json();
 }

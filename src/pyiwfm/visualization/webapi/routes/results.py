@@ -735,7 +735,7 @@ def get_subsidence_all_layers(
 
 @router.get("/hydrographs-multi")
 def get_hydrographs_multi(
-    type: str = Query(description="Type: gw or stream"),
+    type: str = Query(description="Type: gw, stream, or subsidence"),
     ids: str = Query(description="Comma-separated location IDs"),
 ) -> dict[str, Any]:
     """
@@ -901,10 +901,44 @@ def get_hydrographs_multi(
                     "units": "cfs",
                 }
             )
+    elif type == "subsidence":
+        reader = model_state.get_subsidence_reader()
+        if reader is None or reader.n_timesteps == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="No subsidence hydrograph data available",
+            )
+
+        subs_config = None
+        if model and model.groundwater:
+            subs_config = getattr(model.groundwater, "subsidence_config", None)
+        specs = getattr(subs_config, "hydrograph_specs", []) if subs_config else []
+
+        for loc_id in id_list:
+            col_idx = loc_id - 1
+            if col_idx < 0 or col_idx >= reader.n_columns:
+                continue
+
+            subs_times, subs_values = reader.get_time_series(col_idx)
+            name = f"Subsidence Obs {loc_id}"
+            if col_idx < len(specs):
+                name = getattr(specs[col_idx], "name", None) or name
+
+            results.append(
+                {
+                    "location_id": loc_id,
+                    "name": name,
+                    "type": "subsidence",
+                    "times": subs_times,
+                    "values": _sanitize_values(subs_values),
+                    "units": "ft",
+                }
+            )
+
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown type: {type}. Use: gw, stream",
+            detail=f"Unknown type: {type}. Use: gw, stream, subsidence",
         )
 
     return {"type": type, "n_series": len(results), "series": results}
@@ -1158,4 +1192,257 @@ def get_head_statistics(
             "mean": [round(float(v), 3) if not np.isnan(v) else None for v in node_mean],
             "std": [round(float(v), 3) if not np.isnan(v) else None for v in node_std],
         },
+    }
+
+
+# ======================================================================
+# Subsidence Surface Endpoints
+# ======================================================================
+
+
+@router.get("/subsidence-surface")
+def get_subsidence_surface(
+    timestep: int = Query(default=0, ge=0, description="Timestep index"),
+    layer: int = Query(default=0, ge=0, description="Layer number (1-based), or 0 for composite"),
+) -> dict[str, Any]:
+    """Get per-node subsidence values at a given timestep and layer."""
+    loader = model_state.get_subsidence_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No subsidence surface data available")
+
+    if timestep >= loader.n_frames:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Timestep {timestep} out of range [0, {loader.n_frames})",
+        )
+
+    if layer == 0:
+        # Composite: sum across layers
+        values_arr = loader.get_composite_subsidence(timestep)
+        if values_arr is None:
+            raise HTTPException(status_code=500, detail="Failed to compute composite subsidence")
+        values = _sanitize_values(values_arr.tolist())
+    else:
+        frame = loader.get_frame(timestep)
+        layer_idx = layer - 1
+        if layer_idx >= frame.shape[1]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Layer {layer} out of range [1, {frame.shape[1]}]",
+            )
+        values = _sanitize_values(frame[:, layer_idx].tolist())
+
+    dt = loader.times[timestep] if timestep < len(loader.times) else None
+    return {
+        "timestep_index": timestep,
+        "datetime": dt.isoformat() if dt else None,
+        "layer": layer,
+        "values": values,
+    }
+
+
+@router.get("/subsidence-by-element")
+def get_subsidence_by_element(
+    timestep: int = Query(default=0, ge=0, description="Timestep index"),
+    layer: int = Query(default=0, ge=0, description="Layer (1-based), 0=composite"),
+) -> dict[str, Any]:
+    """Get per-element subsidence values (vertex-averaged) for a timestep and layer.
+
+    Uses SQLite cache when available for fast response.
+    """
+    # Try cache first
+    cached = model_state.get_cached_subsidence_by_element(timestep, layer)
+    if cached is not None:
+        values, min_val, max_val = cached
+        loader = model_state.get_subsidence_loader()
+        dt = None
+        if loader and timestep < len(loader.times):
+            dt = loader.times[timestep]
+        return {
+            "timestep_index": timestep,
+            "datetime": dt.isoformat() if dt else None,
+            "layer": layer,
+            "values": values,
+            "min": round(min_val, 3),
+            "max": round(max_val, 3),
+        }
+
+    loader = model_state.get_subsidence_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No subsidence surface data available")
+
+    if timestep >= loader.n_frames:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Timestep {timestep} out of range [0, {loader.n_frames})",
+        )
+
+    # Get node-level values
+    if layer == 0:
+        node_values = loader.get_composite_subsidence(timestep)
+        if node_values is None:
+            raise HTTPException(status_code=500, detail="Failed to compute composite subsidence")
+    else:
+        frame = loader.get_frame(timestep)
+        layer_idx = layer - 1
+        if layer_idx >= frame.shape[1]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Layer {layer} out of range [1, {frame.shape[1]}]",
+            )
+        node_values = frame[:, layer_idx]
+
+    model = model_state.model
+    if model is None or model.grid is None:
+        raise HTTPException(status_code=404, detail="No model grid available")
+
+    grid = model.grid
+    node_id_to_idx = model_state.get_node_id_to_idx()
+    sorted_elem_ids = model_state.get_sorted_elem_ids()
+
+    elem_vals: list[float | None] = []
+    for eid in sorted_elem_ids:
+        elem = grid.elements[eid]
+        nvals: list[float] = []
+        for nid in elem.vertices:
+            idx = node_id_to_idx.get(nid)
+            if idx is not None and idx < len(node_values):
+                v = float(node_values[idx])
+                if v > -9000:
+                    nvals.append(v)
+        if nvals:
+            elem_vals.append(round(sum(nvals) / len(nvals), 3))
+        else:
+            elem_vals.append(None)
+
+    valid = [v for v in elem_vals if v is not None]
+    if valid:
+        valid.sort()
+        lo = valid[max(0, int(len(valid) * 0.02))]
+        hi = valid[min(len(valid) - 1, int(len(valid) * 0.98))]
+    else:
+        lo, hi = 0.0, 0.0
+
+    dt = loader.times[timestep] if timestep < len(loader.times) else None
+    return {
+        "timestep_index": timestep,
+        "datetime": dt.isoformat() if dt else None,
+        "layer": layer,
+        "values": elem_vals,
+        "min": round(lo, 3),
+        "max": round(hi, 3),
+    }
+
+
+@router.get("/subsidence-times")
+def get_subsidence_times() -> dict[str, Any]:
+    """Get list of all available subsidence timestep datetimes."""
+    loader = model_state.get_subsidence_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No subsidence surface data available")
+
+    return {
+        "times": [t.isoformat() for t in loader.times],
+        "n_timesteps": loader.n_frames,
+    }
+
+
+@router.get("/subsidence-range")
+def get_subsidence_range(
+    layer: int = Query(default=0, ge=0, description="Layer (1-based), 0=composite"),
+    max_frames: int = Query(default=50, ge=0, description="Max frames to sample (0=all)"),
+) -> dict[str, Any]:
+    """Get the global subsidence value range across all timesteps for a layer.
+
+    Returns 2nd-98th percentile range for stable color scale rendering.
+    Uses SQLite cache when available.
+    """
+    # Try cache first
+    cached = model_state.get_cached_subsidence_range(layer)
+    if cached is not None:
+        loader = model_state.get_subsidence_loader()
+        n_frames = loader.n_frames if loader else 0
+        return {
+            "layer": layer,
+            "min": cached["percentile_02"],
+            "max": cached["percentile_98"],
+            "n_timesteps": n_frames,
+            "n_frames_scanned": n_frames,
+        }
+
+    loader = model_state.get_subsidence_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No subsidence surface data available")
+
+    lo, hi, n_scanned = loader.get_layer_range(layer=layer, max_frames=max_frames)
+
+    return {
+        "layer": layer,
+        "min": lo,
+        "max": hi,
+        "n_timesteps": loader.n_frames,
+        "n_frames_scanned": n_scanned,
+    }
+
+
+@router.get("/subsidence-diff")
+def get_subsidence_diff(
+    timestep_a: int = Query(default=0, ge=0, description="First timestep index"),
+    timestep_b: int = Query(default=0, ge=0, description="Second timestep index"),
+    layer: int = Query(default=0, ge=0, description="Layer (1-based), 0=composite"),
+) -> dict[str, Any]:
+    """Compute subsidence difference between two timesteps.
+
+    Returns per-node subsidence difference (timestep_b - timestep_a).
+    """
+    loader = model_state.get_subsidence_loader()
+    if loader is None:
+        raise HTTPException(status_code=404, detail="No subsidence surface data available")
+
+    for ts, label in [(timestep_a, "timestep_a"), (timestep_b, "timestep_b")]:
+        if ts >= loader.n_frames:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{label}={ts} out of range [0, {loader.n_frames})",
+            )
+
+    import numpy as np
+
+    if layer == 0:
+        vals_a = loader.get_composite_subsidence(timestep_a)
+        vals_b = loader.get_composite_subsidence(timestep_b)
+        if vals_a is None or vals_b is None:
+            raise HTTPException(status_code=500, detail="Failed to compute composite subsidence")
+    else:
+        frame_a = loader.get_frame(timestep_a)
+        frame_b = loader.get_frame(timestep_b)
+        layer_idx = layer - 1
+        if layer_idx >= frame_a.shape[1]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Layer {layer} out of range [1, {frame_a.shape[1]}]",
+            )
+        vals_a = frame_a[:, layer_idx]
+        vals_b = frame_b[:, layer_idx]
+
+    diff = vals_b - vals_a
+    mask = (vals_a < -9000) | (vals_b < -9000)
+    diff_list = [None if mask[i] else round(float(diff[i]), 3) for i in range(len(diff))]
+
+    valid = diff[~mask]
+    vmin = float(np.min(valid)) if len(valid) > 0 else 0.0
+    vmax = float(np.max(valid)) if len(valid) > 0 else 0.0
+
+    dt_a = loader.times[timestep_a] if timestep_a < len(loader.times) else None
+    dt_b = loader.times[timestep_b] if timestep_b < len(loader.times) else None
+
+    return {
+        "timestep_a": timestep_a,
+        "timestep_b": timestep_b,
+        "datetime_a": dt_a.isoformat() if dt_a else None,
+        "datetime_b": dt_b.isoformat() if dt_b else None,
+        "layer": layer,
+        "values": diff_list,
+        "min": round(vmin, 3),
+        "max": round(vmax, 3),
     }

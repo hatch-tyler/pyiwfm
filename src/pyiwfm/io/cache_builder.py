@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "1"
+SCHEMA_VERSION = "2"
 
 # --------------------------------------------------------------------------
 # Schema DDL
@@ -188,6 +188,29 @@ CREATE TABLE IF NOT EXISTS stream_ratings (
     flows_blob BLOB NOT NULL
 );
 
+-- Subsidence surface data (mirrors head tables)
+CREATE TABLE IF NOT EXISTS subsidence_timesteps (
+    idx INTEGER PRIMARY KEY,
+    datetime TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS subsidence_by_element (
+    frame_idx INTEGER NOT NULL,
+    layer INTEGER NOT NULL,
+    values_blob BLOB NOT NULL,
+    min_val REAL,
+    max_val REAL,
+    PRIMARY KEY (frame_idx, layer)
+);
+
+CREATE TABLE IF NOT EXISTS subsidence_range (
+    layer INTEGER PRIMARY KEY,
+    percentile_02 REAL,
+    percentile_98 REAL,
+    abs_min REAL,
+    abs_max REAL
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_budget_data_loc
     ON budget_data(budget_type, location_idx);
@@ -230,6 +253,7 @@ class SqliteCacheBuilder:
         stream_hydrograph_reader: Any | None = None,
         subsidence_reader: Any | None = None,
         tile_drain_reader: Any | None = None,
+        subsidence_loader: LazyHeadDataLoader | None = None,
         progress_callback: Any | None = None,
     ) -> None:
         """Build the complete cache.
@@ -248,6 +272,8 @@ class SqliteCacheBuilder:
         stream_hydrograph_reader : IWFMHydrographReader, optional
         subsidence_reader : IWFMHydrographReader, optional
         tile_drain_reader : IWFMHydrographReader, optional
+        subsidence_loader : LazyHeadDataLoader, optional
+            Subsidence surface data loader (SubsidenceAtAllNodes HDF5).
         progress_callback : callable, optional
             Called with (step_name, pct) for progress reporting.
         """
@@ -281,6 +307,7 @@ class SqliteCacheBuilder:
             conn.commit()
 
             self._build_head_data(conn, model, head_loader, progress_callback)
+            self._build_subsidence_data(conn, model, subsidence_loader, progress_callback)
             self._build_budget_data(conn, budget_readers, progress_callback)
             self._build_hydrographs(
                 conn,
@@ -412,6 +439,140 @@ class SqliteCacheBuilder:
         conn.commit()
         logger.info(
             "Head data cached: %d frames, %d layers, %d elements",
+            n_frames,
+            n_layers,
+            n_elements,
+        )
+
+    # ------------------------------------------------------------------
+    # Subsidence surface data
+    # ------------------------------------------------------------------
+
+    def _build_subsidence_data(
+        self,
+        conn: sqlite3.Connection,
+        model: IWFMModel,
+        subsidence_loader: LazyHeadDataLoader | None,
+        progress_callback: Any | None,
+    ) -> None:
+        if subsidence_loader is None or subsidence_loader.n_frames == 0:
+            return
+
+        logger.info("Caching %d subsidence frames...", subsidence_loader.n_frames)
+
+        grid = model.grid
+        if grid is None:
+            return
+
+        n_frames = subsidence_loader.n_frames
+        n_layers = subsidence_loader.get_frame(0).shape[1]
+
+        # Store timesteps
+        for idx, t in enumerate(subsidence_loader.times):
+            conn.execute(
+                "INSERT OR REPLACE INTO subsidence_timesteps VALUES (?, ?)",
+                (idx, t.isoformat()),
+            )
+
+        # Build element-to-node mapping
+        sorted_node_ids = sorted(grid.nodes.keys())
+        node_id_to_idx = {nid: i for i, nid in enumerate(sorted_node_ids)}
+        elem_node_map: list[tuple[int, list[int]]] = []
+        for eid in sorted(grid.elements.keys()):
+            elem = grid.elements[eid]
+            node_indices = [node_id_to_idx[vid] for vid in elem.vertices if vid in node_id_to_idx]
+            if node_indices:
+                elem_node_map.append((eid, node_indices))
+
+        n_elements = len(elem_node_map)
+
+        # Track ranges for each layer + composite (layer=0)
+        all_layers = list(range(n_layers)) + [-1]  # -1 = composite
+        layer_all_mins: dict[int, float] = {k: float("inf") for k in all_layers}
+        layer_all_maxs: dict[int, float] = {k: float("-inf") for k in all_layers}
+        sample_size = min(50, n_frames)
+        sample_indices = set(np.linspace(0, n_frames - 1, sample_size, dtype=int).tolist())
+        layer_samples: dict[int, list[float]] = {k: [] for k in all_layers}
+
+        for ts in range(n_frames):
+            frame = subsidence_loader.get_frame(ts)  # (n_nodes, n_layers)
+
+            # Per-layer element averages
+            for layer_idx in range(n_layers):
+                layer_vals = frame[:, layer_idx]
+                elem_avgs = np.full(n_elements, np.nan, dtype=np.float64)
+                for i, (_eid, node_indices) in enumerate(elem_node_map):
+                    node_vals = layer_vals[node_indices]
+                    valid = node_vals[~np.isnan(node_vals)]
+                    valid = valid[valid > -9000]
+                    if len(valid) > 0:
+                        elem_avgs[i] = float(np.mean(valid))
+
+                valid_avgs = elem_avgs[~np.isnan(elem_avgs)]
+                min_val = float(np.min(valid_avgs)) if len(valid_avgs) > 0 else 0.0
+                max_val = float(np.max(valid_avgs)) if len(valid_avgs) > 0 else 0.0
+
+                conn.execute(
+                    "INSERT INTO subsidence_by_element VALUES (?, ?, ?, ?, ?)",
+                    (ts, layer_idx + 1, _compress_array(elem_avgs), min_val, max_val),
+                )
+
+                if len(valid_avgs) > 0:
+                    layer_all_mins[layer_idx] = min(layer_all_mins[layer_idx], min_val)
+                    layer_all_maxs[layer_idx] = max(layer_all_maxs[layer_idx], max_val)
+                    if ts in sample_indices:
+                        layer_samples[layer_idx].extend(valid_avgs.tolist())
+
+            # Composite (layer=0): sum across layers
+            composite = subsidence_loader.get_composite_subsidence(ts)
+            if composite is not None:
+                comp_avgs = np.full(n_elements, np.nan, dtype=np.float64)
+                for i, (_eid, node_indices) in enumerate(elem_node_map):
+                    node_vals = composite[node_indices]
+                    valid = node_vals[~np.isnan(node_vals)]
+                    valid = valid[valid > -9000]
+                    if len(valid) > 0:
+                        comp_avgs[i] = float(np.mean(valid))
+
+                valid_comp = comp_avgs[~np.isnan(comp_avgs)]
+                min_val = float(np.min(valid_comp)) if len(valid_comp) > 0 else 0.0
+                max_val = float(np.max(valid_comp)) if len(valid_comp) > 0 else 0.0
+
+                conn.execute(
+                    "INSERT INTO subsidence_by_element VALUES (?, ?, ?, ?, ?)",
+                    (ts, 0, _compress_array(comp_avgs), min_val, max_val),
+                )
+
+                if len(valid_comp) > 0:
+                    layer_all_mins[-1] = min(layer_all_mins[-1], min_val)
+                    layer_all_maxs[-1] = max(layer_all_maxs[-1], max_val)
+                    if ts in sample_indices:
+                        layer_samples[-1].extend(valid_comp.tolist())
+
+            if progress_callback and ts % 20 == 0:
+                pct = int(ts / n_frames * 40)
+                progress_callback("subsidence_frames", pct)
+
+        # Compute and store ranges
+        for key in all_layers:
+            db_layer = 0 if key == -1 else key + 1
+            samples = np.array(layer_samples[key])
+            p02 = float(np.percentile(samples, 2)) if len(samples) > 0 else 0.0
+            p98 = float(np.percentile(samples, 98)) if len(samples) > 0 else 0.0
+            conn.execute(
+                "INSERT INTO subsidence_range VALUES (?, ?, ?, ?, ?)",
+                (
+                    db_layer,
+                    round(p02, 3),
+                    round(p98, 3),
+                    round(layer_all_mins[key], 3) if layer_all_mins[key] != float("inf") else 0.0,
+                    round(layer_all_maxs[key], 3) if layer_all_maxs[key] != float("-inf") else 0.0,
+                ),
+            )
+
+        conn.commit()
+        logger.info(
+            "Subsidence data cached: %d frames, %d layers (+composite), %d elements",
             n_frames,
             n_layers,
             n_elements,

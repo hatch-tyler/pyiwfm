@@ -77,6 +77,7 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         self._transformer: Any = None  # pyproj Transformer (lazy)
         self._geojson_cache: dict[int, dict[str, Any]] = {}  # layer -> GeoJSON in WGS84
         self._head_loader: LazyHeadDataLoader | None = None
+        self._subsidence_loader: LazyHeadDataLoader | None = None
         self._gw_hydrograph_reader: IWFMHydrographReader | None = None
         self._stream_hydrograph_reader: IWFMHydrographReader | None = None
         self._subsidence_reader: IWFMHydrographReader | None = None
@@ -124,6 +125,7 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         self._transformer = None
         self._geojson_cache = {}
         self._head_loader = None
+        self._subsidence_loader = None
         self._gw_hydrograph_reader = None
         self._stream_hydrograph_reader = None
         self._subsidence_reader = None

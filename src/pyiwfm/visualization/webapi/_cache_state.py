@@ -93,6 +93,7 @@ class CacheStateMixin:
                     stream_hydrograph_reader=self.get_stream_hydrograph_reader(),  # type: ignore[attr-defined]
                     subsidence_reader=self.get_subsidence_reader(),  # type: ignore[attr-defined]
                     tile_drain_reader=self.get_tile_drain_reader(),  # type: ignore[attr-defined]
+                    subsidence_loader=self.get_subsidence_loader(),  # type: ignore[attr-defined]
                 )
                 self._rebuild_cache = False
                 logger.info("SQLite cache build complete.")
@@ -173,3 +174,26 @@ class CacheStateMixin:
         if loader is None:
             return None
         return loader.get_head_range(layer)
+
+    def get_cached_subsidence_by_element(
+        self, frame_idx: int, layer: int
+    ) -> tuple[list[float | None], float, float] | None:
+        """Try to get element-averaged subsidence from cache."""
+        loader = self.get_cache_loader()
+        if loader is None:
+            return None
+        result = loader.get_subsidence_by_element(frame_idx, layer)
+        if result is None:
+            return None
+        arr, min_val, max_val = result
+        import numpy as np
+
+        values: list[float | None] = [None if np.isnan(v) else round(float(v), 3) for v in arr]
+        return values, min_val, max_val
+
+    def get_cached_subsidence_range(self, layer: int) -> dict[str, float] | None:
+        """Try to get subsidence range from cache."""
+        loader = self.get_cache_loader()
+        if loader is None:
+            return None
+        return loader.get_subsidence_range(layer)

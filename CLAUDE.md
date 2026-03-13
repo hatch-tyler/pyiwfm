@@ -126,9 +126,9 @@ The `io/` module handles 50+ IWFM file formats. Key patterns:
 The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D Mesh (vtk.js), Results Map (deck.gl + MapLibre), and Budgets (Plotly).
 
 **Backend** (`visualization/webapi/`):
-- `config.py` — `ModelState` singleton that holds the loaded `IWFMModel` and provides lazy getters for head data, budget data, stream reach boundaries, etc. Caches `node_id_to_idx`, `elem_id_to_idx`, and hydrograph locations for performance.
+- `config.py` — `ModelState` singleton that holds the loaded `IWFMModel` and provides lazy getters for head data, subsidence surface data, budget data, stream reach boundaries, etc. Caches `node_id_to_idx`, `elem_id_to_idx`, and hydrograph locations for performance.
 - `server.py` — FastAPI app creation with CRS configuration and static file serving
-- `routes/` — 13 route modules: model (+ comparison), mesh, results (+ drawdown pagination, statistics), groundwater, streams, lakes, rootzone, small_watersheds, budgets, export (+ GeoPackage, matplotlib plots), observations, slices, properties
+- `routes/` — 13 route modules: model (+ comparison), mesh, results (+ drawdown pagination, statistics, subsidence surface), groundwater, streams, lakes, rootzone, small_watersheds, budgets, export (+ GeoPackage, matplotlib plots), observations, slices, properties
 - Data loaders (`head_loader`, `hydrograph_reader`, `hydrograph_loader`, `area_loader`, `cache_builder`, `cache_loader`) now live in `io/`; backward-compat shims remain in `webapi/`
 - Coordinate reprojection: server-side via `pyproj` (model CRS → WGS84), `--crs` CLI flag
 

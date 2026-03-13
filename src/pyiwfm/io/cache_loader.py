@@ -152,6 +152,66 @@ class SqliteCacheLoader:
         return row[0] if row else 0
 
     # ------------------------------------------------------------------
+    # Subsidence surface data
+    # ------------------------------------------------------------------
+
+    def get_subsidence_by_element(
+        self, frame_idx: int, layer: int
+    ) -> tuple[NDArray[np.float64], float, float] | None:
+        """Get pre-computed element-averaged subsidence.
+
+        Parameters
+        ----------
+        frame_idx : int
+            Frame index (0-based).
+        layer : int
+            Layer number (1-based), or 0 for composite (sum across layers).
+
+        Returns (values_array, min_val, max_val) or None.
+        """
+        cur = self._conn().execute(
+            "SELECT values_blob, min_val, max_val FROM subsidence_by_element "
+            "WHERE frame_idx = ? AND layer = ?",
+            (frame_idx, layer),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        blob, min_val, max_val = row
+        return _decompress_array(blob), float(min_val), float(max_val)
+
+    def get_subsidence_range(self, layer: int) -> dict[str, float] | None:
+        """Get the pre-computed subsidence range for a layer.
+
+        Returns dict with percentile_02, percentile_98, abs_min, abs_max.
+        """
+        cur = self._conn().execute(
+            "SELECT percentile_02, percentile_98, abs_min, abs_max "
+            "FROM subsidence_range WHERE layer = ?",
+            (layer,),
+        )
+        row = cur.fetchone()
+        if row is None:
+            return None
+        return {
+            "percentile_02": row[0],
+            "percentile_98": row[1],
+            "abs_min": row[2],
+            "abs_max": row[3],
+        }
+
+    def get_n_subsidence_frames(self) -> int:
+        """Get the number of cached subsidence frames."""
+        cur = self._conn().execute("SELECT COUNT(*) FROM subsidence_timesteps")
+        row = cur.fetchone()
+        return row[0] if row else 0
+
+    def get_subsidence_timesteps(self) -> list[str]:
+        """Get subsidence timestep datetimes as ISO strings."""
+        cur = self._conn().execute("SELECT datetime FROM subsidence_timesteps ORDER BY idx")
+        return [r[0] for r in cur.fetchall()]
+
+    # ------------------------------------------------------------------
     # Budget data
     # ------------------------------------------------------------------
 
@@ -366,6 +426,9 @@ class SqliteCacheLoader:
             "head_frames",
             "head_by_element",
             "head_range",
+            "subsidence_by_element",
+            "subsidence_range",
+            "subsidence_timesteps",
             "budget_files",
             "budget_data",
             "budget_summaries",

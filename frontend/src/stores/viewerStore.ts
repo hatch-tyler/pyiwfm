@@ -64,6 +64,14 @@ export interface ViewerState {
   headGlobalMin: number | null;
   headGlobalMax: number | null;
 
+  // === Subsidence surface state ===
+  subsidenceTimestep: number;
+  subsidenceTimes: string[];
+  subsidenceLayer: number;  // 0=composite, 1..N=per-layer
+  subsidenceGlobalMin: number | null;
+  subsidenceGlobalMax: number | null;
+  isSubsidenceAnimating: boolean;
+
   // === Map overlay toggles ===
   showSubregions: boolean;
   showStreamsOnMap: boolean;
@@ -187,6 +195,13 @@ export interface ViewerState {
 
   // Head global range
   setHeadGlobalRange: (min: number | null, max: number | null) => void;
+
+  // Subsidence surface
+  setSubsidenceTimestep: (ts: number) => void;
+  setSubsidenceTimes: (times: string[]) => void;
+  setSubsidenceLayer: (layer: number) => void;
+  setSubsidenceGlobalRange: (min: number | null, max: number | null) => void;
+  setIsSubsidenceAnimating: (a: boolean) => void;
 
   // Map overlays
   setShowSubregions: (show: boolean) => void;
@@ -326,6 +341,14 @@ export const useViewerStore = create<ViewerState>((set) => ({
   headGlobalMin: null,
   headGlobalMax: null,
 
+  // Subsidence surface
+  subsidenceTimestep: 0,
+  subsidenceTimes: [],
+  subsidenceLayer: 0,
+  subsidenceGlobalMin: null,
+  subsidenceGlobalMax: null,
+  isSubsidenceAnimating: false,
+
   // Map overlays
   showSubregions: false,
   showStreamsOnMap: false,
@@ -461,6 +484,13 @@ export const useViewerStore = create<ViewerState>((set) => ({
 
   // Head global range
   setHeadGlobalRange: (min, max) => set({ headGlobalMin: min, headGlobalMax: max }),
+
+  // Subsidence surface
+  setSubsidenceTimestep: (ts) => set({ subsidenceTimestep: ts }),
+  setSubsidenceTimes: (times) => set({ subsidenceTimes: times }),
+  setSubsidenceLayer: (layer) => set({ subsidenceLayer: layer }),
+  setSubsidenceGlobalRange: (min, max) => set({ subsidenceGlobalMin: min, subsidenceGlobalMax: max }),
+  setIsSubsidenceAnimating: (a) => set({ isSubsidenceAnimating: a }),
 
   // Map overlays
   setShowSubregions: (show) => set({ showSubregions: show }),

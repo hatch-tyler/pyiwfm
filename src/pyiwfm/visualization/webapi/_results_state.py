@@ -25,6 +25,7 @@ class ResultsStateMixin:
     _transformer: Any
     _geojson_cache: dict[int, dict[str, Any]]
     _head_loader: LazyHeadDataLoader | None
+    _subsidence_loader: LazyHeadDataLoader | None
     _gw_hydrograph_reader: IWFMHydrographReader | None
     _stream_hydrograph_reader: IWFMHydrographReader | None
     _subsidence_reader: IWFMHydrographReader | None
@@ -146,6 +147,69 @@ class ResultsStateMixin:
         )
         convert_headall_to_hdf(text_source, hdf_path, n_layers=n_layers)
         return LazyHeadDataLoader(hdf_path)
+
+    # ------------------------------------------------------------------
+    # Subsidence surface data access
+    # ------------------------------------------------------------------
+
+    def get_subsidence_loader(self) -> LazyHeadDataLoader | None:
+        """Get a LazyHeadDataLoader for SubsidenceAtAllNodes HDF5 data."""
+        if self._subsidence_loader is not None:
+            return self._subsidence_loader
+
+        if self._model is None:
+            return None
+
+        # Try subsidence_config.all_subs_out_file first
+        subs_config = None
+        if self._model.groundwater:
+            subs_config = getattr(self._model.groundwater, "subsidence_config", None)
+
+        if subs_config is not None:
+            all_subs_file = getattr(subs_config, "all_subs_out_file", None)
+            if all_subs_file:
+                p = Path(all_subs_file)
+                if not p.is_absolute() and self._results_dir:
+                    p = self._results_dir / p
+                if p.exists():
+                    try:
+                        from pyiwfm.io.head_loader import LazyHeadDataLoader
+
+                        loader = LazyHeadDataLoader(p)
+                        if loader.n_frames > 0:
+                            self._subsidence_loader = loader
+                            logger.info(
+                                "Subsidence surface loader initialized: %d timesteps from %s",
+                                loader.n_frames,
+                                p.name,
+                            )
+                            return self._subsidence_loader
+                    except Exception as e:
+                        logger.warning("Failed to load subsidence surface file %s: %s", p, e)
+
+        # Fallback: glob results dir for SubsidenceAtAllNodes HDF5
+        if self._results_dir:
+            for pattern in ("*Subsidence*All*.hdf*", "*Subsidence*All*.h5", "*Subsidence*All*.he5"):
+                matches = list(self._results_dir.glob(pattern))
+                if matches:
+                    try:
+                        from pyiwfm.io.head_loader import LazyHeadDataLoader
+
+                        loader = LazyHeadDataLoader(matches[0])
+                        if loader.n_frames > 0:
+                            self._subsidence_loader = loader
+                            logger.info(
+                                "Subsidence surface loader (glob) initialized: %d timesteps from %s",
+                                loader.n_frames,
+                                matches[0].name,
+                            )
+                            return self._subsidence_loader
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to load subsidence surface file %s: %s", matches[0], e
+                        )
+
+        return None
 
     # ------------------------------------------------------------------
     # Area data access (land-use area HDF5)
@@ -834,6 +898,17 @@ class ResultsStateMixin:
                 info["head_time_range"] = {
                     "start": times[0].isoformat(),
                     "end": times[-1].isoformat(),
+                }
+
+        subs_loader = self.get_subsidence_loader()
+        if subs_loader and subs_loader.n_frames > 0:
+            info["has_subsidence_surface"] = True
+            info["n_subsidence_timesteps"] = subs_loader.n_frames
+            subs_times = subs_loader.times
+            if subs_times:
+                info["subsidence_time_range"] = {
+                    "start": subs_times[0].isoformat(),
+                    "end": subs_times[-1].isoformat(),
                 }
 
         if self._model.groundwater:
