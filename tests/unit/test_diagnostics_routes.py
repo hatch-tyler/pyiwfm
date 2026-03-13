@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import pytest
+
+pytest.importorskip("fastapi", reason="fastapi not installed")
+
 from unittest.mock import patch
 
 

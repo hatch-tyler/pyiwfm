@@ -113,6 +113,9 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable/", None),
 }
 
+# Don't fail the build when an intersphinx inventory is temporarily unreachable
+suppress_warnings = ["intersphinx.external"]
+
 # Templates path
 templates_path = ["_templates"]
 exclude_patterns = [
