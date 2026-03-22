@@ -223,9 +223,9 @@ class ResultsExtractor:
         """
         from pyiwfm.io.head_loader import LazyHeadDataLoader
 
-        loader = LazyHeadDataLoader(self._results_path)
-        all_times = loader.times
         n_layers = self._model.n_layers
+        loader = LazyHeadDataLoader(self._results_path, n_layers=n_layers)
+        all_times = loader.times
 
         if timesteps is not None:
             time_indices = timesteps
@@ -458,4 +458,224 @@ class ResultsExtractor:
                 for ni, name in enumerate(names):
                     result.per_layer[name] = pl_arr[:, ni, :]
 
+        return result
+
+
+class FortranBackend:
+    """Run ResultsExtract Fortran executable as a fast extraction backend.
+
+    Generates an input file, invokes ``ResultsExtract_x64.exe``, and parses
+    the IWFM columnar ``.out`` output back into an :class:`ExtractionResult`.
+
+    This is ~300x faster than the pure-Python FE extraction for large
+    datasets (e.g. 31K subsidence locations × 577 timesteps: 3s vs 17min).
+
+    Parameters
+    ----------
+    exe_path : Path
+        Path to ``ResultsExtract_x64.exe``.
+    sim_file : Path
+        Path to the IWFM simulation main file.
+    data_type : str
+        ``'HEAD'`` or ``'SUBSIDENCE'``.
+    incremental : bool
+        If True and data_type is ``'SUBSIDENCE'``, the Fortran code produces
+        incremental output automatically.
+    """
+
+    def __init__(
+        self,
+        exe_path: Path,
+        sim_file: Path,
+        data_type: str = "SUBSIDENCE",
+        incremental: bool = True,
+    ) -> None:
+        self._exe_path = Path(exe_path)
+        self._sim_file = Path(sim_file)
+        self._data_type = data_type.upper()
+        self._incremental = incremental if self._data_type == "SUBSIDENCE" else False
+
+    @staticmethod
+    def find_exe(search_dirs: list[Path] | None = None) -> Path | None:
+        """Locate ``ResultsExtract_x64.exe`` in common locations."""
+        candidates = [Path("tools") / "ResultsExtract_x64.exe"]
+        if search_dirs:
+            candidates.extend(d / "ResultsExtract_x64.exe" for d in search_dirs)
+        for p in candidates:
+            if p.exists():
+                return p
+        return None
+
+    def generate_input(
+        self,
+        specs: list[ExtractionSpec],
+        output_file: str = "RE_OUT.out",
+        factxy: float = 1.0,
+    ) -> tuple[str, list[str]]:
+        """Generate a ResultsExtract input file from ExtractionSpec objects.
+
+        Parameters
+        ----------
+        specs : list[ExtractionSpec]
+            Extraction specifications (coordinates already in model units).
+        output_file : str
+            Name for the ResultsExtract output file.
+        factxy : float
+            Coordinate conversion factor written to the input file.
+
+        Returns
+        -------
+        tuple[str, list[str]]
+            (input file content, ordered list of spec names)
+        """
+        lines: list[str] = []
+        lines.append(f"  {self._sim_file!s:<40s} / SIMFILE")
+        lines.append(f"  {self._data_type:<40s} / DATATYPE")
+        lines.append(f"  {output_file:<40s} / OUTFILE")
+        lines.append(f"  {len(specs):<40d} / NHYD")
+        lines.append(f"  {factxy:<40.5f} / FACTXY")
+
+        names: list[str] = []
+        for i, spec in enumerate(specs, 1):
+            layer = max(spec.layer, 0)
+            lines.append(
+                f"  {i:<6d} 0  {layer:<4d} {spec.x:<18.4f} {spec.y:<18.4f} {spec.name}"
+            )
+            names.append(spec.name)
+
+        return "\n".join(lines) + "\n", names
+
+    def run(
+        self,
+        specs: list[ExtractionSpec],
+        work_dir: Path | None = None,
+        factxy: float = 1.0,
+    ) -> ExtractionResult:
+        """Run ResultsExtract and parse the output.
+
+        Parameters
+        ----------
+        specs : list[ExtractionSpec]
+            Extraction specifications (coordinates in model units).
+        work_dir : Path, optional
+            Working directory for the subprocess.
+        factxy : float
+            Coordinate conversion factor.
+
+        Returns
+        -------
+        ExtractionResult
+
+        Raises
+        ------
+        FileNotFoundError
+            If the executable is not found.
+        RuntimeError
+            If ResultsExtract reports a FATAL error.
+        """
+        import subprocess
+
+        if not self._exe_path.exists():
+            raise FileNotFoundError(f"ResultsExtract not found: {self._exe_path}")
+
+        cwd = Path(work_dir) if work_dir else Path.cwd()
+        out_name = f"RE_{self._data_type}_OUT.out"
+        input_content, names = self.generate_input(specs, out_name, factxy)
+
+        input_path = cwd / f"resultsextract_{self._data_type.lower()}_auto.in"
+        input_path.write_text(input_content)
+
+        logger.info(
+            "Running ResultsExtract (%s, %d locations)...",
+            self._data_type,
+            len(specs),
+        )
+
+        subprocess.run(
+            [str(self._exe_path), str(input_path)],
+            cwd=str(cwd),
+            capture_output=True,
+            text=True,
+        )
+
+        msg_file = cwd / "ResultsExtract_Messages.out"
+        if msg_file.exists():
+            msg_text = msg_file.read_text()
+            if "* FATAL:" in msg_text:
+                raise RuntimeError(f"ResultsExtract FATAL error:\n{msg_text}")
+
+        out_path = cwd / out_name
+        if not out_path.exists():
+            raise RuntimeError(f"ResultsExtract output not found: {out_path}")
+
+        return self._parse_output(out_path, names)
+
+    def _parse_output(
+        self,
+        out_path: Path,
+        names: list[str],
+    ) -> ExtractionResult:
+        """Parse IWFM columnar .out file into ExtractionResult.
+
+        The .out file has header lines starting with ``*`` followed by
+        data lines: ``MM/DD/YYYY_HH:MM   val1   val2   val3 ...``
+        """
+        import re
+        from datetime import datetime
+
+        times_list: list[np.datetime64] = []
+        data_rows: list[list[float]] = []
+        n_names = len(names)
+
+        with open(out_path) as f:
+            for line in f:
+                stripped = line.strip()
+                if not stripped or stripped.startswith("*"):
+                    continue
+                ts_match = re.match(r"(\d{2}/\d{2}/\d{4})_(\d{2}:\d{2})", stripped)
+                if not ts_match:
+                    continue
+
+                date_str = ts_match.group(1)
+                time_str = ts_match.group(2)
+                if time_str.startswith("24:"):
+                    time_str = "00:00"
+                try:
+                    dt = datetime.strptime(
+                        f"{date_str} {time_str}", "%m/%d/%Y %H:%M"
+                    )
+                except ValueError:
+                    continue
+
+                times_list.append(np.datetime64(dt))
+
+                val_str = stripped[ts_match.end():]
+                vals = []
+                for v in val_str.split():
+                    try:
+                        vals.append(float(v))
+                    except ValueError:
+                        vals.append(float("nan"))
+                while len(vals) < n_names:
+                    vals.append(float("nan"))
+                data_rows.append(vals[:n_names])
+
+        times = np.array(times_list)
+        data = np.array(data_rows, dtype=np.float64)
+
+        result = ExtractionResult(
+            times=times,
+            names=list(names),
+            data_type=self._data_type,
+            incremental=self._incremental,
+        )
+
+        for ni, name in enumerate(names):
+            result.values[name] = data[:, ni]
+
+        logger.info(
+            "Parsed ResultsExtract output: %d timesteps × %d locations",
+            len(times),
+            n_names,
+        )
         return result

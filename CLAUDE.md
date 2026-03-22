@@ -123,7 +123,7 @@ The `io/` module handles 50+ IWFM file formats. Key patterns:
 - `head_all_converter` is intentionally NOT in `io/__init__.py`; import directly: `from pyiwfm.io.head_all_converter import convert_headall_to_hdf`
 
 ### Web Viewer Architecture
-The viewer is a FastAPI backend + React SPA frontend with 4 tabs: Overview, 3D Mesh (vtk.js), Results Map (deck.gl + MapLibre), and Budgets (Plotly).
+The viewer is a FastAPI backend + React SPA frontend with 6 tabs: Overview, 3D Mesh (vtk.js), Results Map (deck.gl + MapLibre), Diagnostics, Budgets (Plotly), and Z-Budgets.
 
 **Backend** (`visualization/webapi/`):
 - `config.py` — `ModelState` singleton that holds the loaded `IWFMModel` and provides lazy getters for head data, subsidence surface data, budget data, stream reach boundaries, etc. Caches `node_id_to_idx`, `elem_id_to_idx`, and hydrograph locations for performance.

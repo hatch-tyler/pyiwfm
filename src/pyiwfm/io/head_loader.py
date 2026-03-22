@@ -71,12 +71,29 @@ class LazyHeadDataLoader:
         file_path: Path | str,
         dataset_name: str = "head",
         cache_size: int = 50,
+        n_layers: int | None = None,
     ) -> None:
-        """Initialize the lazy loader."""
+        """Initialize the lazy loader.
+
+        Parameters
+        ----------
+        file_path : Path or str
+            Path to the HDF5 file containing nodal data.
+        dataset_name : str, optional
+            Name of the HDF5 dataset for pyiwfm-format files.
+        cache_size : int, optional
+            Maximum number of timesteps to cache. Default is 50.
+        n_layers : int or None, optional
+            Number of model layers. When provided, takes precedence over
+            any ``NLayers`` attribute in the HDF5 file. Required for
+            IWFM native HDF5 files that lack the attribute (which is
+            the common case — the Fortran writer does not store it).
+        """
         self._file_path = Path(file_path)
         self._dataset_name = dataset_name
         self._cache_size = cache_size
         self._cache: OrderedDict[int, NDArray[np.float64]] = OrderedDict()
+        self._explicit_n_layers = n_layers
 
         # Load metadata (times, shape) without loading all data
         self._times: list[datetime] = []
@@ -174,24 +191,35 @@ class LazyHeadDataLoader:
         Handles both ``GWHeadAtAllNodes`` and ``SubsidenceAtAllNodes``.
         The Fortran code writes data as shape ``(n_timesteps, n_nodes * n_layers)``
         with data ordered layer-by-layer (all nodes for layer 1, then layer 2, etc.).
-        We need ``n_layers`` to reshape; it is stored as an attribute or inferred.
+        We need ``n_layers`` to reshape correctly.
+
+        Resolution order for ``n_layers``:
+        1. Explicit ``n_layers`` parameter passed to constructor (from model geometry)
+        2. ``NLayers`` attribute on the dataset or file
+        3. Fallback to 1 with a warning
         """
         ds = f[self._native_dataset_name]
         self._n_frames = ds.shape[0]
         total_columns = ds.shape[1]
 
-        # Try to get n_layers from attributes
-        n_layers = None
-        if "NLayers" in ds.attrs:
-            n_layers = int(ds.attrs["NLayers"])
-        elif "NLayers" in f.attrs:
-            n_layers = int(f.attrs["NLayers"])
+        # Determine n_layers: explicit param > HDF5 attribute > fallback
+        n_layers = self._explicit_n_layers
+
+        if n_layers is None:
+            if "NLayers" in ds.attrs:
+                n_layers = int(ds.attrs["NLayers"])
+            elif "NLayers" in f.attrs:
+                n_layers = int(f.attrs["NLayers"])
 
         if n_layers is not None and n_layers > 0:
             self._n_layers = n_layers
             self._n_nodes = total_columns // n_layers
         else:
-            # Default: assume 1 layer
+            logger.warning(
+                "NLayers not provided and not found in HDF5 attributes for %s. "
+                "Assuming 1 layer. For multi-layer models, pass n_layers explicitly.",
+                self._file_path.name,
+            )
             self._n_layers = 1
             self._n_nodes = total_columns
 
