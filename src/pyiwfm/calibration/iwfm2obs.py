@@ -1180,18 +1180,18 @@ def iwfm2obs_from_model(
 
         composite_sub: dict[str, SMPTimeSeries] = {}
         for spec in sub_well_specs:
-            layer_series: dict[int, SMPTimeSeries] = {}
+            sub_layer_series: dict[int, SMPTimeSeries] = {}
             for k in range(1, n_layers + 1):
                 layer_id = f"{spec.name}%{k}"
                 if layer_id in sub_results:
-                    layer_series[k] = sub_results[layer_id]
+                    sub_layer_series[k] = sub_results[layer_id]
 
-            if not layer_series:
+            if not sub_layer_series:
                 continue
 
-            first_layer = next(iter(layer_series.values()))
+            first_layer = next(iter(sub_layer_series.values()))
             summed = np.zeros(len(first_layer.times), dtype=np.float64)
-            for ts in layer_series.values():
+            for ts in sub_layer_series.values():
                 summed += np.where(np.isnan(ts.values), 0.0, ts.values)
 
             composite_sub[spec.name] = SMPTimeSeries(

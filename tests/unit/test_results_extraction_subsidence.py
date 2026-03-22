@@ -18,13 +18,14 @@ from numpy.testing import assert_allclose
 # Skip all tests if h5py is not available
 h5py = pytest.importorskip("h5py")
 
-from pyiwfm.io.head_loader import LazyHeadDataLoader
-from pyiwfm.calibration.results_extraction import ExtractionResult, ExtractionSpec
+from pyiwfm.calibration.results_extraction import ExtractionSpec  # noqa: E402, I001
+from pyiwfm.io.head_loader import LazyHeadDataLoader  # noqa: E402, I001
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_iwfm_native_hdf5(
     path: Path,
@@ -59,7 +60,7 @@ def _make_iwfm_native_hdf5(
 
     with h5py.File(path, "w") as f:
         f.create_dataset(dataset_name, data=data)
-        ts_ds = f.create_dataset("times", data=np.array(times, dtype="S32"))
+        f.create_dataset("times", data=np.array(times, dtype="S32"))
         if write_nlayers_attr:
             f[dataset_name].attrs["NLayers"] = n_layers
 
@@ -98,7 +99,11 @@ class TestLoaderReshape:
         n_nodes, n_layers = 3, 2
         fp = tmp_path / "reshape.hdf"
         _make_iwfm_native_hdf5(
-            fp, "SubsidenceAtAllNodes", n_nodes=n_nodes, n_layers=n_layers, n_timesteps=2,
+            fp,
+            "SubsidenceAtAllNodes",
+            n_nodes=n_nodes,
+            n_layers=n_layers,
+            n_timesteps=2,
         )
         loader = LazyHeadDataLoader(fp, n_layers=n_layers)
         frame = loader.get_frame(0)
@@ -120,7 +125,11 @@ class TestLoaderReshape:
         n_nodes, n_layers = 100, 4
         fp = tmp_path / "large.hdf"
         _make_iwfm_native_hdf5(
-            fp, "GWHeadAtAllNodes", n_nodes=n_nodes, n_layers=n_layers, n_timesteps=2,
+            fp,
+            "GWHeadAtAllNodes",
+            n_nodes=n_nodes,
+            n_layers=n_layers,
+            n_timesteps=2,
         )
         loader = LazyHeadDataLoader(fp, n_layers=n_layers)
         frame = loader.get_frame(1)
@@ -137,7 +146,11 @@ class TestLoaderNLayers:
     def test_nlayers_from_parameter(self, tmp_path: Path) -> None:
         fp = tmp_path / "param.hdf"
         _make_iwfm_native_hdf5(
-            fp, "GWHeadAtAllNodes", n_nodes=6, n_layers=3, n_timesteps=1,
+            fp,
+            "GWHeadAtAllNodes",
+            n_nodes=6,
+            n_layers=3,
+            n_timesteps=1,
             write_nlayers_attr=True,
         )
         # Pass n_layers=2 which differs from the attribute (3)
@@ -149,7 +162,11 @@ class TestLoaderNLayers:
     def test_nlayers_from_attribute(self, tmp_path: Path) -> None:
         fp = tmp_path / "attr.hdf"
         _make_iwfm_native_hdf5(
-            fp, "GWHeadAtAllNodes", n_nodes=6, n_layers=3, n_timesteps=1,
+            fp,
+            "GWHeadAtAllNodes",
+            n_nodes=6,
+            n_layers=3,
+            n_timesteps=1,
             write_nlayers_attr=True,
         )
         loader = LazyHeadDataLoader(fp)
@@ -159,10 +176,15 @@ class TestLoaderNLayers:
     def test_nlayers_fallback_warning(self, tmp_path: Path, caplog) -> None:
         fp = tmp_path / "noattr.hdf"
         _make_iwfm_native_hdf5(
-            fp, "GWHeadAtAllNodes", n_nodes=6, n_layers=3, n_timesteps=1,
+            fp,
+            "GWHeadAtAllNodes",
+            n_nodes=6,
+            n_layers=3,
+            n_timesteps=1,
             write_nlayers_attr=False,
         )
         import logging
+
         with caplog.at_level(logging.WARNING, logger="pyiwfm.io.head_loader"):
             loader = LazyHeadDataLoader(fp)
         assert loader.n_layers == 1  # fallback
@@ -176,7 +198,11 @@ class TestLoaderCache:
     def test_cache_consistency(self, tmp_path: Path) -> None:
         fp = tmp_path / "cache.hdf"
         _make_iwfm_native_hdf5(
-            fp, "GWHeadAtAllNodes", n_nodes=4, n_layers=2, n_timesteps=5,
+            fp,
+            "GWHeadAtAllNodes",
+            n_nodes=4,
+            n_layers=2,
+            n_timesteps=5,
         )
         loader = LazyHeadDataLoader(fp, n_layers=2)
         frame_a = loader.get_frame(2)
@@ -196,8 +222,8 @@ class TestLayerAggregation:
         """Create per-layer array for testing aggregation."""
         arr = np.zeros((n_times, n_layers), dtype=np.float64)
         for t in range(n_times):
-            for l in range(n_layers):
-                arr[t, l] = values_fn(t, l)
+            for layer in range(n_layers):
+                arr[t, layer] = values_fn(t, layer)
         return arr
 
     def test_subsidence_sums_layers(self) -> None:
@@ -207,7 +233,6 @@ class TestLayerAggregation:
         # Manually test the aggregation logic
         # Layer 1: [1, 2, 3], Layer 2: [10, 20, 30]
         per_layer = np.array([[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]])
-        n_times = 3
 
         # Create a minimal extractor to test _aggregate_layers
         extractor = object.__new__(ResultsExtractor)
@@ -297,7 +322,9 @@ class TestLayerAggregation:
 # Group 3: Integration with real C2VSimFG data
 # ============================================================================
 
-_C2VSIMFG_SUBS_HDF = Path(__file__).resolve().parents[4] / "c2vsimfg" / "Results" / "C2VSimFG_SubsidenceAll.hdf"
+_C2VSIMFG_SUBS_HDF = (
+    Path(__file__).resolve().parents[4] / "c2vsimfg" / "Results" / "C2VSimFG_SubsidenceAll.hdf"
+)
 _has_c2vsimfg_subs = _C2VSIMFG_SUBS_HDF.exists()
 
 
