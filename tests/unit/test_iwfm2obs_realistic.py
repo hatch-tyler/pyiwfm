@@ -245,12 +245,13 @@ class TestRealisticMultiBore:
         assert "MATCH" in result
         assert "NOMATCH" not in result
 
-    def test_bore_ids_case_sensitive(self) -> None:
-        """Bore ID matching is case-sensitive."""
+    def test_bore_ids_case_insensitive(self) -> None:
+        """Bore ID matching is case-insensitive (Fortran IWFM2OBS convention)."""
         obs = {"Well_01": _make_ts("Well_01", ["2020-06-15"], [0.0])}
         sim = {"WELL_01": _make_ts("WELL_01", ["2020-01-01", "2020-12-01"], [10.0, 20.0])}
         result = interpolate_batch(obs, sim)
-        assert len(result) == 0
+        assert len(result) == 1
+        assert "Well_01" in result
 
     def test_many_bores_different_date_ranges(self) -> None:
         """Bores with different sim date ranges are handled independently."""

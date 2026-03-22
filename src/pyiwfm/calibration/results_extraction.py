@@ -125,6 +125,7 @@ class ResultsExtractor:
         self._specs: list[ExtractionSpec] = []
         self._fe_weights: dict[str, dict[str, Any]] = {}
         self._t_weights: dict[str, NDArray[np.float64]] = {}
+        self._active_layers: dict[str, NDArray[np.bool_]] = {}
 
     def prepare(self, specs: list[ExtractionSpec]) -> None:
         """Pre-compute FE interpolation weights for all extraction points.
@@ -195,6 +196,18 @@ class ResultsExtractor:
                         self._t_weights[spec.name] = np.ones(n_layers) / n_layers
                 else:
                     self._t_weights[spec.name] = np.ones(n_layers) / n_layers
+
+        # Build active-layer masks for HEAD Layer=0 (Fortran averages only
+        # over layers where at least one FE interpolation node is active).
+        if self._data_type == "HEAD" and strat is not None:
+            for spec in specs:
+                if spec.layer == 0 and spec.name in self._fe_weights:
+                    fe_info = self._fe_weights[spec.name]
+                    node_indices = np.array([nid - 1 for nid in fe_info["node_ids"]])
+                    # active_node is (n_nodes, n_layers); layer active if ANY
+                    # FE node is active there
+                    active = np.any(strat.active_node[node_indices, :], axis=0)
+                    self._active_layers[spec.name] = active
 
         if n_outside > 0:
             logger.warning("%d points outside model mesh, skipped", n_outside)
@@ -333,11 +346,16 @@ class ResultsExtractor:
                             result[ti] = float(np.dot(w, per_layer[ti, valid]) / w_sum)
 
         else:
-            # layer == 0, HEAD: average over active layers
+            # layer == 0, HEAD: average over active layers only.
+            # Matches Fortran ResultsExtract which uses Stratigraphy%ActiveNode
+            # to exclude inactive layers from the average.
+            active_mask = self._active_layers.get(spec.name)
             for ti in range(n_times):
                 valid = ~np.isnan(per_layer[ti, :])
+                if active_mask is not None:
+                    valid &= active_mask
                 if valid.any():
-                    result[ti] = np.nanmean(per_layer[ti, :])
+                    result[ti] = float(np.mean(per_layer[ti, valid]))
 
         return result
 
@@ -538,9 +556,7 @@ class FortranBackend:
         names: list[str] = []
         for i, spec in enumerate(specs, 1):
             layer = max(spec.layer, 0)
-            lines.append(
-                f"  {i:<6d} 0  {layer:<4d} {spec.x:<18.4f} {spec.y:<18.4f} {spec.name}"
-            )
+            lines.append(f"  {i:<6d} 0  {layer:<4d} {spec.x:<18.4f} {spec.y:<18.4f} {spec.name}")
             names.append(spec.name)
 
         return "\n".join(lines) + "\n", names
@@ -641,15 +657,13 @@ class FortranBackend:
                 if time_str.startswith("24:"):
                     time_str = "00:00"
                 try:
-                    dt = datetime.strptime(
-                        f"{date_str} {time_str}", "%m/%d/%Y %H:%M"
-                    )
+                    dt = datetime.strptime(f"{date_str} {time_str}", "%m/%d/%Y %H:%M")
                 except ValueError:
                     continue
 
                 times_list.append(np.datetime64(dt))
 
-                val_str = stripped[ts_match.end():]
+                val_str = stripped[ts_match.end() :]
                 vals = []
                 for v in val_str.split():
                     try:

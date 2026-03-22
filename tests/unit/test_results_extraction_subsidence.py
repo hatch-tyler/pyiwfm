@@ -230,6 +230,7 @@ class TestLayerAggregation:
         extractor._data_type = "HEAD"
         extractor._incremental = False
         extractor._t_weights = {}
+        extractor._active_layers = {}
 
         spec = ExtractionSpec(name="test", x=0.0, y=0.0, layer=0)
         result = extractor._aggregate_layers(per_layer, spec, 2)

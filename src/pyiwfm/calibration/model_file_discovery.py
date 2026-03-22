@@ -69,6 +69,8 @@ class HydrographFileInfo:
     tiledrain_hydrograph_path: Path | None = None
     gw_locations: list[HydrographLocation] = field(default_factory=list)
     stream_locations: list[HydrographLocation] = field(default_factory=list)
+    subsidence_locations: list[HydrographLocation] = field(default_factory=list)
+    tiledrain_locations: list[HydrographLocation] = field(default_factory=list)
     n_model_layers: int = 1
     gw_main_path: Path | None = None
     stream_main_path: Path | None = None
@@ -197,6 +199,8 @@ def _parse_gw_main_file(info: HydrographFileInfo, sim_dir: Path) -> None:
         return
 
     gw_dir = gw_path.parent
+    _td_main_path: Path | None = None
+    _sub_main_path: Path | None = None
 
     try:
         with open(gw_path) as f:
@@ -290,6 +294,175 @@ def _parse_gw_main_file(info: HydrographFileInfo, sim_dir: Path) -> None:
         "GW: %d hydrographs, .out=%s",
         len(info.gw_locations),
         info.gw_hydrograph_path,
+    )
+
+    # Parse sub-component files discovered from GW main
+    if _sub_main_path is not None:
+        _parse_subsidence_main_file(info, _sub_main_path, sim_dir)
+    if _td_main_path is not None:
+        _parse_tiledrain_main_file(info, _td_main_path, sim_dir)
+
+
+def _parse_subsidence_main_file(info: HydrographFileInfo, sub_path: Path, sim_dir: Path) -> None:
+    """Parse subsidence main file to extract hydrograph .out path and locations.
+
+    Reads the subsidence component file structure:
+    Line 1: version, Line 2: AllSubsOut HDF5 (v4.1/5.1), Line 3: IC file,
+    Line 4: Tecplot output, Line 5: final results, Line 6: FACTLTOU,
+    Line 7: UNITLTOU, then hydrograph output section via HydOutputType format
+    (NOUTH, FACTXY, output path, NOUTH entries).
+    """
+    try:
+        with open(sub_path) as f:
+            lc: list[int] = [0]
+
+            # Line 1: version string
+            version_line = _read_data_value(f, lc)
+
+            # Determine number of header lines based on version
+            # v4.1/v5.1 have AllSubsOut line; v4.0/v5.0 do not
+            is_v41_or_v51 = any(v in version_line for v in ("4.1", "5.1"))
+            if is_v41_or_v51:
+                # Lines 2-7: AllSubsOut, IC, Tecplot, FinalResults, FACTLTOU, UNITLTOU
+                _skip_lines(f, 6, lc)
+            else:
+                # Lines 2-6: IC, Tecplot, FinalResults, FACTLTOU, UNITLTOU
+                _skip_lines(f, 5, lc)
+
+            # v5.0+: rInterbedDZ line (skip if present)
+            is_v50_plus = any(v in version_line for v in ("5.0", "5.1"))
+            if is_v50_plus:
+                _skip_lines(f, 1, lc)
+
+            # Now at hydrograph output section: NOUTS
+            nouts_raw = _read_data_value(f, lc)
+            n_hyd = int(nouts_raw.split()[0])
+
+            if n_hyd <= 0:
+                return
+
+            # FACTXY
+            factxy_raw = _read_data_value(f, lc)
+            try:
+                factxy = float(factxy_raw.split()[0])
+            except (ValueError, IndexError):
+                factxy = 1.0
+
+            # Output file path (resolve relative to sim_dir)
+            out_raw = _read_data_value(f, lc)
+            out_path = _resolve_path(sim_dir, out_raw, allow_empty=True)
+            if out_path:
+                info.subsidence_hydrograph_path = out_path
+
+            # Read hydrograph entries
+            locations: list[HydrographLocation] = []
+            for _ in range(n_hyd):
+                try:
+                    line = _read_data_line(f, lc)
+                except StopIteration:
+                    break
+                parts = line.split()
+                if len(parts) < 4:
+                    continue
+
+                hyd_id = int(parts[0])
+                hyd_type = int(parts[1])
+                layer = int(parts[2])
+
+                if hyd_type == 0:
+                    x = float(parts[3]) * factxy
+                    y = float(parts[4]) * factxy
+                    name = parts[5] if len(parts) > 5 else f"SUB{hyd_id}"
+                else:
+                    x = 0.0
+                    y = 0.0
+                    name = parts[4] if len(parts) > 4 else f"SUB{hyd_id}"
+
+                locations.append(
+                    HydrographLocation(
+                        node_id=hyd_id,
+                        layer=layer,
+                        x=x,
+                        y=y,
+                        name=name,
+                    )
+                )
+
+            info.subsidence_locations = locations
+
+    except Exception as e:
+        logger.warning("Error parsing subsidence main file %s: %s", sub_path, e)
+
+    logger.info(
+        "Subsidence: %d hydrographs, .out=%s",
+        len(info.subsidence_locations),
+        info.subsidence_hydrograph_path,
+    )
+
+
+def _parse_tiledrain_main_file(info: HydrographFileInfo, td_path: Path, sim_dir: Path) -> None:
+    """Parse tile drain main file to extract hydrograph .out path and locations.
+
+    Reads tile drain component file structure:
+    Line 1: NTD (number of tile drains), then NTD lines of facility data,
+    then NSI, NSI lines of subsurface irrigation, then skip lines to reach
+    hydrograph output file path and hydrograph ID entries.
+    """
+    try:
+        with open(td_path) as f:
+            lc: list[int] = [0]
+
+            # Line 1: NTD
+            ntd_raw = _read_data_value(f, lc)
+            ntd = int(ntd_raw.split()[0])
+
+            # Skip NTD tile drain facility lines + 3 separator lines
+            _skip_lines(f, ntd + 3, lc)
+
+            # Read NSI
+            nsi_raw = _read_data_value(f, lc)
+            nsi = int(nsi_raw.split()[0])
+
+            # Skip NSI subsurface irrigation lines + 6 lines to reach output path
+            _skip_lines(f, nsi + 6, lc)
+
+            # Hydrograph output file path
+            out_raw = _read_data_value(f, lc)
+            out_path = _resolve_path(sim_dir, out_raw, allow_empty=True)
+            if out_path:
+                info.tiledrain_hydrograph_path = out_path
+
+            # Read NTD hydrograph ID entries
+            locations: list[HydrographLocation] = []
+            for _i in range(ntd):
+                try:
+                    line = _read_data_line(f, lc)
+                except StopIteration:
+                    break
+                parts = line.split()
+                if not parts:
+                    continue
+                td_id = int(parts[0])
+                name = parts[1] if len(parts) > 1 else f"TD{td_id}"
+                locations.append(
+                    HydrographLocation(
+                        node_id=td_id,
+                        layer=1,
+                        x=0.0,
+                        y=0.0,
+                        name=name,
+                    )
+                )
+
+            info.tiledrain_locations = locations
+
+    except Exception as e:
+        logger.warning("Error parsing tile drain main file %s: %s", td_path, e)
+
+    logger.info(
+        "Tile drain: %d hydrographs, .out=%s",
+        len(info.tiledrain_locations),
+        info.tiledrain_hydrograph_path,
     )
 
 

@@ -27,7 +27,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -91,8 +91,10 @@ def interpolate_to_obs_times(
     sim_t = simulated.times.astype("datetime64[s]").astype(np.float64)
     sim_v = simulated.values.copy()
 
-    # Remove NaN values from simulated for interpolation
-    valid = ~np.isnan(sim_v)
+    # Remove NaN and excluded values from simulated for interpolation.
+    # Matches Fortran SMP2SMP which sets 'X'-flagged values to sentinel
+    # before interpolation (Class_SMP2SMP.f90:547-555).
+    valid = ~np.isnan(sim_v) & ~simulated.excluded
     sim_t_valid = sim_t[valid]
     sim_v_valid = sim_v[valid]
 
@@ -157,10 +159,14 @@ def interpolate_batch(
     dict[str, SMPTimeSeries]
         Interpolated results for bores present in both inputs.
     """
+    # Build case-insensitive lookup for simulated IDs to match Fortran
+    # IWFM2OBS behavior (all bore IDs are uppercased before matching).
+    sim_upper: dict[str, SMPTimeSeries] = {k.upper(): v for k, v in simulated.items()}
     result: dict[str, SMPTimeSeries] = {}
     for bore_id, obs_ts in observed.items():
-        if bore_id in simulated:
-            result[bore_id] = interpolate_to_obs_times(obs_ts, simulated[bore_id], config)
+        sim_ts = sim_upper.get(bore_id.upper())
+        if sim_ts is not None:
+            result[bore_id] = interpolate_to_obs_times(obs_ts, sim_ts, config)
     return result
 
 
@@ -366,6 +372,113 @@ def deduplicate_smp(
     writer.write(deduped)
 
     return original_count, len(deduped)
+
+
+# ── Head Difference Pairs ──────────────────────────────────────────────
+
+
+@dataclass
+class HeadDifferencePair:
+    """A pair of well IDs for head difference computation.
+
+    Mirrors Fortran ``Class_HeadDifference.f90::HeadDiffPairType``.
+    Computes ``Head(id1) - Head(id2)`` at matching timesteps.
+
+    Attributes
+    ----------
+    id1 : str
+        First well ID.
+    id2 : str
+        Second well ID (subtracted from id1).
+    """
+
+    id1: str
+    id2: str
+
+
+def read_head_difference_pairs(path: str | Path) -> list[HeadDifferencePair]:
+    """Read head difference pairs from a text file.
+
+    Each line contains two whitespace-separated well IDs.
+    IDs are uppercased for case-insensitive matching.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the pairs file.
+
+    Returns
+    -------
+    list[HeadDifferencePair]
+
+    Raises
+    ------
+    ValueError
+        If a pair has identical IDs or a line has fewer than 2 tokens.
+    """
+    pairs: list[HeadDifferencePair] = []
+    with open(path) as f:
+        for lineno, line in enumerate(f, 1):
+            stripped = line.strip()
+            if not stripped or stripped.startswith(("C", "c", "*", "#")):
+                continue
+            tokens = stripped.split()
+            if len(tokens) < 2:
+                raise ValueError(f"Line {lineno} of {path}: expected 2 IDs, got {len(tokens)}")
+            id1 = tokens[0].upper()
+            id2 = tokens[1].upper()
+            if id1 == id2:
+                raise ValueError(f"Line {lineno} of {path}: identical IDs '{id1}'")
+            pairs.append(HeadDifferencePair(id1=id1, id2=id2))
+    if not pairs:
+        raise ValueError(f"No pairs found in {path}")
+    return pairs
+
+
+def compute_head_differences(
+    interpolated: dict[str, SMPTimeSeries],
+    pairs: list[HeadDifferencePair],
+) -> dict[str, SMPTimeSeries]:
+    """Compute head differences for well pairs.
+
+    For each pair, computes ``interpolated[id1].values - interpolated[id2].values``
+    at matching timestamps. Mirrors Fortran ``Class_HeadDifference`` logic.
+
+    Parameters
+    ----------
+    interpolated : dict[str, SMPTimeSeries]
+        Interpolated time series keyed by bore ID (case-insensitive).
+    pairs : list[HeadDifferencePair]
+        Well pairs to difference.
+
+    Returns
+    -------
+    dict[str, SMPTimeSeries]
+        Head differences keyed by ``"id1-id2"``.
+    """
+    # Case-insensitive lookup
+    upper_map: dict[str, SMPTimeSeries] = {k.upper(): v for k, v in interpolated.items()}
+
+    results: dict[str, SMPTimeSeries] = {}
+    for pair in pairs:
+        ts1 = upper_map.get(pair.id1)
+        ts2 = upper_map.get(pair.id2)
+        if ts1 is None:
+            logger.warning("Head difference: ID '%s' not found, skipping pair", pair.id1)
+            continue
+        if ts2 is None:
+            logger.warning("Head difference: ID '%s' not found, skipping pair", pair.id2)
+            continue
+
+        diff_id = f"{pair.id1}-{pair.id2}"
+        diff_values = ts1.values - ts2.values
+        results[diff_id] = SMPTimeSeries(
+            bore_id=diff_id,
+            times=ts1.times.copy(),
+            values=diff_values,
+            excluded=ts1.excluded | ts2.excluded,
+        )
+    return results
 
 
 @dataclass
@@ -638,6 +751,195 @@ class IWFM2OBSConfig:
     date_format: int = 2
 
 
+# ── IWFM2OBS Input File Parser ─────────────────────────────────────────
+
+
+@dataclass
+class IWFM2OBSHydBlock:
+    """One hydrograph block from the IWFM2OBS input file.
+
+    Attributes
+    ----------
+    model_smp : str
+        Model hydrograph SMP path (ignored in model-discovery mode).
+    obs_smp : str
+        Observation SMP path (blank = skip this type).
+    output_smp : str
+        Output SMP path.
+    threshold : float
+        Extrapolation threshold in days.
+    ins_file : str
+        PEST instruction file path (blank = skip).
+    pcf_file : str
+        PEST PCF file path (blank = skip).
+    """
+
+    model_smp: str = ""
+    obs_smp: str = ""
+    output_smp: str = ""
+    threshold: float = 1.0
+    ins_file: str = ""
+    pcf_file: str = ""
+
+
+@dataclass
+class IWFM2OBSInputFile:
+    """Parsed IWFM2OBS input file (``iwfm2obs_template.in`` format).
+
+    Mirrors the Fortran IWFM2OBS input file structure with 4 hydrograph
+    blocks, head difference flag, and multi-layer target flag.
+
+    Attributes
+    ----------
+    simulation_main_file : str
+        IWFM simulation main file (blank = explicit SMP mode).
+    date_format : int
+        1 = dd/mm/yyyy, 2 = mm/dd/yyyy.
+    gw : IWFM2OBSHydBlock
+        Groundwater head hydrograph block.
+    stream : IWFM2OBSHydBlock
+        Stream hydrograph block.
+    tiledrain : IWFM2OBSHydBlock
+        Tile drain hydrograph block.
+    subsidence : IWFM2OBSHydBlock
+        Subsidence hydrograph block.
+    head_diff_enabled : bool
+        Whether to compute head differences.
+    head_diff_file : str
+        Path to head difference pair file.
+    multilayer_enabled : bool
+        Whether to enable multi-layer T-weighted averaging.
+    multilayer_obs_well_file : str
+        Observation well locations + screen intervals.
+    multilayer_elements_file : str
+        IWFM element connectivity file.
+    multilayer_nodes_file : str
+        IWFM node coordinates file.
+    multilayer_stratigraphy_file : str
+        IWFM stratigraphy (layer elevations) file.
+    multilayer_gw_main_file : str
+        IWFM GW main file (for hydraulic conductivity).
+    """
+
+    simulation_main_file: str = ""
+    date_format: int = 2
+    gw: IWFM2OBSHydBlock = field(default_factory=IWFM2OBSHydBlock)
+    stream: IWFM2OBSHydBlock = field(default_factory=IWFM2OBSHydBlock)
+    tiledrain: IWFM2OBSHydBlock = field(default_factory=IWFM2OBSHydBlock)
+    subsidence: IWFM2OBSHydBlock = field(default_factory=IWFM2OBSHydBlock)
+    head_diff_enabled: bool = False
+    head_diff_file: str = ""
+    multilayer_enabled: bool = False
+    multilayer_obs_well_file: str = ""
+    multilayer_elements_file: str = ""
+    multilayer_nodes_file: str = ""
+    multilayer_stratigraphy_file: str = ""
+    multilayer_gw_main_file: str = ""
+
+
+def _next_data_value_i2o(f: Any) -> str:
+    """Read next non-comment data value, stripping inline ``/`` comment.
+
+    Uses IWFM's column-1 comment convention and inline comment rules.
+    Returns the data value with comment text removed, or empty string
+    for blank data lines (which are significant in IWFM2OBS blocks).
+    """
+    from pyiwfm.io.iwfm_reader import is_comment_line as _is_iwfm_comment
+    from pyiwfm.io.iwfm_reader import strip_inline_comment
+
+    for raw in f:
+        raw_line = raw.rstrip("\n\r")
+        if _is_iwfm_comment(raw_line):
+            continue
+        if raw_line and raw_line[0] == "#":
+            continue
+        value, _ = strip_inline_comment(raw_line)
+        return value
+    return ""
+
+
+def _read_hyd_block(f: Any) -> IWFM2OBSHydBlock:
+    """Read a 6-line hydrograph block from the input file."""
+    model_smp = _next_data_value_i2o(f)
+    obs_smp = _next_data_value_i2o(f)
+    output_smp = _next_data_value_i2o(f)
+    threshold_raw = _next_data_value_i2o(f)
+    try:
+        threshold = float(threshold_raw) if threshold_raw else 1.0
+    except ValueError:
+        threshold = 1.0
+    ins_file = _next_data_value_i2o(f)
+    pcf_file = _next_data_value_i2o(f)
+    return IWFM2OBSHydBlock(
+        model_smp=model_smp,
+        obs_smp=obs_smp,
+        output_smp=output_smp,
+        threshold=threshold,
+        ins_file=ins_file,
+        pcf_file=pcf_file,
+    )
+
+
+def read_iwfm2obs_config(path: str | Path) -> IWFM2OBSInputFile:
+    """Parse an IWFM2OBS input file (``iwfm2obs_template.in`` format).
+
+    Reads the structured Fortran-compatible config with 4 hydrograph blocks
+    (GW, stream, tile drain, subsidence), head difference flag, and
+    multi-layer target flag.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the IWFM2OBS input file.
+
+    Returns
+    -------
+    IWFM2OBSInputFile
+        Parsed configuration.
+    """
+    result = IWFM2OBSInputFile()
+
+    with open(path) as f:
+        # Line 1: Simulation main file (or date format for old format)
+        first = _next_data_value_i2o(f)
+
+        if first in ("1", "2"):
+            # Old format: first data line is date format, no model discovery
+            result.date_format = int(first)
+        else:
+            result.simulation_main_file = first
+            # Line 2: Date format
+            date_raw = _next_data_value_i2o(f)
+            try:
+                result.date_format = int(date_raw) if date_raw else 2
+            except ValueError:
+                result.date_format = 2
+
+        # 4 hydrograph blocks: GW, Stream, TileDrain, Subsidence
+        result.gw = _read_hyd_block(f)
+        result.stream = _read_hyd_block(f)
+        result.tiledrain = _read_hyd_block(f)
+        result.subsidence = _read_hyd_block(f)
+
+        # Head differences Y/N
+        hd_raw = _next_data_value_i2o(f)
+        result.head_diff_enabled = hd_raw.upper().startswith("Y")
+        if result.head_diff_enabled:
+            result.head_diff_file = _next_data_value_i2o(f)
+
+        # Multi-layer target Y/N
+        ml_raw = _next_data_value_i2o(f)
+        result.multilayer_enabled = ml_raw.upper().startswith("Y")
+        if result.multilayer_enabled:
+            result.multilayer_obs_well_file = _next_data_value_i2o(f)
+            result.multilayer_elements_file = _next_data_value_i2o(f)
+            result.multilayer_nodes_file = _next_data_value_i2o(f)
+            result.multilayer_stratigraphy_file = _next_data_value_i2o(f)
+            result.multilayer_gw_main_file = _next_data_value_i2o(f)
+
+    return result
+
+
 def iwfm2obs_from_model(
     simulation_main_file: Path | str,
     obs_smp_paths: dict[str, Path],
@@ -708,6 +1010,8 @@ def iwfm2obs_from_model(
     location_map: dict[str, list[tuple[int, str]]] = {
         "gw": [(i, loc.name) for i, loc in enumerate(discovery.gw_locations)],
         "stream": [(i, loc.name) for i, loc in enumerate(discovery.stream_locations)],
+        "subsidence": [(i, loc.name) for i, loc in enumerate(discovery.subsidence_locations)],
+        "tiledrain": [(i, loc.name) for i, loc in enumerate(discovery.tiledrain_locations)],
     }
 
     results: dict[str, dict[str, SMPTimeSeries]] = {}
@@ -862,6 +1166,45 @@ def iwfm2obs_from_model(
                 multilayer_output_path,
                 n_layers,
             )
+
+    # Step 3b: multi-layer subsidence summation (Fortran IWFM2OBS:666-699)
+    # Unlike GW heads which use T-weighted averaging, subsidence layers are
+    # summed (additive compaction) when a well screens multiple layers.
+    if obs_well_spec_path is not None and stratigraphy is not None and "subsidence" in results:
+        from pyiwfm.calibration.obs_well_spec import read_obs_well_spec
+
+        sub_well_specs = read_obs_well_spec(obs_well_spec_path)
+
+        sub_results = results["subsidence"]
+        n_layers = stratigraphy.n_layers
+
+        composite_sub: dict[str, SMPTimeSeries] = {}
+        for spec in sub_well_specs:
+            layer_series: dict[int, SMPTimeSeries] = {}
+            for k in range(1, n_layers + 1):
+                layer_id = f"{spec.name}%{k}"
+                if layer_id in sub_results:
+                    layer_series[k] = sub_results[layer_id]
+
+            if not layer_series:
+                continue
+
+            first_layer = next(iter(layer_series.values()))
+            summed = np.zeros(len(first_layer.times), dtype=np.float64)
+            for ts in layer_series.values():
+                summed += np.where(np.isnan(ts.values), 0.0, ts.values)
+
+            composite_sub[spec.name] = SMPTimeSeries(
+                bore_id=spec.name,
+                times=first_layer.times.copy(),
+                values=summed,
+                excluded=first_layer.excluded.copy(),
+            )
+
+        if composite_sub:
+            results["subsidence"].update(composite_sub)
+            logger.info("Subsidence: summed %d multi-layer wells", len(composite_sub))
+
     return results
 
 
