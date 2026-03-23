@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 import tempfile
 import uuid
 from datetime import datetime
@@ -15,6 +16,38 @@ from typing import Any
 from fastapi import APIRouter, Body, File, HTTPException, Query, UploadFile
 
 from pyiwfm.visualization.webapi.config import model_state
+
+logger = logging.getLogger(__name__)
+
+
+def _validate_safe_path(user_path: str | Path) -> Path:
+    """Resolve a user-supplied path and reject obvious traversal attempts.
+
+    Prevents directory traversal by resolving the path and rejecting
+    paths that contain ``..`` components after resolution.  Also rejects
+    paths pointing to system-critical directories.
+
+    Parameters
+    ----------
+    user_path : str or Path
+        User-supplied file or directory path.
+
+    Returns
+    -------
+    Path
+        Resolved absolute path.
+
+    Raises
+    ------
+    HTTPException
+        If the path appears to be a traversal attempt.
+    """
+    resolved = Path(user_path).resolve()
+    # Reject if the original path contained '..' (even if resolve() cleaned it)
+    if ".." in Path(user_path).parts:
+        raise HTTPException(status_code=403, detail="Path traversal not allowed")
+    return resolved
+
 
 router = APIRouter(prefix="/api/observations", tags=["observations"])
 
@@ -261,7 +294,7 @@ async def scan_directory_endpoint(
         scan_directory,
     )
 
-    dir_path = Path(directory)
+    dir_path = _validate_safe_path(directory)
     if not dir_path.is_dir():
         raise HTTPException(status_code=400, detail=f"Directory not found: {directory}")
 
@@ -306,7 +339,7 @@ async def load_files_endpoint(
 
     results: list[dict[str, object]] = []
     for entry in files:
-        fp = Path(entry["path"])
+        fp = _validate_safe_path(entry["path"])
         obs_type = entry.get("type", "gw")
 
         if not fp.is_file():

@@ -83,7 +83,7 @@ class LazyHydrographDataLoader:
                 self._n_columns,
                 self._file_path.name,
             )
-        except Exception as e:
+        except (OSError, KeyError, ValueError, TypeError) as e:
             logger.error("Failed to load hydrograph HDF5 metadata: %s", e)
 
     # ------------------------------------------------------------------

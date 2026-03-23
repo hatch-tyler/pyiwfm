@@ -540,7 +540,11 @@ def compare_models(body: dict[str, Any]) -> dict[str, Any]:
 
     from pathlib import Path
 
-    other_path = Path(other_path)
+    # Reject path traversal attempts
+    if ".." in Path(other_path).parts:
+        raise HTTPException(status_code=403, detail="Path traversal not allowed")
+
+    other_path = Path(other_path).resolve()
     if not other_path.exists():
         raise HTTPException(
             status_code=404,

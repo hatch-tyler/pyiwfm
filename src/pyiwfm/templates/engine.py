@@ -64,6 +64,8 @@ class TemplateEngine:
 
             self.env = Environment(
                 loader=ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0],
+                # Autoescape intentionally off: templates produce Fortran input
+                # files, not HTML.  Escaping would corrupt numeric output.
                 autoescape=select_autoescape(default=False),
                 trim_blocks=True,
                 lstrip_blocks=True,
@@ -71,6 +73,8 @@ class TemplateEngine:
             )
         else:
             self.env = Environment(
+                # Autoescape intentionally off: templates produce Fortran input
+                # files, not HTML.  Escaping would corrupt numeric output.
                 autoescape=select_autoescape(default=False),
                 trim_blocks=True,
                 lstrip_blocks=True,

@@ -5,6 +5,7 @@ Configuration settings for the FastAPI web viewer.
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -50,7 +51,10 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
     precomputed meshes for efficient API responses.
     """
 
+    MAX_OBSERVATIONS = 100  # Maximum number of uploaded observation sets
+
     def __init__(self) -> None:
+        self._lock = threading.Lock()
         self._model: IWFMModel | None = None
         self._mesh_3d: bytes | None = None
         self._mesh_surface: bytes | None = None
@@ -115,7 +119,22 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         no_cache: bool = False,
         rebuild_cache: bool = False,
     ) -> None:
-        """Set the model and reset caches."""
+        """Set the model and reset caches.
+
+        Thread-safe: acquires lock to prevent concurrent requests from
+        seeing partially reset state.
+        """
+        with self._lock:
+            self._set_model_unlocked(model, crs, no_cache, rebuild_cache)
+
+    def _set_model_unlocked(
+        self,
+        model: IWFMModel,
+        crs: str,
+        no_cache: bool,
+        rebuild_cache: bool,
+    ) -> None:
+        """Internal model setter (caller holds lock)."""
         self._model = model
         self._mesh_3d = None
         self._mesh_surface = None
@@ -176,7 +195,18 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
     # ------------------------------------------------------------------
 
     def add_observation(self, obs_id: str, data: dict[str, Any]) -> None:
-        """Store an uploaded observation dataset."""
+        """Store an uploaded observation dataset.
+
+        Raises
+        ------
+        ValueError
+            If the maximum number of observations has been reached.
+        """
+        if len(self._observations) >= self.MAX_OBSERVATIONS and obs_id not in self._observations:
+            raise ValueError(
+                f"Maximum of {self.MAX_OBSERVATIONS} observation sets reached. "
+                "Remove existing observations before adding more."
+            )
         self._observations[obs_id] = data
 
     def get_observation(self, obs_id: str) -> dict[str, Any] | None:

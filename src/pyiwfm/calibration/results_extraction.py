@@ -140,7 +140,8 @@ class ResultsExtractor:
         self._specs = specs
 
         grid = self._model.grid
-        assert grid is not None, "Model must have a grid loaded"
+        if grid is None:
+            raise ValueError("Model must have a grid loaded")
         strat = self._model.stratigraphy
         interp = FEInterpolator(grid)
         n_layers = self._model.n_layers
@@ -607,12 +608,25 @@ class FortranBackend:
             len(specs),
         )
 
-        subprocess.run(
-            [str(self._exe_path), str(input_path)],
-            cwd=str(cwd),
-            capture_output=True,
-            text=True,
-        )
+        try:
+            proc = subprocess.run(
+                [str(self._exe_path), str(input_path)],
+                cwd=str(cwd),
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            if proc.returncode != 0:
+                raise RuntimeError(
+                    f"ResultsExtract exited with code {proc.returncode}:\n"
+                    f"{proc.stderr or proc.stdout}"
+                )
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("ResultsExtract timed out after 300 seconds") from exc
+        finally:
+            # Clean up input file regardless of success/failure
+            if input_path.exists():
+                input_path.unlink(missing_ok=True)
 
         msg_file = cwd / "ResultsExtract_Messages.out"
         if msg_file.exists():
@@ -675,7 +689,6 @@ class FortranBackend:
                 data_rows.append(vals[:n_names])
 
         times = np.array(times_list)
-        data = np.array(data_rows, dtype=np.float64)
 
         result = ExtractionResult(
             times=times,
@@ -684,8 +697,10 @@ class FortranBackend:
             incremental=self._incremental,
         )
 
-        for ni, name in enumerate(names):
-            result.values[name] = data[:, ni]
+        if data_rows:
+            data = np.array(data_rows, dtype=np.float64)
+            for ni, name in enumerate(names):
+                result.values[name] = data[:, ni]
 
         logger.info(
             "Parsed ResultsExtract output: %d timesteps × %d locations",

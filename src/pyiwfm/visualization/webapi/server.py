@@ -70,10 +70,13 @@ def create_app(
         redoc_url="/api/redoc" if settings.debug else None,
     )
 
+    # CORS: allow all origins since the viewer is a local tool, but disable
+    # credentials to prevent CSRF when exposed on a network.  Wildcard origins
+    # with allow_credentials=True is an unsafe combination per OWASP.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )

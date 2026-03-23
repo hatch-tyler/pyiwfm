@@ -172,7 +172,7 @@ class LazyHeadDataLoader:
                     f"{' (IWFM native)' if self._iwfm_native else ''}"
                 )
 
-        except Exception as e:
+        except (OSError, KeyError, ValueError, TypeError) as e:
             logger.error(f"Failed to load metadata from {self._file_path}: {e}")
 
     def _load_metadata_pyiwfm(self, f: Any) -> None:

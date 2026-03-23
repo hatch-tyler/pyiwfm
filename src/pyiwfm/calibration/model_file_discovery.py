@@ -287,7 +287,7 @@ def _parse_gw_main_file(info: HydrographFileInfo, sim_dir: Path) -> None:
 
             info.gw_locations = locations
 
-    except Exception as e:
+    except (OSError, ValueError, StopIteration, KeyError, IndexError) as e:
         logger.warning("Error parsing GW main file %s: %s", gw_path, e)
 
     logger.info(
@@ -390,7 +390,7 @@ def _parse_subsidence_main_file(info: HydrographFileInfo, sub_path: Path, sim_di
 
             info.subsidence_locations = locations
 
-    except Exception as e:
+    except (OSError, ValueError, StopIteration, KeyError, IndexError) as e:
         logger.warning("Error parsing subsidence main file %s: %s", sub_path, e)
 
     logger.info(
@@ -456,7 +456,7 @@ def _parse_tiledrain_main_file(info: HydrographFileInfo, td_path: Path, sim_dir:
 
             info.tiledrain_locations = locations
 
-    except Exception as e:
+    except (OSError, ValueError, StopIteration, KeyError, IndexError) as e:
         logger.warning("Error parsing tile drain main file %s: %s", td_path, e)
 
     logger.info(
@@ -507,7 +507,7 @@ def _parse_stream_main_file(info: HydrographFileInfo, sim_dir: Path) -> None:
 
             info.stream_locations = locations
 
-    except Exception as e:
+    except (OSError, ValueError, StopIteration, KeyError, IndexError) as e:
         logger.warning("Error parsing stream main file %s: %s", str_path, e)
 
     logger.info(

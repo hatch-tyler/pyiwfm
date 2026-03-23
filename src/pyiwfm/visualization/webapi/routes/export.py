@@ -23,6 +23,20 @@ from pyiwfm.visualization.webapi.config import model_state, require_model
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_filename(name: str) -> str:
+    """Sanitize a string for use in a filename.
+
+    Strips directory components to prevent path traversal, and replaces
+    spaces with underscores for cleaner filenames.
+    """
+    from pathlib import PurePosixPath
+
+    # Extract just the filename part, stripping any directory components
+    safe = PurePosixPath(name).name
+    return safe.replace(" ", "_")
+
+
 router = APIRouter(prefix="/api/export", tags=["export"])
 
 
@@ -153,7 +167,7 @@ def export_budget_csv(
         writer.writerow(row)
 
     loc_name = location or reader.locations[0]
-    safe_name = loc_name.replace(" ", "_").replace("/", "_")
+    safe_name = _safe_filename(loc_name)
     filename = f"budget_{budget_type}_{safe_name}.csv"
 
     return Response(
@@ -209,7 +223,7 @@ def export_budget_excel(
         except OSError:
             pass
 
-    safe_type = budget_type.replace(" ", "_").replace("/", "_")
+    safe_type = _safe_filename(budget_type)
     filename = f"budget_{safe_type}.xlsx"
 
     return Response(
@@ -394,7 +408,7 @@ def export_geopackage(
         data = Path(tmp_path).read_bytes()
 
         model_name = model.name or "model"
-        safe_name = model_name.replace(" ", "_").replace("/", "_")
+        safe_name = _safe_filename(model_name)
         filename = f"{safe_name}.gpkg"
 
         return Response(
@@ -942,6 +956,6 @@ def export_timeseries_budget(
         )
 
     loc_name = location or reader.locations[0]
-    safe_name = str(loc_name).replace(" ", "_").replace("/", "_")
+    safe_name = _safe_filename(str(loc_name))
     filename = f"budget_ts_{budget_type}_{safe_name}.csv"
     return _csv_streaming_response(rows, all_headers, filename)
