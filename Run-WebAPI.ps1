@@ -18,7 +18,8 @@
     5. Launch the FastAPI web viewer application
 
 .PARAMETER ModelDir
-    Path to the IWFM model directory. Default: ~/OneDrive/Desktop/c2vsimfg
+    Path to the IWFM model directory. Default: auto-discovered from Desktop
+    (checks C2VSIMFG_DIR env var, then Desktop, then OneDrive Desktop).
 
 .PARAMETER BindAddress
     Server host/bind address. Default: 127.0.0.1
@@ -149,13 +150,66 @@ Write-Host ""
 
 # ── Resolve model directory ──────────────────────────────────────────
 if ([string]::IsNullOrEmpty($ModelDir)) {
-    $DesktopPath = [Environment]::GetFolderPath("Desktop")
-    $ModelDir = Join-Path $DesktopPath "c2vsimfg"
+    $Discovered = $false
 
-    # Check OneDrive Desktop fallback
-    $OneDriveDesktop = Join-Path $env:USERPROFILE "OneDrive\Desktop\c2vsimfg"
-    if ((Test-Path $OneDriveDesktop) -and -not (Test-Path $ModelDir)) {
-        $ModelDir = $OneDriveDesktop
+    # 1. Environment variable (explicit override)
+    if ($env:C2VSIMFG_DIR -and (Test-Path $env:C2VSIMFG_DIR)) {
+        $ModelDir = $env:C2VSIMFG_DIR
+        $Discovered = $true
+        Write-Host "  Discovery       : C2VSIMFG_DIR environment variable" -ForegroundColor DarkGray
+    }
+
+    # 2. Shell Desktop folder (handles redirected/custom Desktop locations)
+    if (-not $Discovered) {
+        $ShellDesktop = [Environment]::GetFolderPath("Desktop")
+        $Candidate = Join-Path $ShellDesktop "c2vsimfg"
+        if (Test-Path $Candidate) {
+            $ModelDir = $Candidate
+            $Discovered = $true
+            Write-Host "  Discovery       : Desktop folder" -ForegroundColor DarkGray
+        }
+    }
+
+    # 3. USERPROFILE\Desktop (direct path, bypasses shell folder resolution)
+    if (-not $Discovered) {
+        $Candidate = Join-Path $env:USERPROFILE "Desktop\c2vsimfg"
+        if (Test-Path $Candidate) {
+            $ModelDir = $Candidate
+            $Discovered = $true
+            Write-Host "  Discovery       : %USERPROFILE%\Desktop" -ForegroundColor DarkGray
+        }
+    }
+
+    # 4. OneDrive Desktop
+    if (-not $Discovered) {
+        $Candidate = Join-Path $env:USERPROFILE "OneDrive\Desktop\c2vsimfg"
+        if (Test-Path $Candidate) {
+            $ModelDir = $Candidate
+            $Discovered = $true
+            Write-Host "  Discovery       : OneDrive Desktop" -ForegroundColor DarkGray
+        }
+    }
+
+    # 5. Scan Desktop for any IWFM model directory (has Preprocessor/ + Simulation/)
+    if (-not $Discovered) {
+        $DesktopPath = [Environment]::GetFolderPath("Desktop")
+        $IwfmModels = Get-ChildItem -Path $DesktopPath -Directory -ErrorAction SilentlyContinue |
+            Where-Object {
+                (Test-Path (Join-Path $_.FullName "Preprocessor")) -and
+                (Test-Path (Join-Path $_.FullName "Simulation"))
+            } | Select-Object -First 1
+
+        if ($IwfmModels) {
+            $ModelDir = $IwfmModels.FullName
+            $Discovered = $true
+            Write-Host "  Discovery       : scanned Desktop for IWFM model" -ForegroundColor DarkGray
+        }
+    }
+
+    # Fallback: default to Desktop\c2vsimfg even if it doesn't exist (let the
+    # validation step below produce a helpful error message)
+    if (-not $Discovered) {
+        $ModelDir = Join-Path ([Environment]::GetFolderPath("Desktop")) "c2vsimfg"
     }
 }
 
