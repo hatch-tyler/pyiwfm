@@ -27,14 +27,17 @@ logger = logging.getLogger(__name__)
 def _safe_filename(name: str) -> str:
     """Sanitize a string for use in a filename.
 
-    Strips directory components to prevent path traversal, and replaces
-    spaces with underscores for cleaner filenames.
+    Replaces path separators and spaces with underscores to prevent path
+    traversal while preserving the full location name.
     """
-    from pathlib import PurePosixPath
+    import re
 
-    # Extract just the filename part, stripping any directory components
-    safe = PurePosixPath(name).name
-    return safe.replace(" ", "_")
+    # Replace path separators, colons, and other unsafe chars with underscores
+    safe = re.sub(r'[/\\:*?"<>|]', "_", name)
+    safe = safe.replace(" ", "_")
+    # Collapse multiple underscores
+    safe = re.sub(r"_+", "_", safe)
+    return safe.strip("_")
 
 
 router = APIRouter(prefix="/api/export", tags=["export"])
