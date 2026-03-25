@@ -1641,6 +1641,8 @@ export interface ConvergenceRecord {
   iteration_count: number;
   max_residual: number | null;
   convergence_achieved: boolean;
+  bottleneck_variable: string;
+  supply_adj_count: number;
 }
 
 export interface ConvergenceResponse {
@@ -1671,7 +1673,22 @@ export interface DiagnosticsSummary {
   total_runtime_seconds: number | null;
   max_iterations: number;
   avg_iterations: number;
+  total_timesteps: number;
   spatial_summary: Record<string, Record<string, number>>;
+}
+
+export interface ConvergenceHotspot {
+  variable: string;
+  entity_type: string;
+  entity_id: number;
+  layer: number | null;
+  occurrence_count: number;
+  total_iterations: number;
+  avg_iterations: number;
+  worst_timestep_index: number;
+  worst_timestep_date: string;
+  x: number | null;
+  y: number | null;
 }
 
 export async function fetchDiagnosticsSummary(): Promise<DiagnosticsSummary> {
@@ -1705,6 +1722,64 @@ export async function fetchMassBalanceData(component?: string): Promise<MassBala
   if (component) params.set('component', component);
   const response = await fetch(`${API_BASE}/diagnostics/mass-balance?${params}`);
   if (!response.ok) throw new Error(`Failed to fetch mass balance data: ${response.statusText}`);
+  return response.json();
+}
+
+export async function fetchConvergenceHotspots(): Promise<ConvergenceHotspot[]> {
+  const response = await fetch(`${API_BASE}/diagnostics/convergence-hotspots`);
+  if (!response.ok) throw new Error(`Failed to fetch convergence hotspots: ${response.statusText}`);
+  return response.json();
+}
+
+export interface HotspotContext {
+  variable: string;
+  entity_type: string;
+  entity_id: number;
+  layer: number | null;
+  x: number | null;
+  y: number | null;
+  surrounding_element_ids: number[];
+  surrounding_elements_geometry: { id: number; vertices: [number, number][] }[];
+  context_elements_geometry: { id: number; vertices: [number, number][] }[];
+  stream_reach_coords: [number, number][];
+  stream_reach_id: number | null;
+  stream_reach_name: string | null;
+  iteration_history: { timestep_index: number; date: string; iteration_count: number }[];
+}
+
+export interface ElementBudgetData {
+  element_id: number;
+  times: string[];
+  columns: { name: string; values: number[] }[];
+}
+
+export interface StreamNodeBudgetData {
+  stream_node_id: number;
+  times: string[];
+  columns: { name: string; values: number[] }[];
+}
+
+export async function fetchHotspotContext(variable: string, timestepIndex?: number): Promise<HotspotContext> {
+  const params = new URLSearchParams({ variable });
+  if (timestepIndex !== undefined) params.set('timestep_index', String(timestepIndex));
+  const response = await fetch(`${API_BASE}/diagnostics/hotspot-context?${params}`);
+  if (!response.ok) throw new Error(`Failed to fetch hotspot context: ${response.statusText}`);
+  return response.json();
+}
+
+export async function fetchElementBudget(elementId: number, timestepIndex?: number, layer = 1): Promise<ElementBudgetData> {
+  const params = new URLSearchParams({ element_id: String(elementId), layer: String(layer) });
+  if (timestepIndex !== undefined) params.set('timestep_index', String(timestepIndex));
+  const response = await fetch(`${API_BASE}/diagnostics/element-budget?${params}`);
+  if (!response.ok) throw new Error(`Failed to fetch element budget: ${response.statusText}`);
+  return response.json();
+}
+
+export async function fetchStreamNodeBudget(streamNodeId: number, timestepIndex?: number): Promise<StreamNodeBudgetData> {
+  const params = new URLSearchParams({ stream_node_id: String(streamNodeId) });
+  if (timestepIndex !== undefined) params.set('timestep_index', String(timestepIndex));
+  const response = await fetch(`${API_BASE}/diagnostics/stream-node-budget?${params}`);
+  if (!response.ok) throw new Error(`Failed to fetch stream node budget: ${response.statusText}`);
   return response.json();
 }
 

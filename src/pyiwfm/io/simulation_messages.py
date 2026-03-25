@@ -135,6 +135,33 @@ _DAMPING_RE = re.compile(
     re.IGNORECASE,
 )
 
+# ---------------------------------------------------------------------------
+# IWFM tabular convergence iteration patterns
+# ---------------------------------------------------------------------------
+
+# Supply adjustment iteration header: "*** SUPPLY ADJUSTMENT ITERATION:     1 ***"
+_SUPPLY_ADJ_RE = re.compile(
+    r"\*{3}\s*SUPPLY\s+ADJUSTMENT\s+ITERATION\s*:\s*(\d+)\s*\*{3}",
+    re.IGNORECASE,
+)
+
+# Iteration data row from convergence table
+# Fortran format: (1X,I6,4X,G13.6,4X,G13.6,4X,A15,2X,G13.6)
+# Example: "      1      9167.18          831.113        GW_69_(L1)         1.00000"
+_ITER_ROW_RE = re.compile(
+    r"^\s+(\d+)\s+"  # ITER number
+    r"([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)\s+"  # HEAD CONVERGENCE (L2)
+    r"([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)\s+"  # MAX.DIFF
+    r"(\S+)\s+"  # VARIABLE (GW_N_(L1), ST_N, LK_N)
+    r"([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)",  # VOLUMETRIC CONVERGENCE
+)
+
+# Convergence failure: "Desired convergence at GW node was not achieved"
+_DESIRED_CONV_RE = re.compile(
+    r"Desired\s+convergence\s+at\s+\w+\s+node\s+was\s+not\s+achieved",
+    re.IGNORECASE,
+)
+
 
 @dataclass
 class SimulationMessage:
@@ -193,6 +220,75 @@ class ConvergenceRecord:
     iteration_count: int
     max_residual: float | None
     convergence_achieved: bool
+    bottleneck_variable: str = ""
+    supply_adj_count: int = 0
+
+
+# Regex for parsing variable identifiers from convergence tables
+_GW_VAR_RE = re.compile(r"^GW_(\d+)(?:_\(L(\d+)\))?$")
+_ST_VAR_RE = re.compile(r"^ST_(\d+)$")
+_LK_VAR_RE = re.compile(r"^LK_(\d+)$")
+
+
+def _parse_variable_id(variable: str) -> tuple[str, int, int | None]:
+    """Parse a convergence table variable identifier.
+
+    Parameters
+    ----------
+    variable : str
+        Variable string like ``"GW_25393_(L1)"``, ``"ST_2620"``, ``"LK_5"``.
+
+    Returns
+    -------
+    tuple[str, int, int | None]
+        ``(entity_type, entity_id, layer)`` where entity_type is
+        ``"groundwater"``, ``"stream"``, or ``"lake"``.
+    """
+    m = _GW_VAR_RE.match(variable)
+    if m:
+        layer = int(m.group(2)) if m.group(2) else None
+        return "groundwater", int(m.group(1)), layer
+    m = _ST_VAR_RE.match(variable)
+    if m:
+        return "stream", int(m.group(1)), None
+    m = _LK_VAR_RE.match(variable)
+    if m:
+        return "lake", int(m.group(1)), None
+    return "unknown", 0, None
+
+
+@dataclass
+class ConvergenceHotspot:
+    """Aggregated convergence bottleneck information for a single variable.
+
+    Attributes
+    ----------
+    variable : str
+        Variable identifier (e.g. ``"GW_25393_(L1)"``).
+    entity_type : str
+        Entity type: ``"groundwater"``, ``"stream"``, or ``"lake"``.
+    entity_id : int
+        Numeric ID of the entity.
+    layer : int | None
+        Layer number for groundwater nodes.
+    occurrence_count : int
+        Number of timesteps where this was the bottleneck variable.
+    total_iterations : int
+        Sum of iteration counts across all timesteps where this was bottleneck.
+    worst_timestep_index : int
+        Timestep with the most iterations for this variable.
+    worst_timestep_date : str
+        Date of the worst timestep.
+    """
+
+    variable: str
+    entity_type: str
+    entity_id: int
+    layer: int | None
+    occurrence_count: int
+    total_iterations: int
+    worst_timestep_index: int
+    worst_timestep_date: str
 
 
 @dataclass
@@ -319,6 +415,42 @@ class SimulationMessagesResult:
             "max_mass_balance_error": max_mb,
             "components_with_errors": components,
         }
+
+    def get_hotspots(self) -> list[ConvergenceHotspot]:
+        """Return convergence hotspot variables sorted by occurrence count.
+
+        Groups convergence records by ``bottleneck_variable`` and aggregates
+        occurrence counts, total iterations, and worst timestep.
+
+        Returns
+        -------
+        list[ConvergenceHotspot]
+            Hotspots sorted by occurrence count (descending).
+        """
+        groups: dict[str, list[ConvergenceRecord]] = {}
+        for rec in self.convergence_records:
+            if not rec.bottleneck_variable:
+                continue
+            groups.setdefault(rec.bottleneck_variable, []).append(rec)
+
+        hotspots: list[ConvergenceHotspot] = []
+        for var, recs in groups.items():
+            entity_type, entity_id, layer = _parse_variable_id(var)
+            worst = max(recs, key=lambda r: r.iteration_count)
+            hotspots.append(
+                ConvergenceHotspot(
+                    variable=var,
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    layer=layer,
+                    occurrence_count=len(recs),
+                    total_iterations=sum(r.iteration_count for r in recs),
+                    worst_timestep_index=worst.timestep_index,
+                    worst_timestep_date=worst.date,
+                )
+            )
+        hotspots.sort(key=lambda h: h.occurrence_count, reverse=True)
+        return hotspots
 
     def filter_by_severity(self, severity: MessageSeverity) -> list[SimulationMessage]:
         """Return messages matching the given severity.
@@ -485,8 +617,8 @@ def _scan_text_for_convergence(
         )
         return
 
-    # Convergence NOT achieved
-    if _NO_CONVERGE_RE.search(text):
+    # Convergence NOT achieved (generic or IWFM "Desired convergence" FATAL)
+    if _NO_CONVERGE_RE.search(text) or _DESIRED_CONV_RE.search(text):
         # Try to extract iteration count from the text
         iter_m = _ITERATION_RE.search(text)
         n_iters = int(iter_m.group(1)) if iter_m else cur_max_iter
@@ -494,7 +626,14 @@ def _scan_text_for_convergence(
         after_m = re.search(r"after\s+(\d+)\s+iteration", text, re.IGNORECASE)
         if after_m:
             n_iters = max(n_iters, int(after_m.group(1)))
+        # Try "Difference = value" pattern from IWFM FATAL messages
         res_match = _MAX_RESIDUAL_RE.search(text)
+        if not res_match:
+            res_match = re.search(
+                r"Difference\s*=\s*([+-]?\d+\.?\d*(?:[EeDd][+-]?\d+)?)",
+                text,
+                re.IGNORECASE,
+            )
         residual = (
             float(res_match.group(1).replace("D", "E").replace("d", "e"))
             if res_match
@@ -585,6 +724,13 @@ class SimulationMessagesReader(BaseReader):
         cur_max_iter: int = 0
         cur_max_residual: float | None = None
 
+        # Tabular iteration tracking (IWFM supply adjustment tables)
+        cur_ts_total_iters: int = 0  # total solver iterations across all supply adjs
+        cur_ts_supply_adjs: int = 0  # number of supply adjustment iterations
+        last_head_conv: float | None = None  # last HEAD CONVERGENCE value
+        last_bottleneck_var: str = ""  # VARIABLE from last iteration row
+        in_tabular_block: bool = False  # inside a supply adjustment iteration table
+
         with open(self.filepath, encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
 
@@ -609,9 +755,27 @@ class SimulationMessagesReader(BaseReader):
                             convergence_achieved=True,
                         )
                     )
+                # Flush tabular iteration data from previous timestep
+                if cur_ts > 0 and cur_ts_total_iters > 0 and cur_max_iter == 0:
+                    convergence_records.append(
+                        ConvergenceRecord(
+                            timestep_index=cur_ts,
+                            date=cur_date,
+                            iteration_count=cur_ts_total_iters,
+                            max_residual=last_head_conv,
+                            convergence_achieved=True,
+                            bottleneck_variable=last_bottleneck_var,
+                            supply_adj_count=cur_ts_supply_adjs,
+                        )
+                    )
                 cur_ts = int(ts_match.group(1))
                 cur_max_iter = 0
                 cur_max_residual = None
+                cur_ts_total_iters = 0
+                cur_ts_supply_adjs = 0
+                last_head_conv = None
+                last_bottleneck_var = ""
+                in_tabular_block = False
 
             date_match = _IWFM_DATE_RE.search(stripped)
             if date_match:
@@ -701,6 +865,25 @@ class SimulationMessagesReader(BaseReader):
                     cur_date = date_match.group(1)
 
                 continue
+
+            # ----------------------------------------------------------
+            # IWFM tabular convergence iteration parsing
+            # ----------------------------------------------------------
+            supply_match = _SUPPLY_ADJ_RE.search(stripped)
+            if supply_match:
+                cur_ts_supply_adjs += 1
+                in_tabular_block = True
+                i += 1
+                continue
+
+            if in_tabular_block:
+                row_match = _ITER_ROW_RE.match(stripped)
+                if row_match:
+                    cur_ts_total_iters += 1
+                    last_head_conv = float(row_match.group(2).replace("D", "E").replace("d", "e"))
+                    last_bottleneck_var = row_match.group(4)
+                    i += 1
+                    continue
 
             # ----------------------------------------------------------
             # Convergence iteration tracking
@@ -855,6 +1038,19 @@ class SimulationMessagesReader(BaseReader):
                     iteration_count=cur_max_iter,
                     max_residual=cur_max_residual,
                     convergence_achieved=True,
+                )
+            )
+        # Flush trailing tabular iteration data
+        if cur_ts > 0 and cur_ts_total_iters > 0 and cur_max_iter == 0:
+            convergence_records.append(
+                ConvergenceRecord(
+                    timestep_index=cur_ts,
+                    date=cur_date,
+                    iteration_count=cur_ts_total_iters,
+                    max_residual=last_head_conv,
+                    convergence_achieved=True,
+                    bottleneck_variable=last_bottleneck_var,
+                    supply_adj_count=cur_ts_supply_adjs,
                 )
             )
 

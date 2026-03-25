@@ -436,6 +436,7 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "LazyHydrographDataLoader": ("pyiwfm.io.hydrograph_loader", "LazyHydrographDataLoader"),
     "IWFMHydrographReader": ("pyiwfm.io.hydrograph_reader", "IWFMHydrographReader"),
     # SimulationMessages.out Parser
+    "ConvergenceHotspot": ("pyiwfm.io.simulation_messages", "ConvergenceHotspot"),
     "ConvergenceRecord": ("pyiwfm.io.simulation_messages", "ConvergenceRecord"),
     "MassBalanceRecord": ("pyiwfm.io.simulation_messages", "MassBalanceRecord"),
     "MessageSeverity": ("pyiwfm.io.simulation_messages", "MessageSeverity"),

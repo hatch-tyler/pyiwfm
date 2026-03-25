@@ -1,5 +1,5 @@
 /**
- * Diagnostics tab — simulation messages, convergence tracking, mass balance.
+ * Diagnostics dashboard — simulation convergence analysis, hotspots, and messages.
  */
 
 import { useState, useEffect } from 'react';
@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
+import Collapse from '@mui/material/Collapse';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -18,34 +19,34 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Tabs from '@mui/material/Tabs';
-import Tab from '@mui/material/Tab';
-import Pagination from '@mui/material/Pagination';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import {
   fetchDiagnosticsSummary,
   fetchDiagnosticsMessages,
   fetchConvergenceData,
-  fetchMassBalanceData,
+  fetchConvergenceHotspots,
+  fetchHotspotContext,
+  fetchElementBudget,
+  fetchStreamNodeBudget,
 } from '../../api/client';
 import type {
   DiagnosticsSummary,
   DiagnosticMessage,
   ConvergenceRecord,
-  MassBalanceRecord,
+  ConvergenceHotspot,
+  HotspotContext,
+  ElementBudgetData,
+  StreamNodeBudgetData,
 } from '../../api/client';
 import { ConvergenceChart } from './ConvergenceChart';
-import { MassBalanceChart } from './MassBalanceChart';
-
-function SeverityChip({ severity }: { severity: string }) {
-  const color = severity === 'FATAL' ? 'error'
-    : severity === 'WARN' ? 'warning'
-    : severity === 'INFO' ? 'info' : 'default';
-  return <Chip label={severity} color={color} size="small" />;
-}
+import { HotspotsTable } from './HotspotsTable';
+import { HotspotMap } from './HotspotMap';
+import { StressContextChart } from './StressContextChart';
 
 function formatRuntime(seconds: number | null): string {
   if (seconds === null) return 'N/A';
@@ -57,24 +58,27 @@ function formatRuntime(seconds: number | null): string {
   return `${s}s`;
 }
 
+function SeverityChip({ severity }: { severity: string }) {
+  const color = severity === 'FATAL' ? 'error'
+    : severity === 'WARN' ? 'warning'
+    : severity === 'INFO' ? 'info' : 'default';
+  return <Chip label={severity} color={color} size="small" />;
+}
+
 // ---- Summary Cards ----
 
 function SummaryCards({ summary }: { summary: DiagnosticsSummary }) {
   const cards = [
-    { label: 'Total Messages', value: summary.message_count, color: '#1976d2' },
+    { label: 'Runtime', value: formatRuntime(summary.total_runtime_seconds), color: '#2e7d32' },
+    { label: 'Timesteps', value: summary.total_timesteps || 'N/A', color: '#1976d2' },
+    { label: 'Max Iterations', value: summary.max_iterations || 'N/A', color: '#9c27b0' },
+    { label: 'Avg Iterations', value: summary.avg_iterations ? summary.avg_iterations.toFixed(1) : 'N/A', color: '#0288d1' },
     { label: 'Warnings', value: summary.warning_count, color: '#ed6c02' },
     { label: 'Errors', value: summary.error_count, color: '#d32f2f' },
-    { label: 'Runtime', value: formatRuntime(summary.total_runtime_seconds), color: '#2e7d32' },
-    { label: 'Max Iterations', value: summary.max_iterations || 'N/A', color: '#9c27b0' },
-    {
-      label: 'Avg Iterations',
-      value: summary.avg_iterations ? summary.avg_iterations.toFixed(1) : 'N/A',
-      color: '#0288d1',
-    },
   ];
 
   return (
-    <Grid container spacing={2} sx={{ mb: 3 }}>
+    <Grid container spacing={2} sx={{ mb: 2 }}>
       {cards.map((c) => (
         <Grid item xs={6} sm={4} md={2} key={c.label}>
           <Card variant="outlined">
@@ -93,61 +97,59 @@ function SummaryCards({ summary }: { summary: DiagnosticsSummary }) {
   );
 }
 
-// ---- Messages Table ----
+// ---- Messages Alert ----
 
-function MessagesPanel() {
+function MessagesAlert({ messageCount, warningCount, errorCount }: {
+  messageCount: number;
+  warningCount: number;
+  errorCount: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<DiagnosticMessage[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [severity, setSeverity] = useState<string>('');
-  const [page, setPage] = useState(1);
-  const pageSize = 50;
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchDiagnosticsMessages(severity || undefined, pageSize, (page - 1) * pageSize)
-      .then((res) => {
-        setMessages(res.messages);
-        setTotal(res.total);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [severity, page]);
+  if (messageCount === 0) return null;
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const severity = errorCount > 0 ? 'error' : warningCount > 0 ? 'warning' : 'info';
+  const summary = [
+    errorCount > 0 ? `${errorCount} error${errorCount !== 1 ? 's' : ''}` : '',
+    warningCount > 0 ? `${warningCount} warning${warningCount !== 1 ? 's' : ''}` : '',
+    messageCount - errorCount - warningCount > 0 ? `${messageCount - errorCount - warningCount} info` : '',
+  ].filter(Boolean).join(', ');
+
+  const handleToggle = () => {
+    if (!expanded && messages.length === 0) {
+      setLoading(true);
+      fetchDiagnosticsMessages(undefined, 50, 0)
+        .then((res) => { setMessages(res.messages); setLoading(false); })
+        .catch(() => setLoading(false));
+    }
+    setExpanded(!expanded);
+  };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Severity</InputLabel>
-          <Select value={severity} label="Severity" onChange={(e) => { setSeverity(e.target.value); setPage(1); }}>
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value="FATAL">Fatal</MenuItem>
-            <MenuItem value="WARN">Warning</MenuItem>
-            <MenuItem value="INFO">Info</MenuItem>
-          </Select>
-        </FormControl>
-        <Typography variant="body2" color="text.secondary">
-          {total} message{total !== 1 ? 's' : ''}
-        </Typography>
-      </Box>
-
-      {loading ? (
-        <CircularProgress size={24} />
-      ) : messages.length === 0 ? (
-        <Typography color="text.secondary">No messages found.</Typography>
-      ) : (
-        <>
-          <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 500 }}>
+    <Box sx={{ mb: 2 }}>
+      <Alert
+        severity={severity}
+        action={
+          <IconButton size="small" onClick={handleToggle}>
+            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          </IconButton>
+        }
+      >
+        Simulation messages found: {summary}
+      </Alert>
+      <Collapse in={expanded}>
+        {loading ? (
+          <Box sx={{ p: 2, textAlign: 'center' }}><CircularProgress size={20} /></Box>
+        ) : messages.length > 0 ? (
+          <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 300, mt: 1 }}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
                   <TableCell width={80}>Severity</TableCell>
                   <TableCell width={100}>Procedure</TableCell>
                   <TableCell>Message</TableCell>
-                  <TableCell width={100}>Nodes</TableCell>
-                  <TableCell width={100}>Elements</TableCell>
                   <TableCell width={60}>Line</TableCell>
                 </TableRow>
               </TableHead>
@@ -165,109 +167,48 @@ function MessagesPanel() {
                         {msg.text}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      {msg.node_ids.length > 0 ? msg.node_ids.join(', ') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {msg.element_ids.length > 0 ? msg.element_ids.join(', ') : '-'}
-                    </TableCell>
                     <TableCell>{msg.line_number}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-              <Pagination count={totalPages} page={page} onChange={(_, v) => setPage(v)} />
-            </Box>
-          )}
-        </>
-      )}
+        ) : null}
+      </Collapse>
     </Box>
   );
 }
 
-// ---- Convergence Panel ----
+// ---- Timestep Detail Panel ----
 
-function ConvergencePanel() {
-  const [records, setRecords] = useState<ConvergenceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ max: 0, avg: 0, total: 0 });
-
-  useEffect(() => {
-    fetchConvergenceData()
-      .then((res) => {
-        setRecords(res.records);
-        setStats({ max: res.max_iterations, avg: res.avg_iterations, total: res.total_timesteps });
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  if (loading) return <CircularProgress size={24} />;
-  if (records.length === 0) {
-    return <Typography color="text.secondary">No convergence data available.</Typography>;
-  }
-
+function TimestepDetail({ record }: { record: ConvergenceRecord }) {
   return (
     <Box>
-      <Box sx={{ display: 'flex', gap: 3, mb: 2 }}>
-        <Typography variant="body2">
-          Total Timesteps: <strong>{stats.total}</strong>
-        </Typography>
-        <Typography variant="body2">
-          Max Iterations: <strong>{stats.max}</strong>
-        </Typography>
-        <Typography variant="body2">
-          Avg Iterations: <strong>{stats.avg.toFixed(1)}</strong>
-        </Typography>
-      </Box>
-      <ConvergenceChart records={records} />
-    </Box>
-  );
-}
-
-// ---- Mass Balance Panel ----
-
-function MassBalancePanel() {
-  const [records, setRecords] = useState<MassBalanceRecord[]>([]);
-  const [components, setComponents] = useState<string[]>([]);
-  const [selectedComponent, setSelectedComponent] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchMassBalanceData(selectedComponent || undefined)
-      .then((res) => {
-        setRecords(res.records);
-        if (res.components.length > 0 && components.length === 0) {
-          setComponents(res.components);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedComponent]);
-
-  if (loading) return <CircularProgress size={24} />;
-  if (records.length === 0) {
-    return <Typography color="text.secondary">No mass balance data available.</Typography>;
-  }
-
-  return (
-    <Box>
-      {components.length > 1 && (
-        <FormControl size="small" sx={{ minWidth: 150, mb: 2 }}>
-          <InputLabel>Component</InputLabel>
-          <Select value={selectedComponent} label="Component" onChange={(e) => setSelectedComponent(e.target.value)}>
-            <MenuItem value="">All</MenuItem>
-            {components.map((c) => (
-              <MenuItem key={c} value={c}>{c}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      )}
-      <MassBalanceChart records={records} />
+      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+        Timestep {record.timestep_index} — {record.date}
+      </Typography>
+      <Grid container spacing={2}>
+        <Grid item xs={3}>
+          <Typography variant="caption" color="text.secondary">Total Iterations</Typography>
+          <Typography variant="h6">{record.iteration_count}</Typography>
+        </Grid>
+        <Grid item xs={3}>
+          <Typography variant="caption" color="text.secondary">Supply Adjustments</Typography>
+          <Typography variant="h6">{record.supply_adj_count || 'N/A'}</Typography>
+        </Grid>
+        <Grid item xs={3}>
+          <Typography variant="caption" color="text.secondary">Final Residual</Typography>
+          <Typography variant="h6">
+            {record.max_residual !== null ? record.max_residual.toExponential(3) : 'N/A'}
+          </Typography>
+        </Grid>
+        <Grid item xs={3}>
+          <Typography variant="caption" color="text.secondary">Bottleneck</Typography>
+          <Typography variant="h6" sx={{ fontFamily: 'monospace', fontSize: '1rem' }}>
+            {record.bottleneck_variable || 'N/A'}
+          </Typography>
+        </Grid>
+      </Grid>
     </Box>
   );
 }
@@ -276,21 +217,92 @@ function MassBalancePanel() {
 
 export function DiagnosticsView() {
   const [summary, setSummary] = useState<DiagnosticsSummary | null>(null);
+  const [convergenceRecords, setConvergenceRecords] = useState<ConvergenceRecord[]>([]);
+  const [hotspots, setHotspots] = useState<ConvergenceHotspot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [subTab, setSubTab] = useState(0);
+  const [selectedTimestep, setSelectedTimestep] = useState<number | null>(null);
+  const [chartExpanded, setChartExpanded] = useState(false);
+  const [avgIterations, setAvgIterations] = useState(0);
+
+  // Hotspot investigation state
+  const [hotspotContext, setHotspotContext] = useState<HotspotContext | null>(null);
+  const [hotspotLoading, setHotspotLoading] = useState(false);
+  const [selectedElementId, setSelectedElementId] = useState<number | null>(null);
+  const [budgetData, setBudgetData] = useState<ElementBudgetData | StreamNodeBudgetData | null>(null);
+  const [budgetLoading, setBudgetLoading] = useState(false);
 
   useEffect(() => {
-    fetchDiagnosticsSummary()
-      .then((data) => {
-        setSummary(data);
+    Promise.all([
+      fetchDiagnosticsSummary(),
+      fetchConvergenceData(),
+      fetchConvergenceHotspots(),
+    ])
+      .then(([sum, conv, spots]) => {
+        setSummary(sum);
+        setConvergenceRecords(conv.records);
+        setAvgIterations(conv.avg_iterations);
+        setHotspots(spots);
         setLoading(false);
+        // Auto-select the top hotspot so the investigation panel is visible
+        if (spots.length > 0) {
+          const top = spots[0];
+          setHotspotLoading(true);
+          fetchHotspotContext(top.variable, top.worst_timestep_index)
+            .then((ctx) => { setHotspotContext(ctx); setHotspotLoading(false); })
+            .catch(() => setHotspotLoading(false));
+        }
       })
       .catch((err) => {
         setError(err.message);
         setLoading(false);
       });
   }, []);
+
+  const selectedRecord = selectedTimestep !== null
+    ? convergenceRecords.find((r) => r.timestep_index === selectedTimestep)
+    : undefined;
+
+  // Handle timestep click from chart or iteration history — update both timestep and hotspot
+  const handleClickTimestep = (timestepIndex: number) => {
+    setSelectedTimestep(timestepIndex);
+    const rec = convergenceRecords.find((r) => r.timestep_index === timestepIndex);
+    if (rec?.bottleneck_variable && rec.bottleneck_variable !== hotspotContext?.variable) {
+      handleSelectHotspot(rec.bottleneck_variable, timestepIndex);
+    }
+  };
+
+  // Load hotspot context when a hotspot variable is selected
+  const handleSelectHotspot = (variable: string, worstTimestepIndex?: number) => {
+    setHotspotLoading(true);
+    setBudgetData(null);
+    setSelectedElementId(null);
+    const tsIdx = worstTimestepIndex ?? selectedTimestep ?? undefined;
+    fetchHotspotContext(variable, tsIdx)
+      .then((ctx) => {
+        setHotspotContext(ctx);
+        setHotspotLoading(false);
+        // For stream nodes, auto-load the stream node budget
+        if (ctx.entity_type === 'stream') {
+          setBudgetLoading(true);
+          fetchStreamNodeBudget(ctx.entity_id, tsIdx)
+            .then((data) => { setBudgetData(data); setBudgetLoading(false); })
+            .catch(() => setBudgetLoading(false));
+        }
+      })
+      .catch(() => setHotspotLoading(false));
+  };
+
+  // Load element budget when an element is clicked on the map
+  const handleClickElement = (elementId: number) => {
+    setSelectedElementId(elementId);
+    setBudgetLoading(true);
+    const layer = hotspotContext?.layer ?? 1;
+    const tsIdx = selectedTimestep ?? hotspotContext?.iteration_history[0]?.timestep_index;
+    fetchElementBudget(elementId, tsIdx, layer)
+      .then((data) => { setBudgetData(data); setBudgetLoading(false); })
+      .catch(() => setBudgetLoading(false));
+  };
 
   if (loading) {
     return (
@@ -321,21 +333,164 @@ export function DiagnosticsView() {
     );
   }
 
+  // Determine stress chart title and highlight timestep
+  const budgetTitle = budgetData
+    ? 'element_id' in budgetData
+      ? `Element ${(budgetData as ElementBudgetData).element_id} — GW ZBudget`
+      : `Stream Node ${(budgetData as StreamNodeBudgetData).stream_node_id} — Stream Budget`
+    : '';
+  const highlightTs = selectedTimestep && budgetData?.times
+    ? budgetData.times[Math.min(5, budgetData.times.length - 1)] // center of window
+    : undefined;
+
   return (
     <Box sx={{ p: 3, overflowY: 'auto', height: '100%' }}>
       <Typography variant="h5" sx={{ mb: 2 }}>Simulation Diagnostics</Typography>
 
       <SummaryCards summary={summary} />
 
-      <Tabs value={subTab} onChange={(_, v) => setSubTab(v)} sx={{ mb: 2 }}>
-        <Tab label="Messages" />
-        <Tab label="Convergence" />
-        <Tab label="Mass Balance" />
-      </Tabs>
+      <MessagesAlert
+        messageCount={summary.message_count}
+        warningCount={summary.warning_count}
+        errorCount={summary.error_count}
+      />
 
-      {subTab === 0 && <MessagesPanel />}
-      {subTab === 1 && <ConvergencePanel />}
-      {subTab === 2 && <MassBalancePanel />}
+      {/* Convergence Chart */}
+      {convergenceRecords.length > 0 && (
+        <Paper variant="outlined" sx={{ mb: 2, height: 420, position: 'relative' }}>
+          <ConvergenceChart
+            records={convergenceRecords}
+            avgIterations={avgIterations}
+            onExpand={() => setChartExpanded(true)}
+            onClickTimestep={handleClickTimestep}
+            selectedTimestep={selectedTimestep}
+          />
+        </Paper>
+      )}
+
+      {/* Investigation Panel — between chart and hotspots table */}
+      {(selectedRecord || hotspotContext || hotspotLoading) && (
+        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+          {/* Timestep Detail row */}
+          {selectedRecord && (
+            <Box sx={{ mb: hotspotContext ? 2 : 0 }}>
+              <TimestepDetail record={selectedRecord} />
+            </Box>
+          )}
+
+          {/* Hotspot spatial + budget investigation */}
+          {hotspotLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2">Loading hotspot context...</Typography>
+            </Box>
+          ) : hotspotContext ? (
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+                Investigating: {hotspotContext.variable}
+              </Typography>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={4}>
+                  <HotspotMap
+                    context={hotspotContext}
+                    selectedElementId={selectedElementId}
+                    onClickElement={handleClickElement}
+                  />
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {/* Iteration history for this variable */}
+                  {hotspotContext.iteration_history.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                        Iteration History ({hotspotContext.iteration_history.length} timesteps)
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Timesteps where this variable was the convergence bottleneck
+                      </Typography>
+                      <Box sx={{ maxHeight: 280, overflowY: 'auto', mt: 1 }}>
+                        {[...hotspotContext.iteration_history]
+                          .sort((a, b) => b.iteration_count - a.iteration_count)
+                          .slice(0, 15)
+                          .map((h) => (
+                            <Box
+                              key={h.timestep_index}
+                              sx={{
+                                display: 'flex', justifyContent: 'space-between',
+                                py: 0.3, px: 1, cursor: 'pointer',
+                                '&:hover': { bgcolor: 'action.hover' },
+                                bgcolor: h.timestep_index === selectedTimestep ? 'action.selected' : 'transparent',
+                                borderRadius: 0.5,
+                              }}
+                              onClick={() => handleClickTimestep(h.timestep_index)}
+                            >
+                              <Typography variant="caption">{h.date}</Typography>
+                              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                                {h.iteration_count} iters
+                              </Typography>
+                            </Box>
+                          ))}
+                      </Box>
+                    </Box>
+                  )}
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  {/* Stress Context Chart */}
+                  {(budgetData || budgetLoading) ? (
+                    <StressContextChart
+                      title={budgetTitle}
+                      times={budgetData?.times ?? []}
+                      columns={budgetData?.columns ?? []}
+                      loading={budgetLoading}
+                      highlightTimestep={highlightTs}
+                    />
+                  ) : (
+                    <Box sx={{ p: 2, textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {hotspotContext.entity_type === 'groundwater'
+                          ? 'Click an element on the map to view its GW ZBudget'
+                          : 'Loading budget data...'}
+                      </Typography>
+                    </Box>
+                  )}
+                </Grid>
+              </Grid>
+            </Box>
+          ) : null}
+        </Paper>
+      )}
+
+      {/* Hotspots Table */}
+      {hotspots.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <HotspotsTable
+            hotspots={hotspots}
+            onClickTimestep={handleClickTimestep}
+            onClickVariable={handleSelectHotspot}
+          />
+        </Box>
+      )}
+
+      {/* Fullscreen chart dialog */}
+      <Dialog
+        fullScreen
+        open={chartExpanded}
+        onClose={() => setChartExpanded(false)}
+      >
+        <DialogContent sx={{ p: 0, position: 'relative', height: '100vh' }}>
+          <IconButton
+            onClick={() => setChartExpanded(false)}
+            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 10 }}
+          >
+            <CloseIcon />
+          </IconButton>
+          <ConvergenceChart
+            records={convergenceRecords}
+            avgIterations={avgIterations}
+            onClickTimestep={setSelectedTimestep}
+            selectedTimestep={selectedTimestep}
+          />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
