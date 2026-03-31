@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Date formats supported for CSV parsing
+# Date formats supported for delimited file parsing
 _DATE_FORMATS = [
     "%Y-%m-%d %H:%M:%S",
     "%Y-%m-%d %H:%M",
@@ -40,7 +40,53 @@ _TYPE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(gw|head|level)", re.IGNORECASE), "gw"),
 ]
 
-_LOADABLE_EXTENSIONS = {".smp", ".csv"}
+_LOADABLE_EXTENSIONS = {".smp", ".csv", ".tsv", ".txt", ".dat"}
+
+# Regex for SMP-style date: M/DD/YYYY or MM/DD/YYYY
+_SMP_DATE_RE = re.compile(r"\d{1,2}/\d{1,2}/\d{4}")
+
+
+def detect_delimiter(text: str) -> str:
+    """Detect the delimiter used in a text file by sampling the first lines.
+
+    Returns ``','``, ``'\\t'``, or ``'whitespace'``.
+    """
+    sample_lines = [line for line in text.split("\n")[:10] if line.strip()]
+    if not sample_lines:
+        return ","
+
+    tab_counts = [line.count("\t") for line in sample_lines]
+    comma_counts = [line.count(",") for line in sample_lines]
+
+    avg_tabs = sum(tab_counts) / len(tab_counts)
+    avg_commas = sum(comma_counts) / len(comma_counts)
+
+    if avg_tabs >= 1 and avg_tabs >= avg_commas:
+        return "\t"
+    if avg_commas >= 1:
+        return ","
+    return "whitespace"
+
+
+def looks_like_smp(text: str) -> bool:
+    """Check whether text content looks like SMP format.
+
+    SMP files have no header row and each line contains a bore ID followed
+    by a date in ``M/DD/YYYY`` or ``MM/DD/YYYY`` format, a time, and a value.
+    """
+    lines = [line for line in text.split("\n")[:5] if line.strip()]
+    if not lines:
+        return False
+
+    matches = 0
+    for line in lines:
+        parts = line.split()
+        if len(parts) < 4:
+            continue
+        if any(_SMP_DATE_RE.fullmatch(parts[i]) for i in range(1, min(4, len(parts)))):
+            matches += 1
+
+    return matches >= len(lines) * 0.8
 
 
 def guess_obs_type(filename: str) -> str:
@@ -107,6 +153,15 @@ def _parse_datetime(dt_str: str) -> datetime | None:
     return None
 
 
+def _split_row(line: str, delimiter: str) -> list[str]:
+    """Split a line by the detected delimiter."""
+    if delimiter == "whitespace":
+        return line.split()
+    if delimiter == "\t":
+        return [c.strip() for c in line.split("\t")]
+    return next(csv.reader(io.StringIO(line)))
+
+
 def load_smp_file(
     path: Path,
     obs_type: str,
@@ -159,7 +214,7 @@ def load_smp_file(
     return obs_ids
 
 
-def load_csv_file(
+def load_delimited_file(
     path: Path,
     obs_type: str,
     state: ModelState,
@@ -167,22 +222,29 @@ def load_csv_file(
     value_col: int = 1,
     location_col: int = -1,
 ) -> list[str]:
-    """Load a single CSV file into model state.
+    """Load a delimited text file into model state.
 
+    Automatically detects the delimiter (comma, tab, or whitespace).
     When ``location_col >= 0``, groups rows by location value and creates
     one observation per unique location. Otherwise creates a single observation.
 
     Returns list of observation IDs created.
     """
     text = path.read_text(encoding="utf-8", errors="replace")
-    reader = csv.reader(io.StringIO(text))
+    delimiter = detect_delimiter(text)
     header_skipped = False
 
     # Collect rows grouped by location
     groups: dict[str, tuple[list[str], list[float]]] = {}
     default_key = path.stem
 
-    for row in reader:
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+
+        row = _split_row(line, delimiter)
+
         max_col = max(date_col, value_col, location_col if location_col >= 0 else 0)
         if len(row) <= max_col:
             continue
@@ -243,8 +305,8 @@ def load_observation_paths(
 
     For each path:
     - File (``.smp``) -> parse via SMPReader, one obs per bore
-    - File (``.csv``) -> parse via CSV reader with auto-detect columns
-    - Directory -> scan for ``.smp``/``.csv``, load each
+    - File (other delimited) -> parse via delimiter detection with auto-detect columns
+    - Directory -> scan for loadable files, load each
 
     Returns ``{type: n_observations_loaded}``.
     """
@@ -274,12 +336,25 @@ def _load_single_file(
     obs_type: str,
     state: ModelState,
 ) -> list[str]:
-    """Load a single file by extension."""
+    """Load a single file by extension, with SMP content sniffing fallback."""
     ext = path.suffix.lower()
+
+    # Explicit .smp extension
     if ext == ".smp":
         return load_smp_file(path, obs_type, state)
-    elif ext == ".csv":
-        return load_csv_file(path, obs_type, state)
-    else:
-        logger.warning("Unsupported file format: %s", path)
-        return []
+
+    # For other extensions, sniff content to see if it's SMP format
+    if ext in _LOADABLE_EXTENSIONS:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            logger.warning("Could not read file: %s", path)
+            return []
+
+        if looks_like_smp(text):
+            return load_smp_file(path, obs_type, state)
+
+        return load_delimited_file(path, obs_type, state)
+
+    logger.warning("Unsupported file format: %s", path)
+    return []

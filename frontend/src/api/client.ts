@@ -1003,6 +1003,7 @@ export interface ObservationPreview {
   headers: string[];
   sample_rows: string[][];
   n_rows: number;
+  format: 'csv' | 'tsv' | 'whitespace' | 'smp';
 }
 
 export interface UploadResult {
@@ -1019,15 +1020,88 @@ export interface UploadResult {
   unmatched_locations: string[];
 }
 
-/** Client-side CSV preview: reads headers and first sample rows. */
+/**
+ * Detect the delimiter used in a text file by sampling the first lines.
+ * Returns 'csv' (comma), 'tsv' (tab), or 'whitespace'.
+ */
+function detectDelimiter(lines: string[]): 'csv' | 'tsv' | 'whitespace' {
+  const sample = lines.slice(0, 10);
+  if (sample.length === 0) return 'csv';
+  const avgTabs = sample.reduce((s, l) => s + (l.match(/\t/g)?.length ?? 0), 0) / sample.length;
+  const avgCommas = sample.reduce((s, l) => s + (l.match(/,/g)?.length ?? 0), 0) / sample.length;
+  if (avgTabs >= 1 && avgTabs >= avgCommas) return 'tsv';
+  if (avgCommas >= 1) return 'csv';
+  return 'whitespace';
+}
+
+/** SMP date pattern: M/DD/YYYY or MM/DD/YYYY */
+const SMP_DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+
+/**
+ * Check whether content looks like SMP format (no header, bore-ID + date + time + value).
+ */
+function looksLikeSmp(lines: string[]): boolean {
+  const sample = lines.slice(0, 5);
+  if (sample.length === 0) return false;
+  let matches = 0;
+  for (const line of sample) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 4) continue;
+    // Check for a date field in positions 1-3
+    for (let i = 1; i < Math.min(4, parts.length); i++) {
+      if (SMP_DATE_RE.test(parts[i])) { matches++; break; }
+    }
+  }
+  return matches >= sample.length * 0.8;
+}
+
+/** Split a line by the detected delimiter. */
+function splitRow(line: string, format: 'csv' | 'tsv' | 'whitespace'): string[] {
+  if (format === 'tsv') return line.split('\t').map((c) => c.trim());
+  if (format === 'whitespace') return line.trim().split(/\s+/);
+  return line.split(',').map((c) => c.trim());
+}
+
+/**
+ * Client-side preview: reads headers and first sample rows.
+ * Auto-detects delimiter and SMP format.
+ */
 export async function previewObservationFile(file: File): Promise<ObservationPreview> {
   const text = await file.text();
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
   if (lines.length === 0) throw new Error('File is empty');
-  const headers = lines[0].split(',').map((h) => h.trim());
-  const dataLines = lines.slice(1);
-  const sampleRows = dataLines.slice(0, 10).map((l) => l.split(',').map((c) => c.trim()));
-  return { headers, sample_rows: sampleRows, n_rows: dataLines.length };
+
+  // Check for SMP format first
+  if (looksLikeSmp(lines)) {
+    const headers = ['Bore ID', 'Date', 'Time', 'Value'];
+    const sampleRows = lines.slice(0, 10).map((l) => {
+      const parts = l.trim().split(/\s+/);
+      // Ensure exactly 4 columns (extra fields like 'X' excluded flag are ignored)
+      return parts.slice(0, 4);
+    });
+    return { headers, sample_rows: sampleRows, n_rows: lines.length, format: 'smp' };
+  }
+
+  // Detect delimiter
+  const delim = detectDelimiter(lines);
+
+  // Check if first line looks like a header (contains letters)
+  const firstRow = splitRow(lines[0], delim);
+  const hasHeader = firstRow.some((cell) => /[a-zA-Z]/.test(cell));
+
+  let headers: string[];
+  let dataLines: string[];
+
+  if (hasHeader) {
+    headers = firstRow;
+    dataLines = lines.slice(1);
+  } else {
+    headers = firstRow.map((_, i) => `Column ${i + 1}`);
+    dataLines = lines;
+  }
+
+  const sampleRows = dataLines.slice(0, 10).map((l) => splitRow(l, delim));
+  return { headers, sample_rows: sampleRows, n_rows: dataLines.length, format: delim === 'tsv' ? 'tsv' : delim === 'whitespace' ? 'whitespace' : 'csv' };
 }
 
 export async function uploadObservation(

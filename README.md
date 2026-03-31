@@ -117,7 +117,7 @@ pyiwfm viewer --model-dir /path/to/model --crs "+proj=utm +zone=10 +datum=NAD83 
 The viewer provides six tabs:
 - **Overview**: Model summary, metadata, and mesh quality metrics
 - **3D Mesh**: Interactive vtk.js 3D rendering with layer visibility, cross-section slicing, stream network overlay, and z-exaggeration
-- **Results Map**: deck.gl + MapLibre map showing head contours, drawdown with diverging color scale, subsidence surface, hydrograph locations, head statistics, and observation upload/comparison
+- **Results Map**: deck.gl + MapLibre map showing head contours, drawdown with diverging color scale, subsidence surface, hydrograph locations, head statistics, and observation upload/comparison (CSV, TSV, SMP formats)
 - **Diagnostics**: Convergence iteration charts, mass balance error timeseries, filterable message table
 - **Budgets**: Plotly charts of water budget time series with location/column selection
 - **Z-Budgets**: Zone budget visualization organized by spatial zones

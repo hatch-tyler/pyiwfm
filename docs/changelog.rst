@@ -6,6 +6,40 @@ All notable changes to pyiwfm will be documented in this file.
 The format is based on `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_,
 and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
+[Unreleased]
+------------
+
+Added
+~~~~~
+
+**Observation Upload Format Expansion**
+
+- Web viewer observation upload now supports CSV, TSV, SMP, and generic
+  whitespace-delimited text files (previously CSV only)
+- Automatic delimiter detection (comma, tab, whitespace) from file content
+- Content-based SMP format sniffing — SMP data is recognized regardless of
+  file extension (``.txt``, ``.dat``, ``.smp``, etc.)
+- Frontend upload wizard auto-detects format and skips column mapping for SMP
+- File extensions ``.csv``, ``.tsv``, ``.txt``, ``.dat``, ``.smp`` all accepted
+- Normalized upload API response shape for consistent frontend handling
+
+**Calibration Enhancements**
+
+- ``compute_composite_continuous()``: T-weighted composite heads at all
+  simulation timesteps (full temporal resolution for CalcTypHyd)
+- ``average_to_seasonal()``: Aggregate continuous monthly series to seasonal
+  window averages for sim/obs comparison
+- ``compute_obs_type_hydrographs()``: Convenience wrapper for observed type
+  hydrograph computation with PEST output
+- ``BIANNUAL_SEASONS``: Spring/Fall seasonal period definitions for clustering
+
+Changed
+~~~~~~~
+
+- Budget plot colors: improved contrast for Ice Blue and Cream palette entries
+- Budget table: colored squares before component names, adjusted column widths,
+  moved discrepancy percentage to its own row
+
 [1.1.0] - 2026-03-13
 --------------------
 

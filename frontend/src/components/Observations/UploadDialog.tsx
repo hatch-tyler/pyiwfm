@@ -1,6 +1,7 @@
 /**
  * Observation file upload dialog.
- * Allows uploading a CSV file and associating it with a hydrograph location.
+ * Allows uploading an observation file (CSV, TSV, SMP, or other delimited text)
+ * and associating it with a hydrograph location.
  */
 
 import { useState } from 'react';
@@ -52,8 +53,9 @@ export function UploadDialog({ open, onClose }: UploadDialogProps) {
       <DialogTitle>Upload Observation File</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Upload a CSV file with columns: datetime, value. The file will be
-          stored for the current session and can be overlaid on hydrograph charts.
+          Upload a text file with observation data (CSV, TSV, or SMP format).
+          The file will be stored for the current session and can be overlaid on
+          hydrograph charts.
         </Typography>
 
         <Box
@@ -72,12 +74,12 @@ export function UploadDialog({ open, onClose }: UploadDialogProps) {
         >
           <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
           <Typography>
-            Drop CSV file here or{' '}
+            Drop observation file here or{' '}
             <Button component="label" size="small">
               browse
               <input
                 type="file"
-                accept=".csv,.txt"
+                accept=".csv,.txt,.tsv,.dat,.smp"
                 hidden
                 onChange={(e) => {
                   const file = e.target.files?.[0];

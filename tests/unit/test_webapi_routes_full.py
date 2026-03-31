@@ -759,10 +759,12 @@ class TestObservationsUpload:
         assert resp.status_code == 200
         data = resp.json()
         assert data["n_records"] == 3
-        assert data["filename"] == "test_obs.csv"
-        assert "observation_id" in data
-        assert data["start_time"] is not None
-        assert data["end_time"] is not None
+        assert data["n_observations"] == 1
+        obs = data["observations"][0]
+        assert obs["filename"] == "test_obs.csv"
+        assert "observation_id" in obs
+        assert obs["start_time"] is not None
+        assert obs["end_time"] is not None
 
     def test_upload_iso_datetime_format(self, client_with_model):
         """Upload with ISO datetime format (YYYY-MM-DDTHH:MM:SS)."""
@@ -848,7 +850,7 @@ class TestObservationsData:
         csv_content = "datetime,value\n2020-01-01,100.0\n2020-02-01,200.0\n"
         files = {"file": ("test.csv", io.BytesIO(csv_content.encode()), "text/csv")}
         upload_resp = client.post("/api/observations/upload", files=files)
-        obs_id = upload_resp.json()["observation_id"]
+        obs_id = upload_resp.json()["observations"][0]["observation_id"]
 
         resp = client.get(f"/api/observations/{obs_id}/data")
         assert resp.status_code == 200
@@ -876,7 +878,7 @@ class TestObservationsLocation:
         csv_content = "datetime,value\n2020-01-01,100.0\n"
         files = {"file": ("test.csv", io.BytesIO(csv_content.encode()), "text/csv")}
         upload_resp = client.post("/api/observations/upload", files=files)
-        obs_id = upload_resp.json()["observation_id"]
+        obs_id = upload_resp.json()["observations"][0]["observation_id"]
 
         resp = client.put(
             f"/api/observations/{obs_id}/location",
@@ -902,7 +904,7 @@ class TestObservationsDelete:
         csv_content = "datetime,value\n2020-01-01,100.0\n"
         files = {"file": ("test.csv", io.BytesIO(csv_content.encode()), "text/csv")}
         upload_resp = client.post("/api/observations/upload", files=files)
-        obs_id = upload_resp.json()["observation_id"]
+        obs_id = upload_resp.json()["observations"][0]["observation_id"]
 
         resp = client.delete(f"/api/observations/{obs_id}")
         assert resp.status_code == 200
@@ -918,7 +920,7 @@ class TestObservationsDelete:
         csv_content = "datetime,value\n2020-01-01,100.0\n"
         files = {"file": ("test.csv", io.BytesIO(csv_content.encode()), "text/csv")}
         upload_resp = client.post("/api/observations/upload", files=files)
-        obs_id = upload_resp.json()["observation_id"]
+        obs_id = upload_resp.json()["observations"][0]["observation_id"]
 
         client.delete(f"/api/observations/{obs_id}")
         resp = client.get("/api/observations")
@@ -1696,7 +1698,7 @@ class TestObservationWorkflow:
         files = {"file": ("wells.csv", io.BytesIO(csv_content.encode()), "text/csv")}
         resp = client.post("/api/observations/upload", files=files)
         assert resp.status_code == 200
-        obs_id = resp.json()["observation_id"]
+        obs_id = resp.json()["observations"][0]["observation_id"]
 
         # Step 2: List
         resp = client.get("/api/observations")

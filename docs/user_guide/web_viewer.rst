@@ -117,7 +117,7 @@ Results Map
   values as a color-coded surface layer
 - Hydrograph locations displayed as markers (cached for fast response)
 - Click a hydrograph marker to view time series chart
-- Upload observed data (CSV) for comparison overlay
+- Upload observed data (CSV, TSV, SMP, or other delimited text) for comparison overlay
 - Stream network overlay on map
 
 Budgets

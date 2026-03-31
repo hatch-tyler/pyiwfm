@@ -308,8 +308,8 @@ class TestObservationRoutes:
         resp = client_with_model.post("/api/observations/upload", files=files)
         assert resp.status_code == 200
         data = resp.json()
-        obs_id = data["observation_id"]
         assert data["n_records"] > 0
+        obs_id = data["observations"][0]["observation_id"]
 
         # List should now show the observation
         resp2 = client_with_model.get("/api/observations")

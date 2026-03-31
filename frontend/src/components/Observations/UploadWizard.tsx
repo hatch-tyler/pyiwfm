@@ -2,7 +2,7 @@
  * 3-step observation upload wizard.
  *
  * Step 1: Select observation type + drag-drop or browse file
- * Step 2: Column mapping (date, value, optional location)
+ * Step 2: Column mapping (date, value, optional location) — skipped for SMP
  * Step 3: Confirm and upload
  */
 
@@ -76,6 +76,9 @@ export function UploadWizard({ open, onClose }: UploadWizardProps) {
   const [valueCol, setValueCol] = useState(1);
   const [locationCol, setLocationCol] = useState(-1);
 
+  // Auto-parsed format (SMP) — column mapping is not needed
+  const [autoFormat, setAutoFormat] = useState(false);
+
   // Upload result
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
@@ -88,6 +91,7 @@ export function UploadWizard({ open, onClose }: UploadWizardProps) {
     setDateCol(0);
     setValueCol(1);
     setLocationCol(-1);
+    setAutoFormat(false);
   };
 
   const handleClose = () => {
@@ -103,13 +107,19 @@ export function UploadWizard({ open, onClose }: UploadWizardProps) {
       const prev = await previewObservationFile(f);
       setPreview(prev);
 
-      // Auto-detect columns from headers
-      const dc = autoDetectColumn(prev.headers, DATE_PATTERNS);
-      const vc = autoDetectColumn(prev.headers, VALUE_PATTERNS);
-      const lc = autoDetectColumn(prev.headers, LOCATION_PATTERNS);
-      setDateCol(dc >= 0 ? dc : 0);
-      setValueCol(vc >= 0 ? vc : (dc === 0 ? 1 : 0));
-      setLocationCol(lc);
+      if (prev.format === 'smp') {
+        // SMP format: skip column mapping
+        setAutoFormat(true);
+      } else {
+        setAutoFormat(false);
+        // Auto-detect columns from headers
+        const dc = autoDetectColumn(prev.headers, DATE_PATTERNS);
+        const vc = autoDetectColumn(prev.headers, VALUE_PATTERNS);
+        const lc = autoDetectColumn(prev.headers, LOCATION_PATTERNS);
+        setDateCol(dc >= 0 ? dc : 0);
+        setValueCol(vc >= 0 ? vc : (dc === 0 ? 1 : 0));
+        setLocationCol(lc);
+      }
 
       setStep(1);
     } catch (err) {
@@ -123,7 +133,9 @@ export function UploadWizard({ open, onClose }: UploadWizardProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await uploadObservation(file, obsType, dateCol, valueCol, locationCol);
+      const res = autoFormat
+        ? await uploadObservation(file, obsType)
+        : await uploadObservation(file, obsType, dateCol, valueCol, locationCol);
       setUploadResult(res);
       const obs = await fetchObservations();
       setObservations(obs);
@@ -176,10 +188,11 @@ export function UploadWizard({ open, onClose }: UploadWizardProps) {
             </FormControl>
 
             <Alert severity="info" sx={{ mb: 2 }}>
-              Upload a CSV or TXT file with columns for date/time and measurement values.
-              An optional location column groups records by station or well.
+              Upload a text file with tabular observation data. Supported delimiters:
+              comma (CSV), tab (TSV), or whitespace (SMP).
+              Common extensions: .csv, .tsv, .txt, .dat, .smp
               <Box component="code" sx={{ display: 'block', mt: 0.5, fontSize: 11, whiteSpace: 'pre' }}>
-                {'Date,Value,Station\n01/31/2000,125.3,Well-01\n02/28/2000,124.8,Well-01'}
+                {'CSV:  Date,Value,Station\n      01/31/2000,125.3,Well-01\nSMP:  C_349836N1189228W001  9/30/1974  0:00:00  238.53'}
               </Box>
             </Alert>
 
@@ -199,12 +212,12 @@ export function UploadWizard({ open, onClose }: UploadWizardProps) {
             >
               <CloudUploadIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
               <Typography>
-                Drop CSV/TXT file here or{' '}
+                Drop observation file here or{' '}
                 <Button component="label" size="small">
                   browse
                   <input
                     type="file"
-                    accept=".csv,.txt"
+                    accept=".csv,.txt,.tsv,.dat,.smp"
                     hidden
                     onChange={(e) => {
                       const f = e.target.files?.[0];
@@ -224,55 +237,65 @@ export function UploadWizard({ open, onClose }: UploadWizardProps) {
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               File: <strong>{file?.name}</strong> ({preview.n_rows} data rows, {preview.headers.length} columns)
+              {preview.format !== 'csv' && (
+                <> &mdash; detected format: <strong>{preview.format.toUpperCase()}</strong></>
+              )}
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <Tooltip title="Column with date/time values (e.g., MM/DD/YYYY, ISO 8601, MM/DD/YYYY HH:MM)" arrow>
-                  <InputLabel>Date/Time Column</InputLabel>
-                </Tooltip>
-                <Select
-                  value={dateCol}
-                  label="Date/Time Column"
-                  onChange={(e) => setDateCol(e.target.value as number)}
-                >
-                  {preview.headers.map((h: string, i: number) => (
-                    <MenuItem key={i} value={i}>{h}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            {autoFormat ? (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                SMP format detected. Bore ID, date, time, and value columns will be
+                parsed automatically. No column mapping needed.
+              </Alert>
+            ) : (
+              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <Tooltip title="Column with date/time values (e.g., MM/DD/YYYY, ISO 8601, MM/DD/YYYY HH:MM)" arrow>
+                    <InputLabel>Date/Time Column</InputLabel>
+                  </Tooltip>
+                  <Select
+                    value={dateCol}
+                    label="Date/Time Column"
+                    onChange={(e) => setDateCol(e.target.value as number)}
+                  >
+                    {preview.headers.map((h: string, i: number) => (
+                      <MenuItem key={i} value={i}>{h}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <Tooltip title="Column with numeric measurement values (e.g., head elevation in ft)" arrow>
-                  <InputLabel>Value Column</InputLabel>
-                </Tooltip>
-                <Select
-                  value={valueCol}
-                  label="Value Column"
-                  onChange={(e) => setValueCol(e.target.value as number)}
-                >
-                  {preview.headers.map((h: string, i: number) => (
-                    <MenuItem key={i} value={i}>{h}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <Tooltip title="Column with numeric measurement values (e.g., head elevation in ft)" arrow>
+                    <InputLabel>Value Column</InputLabel>
+                  </Tooltip>
+                  <Select
+                    value={valueCol}
+                    label="Value Column"
+                    onChange={(e) => setValueCol(e.target.value as number)}
+                  >
+                    {preview.headers.map((h: string, i: number) => (
+                      <MenuItem key={i} value={i}>{h}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              <FormControl size="small" sx={{ minWidth: 160 }}>
-                <Tooltip title="Optional. Groups records by station/well name. Leave as 'None' for single-station files." arrow>
-                  <InputLabel>Location Column</InputLabel>
-                </Tooltip>
-                <Select
-                  value={locationCol}
-                  label="Location Column"
-                  onChange={(e) => setLocationCol(e.target.value as number)}
-                >
-                  <MenuItem value={-1}><em>None</em></MenuItem>
-                  {preview.headers.map((h: string, i: number) => (
-                    <MenuItem key={i} value={i}>{h}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <Tooltip title="Optional. Groups records by station/well name. Leave as 'None' for single-station files." arrow>
+                    <InputLabel>Location Column</InputLabel>
+                  </Tooltip>
+                  <Select
+                    value={locationCol}
+                    label="Location Column"
+                    onChange={(e) => setLocationCol(e.target.value as number)}
+                  >
+                    <MenuItem value={-1}><em>None</em></MenuItem>
+                    {preview.headers.map((h: string, i: number) => (
+                      <MenuItem key={i} value={i}>{h}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            )}
 
             <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
               Preview (first {Math.min(preview.sample_rows.length, 10)} rows):
@@ -287,17 +310,17 @@ export function UploadWizard({ open, onClose }: UploadWizardProps) {
                         sx={{
                           fontWeight: 'bold',
                           fontSize: 11,
-                          bgcolor: i === dateCol ? 'primary.light'
-                            : i === valueCol ? 'success.light'
-                            : i === locationCol ? 'warning.light'
+                          bgcolor: !autoFormat && i === dateCol ? 'primary.light'
+                            : !autoFormat && i === valueCol ? 'success.light'
+                            : !autoFormat && i === locationCol ? 'warning.light'
                             : undefined,
-                          color: (i === dateCol || i === valueCol || i === locationCol) ? 'white' : undefined,
+                          color: (!autoFormat && (i === dateCol || i === valueCol || i === locationCol)) ? 'white' : undefined,
                         }}
                       >
                         {h}
-                        {i === dateCol && ' (Date)'}
-                        {i === valueCol && ' (Value)'}
-                        {i === locationCol && ' (Location)'}
+                        {!autoFormat && i === dateCol && ' (Date)'}
+                        {!autoFormat && i === valueCol && ' (Value)'}
+                        {!autoFormat && i === locationCol && ' (Location)'}
                       </TableCell>
                     ))}
                   </TableRow>
