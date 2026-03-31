@@ -51,7 +51,7 @@ BUDGET_INFLOW_COLORS = [
     "#67a9cf",  # Light Steel
     "#92c5de",  # Powder Blue
     "#a6dba0",  # Sage Green
-    "#d1e5f0",  # Ice Blue
+    "#7eb5d6",  # Muted Blue (was Ice Blue #d1e5f0)
 ]
 BUDGET_OUTFLOW_COLORS = [
     "#D55E00",  # Vermillion (Okabe-Ito)
@@ -60,7 +60,7 @@ BUDGET_OUTFLOW_COLORS = [
     "#d6604d",  # Salmon
     "#f4a582",  # Peach
     "#fdb863",  # Light Orange
-    "#fee0b6",  # Cream
+    "#e8a94f",  # Gold (was Cream #fee0b6)
     "#c51b7d",  # Magenta
 ]
 
@@ -70,7 +70,7 @@ BUDGET_COLORS: dict[str, str] = {
     "DEEP_PERC": "#4393c3",
     "RECHARGE": "#2166ac",
     "BOUNDARY_INFLOW": "#92c5de",
-    "SUBSIDENCE": "#d1e5f0",
+    "SUBSIDENCE": "#7eb5d6",
     "SUBSURF_IRRIGATION": "#67a9cf",
     "GW_RETURN_FLOW": "#1b7837",
     "NET_SUBSURF_INFLOW": "#a6dba0",

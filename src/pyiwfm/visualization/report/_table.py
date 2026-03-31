@@ -132,7 +132,7 @@ def draw_table(
         top_margin = 0.90
     available = top_margin - bottom_margin
     if total_rows > 0:
-        row_height = min(available / total_rows, 0.06)
+        row_height = min(available / total_rows, 0.08)
     else:
         row_height = 0.04
 
@@ -182,13 +182,13 @@ def draw_table(
                 str(label),
                 transform=ax.transAxes,
                 ha=align,
-                va="top",
+                va="baseline",
                 fontsize=style.fontsize,
                 fontweight=style.header_fontweight,
             )
         # Header rule
         if style.show_header_rule:
-            rule_y = y - row_height * 0.6
+            rule_y = y - row_height * 0.85
             line = Line2D(
                 [left_margin - 0.02, right_margin + 0.02],
                 [rule_y, rule_y],

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -1255,3 +1256,184 @@ def write_multilayer_output(
                 line += f"  {spec.top_of_screen:10.2f}"
                 line += f"  {spec.bottom_of_screen:10.2f}"
                 f.write(line + "\n")
+
+
+# =====================================================================
+# Continuous composite and seasonal averaging
+# =====================================================================
+
+
+def compute_composite_continuous(
+    per_layer_sim: dict[str, SMPTimeSeries],
+    well_specs: list[MultiLayerWellSpec],
+    layer_weights: dict[str, NDArray[np.float64]],
+    n_layers: int = 4,
+) -> dict[str, SMPTimeSeries]:
+    """Compute T-weighted composite heads at ALL simulation timesteps.
+
+    Unlike the standard ``iwfm2obs_from_model`` workflow which first
+    interpolates per-layer heads to observation dates and then averages,
+    this function averages per-layer data **first** across all timesteps,
+    producing a continuous composite time series per well.
+
+    This is the correct order of operations for CalcTypeHyd: the
+    composite series preserves full temporal resolution (577 monthly
+    timesteps), and downstream tools can sample or aggregate as needed.
+
+    Parameters
+    ----------
+    per_layer_sim : dict[str, SMPTimeSeries]
+        Per-layer simulation time series keyed by bore ID with ``%N``
+        layer suffix (e.g. ``"WELL_A%1"``, ``"WELL_A%2"``).
+    well_specs : list[MultiLayerWellSpec]
+        Well specifications with screen intervals.
+    layer_weights : dict[str, NDArray[np.float64]]
+        Pre-computed T-weights per well, keyed by base well name.
+        Each array has shape ``(n_layers,)``.
+    n_layers : int
+        Number of model layers (default 4).
+
+    Returns
+    -------
+    dict[str, SMPTimeSeries]
+        Composite time series keyed by base well name (no ``%N`` suffix).
+    """
+    composites: dict[str, SMPTimeSeries] = {}
+
+    for spec in well_specs:
+        base_name = spec.name
+        weights = layer_weights.get(base_name)
+        if weights is None:
+            continue
+
+        # Gather per-layer series
+        layer_series: list[SMPTimeSeries | None] = [None] * n_layers
+        for k in range(n_layers):
+            lid = f"{base_name}%{k + 1}"
+            layer_series[k] = per_layer_sim.get(lid)
+
+        # Find a layer with data to get timestamps
+        ref_ts: SMPTimeSeries | None = None
+        for ts in layer_series:
+            if ts is not None and len(ts.times) > 0:
+                ref_ts = ts
+                break
+        if ref_ts is None:
+            continue
+
+        n_times = len(ref_ts.times)
+        composite_vals = np.zeros(n_times, dtype=np.float64)
+
+        for k in range(n_layers):
+            ts_k = layer_series[k]
+            if ts_k is not None and weights[k] > 0.0:
+                vals = ts_k.values
+                # Handle NaN: treat as zero contribution
+                clean_vals = np.where(np.isnan(vals), 0.0, vals)
+                composite_vals += weights[k] * clean_vals
+
+        composites[base_name] = SMPTimeSeries(
+            bore_id=base_name,
+            times=ref_ts.times.copy(),
+            values=composite_vals,
+            excluded=np.zeros(n_times, dtype=np.bool_),
+        )
+
+    logger.info(
+        "Computed continuous composite heads for %d wells (%d timesteps each)",
+        len(composites),
+        len(next(iter(composites.values())).times) if composites else 0,
+    )
+    return composites
+
+
+def average_to_seasonal(
+    continuous: dict[str, SMPTimeSeries],
+    periods: list[tuple[str, list[int], str]],
+) -> dict[str, SMPTimeSeries]:
+    """Aggregate continuous monthly time series to seasonal window averages.
+
+    For each well, groups timesteps by seasonal window (e.g. Jan-Apr for
+    spring) and year, computes the mean, and assigns the result to the
+    representative date.  Both sim and obs data should be processed
+    through this function with the same ``periods`` to ensure consistent
+    comparison.
+
+    Parameters
+    ----------
+    continuous : dict[str, SMPTimeSeries]
+        Continuous monthly time series by bore ID.
+    periods : list[tuple[str, list[int], str]]
+        Seasonal period definitions as ``(name, months, representative_date)``
+        tuples.  ``representative_date`` is ``"MM/DD"`` format.
+        Example::
+
+            [("Spring", [1,2,3,4], "03/01"),
+             ("Fall", [8,9,10,11], "10/01")]
+
+    Returns
+    -------
+    dict[str, SMPTimeSeries]
+        Seasonal-averaged time series.  Each well has one record per
+        period per year (e.g. 2 records/year for biannual periods).
+    """
+    result: dict[str, SMPTimeSeries] = {}
+
+    # Build month→(period_idx, rep_month, rep_day)
+    month_map: dict[int, tuple[int, int, int]] = {}
+    for p_idx, (_, months, rep_date) in enumerate(periods):
+        rep_parts = rep_date.split("/")
+        rep_m, rep_d = int(rep_parts[0]), int(rep_parts[1])
+        for m in months:
+            month_map[m] = (p_idx, rep_m, rep_d)
+
+    for bore_id, ts in continuous.items():
+        if len(ts.times) == 0:
+            continue
+
+        # Extract year and month from timestamps
+        ts_months = ts.times.astype("datetime64[M]").astype(int) % 12 + 1
+        years = ts.times.astype("datetime64[Y]").astype(int) + 1970
+        valid = ~np.isnan(ts.values) & ~ts.excluded
+
+        # Group by (year, period_idx)
+        buckets: dict[tuple[int, int], list[float]] = defaultdict(list)
+        for i in range(len(ts.times)):
+            if not valid[i]:
+                continue
+            m = int(ts_months[i])
+            if m not in month_map:
+                continue
+            p_idx, _, _ = month_map[m]
+            yr = int(years[i])
+            buckets[(yr, p_idx)].append(float(ts.values[i]))
+
+        # Build output arrays
+        out_times: list[np.datetime64] = []
+        out_values: list[float] = []
+
+        for yr, p_idx in sorted(buckets.keys()):
+            vals = buckets[(yr, p_idx)]
+            if not vals:
+                continue
+            # Look up representative date from first month in this period
+            first_month = periods[p_idx][1][0]
+            _, rep_m, rep_d = month_map[first_month]
+            dt_str = f"{yr:04d}-{rep_m:02d}-{rep_d:02d}"
+            out_times.append(np.datetime64(dt_str))
+            out_values.append(float(np.mean(vals)))
+
+        if out_times:
+            result[bore_id] = SMPTimeSeries(
+                bore_id=bore_id,
+                times=np.array(out_times, dtype="datetime64[s]"),
+                values=np.array(out_values, dtype=np.float64),
+                excluded=np.zeros(len(out_times), dtype=np.bool_),
+            )
+
+    logger.info(
+        "Averaged %d wells to %d seasonal periods",
+        len(result),
+        len(periods),
+    )
+    return result

@@ -304,15 +304,16 @@ def plot_budget_horizontal_bars(
             row_clr: list[str] = []
             ie = padded_in[i]
             if ie:
-                row_text += [str(ie[0]), ie[1], f"{ie[2]:>12,.0f}"]
-                row_clr += [ie[3], "white", "white"]
+                # Plain number + colored square before name
+                row_text += [str(ie[0]), f"\u25a0 {ie[1]}", f"{ie[2]:>12,.0f}"]
+                row_clr += ["white", ie[3], "white"]
             else:
                 row_text += ["", "", ""]
                 row_clr += ["white", "white", "white"]
             oe = padded_out[i]
             if oe:
-                row_text += [str(oe[0]), oe[1], f"{oe[2]:>12,.0f}"]
-                row_clr += [oe[3], "white", "white"]
+                row_text += [str(oe[0]), f"\u25a0 {oe[1]}", f"{oe[2]:>12,.0f}"]
+                row_clr += ["white", oe[3], "white"]
             else:
                 row_text += ["", "", ""]
                 row_clr += ["white", "white", "white"]
@@ -320,8 +321,6 @@ def plot_budget_horizontal_bars(
             cell_colors.append(row_clr)
 
         # Summary rows
-        balance_err = total_in - total_out - storage_change
-        pct = f" ({100 * balance_err / total_in:.2f}%)" if total_in else ""
         cell_text.append(["", "Total", f"{total_in:>12,.0f}", "", "Total", f"{total_out:>12,.0f}"])
         cell_colors.append(["white"] * 6)
         if abs(storage_change) > 0.5:
@@ -332,17 +331,18 @@ def plot_budget_horizontal_bars(
                     "\u0394Storage",
                     f"{sign_s}{abs(storage_change):>11,.0f}",
                     "",
-                    "Balance",
-                    f"{balance_err:>12,.0f}{pct}",
+                    "",
+                    "",
                 ]
             )
             cell_colors.append(["white"] * 6)
         if abs(discrepancy) > 0.5:
-            cell_text.append(["", "Discrepancy", f"{discrepancy:>12,.0f}", "", "", ""])
+            pct = f" ({100 * discrepancy / total_in:.2f}%)" if total_in else ""
+            cell_text.append(["", "Discrepancy", f"{discrepancy:>12,.0f}{pct}", "", "", ""])
             cell_colors.append(["white"] * 6)
 
         col_labels = ["#", inflow_label, units, "#", outflow_label, units]
-        col_widths = [0.04, 0.24, 0.16, 0.04, 0.24, 0.16]
+        col_widths = [0.06, 0.22, 0.16, 0.06, 0.22, 0.16]
 
         table = tgt_ax.table(
             cellText=cell_text,
@@ -367,7 +367,10 @@ def plot_budget_horizontal_bars(
             cell.set_facecolor("white")
 
             if row == 0:  # header row
-                cell.set_text_props(fontweight="bold", color="#333333")
+                props = {"fontweight": "bold", "color": "#333333"}
+                if col in (0, 3):
+                    props["ha"] = "center"
+                cell.set_text_props(**props)
                 cell.set_facecolor("white")
                 # Bottom edge under header
                 cell.visible_edges = "B"
@@ -378,14 +381,16 @@ def plot_budget_horizontal_bars(
                 cell.visible_edges = ""  # no edges on data rows
 
                 if data_row < len(cell_colors):
-                    if col in (0, 3):  # swatch columns
+                    if col in (0, 3):  # number columns — centered, plain dark text
+                        cell.set_text_props(
+                            fontweight="bold",
+                            color="#333333",
+                            ha="center",
+                        )
+                    elif col in (1, 4):  # name columns — colored square prefix
                         c = cell_colors[data_row][col]
                         if c != "white":
-                            cell.set_facecolor(c)
-                            cell.set_text_props(
-                                fontweight="bold",
-                                color="white",
-                            )
+                            cell.set_text_props(color=c)
                         else:
                             cell.set_text_props(color="#333333")
                     elif col in (2, 5):  # numeric columns

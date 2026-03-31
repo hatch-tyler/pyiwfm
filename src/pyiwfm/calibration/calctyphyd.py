@@ -31,7 +31,7 @@ from pyiwfm.io.smp import SMPTimeSeries
 
 logger = logging.getLogger(__name__)
 
-# Default seasonal periods matching IWFM CalcTypHyd convention
+# Default seasonal periods matching IWFM CalcTypHyd convention (quarterly)
 _DEFAULT_SEASONS = [
     ("Winter", [12, 1, 2], "01/15"),
     ("Spring", [3, 4, 5], "04/15"),
@@ -57,6 +57,16 @@ class SeasonalPeriod:
     name: str
     months: list[int]
     representative_date: str
+
+
+# Biannual seasonal periods — spring high / fall low (2 periods per year).
+# Uses months 1-4 for spring and 8-11 for fall, matching the clustering
+# basis in process_cnra_gw_data.py.  Representative dates are March 1 and
+# October 1.
+BIANNUAL_SEASONS = [
+    SeasonalPeriod("Spring", [1, 2, 3, 4], "03/01"),
+    SeasonalPeriod("Fall", [8, 9, 10, 11], "10/01"),
+]
 
 
 @dataclass
@@ -783,4 +793,86 @@ def write_pest_output(
         generate_thyd_ins(out_path, ins_path)
         written.append(ins_path)
 
+    return written
+
+
+def compute_obs_type_hydrographs(
+    water_levels: dict[str, SMPTimeSeries],
+    cluster_weights: dict[str, NDArray[np.float64]],
+    file_config: CalcTypHydFileConfig,
+    output_dir: Path,
+    *,
+    obs_prefix: str = "obs_",
+) -> list[Path]:
+    """Compute observed type hydrographs and write PEST output files.
+
+    Convenience wrapper that computes period-year type hydrographs from
+    observation data and writes ``obs_*.out`` / ``obs_*.ins`` files.
+
+    This function is intended to be called from the data processing pipeline
+    (Step 8) to pre-compute the observed type hydrograph targets.  The sim
+    counterparts are produced by CalcTypeHyd reading the continuous sim SMP.
+
+    Both sim and obs type hydrographs use the same seasonal period
+    aggregation (window-averaging) so they are directly comparable.
+
+    Parameters
+    ----------
+    water_levels : dict[str, SMPTimeSeries]
+        Observed water level time series by well ID (from GW_Obs.smp).
+    cluster_weights : dict[str, NDArray[np.float64]]
+        Fuzzy cluster membership weights by well ID.
+    file_config : CalcTypHydFileConfig
+        CalcTypHyd configuration (date range, periods, desired clusters,
+        pest base name, weights path — for naming output files).
+    output_dir : Path
+        Directory for output files.
+    obs_prefix : str
+        Prefix for output file names (default ``"obs_"``).
+
+    Returns
+    -------
+    list[Path]
+        Paths to all written files.
+    """
+    from pyiwfm.calibration.pest_files import generate_thyd_ins
+
+    result = compute_typical_hydrographs_timeseries(
+        water_levels,
+        cluster_weights,
+        file_config,
+    )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    weights_stem = file_config.weights_path.stem.lower()
+    written: list[Path] = []
+
+    for th in result.hydrographs:
+        cls_id = th.cluster_id
+
+        out_path = output_dir / f"{obs_prefix}{weights_stem}_cls{cls_id}.out"
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(
+                f"{'PEST_NAME':>14s}        "
+                f"{'DATE':4s}"
+                f"                          "
+                f"{obs_prefix}{weights_stem}_cls{cls_id}\n"
+            )
+            for i in range(len(th.dates)):
+                name = th.pest_names[i]
+                date_str = th.dates[i].strftime("%m/%d/%Y")
+                value = th.values[i]
+                f.write(f"{name:<16s}{date_str:>10s}{value:20.6f}\n")
+        written.append(out_path)
+
+        ins_path = output_dir / f"{obs_prefix}{weights_stem}_cls{cls_id}.ins"
+        generate_thyd_ins(out_path, ins_path)
+        written.append(ins_path)
+
+    logger.info(
+        "Wrote %d obs type hydrograph files for %s (%d clusters)",
+        len(written),
+        weights_stem,
+        len(result.hydrographs),
+    )
     return written

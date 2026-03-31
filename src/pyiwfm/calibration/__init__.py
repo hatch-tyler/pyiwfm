@@ -19,10 +19,12 @@ Modules
 from __future__ import annotations
 
 from pyiwfm.calibration.calctyphyd import (
+    BIANNUAL_SEASONS,
     CalcTypHydConfig,
     CalcTypHydResult,
     SeasonalPeriod,
     TypicalHydrograph,
+    compute_obs_type_hydrographs,
     compute_seasonal_averages,
     compute_typical_hydrographs,
     read_cluster_weights,
@@ -45,6 +47,8 @@ from pyiwfm.calibration.iwfm2obs import (
     InterpolationConfig,
     IWFM2OBSConfig,
     MultiLayerWellSpec,
+    average_to_seasonal,
+    compute_composite_continuous,
     compute_composite_head,
     compute_composite_subsidence,
     compute_multilayer_weights,
@@ -110,6 +114,8 @@ __all__ = [
     "iwfm2obs",
     "iwfm2obs_from_model",
     "write_multilayer_output",
+    "compute_composite_continuous",
+    "average_to_seasonal",
     # model_file_discovery
     "HydrographFileInfo",
     "discover_hydrograph_files",
@@ -117,6 +123,7 @@ __all__ = [
     "ObsWellSpec",
     "read_obs_well_spec",
     # calctyphyd
+    "BIANNUAL_SEASONS",
     "SeasonalPeriod",
     "CalcTypHydConfig",
     "TypicalHydrograph",
@@ -124,6 +131,7 @@ __all__ = [
     "read_cluster_weights",
     "compute_seasonal_averages",
     "compute_typical_hydrographs",
+    "compute_obs_type_hydrographs",
     # clustering
     "ClusteringConfig",
     "ClusteringResult",
