@@ -18,7 +18,7 @@ Changed
 Fixed
 ~~~~~
 
-[1.1.1] - 2026-04-23
+[1.1.2] - 2026-04-23
 --------------------
 
 Added
@@ -121,11 +121,15 @@ Changed
 Fixed
 ~~~~~
 
-- Release workflow now pins the build-time version to the git tag via
-  ``SETUPTOOLS_SCM_PRETEND_VERSION_FOR_PYIWFM``, so the sdist and wheel
-  always ship at the same version (previously hatch-vcs could bump the
-  wheel to the next dev version if ``hatch_build.py``'s ``npm run build``
-  dirtied tracked files between sdist and wheel packaging).
+- Release workflow now uses ``python -m build`` instead of
+  ``hatch build``, so the wheel is built from the sdist (isolated)
+  rather than from the source tree. This prevents the sdist-then-wheel
+  version-mismatch that affected v1.1.0 and v1.1.1, where
+  ``hatch_build.py``'s ``npm run build`` could dirty tracked files
+  between packaging steps and cause hatch-vcs to bump the wheel to the
+  next dev version. The workflow also pins the version from the git
+  tag via ``SETUPTOOLS_SCM_PRETEND_VERSION_FOR_PYIWFM`` and asserts
+  sdist/wheel filenames match before uploading, as a safety net.
 - ``pyiwfm.io.ascii.read_stratigraphy`` now correctly handles stratigraphy
   files whose node IDs are not 1-based contiguous. The previous dead-code
   ``idx = node_id - 1`` branch silently scrambled row assignments; now
