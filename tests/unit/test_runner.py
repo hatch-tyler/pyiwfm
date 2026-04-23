@@ -391,28 +391,9 @@ class TestIWFMRunner:
         assert "timeout" in stderr.lower() or "partial" in stdout
 
 
-class TestIWFMRunnerIntegration:
-    """Integration tests for IWFMRunner (skipped if no IWFM installed)."""
-
-    @pytest.fixture
-    def iwfm_runner(self):
-        """Get an IWFM runner, skip if no executables found."""
-        runner = IWFMRunner()
-        if not runner.executables.available:
-            pytest.skip("No IWFM executables found")
-        return runner
-
-    @pytest.mark.skip(reason="Requires IWFM executables")
-    def test_run_real_preprocessor(self, iwfm_runner, tmp_path):
-        """Test running real preprocessor (requires IWFM)."""
-        # This test would need actual IWFM input files
-        pass
-
-    @pytest.mark.skip(reason="Requires IWFM executables")
-    def test_run_real_simulation(self, iwfm_runner, tmp_path):
-        """Test running real simulation (requires IWFM)."""
-        # This test would need actual IWFM input files
-        pass
+# Real end-to-end runner coverage lives in
+# tests/integration/test_preprocessor_run.py and test_simulation_run.py,
+# which auto-download IWFM executables via IWFMExecutableManager.
 
 
 # ── Additional runner tests for increased coverage ───────────────────
