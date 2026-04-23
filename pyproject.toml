@@ -39,7 +39,7 @@ dependencies = [
 
 [project.optional-dependencies]
 mesh = [
-    "triangle>=20220202",
+    "triangle>=20200424 ; python_version < '3.14'",
     "gmsh>=4.11",
 ]
 viz = [
@@ -58,6 +58,7 @@ pest = [
     "scipy>=1.7",
 ]
 dev = [
+    "pyiwfm[mesh]",
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "pytest-benchmark>=4.0",
@@ -77,7 +78,7 @@ docs = [
     "sphinx-design>=0.5",
     "myst-parser>=2.0",
     "numpydoc>=1.6",
-    "triangle>=20220202",
+    "triangle>=20200424 ; python_version < '3.14'",
     "gmsh>=4.11",
 ]
 all = [
