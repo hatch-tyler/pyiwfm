@@ -126,6 +126,11 @@ export default function Viewer3D() {
       const renderer = vtkRefs.current.renderer;
       if (!renderer) return;
 
+      // Apply the current stored Z exaggeration at actor-creation time so
+      // the first render after a tab remount respects it (without waiting
+      // for the reactive effect to re-fire).
+      const currentZ = useViewerStore.getState().zExaggeration;
+
       // Create an actor for each layer
       layerDataArray.forEach((meshData, i) => {
         if (meshData.n_cells === 0) return;
@@ -137,6 +142,7 @@ export default function Viewer3D() {
           color,
         );
 
+        actor.setScale(1, 1, currentZ);
         vtkRefs.current.layerActors.set(i, actor);
         vtkRefs.current.layerPolyDatas.set(i, polyData);
         renderer.addActor(actor);
@@ -466,6 +472,7 @@ export default function Viewer3D() {
         actor.setMapper(mapper);
         actor.getProperty().setColor(0.2, 0.4, 0.8);
         actor.getProperty().setLineWidth(3);
+        actor.setScale(1, 1, useViewerStore.getState().zExaggeration);
 
         vtkRefs.current.streamActor = actor;
         vtkRefs.current.renderer?.addActor(actor);
