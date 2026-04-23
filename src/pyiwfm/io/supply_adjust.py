@@ -22,28 +22,32 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from pyiwfm.io.iwfm_reader import COMMENT_CHARS, strip_inline_comment
 from pyiwfm.io.timeseries_ascii import (
-    _strip_inline_comment,
     format_iwfm_timestamp,
     parse_iwfm_timestamp,
 )
 
 logger = logging.getLogger(__name__)
 
-# IWFM line-comment characters (must appear in column 1).
-_LINE_COMMENT_CHARS = ("C", "c", "*")
-
 
 def _is_fortran_comment(line: str) -> bool:
     """Check if a line is a Fortran-style IWFM comment.
 
-    Only C, c, or * in column 1 count as line comments.
-    This distinction matters for blank DSSFL lines like
-    ``'                   / DSSFL'`` which are data lines (empty value).
+    Only C, c, or * in column 1 count as line comments. Unlike
+    :func:`pyiwfm.io.iwfm_reader.is_comment_line`, blank lines are NOT
+    treated as comments here, so callers can tell a truly-empty DSSFL line
+    (``''`` → empty filename) apart from a comment line.
     """
     if not line or not line.strip():
-        return False  # blank lines are not comments — caller decides handling
-    return line[0] in _LINE_COMMENT_CHARS
+        return False  # blank lines are data, not comments (DSSFL may be blank)
+    return line[0] in COMMENT_CHARS
+
+
+def _strip_inline_comment(line: str) -> str:
+    """Return the value portion of a data line (IWFM inline-comment aware)."""
+    value, _ = strip_inline_comment(line)
+    return value
 
 
 @dataclass

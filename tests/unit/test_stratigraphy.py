@@ -277,3 +277,81 @@ class TestStratigraphyOperations:
         assert "Stratigraphy" in repr_str
         assert "n_layers=2" in repr_str
         assert "n_nodes=9" in repr_str
+
+
+class TestAquitardAccessors:
+    """Tests for the aquitard helpers added in Stratigraphy."""
+
+    @staticmethod
+    def _build_known_strat() -> Stratigraphy:
+        """2-layer, 3-node stratigraphy with non-zero top aquitard.
+
+        Node 0: gs=100, AQT1=5, AQF1=45, AQT2=10, AQF2=40
+        Node 1: gs=110, AQT1=0, AQF1=50, AQT2=20, AQF2=40
+        Node 2: gs=120, AQT1=2, AQF1=58, AQT2=0,  AQF2=60
+        """
+        n_nodes = 3
+        n_layers = 2
+        gs_elev = np.array([100.0, 110.0, 120.0])
+
+        aquitard_1 = np.array([5.0, 0.0, 2.0])
+        aquifer_1 = np.array([45.0, 50.0, 58.0])
+        aquitard_2 = np.array([10.0, 20.0, 0.0])
+        aquifer_2 = np.array([40.0, 40.0, 60.0])
+
+        top_elev = np.zeros((n_nodes, n_layers))
+        bottom_elev = np.zeros((n_nodes, n_layers))
+        top_elev[:, 0] = gs_elev - aquitard_1
+        bottom_elev[:, 0] = top_elev[:, 0] - aquifer_1
+        top_elev[:, 1] = bottom_elev[:, 0] - aquitard_2
+        bottom_elev[:, 1] = top_elev[:, 1] - aquifer_2
+
+        return Stratigraphy(
+            n_layers=n_layers,
+            n_nodes=n_nodes,
+            gs_elev=gs_elev,
+            top_elev=top_elev,
+            bottom_elev=bottom_elev,
+            active_node=np.ones((n_nodes, n_layers), dtype=bool),
+        )
+
+    def test_n_aquitards(self, sample_stratigraphy_data: dict) -> None:
+        strat = Stratigraphy(**sample_stratigraphy_data)
+        assert strat.n_aquitards == strat.n_layers
+
+    def test_get_aquitard_thickness_top(self) -> None:
+        strat = self._build_known_strat()
+        np.testing.assert_allclose(strat.get_aquitard_thickness(0), [5.0, 0.0, 2.0])
+
+    def test_get_aquitard_thickness_interior(self) -> None:
+        strat = self._build_known_strat()
+        np.testing.assert_allclose(strat.get_aquitard_thickness(1), [10.0, 20.0, 0.0])
+
+    def test_get_aquitard_thickness_out_of_range(self) -> None:
+        strat = self._build_known_strat()
+        with pytest.raises(IndexError):
+            strat.get_aquitard_thickness(strat.n_aquitards)
+        with pytest.raises(IndexError):
+            strat.get_aquitard_thickness(-1)
+
+    def test_get_all_aquitard_thicknesses(self) -> None:
+        strat = self._build_known_strat()
+        all_aqt = strat.get_all_aquitard_thicknesses()
+        assert all_aqt.shape == (3, 2)
+        np.testing.assert_allclose(all_aqt[:, 0], [5.0, 0.0, 2.0])
+        np.testing.assert_allclose(all_aqt[:, 1], [10.0, 20.0, 0.0])
+
+    def test_get_node_aquitards(self) -> None:
+        strat = self._build_known_strat()
+        assert strat.get_node_aquitards(0) == pytest.approx([5.0, 10.0])
+        assert strat.get_node_aquitards(2) == pytest.approx([2.0, 0.0])
+
+    def test_aquitard_plus_aquifer_equals_gs_minus_bottom(self) -> None:
+        """Total column (aquitards + aquifers) must equal gs - bottom_of_last_layer."""
+        strat = self._build_known_strat()
+        aquitard_sum = strat.get_all_aquitard_thicknesses().sum(axis=1)
+        aquifer_sum = (strat.top_elev - strat.bottom_elev).sum(axis=1)
+        np.testing.assert_allclose(
+            aquitard_sum + aquifer_sum,
+            strat.gs_elev - strat.bottom_elev[:, -1],
+        )

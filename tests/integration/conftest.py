@@ -168,6 +168,23 @@ def c2vsimcg_path() -> Path:
     return path
 
 
+@pytest.fixture
+def c2vsimfg_path() -> Path:
+    """Return path to the C2VSimFG (Fine Grid) model directory.
+
+    Requires the ``C2VSIMFG_DIR`` environment variable to be set (same
+    convention as ``test_calibration_c2vsimfg.py``). Skips the test if the
+    env var is not set or the directory does not exist.
+    """
+    env = os.environ.get("C2VSIMFG_DIR")
+    if not env:
+        pytest.skip("C2VSIMFG_DIR environment variable not set")
+    path = Path(env)
+    if not path.exists():
+        pytest.skip(f"C2VSimFG model directory not found: {path}")
+    return path
+
+
 # ---------------------------------------------------------------------------
 # Executable fixtures (unified via IWFMExecutableManager)
 # ---------------------------------------------------------------------------

@@ -199,6 +199,43 @@ C  Node  GS     Aqt1   Aqu1   Aqt2   Aqu2
         np.testing.assert_allclose(strat.top_elev[:, 1], [50.0, 50.0, 50.0, 50.0])  # L2 top
         np.testing.assert_allclose(strat.bottom_elev[:, 1], [0.0, 0.0, 0.0, 0.0])  # L2 bottom
 
+    def test_read_stratigraphy_non_sequential_node_ids(self, tmp_path: Path) -> None:
+        """Node IDs may be non-sequential; rows must follow file order, not id-1."""
+        strat_file = tmp_path / "strat.dat"
+        # Three nodes with ids 101, 7, 42 and distinct ground-surface elevations.
+        strat_file.write_text(
+            """C  non-sequential stratigraphy
+1                         / NL
+1.0                       / FACT
+C  ID  GS     Aqt1   Aqu1
+101    500.0  5.0    45.0
+7      600.0  0.0    60.0
+42     700.0  2.0    58.0
+"""
+        )
+
+        strat = read_stratigraphy(strat_file)
+
+        assert strat.n_nodes == 3
+        # Row order follows file order (row 0=id 101, row 1=id 7, row 2=id 42).
+        np.testing.assert_allclose(strat.gs_elev, [500.0, 600.0, 700.0])
+        np.testing.assert_allclose(strat.top_elev[:, 0], [495.0, 600.0, 698.0])
+        np.testing.assert_allclose(strat.bottom_elev[:, 0], [450.0, 540.0, 640.0])
+
+    def test_read_stratigraphy_duplicate_node_ids_raises(self, tmp_path: Path) -> None:
+        """Duplicate node IDs in stratigraphy file must surface as FileFormatError."""
+        strat_file = tmp_path / "strat.dat"
+        strat_file.write_text(
+            """1                         / NL
+1.0                       / FACT
+1    100.0  0.0  50.0
+1    200.0  0.0  50.0
+"""
+        )
+
+        with pytest.raises(FileFormatError, match="Duplicate node ID"):
+            read_stratigraphy(strat_file)
+
 
 class TestWriteNodes:
     """Tests for writing node files."""

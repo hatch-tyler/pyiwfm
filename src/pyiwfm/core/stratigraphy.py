@@ -83,6 +83,22 @@ class Stratigraphy:
         if node_idx < 0 or node_idx >= self.n_nodes:
             raise IndexError(f"Node index {node_idx} out of range [0, {self.n_nodes - 1}]")
 
+    @property
+    def n_aquitards(self) -> int:
+        """
+        Number of aquitards in the stratigraphy.
+
+        The IWFM stratigraphy convention places one aquitard above each aquifer
+        layer. Aquitard ``k`` sits above aquifer layer ``k``; the top aquitard
+        (``k=0``) sits between the ground surface and the first aquifer top.
+        Interior or top aquitards of zero thickness are valid.
+        """
+        return self.n_layers
+
+    def _check_aquitard_index(self, aquitard: int) -> None:
+        if aquitard < 0 or aquitard >= self.n_aquitards:
+            raise IndexError(f"Aquitard index {aquitard} out of range [0, {self.n_aquitards - 1}]")
+
     def get_layer_thickness(self, layer: int) -> NDArray[np.float64]:
         """
         Get thickness of a layer at all nodes.
@@ -95,6 +111,55 @@ class Stratigraphy:
         """
         self._check_layer_index(layer)
         return self.top_elev[:, layer] - self.bottom_elev[:, layer]
+
+    def get_aquitard_thickness(self, aquitard: int) -> NDArray[np.float64]:
+        """
+        Get thickness of an aquitard at all nodes.
+
+        Aquitard ``0`` lies between ground surface and the top of aquifer
+        layer 0. Aquitard ``k`` (for ``k >= 1``) lies between the bottom of
+        aquifer layer ``k-1`` and the top of aquifer layer ``k``. This matches
+        the IWFM stratigraphy file ordering where ``W`` values alternate
+        ``aquitard_k, aquifer_k`` for each layer.
+
+        Args:
+            aquitard: Aquitard index (0-based)
+
+        Returns:
+            Array of aquitard thickness values at each node
+        """
+        self._check_aquitard_index(aquitard)
+        if aquitard == 0:
+            return self.gs_elev - self.top_elev[:, 0]
+        return self.bottom_elev[:, aquitard - 1] - self.top_elev[:, aquitard]
+
+    def get_all_aquitard_thicknesses(self) -> NDArray[np.float64]:
+        """
+        Get all aquitard thicknesses at every node.
+
+        Returns:
+            Array of shape ``(n_nodes, n_aquitards)``. Column ``k`` is the
+            thickness of aquitard ``k`` at each node.
+        """
+        result = np.empty((self.n_nodes, self.n_aquitards), dtype=np.float64)
+        result[:, 0] = self.gs_elev - self.top_elev[:, 0]
+        if self.n_aquitards > 1:
+            result[:, 1:] = self.bottom_elev[:, :-1] - self.top_elev[:, 1:]
+        return result
+
+    def get_node_aquitards(self, node_idx: int) -> list[float]:
+        """
+        Get all aquitard thicknesses for a specific node.
+
+        Args:
+            node_idx: Node index (0-based)
+
+        Returns:
+            List of aquitard thicknesses (length ``n_aquitards``).
+        """
+        self._check_node_index(node_idx)
+        thicknesses = self.get_all_aquitard_thicknesses()[node_idx, :]
+        return [float(v) for v in thicknesses]
 
     def get_total_thickness(self) -> NDArray[np.float64]:
         """

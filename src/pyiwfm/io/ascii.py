@@ -429,6 +429,16 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
         if n_nodes == 0:
             raise FileFormatError("No stratigraphy data found in file")
 
+        # Build a node_id -> array_idx mapping. Node IDs in the stratigraphy
+        # file are not guaranteed to be 1-based-contiguous, so we can't rely on
+        # ``idx = node_id - 1``. Rows are stored in file order; duplicate IDs
+        # are an error.
+        id_to_idx: dict[int, int] = {}
+        for row_idx, (node_id, _values) in enumerate(node_data):
+            if node_id in id_to_idx:
+                raise FileFormatError(f"Duplicate node ID {node_id} in stratigraphy file")
+            id_to_idx[node_id] = row_idx
+
         # Initialize arrays
         gs_elev = np.zeros(n_nodes)
         top_elev = np.zeros((n_nodes, n_layers))
@@ -437,11 +447,7 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
 
         # Process node data - compute top/bottom elevations from thicknesses
         for node_id, values in node_data:
-            # Node ID is 1-based, array index is 0-based
-            idx = node_id - 1
-            if idx < 0 or idx >= n_nodes:
-                # Node IDs may not be sequential, handle with dictionary mapping
-                idx = node_id - 1  # For now, assume sequential
+            idx = id_to_idx[node_id]
 
             gs = values[0]  # Ground surface elevation
             gs_elev[idx] = gs
@@ -588,6 +594,11 @@ def write_stratigraphy(
         f.write(f"{stratigraphy.n_layers:<10}                    / NLAYERS\n")
         f.write(f"{'1.0':>14}                          / FACTEL\n")
 
+        # Precompute aquitard/aquifer thicknesses via the canonical helpers
+        # so the math has a single owner.
+        aquitard_thicks = stratigraphy.get_all_aquitard_thicknesses()
+        aquifer_thicks = stratigraphy.top_elev - stratigraphy.bottom_elev
+
         # Write node data with thicknesses
         for idx in range(stratigraphy.n_nodes):
             node_id = idx + 1  # 1-based node ID
@@ -595,19 +606,6 @@ def write_stratigraphy(
 
             line = f"{node_id:<5} {gs:>10.4f}"
             for layer in range(stratigraphy.n_layers):
-                # Aquitard thickness: from previous bottom (or gs) to current top
-                if layer == 0:
-                    aquitard_thick = gs - stratigraphy.top_elev[idx, layer]
-                else:
-                    aquitard_thick = (
-                        stratigraphy.bottom_elev[idx, layer - 1] - stratigraphy.top_elev[idx, layer]
-                    )
-
-                # Aquifer thickness: from layer top to layer bottom
-                aquifer_thick = (
-                    stratigraphy.top_elev[idx, layer] - stratigraphy.bottom_elev[idx, layer]
-                )
-
-                line += f" {aquitard_thick:>10.4f} {aquifer_thick:>10.4f}"
+                line += f" {aquitard_thicks[idx, layer]:>10.4f} {aquifer_thicks[idx, layer]:>10.4f}"
 
             f.write(line + "\n")
