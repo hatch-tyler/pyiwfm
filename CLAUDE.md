@@ -28,8 +28,12 @@ pytest tests/ -m property              # Run property-based (Hypothesis) tests
 ```
 
 Integration tests require model data via environment variables:
-- `IWFM_SAMPLE_MODEL` — path to IWFM Sample Model dir (auto-downloads from CNRA if unset)
+- `IWFM_SAMPLE_MODEL_DIR` — path to IWFM Sample Model dir (auto-downloads from CNRA if unset; see `tests/integration/conftest.py`)
 - `C2VSIMCG_DIR` — path to C2VSimCG model dir (required for C2VSimCG-specific tests)
+- `C2VSIMFG_DIR` — path to C2VSimFG model dir (enables fine-grid tests such as `tests/integration/test_stratigraphy_roundtrip.py` and `tests/integration/test_calibration_c2vsimfg.py`)
+- `C2VSIMFG_SUBS_HDF` — explicit path to the C2VSimFG `SubsidenceAll.hdf`; alternatively `C2VSIMFG_DIR` is searched for `Results/C2VSimFG_SubsidenceAll.hdf` (unskips the 3 tests in `tests/unit/test_results_extraction_subsidence.py`)
+
+The `[dev]` extra depends on `[mesh]`, so `pip install -e ".[dev]"` gives a full test env (triangle + gmsh wrappers run). `pytest-benchmark` and `hypothesis` are also in `[dev]`; lean installs that skip `[dev]` still collect the rest of the suite cleanly via `pytest.importorskip` guards.
 
 ### Code Quality
 ```bash
@@ -103,12 +107,17 @@ frontend/              # React + TypeScript + vtk.js + deck.gl (builds to webapi
 ```
 
 ### Key Classes
-- **AppGrid**: Main mesh container with nodes, elements, faces, subregions (mirrors IWFM's Class_AppGrid)
+- **AppGrid**: Main mesh container with nodes, elements, faces, subregions (mirrors IWFM's Class_AppGrid). `element_centroids` is a cached `(n_elements, 2)` array built in one vectorized pass; `get_element_centroid(element_id)` is an O(1) lookup after first use. `_invalidate_cache()` resets the centroid cache along with the existing x/y/vertex caches.
 - **IWFMModel**: Orchestrates all components (grid, stratigraphy, groundwater, streams, lakes, rootzone, small watersheds, unsaturated zone). Construction helpers live in `core/model_factory.py`.
+- **Stratigraphy** (`core/stratigraphy.py`): aquifer elevations **and** aquitard thicknesses. Use `get_aquitard_thickness(k)`, `get_all_aquitard_thicknesses()`, `get_node_aquitards(node_idx)`, and the `n_aquitards` property instead of hand-subtracting elevation arrays. IWFM convention: aquitard `k` sits above aquifer layer `k`; aquitard `0` is between ground surface and aquifer layer 0.
+- **AquiferParameters** (`components/groundwater.py`): five parameter arrays (Kh, Kv, specific_storage, specific_yield, aquitard_kv) are reachable via a short-name dispatcher: `get_array("kh")`, `get_layer("kh", layer)`, `get_at("kh", node_idx, layer)`. Existing `get_layer_kh`/`get_layer_kv` are thin shims. Unknown names raise `KeyError`; unset arrays raise `ValueError`.
+- **AppStream** (`components/stream.py`): `get_nodes_in_reach(reach_id)` returns stream nodes; `get_gw_nodes_in_reach(reach_id)` returns `list[int | None]` of linked groundwater node IDs in upstream-to-downstream order.
+- **IWFMSimulationReader** (`io/simulation.py`): `read()` is a short orchestrator that calls `_read_titles` / `_read_input_files` / `_read_time_settings` / `_read_processing_options` / `_read_solver_settings` (+ `_read_convergence_tail`). The 11 fixed input-file slots are table-driven via `_INPUT_FILE_FIELDS`. Section methods take a `TextIO` + `SimulationConfig` so they can be driven directly in unit tests via `io.StringIO`.
 - **BaseComponent**: ABC in `core/base_component.py` — all 6 component classes inherit from it (`validate()`, `n_items`)
 - **BaseReader/BaseWriter**: Abstract I/O classes in `io/base.py` and `io/writer_base.py`
 - **BaseComponentWriterConfig**: Shared config base in `io/writer_config_base.py` — inherited by all 6 component writer configs
 - **CommentAwareReader/CommentAwareWriter**: Extended base classes for roundtrip comment preservation
+- **DSSFile** (`io/dss/wrapper.py`): `mode` is advisory (HEC-DSS 7's `zopenExtended` takes no mode arg); constructor validates it's one of `"r"`, `"w"`, `"rw"` and raises `ValueError` otherwise.
 
 ### I/O System
 The `io/` module handles 50+ IWFM file formats. Key patterns:

@@ -12,6 +12,41 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 ~~~~~
 
+**Stratigraphy Aquitard Accessors** (``pyiwfm.core.stratigraphy``)
+
+- ``Stratigraphy.n_aquitards`` property (equals ``n_layers``)
+- ``Stratigraphy.get_aquitard_thickness(aquitard)`` — single aquitard
+  thickness at every node (aquitard 0 = top aquitard above aquifer layer 0;
+  aquitard *k* = between layer *k-1* bottom and layer *k* top)
+- ``Stratigraphy.get_all_aquitard_thicknesses()`` — vectorised
+  ``(n_nodes, n_aquitards)`` array
+- ``Stratigraphy.get_node_aquitards(node_idx)`` — list of aquitard thicknesses
+  at a specific node, mirroring ``get_node_elevations``
+- The stratigraphy writer now uses these helpers so aquitard math has a
+  single owner
+
+**AquiferParameters Dispatcher** (``pyiwfm.components.groundwater``)
+
+- ``AquiferParameters.get_array(param)`` / ``.get_layer(param, layer)`` /
+  ``.get_at(param, node_idx, layer)`` — unified accessors keyed by short
+  parameter names (``"kh"``, ``"kv"``, ``"ss"``, ``"sy"``, ``"aquitard_kv"``);
+  unknown names raise ``KeyError``, unset arrays raise ``ValueError``
+- Existing ``get_layer_kh`` / ``get_layer_kv`` are now thin shims over the
+  dispatcher (no breaking change)
+
+**Stream Reach → Groundwater Node Mapping** (``pyiwfm.components.stream``)
+
+- ``AppStream.get_gw_nodes_in_reach(reach_id)`` returns
+  ``list[int | None]`` of gw node IDs in upstream-to-downstream order
+
+**Element Centroid Cache** (``pyiwfm.core.mesh``)
+
+- ``AppGrid.element_centroids`` lazy property — vectorised
+  ``(n_elements, 2)`` array built in a single pass, cached until mesh
+  mutation invalidates
+- ``AppGrid.get_element_centroid(element_id)`` now an O(1) dict + array
+  lookup after first call (previously re-computed per call)
+
 **Observation Upload Format Expansion**
 
 - Web viewer observation upload now supports CSV, TSV, SMP, and generic
@@ -39,6 +74,50 @@ Changed
 - Budget plot colors: improved contrast for Ice Blue and Cream palette entries
 - Budget table: colored squares before component names, adjusted column widths,
   moved discrepancy percentage to its own row
+
+**Simulation Reader Refactor**
+
+- ``IWFMSimulationReader.read()`` split into focused section methods
+  (``_read_titles``, ``_read_input_files``, ``_read_time_settings``,
+  ``_read_processing_options``, ``_read_solver_settings``,
+  ``_read_convergence_tail``) for easier piecewise testing. No behavior
+  change; 11 fixed input-file slots now driven by the
+  ``_INPUT_FILE_FIELDS`` table.
+
+**Test & Dev-Env Improvements**
+
+- ``[dev]`` extra now pulls in ``[mesh]`` so ``pip install -e ".[dev]"``
+  yields a full test environment (mesh-wrapper unit tests no longer silently
+  skip); triangle pin relaxed to ``>=20200424`` with a Python 3.14 compat
+  marker.
+- Graceful module-/class-level ``importorskip`` guards for ``hypothesis``
+  property-test files and ``pytest-benchmark``-dependent classes.
+- ``tests/unit/test_results_extraction_subsidence.py`` resolves the C2VSimFG
+  subsidence HDF5 via ``C2VSIMFG_SUBS_HDF`` or ``C2VSIMFG_DIR`` env vars
+  (previously hard-coded) so CI and contributors can unskip those 3 tests
+  by configuring the existing data location.
+- New integration test ``tests/integration/test_stratigraphy_roundtrip.py``
+  exercises aquitard helpers and read → write → read against the IWFM
+  Sample Model and C2VSimFG.
+
+Fixed
+~~~~~
+
+- ``pyiwfm.io.ascii.read_stratigraphy`` now correctly handles stratigraphy
+  files whose node IDs are not 1-based contiguous. The previous dead-code
+  ``idx = node_id - 1`` branch silently scrambled row assignments; now
+  builds a ``node_id → row`` mapping from the file and raises
+  ``FileFormatError`` on duplicate IDs.
+- ``DSSFile.__init__`` validates the ``mode`` argument (raises
+  ``ValueError`` for anything other than ``"r"`` / ``"w"`` / ``"rw"``) and
+  the three dead ``pass``-only mode-dispatch branches in ``open()`` have
+  been removed — HEC-DSS 7's ``zopenExtended`` does not expose per-mode
+  open semantics, so the branches had no effect.
+- ``pyiwfm.io.supply_adjust`` now imports ``COMMENT_CHARS`` and
+  ``strip_inline_comment`` from ``pyiwfm.io.iwfm_reader`` instead of
+  duplicating them locally (per CLAUDE.md's "never duplicate these
+  helpers" rule). Blank-line-as-data semantics for the DSSFL slot are
+  preserved via a small local ``_is_fortran_comment`` wrapper.
 
 [1.1.0] - 2026-03-13
 --------------------

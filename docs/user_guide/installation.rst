@@ -42,7 +42,8 @@ For creating finite element meshes:
 
 This installs:
 
-- triangle >= 20220202 (triangular meshes)
+- triangle >= 20200424 (triangular meshes; skipped on Python 3.14+ where the
+  legacy C source fails to build against the removed ``longintrepr.h``)
 - gmsh >= 4.11 (triangular, quadrilateral, or mixed meshes)
 
 VTK 3D Export
@@ -129,12 +130,20 @@ For development, clone the repository and install in editable mode:
     cd pyiwfm
     pip install -e ".[dev]"
 
-The ``[dev]`` extra includes testing and linting tools:
+The ``[dev]`` extra installs a full test and linting environment:
 
-- pytest, pytest-cov, hypothesis
+- pytest, pytest-cov, pytest-benchmark
+- hypothesis (property-based testing)
 - mypy
 - ruff, pre-commit
 - httpx
+- ``pyiwfm[mesh]`` (triangle + gmsh) so mesh-wrapper unit tests run out of
+  the box — on Python 3.14 the triangle install is automatically skipped
+  and the corresponding unit test skips cleanly
+
+The optional plugins (``pytest-benchmark``, ``hypothesis``) are guarded with
+``pytest.importorskip`` in the test files, so a lean install without
+``[dev]`` still runs the rest of the suite cleanly.
 
 Verifying Installation
 ----------------------

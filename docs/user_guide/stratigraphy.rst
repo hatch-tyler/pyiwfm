@@ -115,26 +115,51 @@ Create stratigraphy with spatially varying thicknesses:
 Accessing Stratigraphy Data
 ---------------------------
 
-Query stratigraphy properties:
+Query stratigraphy properties via the convenience accessors (preferred) or
+the raw arrays:
 
 .. code-block:: python
 
-    # Get layer thickness at all nodes for layer 1
-    layer1_thickness = strat.top_elev[:, 0] - strat.bottom_elev[:, 0]
+    # Aquifer layer thickness at all nodes, layer 0 (0-based)
+    layer1_thickness = strat.get_layer_thickness(layer=0)
     print(f"Layer 1 thickness: min={layer1_thickness.min():.1f}, "
           f"max={layer1_thickness.max():.1f}")
 
-    # Get total aquifer thickness at each node
-    total_thickness = strat.gs_elev - strat.bottom_elev[:, -1]
-    print(f"Total thickness: min={total_thickness.min():.1f}, "
-          f"max={total_thickness.max():.1f}")
+    # Total aquifer-column thickness (summed across all layers) at each node
+    total_thickness = strat.get_total_thickness()
 
-    # Get elevation at a specific node and layer
-    node_idx = 50
-    layer_idx = 0
-    print(f"Node {node_idx + 1}, Layer {layer_idx + 1}:")
-    print(f"  Top: {strat.top_elev[node_idx, layer_idx]:.1f}")
-    print(f"  Bottom: {strat.bottom_elev[node_idx, layer_idx]:.1f}")
+    # Per-node elevations (ground surface, layer tops, layer bottoms)
+    gs, tops, bottoms = strat.get_node_elevations(node_idx=50)
+    print(f"Node 51 GS elev: {gs:.1f}, layer 1 top: {tops[0]:.1f}")
+
+Accessing Aquitard Thicknesses
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The IWFM stratigraphy format stores alternating
+*aquitard–aquifer* thicknesses per node. The ``Stratigraphy`` dataclass
+exposes the computed thicknesses directly — aquitard ``k`` sits above
+aquifer layer ``k`` (aquitard ``0`` is the uppermost one, between the ground
+surface and the top of aquifer layer 0):
+
+.. code-block:: python
+
+    # Thickness of the top aquitard (above aquifer layer 0) at every node
+    aqt0 = strat.get_aquitard_thickness(aquitard=0)
+    # == strat.gs_elev - strat.top_elev[:, 0]
+
+    # Thickness of the aquitard between aquifer layers 0 and 1
+    aqt1 = strat.get_aquitard_thickness(aquitard=1)
+    # == strat.bottom_elev[:, 0] - strat.top_elev[:, 1]
+
+    # Full (n_nodes, n_aquitards) array in one vectorised pass
+    all_aqt = strat.get_all_aquitard_thicknesses()
+    print(all_aqt.shape)  # (n_nodes, n_aquitards)
+
+    # All aquitards for a specific node (as a Python list)
+    node_aqt = strat.get_node_aquitards(node_idx=50)
+
+By IWFM convention ``strat.n_aquitards == strat.n_layers``; a thickness of
+zero is valid and simply indicates no aquitard at that layer boundary.
 
 Loading Stratigraphy from Arrays
 --------------------------------
