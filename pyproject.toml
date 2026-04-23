@@ -96,6 +96,7 @@ Repository = "https://github.com/hatch-tyler/pyiwfm"
 [tool.hatch.version]
 source = "vcs"
 tag-pattern = "v(?P<version>.*)"
+raw-options = { local_scheme = "no-local-version" }
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/pyiwfm/_version.py"
