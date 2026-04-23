@@ -8,6 +8,7 @@ Test groups:
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -322,9 +323,31 @@ class TestLayerAggregation:
 # Group 3: Integration with real C2VSimFG data
 # ============================================================================
 
-_C2VSIMFG_SUBS_HDF = (
-    Path(__file__).resolve().parents[4] / "c2vsimfg" / "Results" / "C2VSimFG_SubsidenceAll.hdf"
-)
+
+def _resolve_subs_hdf() -> Path:
+    """Resolve the C2VSimFG subsidence HDF5 path.
+
+    Resolution order:
+        1. ``C2VSIMFG_SUBS_HDF`` env var (explicit path to the .hdf file).
+        2. ``C2VSIMFG_DIR`` env var (model root; HDF expected at
+           ``<dir>/Results/C2VSimFG_SubsidenceAll.hdf``). Matches the
+           convention used in ``tests/integration/test_calibration_c2vsimfg.py``.
+        3. Historical fallback: ``~/c2vsimfg/Results/C2VSimFG_SubsidenceAll.hdf``.
+
+    Returned path may not exist; the caller checks via ``.exists()``.
+    """
+    env = os.environ.get("C2VSIMFG_SUBS_HDF")
+    if env:
+        return Path(env)
+
+    model_dir = os.environ.get("C2VSIMFG_DIR")
+    if model_dir:
+        return Path(model_dir) / "Results" / "C2VSimFG_SubsidenceAll.hdf"
+
+    return Path.home() / "c2vsimfg" / "Results" / "C2VSimFG_SubsidenceAll.hdf"
+
+
+_C2VSIMFG_SUBS_HDF = _resolve_subs_hdf()
 _has_c2vsimfg_subs = _C2VSIMFG_SUBS_HDF.exists()
 
 
