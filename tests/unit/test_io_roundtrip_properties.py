@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
 
-from pyiwfm.core.stratigraphy import Stratigraphy
+# Hypothesis is an optional dev dep; skip the whole module if not installed
+# instead of failing at collection time.
+pytest.importorskip("hypothesis")
+
+from hypothesis import given, settings  # noqa: E402
+from hypothesis import strategies as st  # noqa: E402
+
+from pyiwfm.core.stratigraphy import Stratigraphy  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Strategies

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
 import numpy as np
@@ -15,6 +16,10 @@ from pyiwfm.calibration.calctyphyd import (
     read_cluster_weights,
 )
 from pyiwfm.io.smp import SMPReader, SMPTimeSeries
+
+# pytest-benchmark is an optional dev dep. Module-level sentinel so we can
+# skip only the benchmark class without hiding the rest of the file.
+_HAS_BENCHMARK = importlib.util.find_spec("pytest_benchmark") is not None
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -487,6 +492,7 @@ def _load_expected_typhyd(filepath: Path) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not _HAS_BENCHMARK, reason="pytest-benchmark not installed")
 @pytest.mark.benchmark
 class TestCalcTypHydBenchmark:
     """Benchmark CalcTypHyd performance."""

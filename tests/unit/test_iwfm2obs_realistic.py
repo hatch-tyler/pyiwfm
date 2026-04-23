@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from datetime import timedelta
 from pathlib import Path
 
@@ -15,6 +16,10 @@ from pyiwfm.calibration.iwfm2obs import (
     iwfm2obs,
 )
 from pyiwfm.io.smp import SMPReader, SMPTimeSeries, SMPWriter
+
+# pytest-benchmark is an optional dev dep. Module-level sentinel so we can
+# skip only the benchmark class without hiding the rest of the file.
+_HAS_BENCHMARK = importlib.util.find_spec("pytest_benchmark") is not None
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -418,6 +423,7 @@ class TestFixtureDataMatch:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not _HAS_BENCHMARK, reason="pytest-benchmark not installed")
 @pytest.mark.benchmark
 class TestIWFM2OBSBenchmark:
     """Benchmark IWFM2OBS performance with pytest-benchmark."""
