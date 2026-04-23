@@ -532,6 +532,23 @@ class IWFMSimulationReader:
     def __init__(self) -> None:
         self._line_num = 0
 
+    # Ordered list of (field_name, position_label) for the fixed 11 input-file
+    # slots that precede the optional 12th (KC) slot. Paths are resolved
+    # against ``base_dir`` and assigned only when the line is non-empty.
+    _INPUT_FILE_FIELDS: tuple[tuple[str, str], ...] = (
+        ("binary_preprocessor_file", "binary preprocessor"),
+        ("groundwater_file", "groundwater main"),
+        ("streams_file", "stream main"),
+        ("lakes_file", "lake main"),
+        ("rootzone_file", "root zone main"),
+        ("small_watershed_file", "small watershed main"),
+        ("unsaturated_zone_file", "unsaturated zone main"),
+        ("irrigation_fractions_file", "irrigation fractions"),
+        ("supply_adjust_file", "supply adjustment"),
+        ("precipitation_file", "precipitation data"),
+        ("et_file", "ET data"),
+    )
+
     def read(self, filepath: Path | str, base_dir: Path | None = None) -> SimulationConfig:
         """Read IWFM simulation main file in positional format.
 
@@ -550,188 +567,155 @@ class IWFMSimulationReader:
         self._line_num = 0
 
         with open(filepath) as f:
-            # Section 1: Title lines (3 non-comment lines)
-            for _ in range(3):
-                title = _next_data_or_empty(f)
-                if title:
-                    config.title_lines.append(title)
+            self._read_titles(f, config)
+            bdt_already_read = self._read_input_files(f, config, base_dir)
+            self._read_time_settings(f, config, bdt_already_read)
+            self._read_processing_options(f, config)
+            self._read_solver_settings(f, config)
 
-            # Section 2: File names (11 or 12 lines)
-            # 1: Binary preprocessor file (required)
-            bin_pp = _next_data_or_empty(f)
-            if bin_pp:
-                config.binary_preprocessor_file = _resolve_path_f(base_dir, bin_pp)
-
-            # 2: Groundwater main file (required)
-            gw = _next_data_or_empty(f)
-            if gw:
-                config.groundwater_file = _resolve_path_f(base_dir, gw)
-
-            # 3: Stream main file (optional)
-            strm = _next_data_or_empty(f)
-            if strm:
-                config.streams_file = _resolve_path_f(base_dir, strm)
-
-            # 4: Lake main file (optional)
-            lake = _next_data_or_empty(f)
-            if lake:
-                config.lakes_file = _resolve_path_f(base_dir, lake)
-
-            # 5: Root zone main file (optional)
-            rz = _next_data_or_empty(f)
-            if rz:
-                config.rootzone_file = _resolve_path_f(base_dir, rz)
-
-            # 6: Small watershed main file (optional)
-            sw = _next_data_or_empty(f)
-            if sw:
-                config.small_watershed_file = _resolve_path_f(base_dir, sw)
-
-            # 7: Unsaturated zone main file (optional)
-            uz = _next_data_or_empty(f)
-            if uz:
-                config.unsaturated_zone_file = _resolve_path_f(base_dir, uz)
-
-            # 8: Irrigation fractions file (optional)
-            irig = _next_data_or_empty(f)
-            if irig:
-                config.irrigation_fractions_file = _resolve_path_f(base_dir, irig)
-
-            # 9: Supply adjustment specification file (optional)
-            supp = _next_data_or_empty(f)
-            if supp:
-                config.supply_adjust_file = _resolve_path_f(base_dir, supp)
-
-            # 10: Precipitation data file (optional)
-            precip = _next_data_or_empty(f)
-            if precip:
-                config.precipitation_file = _resolve_path_f(base_dir, precip)
-
-            # 11: ET data file (optional)
-            et = _next_data_or_empty(f)
-            if et:
-                config.et_file = _resolve_path_f(base_dir, et)
-
-            # 12: Crop coefficient file (optional, backward compatibility)
-            # Peek at the next data value to see if it looks like a file path
-            # or a date. If it's a date (MM/DD/YYYY), it's BDT and there's
-            # no 12th file entry.
-            kc_or_bdt = _next_data_or_empty(f)
-            if kc_or_bdt and self._looks_like_datetime(kc_or_bdt):
-                # This is actually BDT (no KC file entry)
-                config.start_date = _parse_iwfm_datetime(kc_or_bdt)
-                bdt_already_read = True
-            elif kc_or_bdt:
-                config.kc_file = _resolve_path_f(base_dir, kc_or_bdt)
-                bdt_already_read = False
-            else:
-                bdt_already_read = False
-
-            # Section 3: Simulation period
-            if not bdt_already_read:
-                bdt_str = _next_data_or_empty(f)
-                if bdt_str:
-                    config.start_date = _parse_iwfm_datetime(bdt_str)
-
-            # Restart flag
-            restart_str = _next_data_or_empty(f)
-            if restart_str:
-                config.restart_flag = int(restart_str)
-
-            # Time unit (combined format like "1MON")
-            unitt_str = _next_data_or_empty(f)
-            if unitt_str:
-                m = _re.match(r"(\d+)\s*(\w+)", unitt_str.strip())
-                if m:
-                    config.time_step_length = int(m.group(1))
-                    config.time_step_unit = TimeUnit.from_string(m.group(2))
-                else:
-                    config.time_step_unit = TimeUnit.from_string(unitt_str)
-
-            # End date
-            edt_str = _next_data_or_empty(f)
-            if edt_str:
-                config.end_date = _parse_iwfm_datetime(edt_str)
-
-            # Section 4: Processing and output options
-            # Restart output flag (ISTRT)
-            istrt_str = _next_data_or_empty(f)
-            if istrt_str:
-                config.restart_output_flag = int(istrt_str)
-
-            # Debug flag (KDEB)
-            kdeb_str = _next_data_or_empty(f)
-            if kdeb_str:
-                config.debug_flag = int(kdeb_str)
-
-            # Cache size
-            cache_str = _next_data_or_empty(f)
-            if cache_str:
-                config.cache_size = int(cache_str)
-
-            # Section 5: Solution scheme control
-            # Matrix solver (MSOLVE)
-            msolve_str = _next_data_or_empty(f)
-            if msolve_str:
-                config.matrix_solver = int(msolve_str)
-
-            # Relaxation factor (RELAX)
-            relax_str = _next_data_or_empty(f)
-            if relax_str:
-                config.relaxation = float(relax_str)
-
-            # Max iterations (MXITER)
-            mxiter_str = _next_data_or_empty(f)
-            if mxiter_str:
-                config.max_iterations = int(mxiter_str)
-
-            # Max supply iterations (MXITERSP)
-            mxitersp_str = _next_data_or_empty(f)
-            if mxitersp_str:
-                config.max_supply_iterations = int(mxitersp_str)
-
-            # Flow convergence tolerance (STOPC)
-            stopc_str = _next_data_or_empty(f)
-            if stopc_str:
-                config.convergence_tolerance = float(stopc_str)
-
-            # Volume convergence tolerance (STOPCVL) - optional
-            # The format may have 6 lines (no STOPCVL) or 7 lines (with STOPCVL):
-            # 6-line: STOPC → STOPCSP → KOPTDV
-            # 7-line: STOPC → STOPCVL → STOPCSP → KOPTDV
-            #
-            # Heuristic: KOPTDV is an integer (no decimal point in string).
-            # Tolerances always have a decimal point or scientific notation.
-            stopcvl_or_stopcsp = _next_data_or_empty(f)
-            if stopcvl_or_stopcsp:
-                koptdv_or_stopcsp = _next_data_or_empty(f)
-                if koptdv_or_stopcsp:
-                    if self._looks_like_integer(koptdv_or_stopcsp):
-                        # No STOPCVL: stopcvl_or_stopcsp is STOPCSP,
-                        # koptdv_or_stopcsp is KOPTDV
-                        config.convergence_supply = float(stopcvl_or_stopcsp)
-                        config.supply_adjust_option = int(float(koptdv_or_stopcsp))
-                    else:
-                        # Has STOPCVL: stopcvl_or_stopcsp is STOPCVL,
-                        # koptdv_or_stopcsp is STOPCSP
-                        config.convergence_volume = float(stopcvl_or_stopcsp)
-                        config.convergence_supply = float(koptdv_or_stopcsp)
-                        # Read KOPTDV
-                        kopt_str = _next_data_or_empty(f)
-                        if kopt_str:
-                            config.supply_adjust_option = int(float(kopt_str))
-                else:
-                    # Only one more value: it's STOPCSP, no STOPCVL
-                    try:
-                        config.convergence_supply = float(stopcvl_or_stopcsp)
-                    except ValueError:
-                        pass
-
-        # Set model_name from first title if not set
+        # Default model_name from first title if caller never set one.
         if config.model_name == "IWFM_Model" and config.title_lines:
             config.model_name = config.title_lines[0].strip()
 
         return config
+
+    def _read_titles(self, f: TextIO, config: SimulationConfig) -> None:
+        """Section 1 — three title lines."""
+        for _ in range(3):
+            title = _next_data_or_empty(f)
+            if title:
+                config.title_lines.append(title)
+
+    def _read_input_files(
+        self,
+        f: TextIO,
+        config: SimulationConfig,
+        base_dir: Path,
+    ) -> bool:
+        """Section 2 — 11 required/optional input-file paths + 12th KC slot.
+
+        The 12th slot is optional (backward compatibility): if the line parses
+        as an IWFM ``MM/DD/YYYY`` date it's actually the BDT value from
+        Section 3 and no KC file is present. Returns ``True`` in that case so
+        the caller can skip re-reading BDT.
+        """
+        for attr, _label in self._INPUT_FILE_FIELDS:
+            value = _next_data_or_empty(f)
+            if value:
+                setattr(config, attr, _resolve_path_f(base_dir, value))
+
+        kc_or_bdt = _next_data_or_empty(f)
+        if not kc_or_bdt:
+            return False
+        if self._looks_like_datetime(kc_or_bdt):
+            config.start_date = _parse_iwfm_datetime(kc_or_bdt)
+            return True
+        config.kc_file = _resolve_path_f(base_dir, kc_or_bdt)
+        return False
+
+    def _read_time_settings(
+        self,
+        f: TextIO,
+        config: SimulationConfig,
+        bdt_already_read: bool,
+    ) -> None:
+        """Section 3 — BDT, restart flag, time step unit, EDT."""
+        if not bdt_already_read:
+            bdt_str = _next_data_or_empty(f)
+            if bdt_str:
+                config.start_date = _parse_iwfm_datetime(bdt_str)
+
+        restart_str = _next_data_or_empty(f)
+        if restart_str:
+            config.restart_flag = int(restart_str)
+
+        unitt_str = _next_data_or_empty(f)
+        if unitt_str:
+            # Combined format like "1MON" -> length 1, unit MON.
+            m = _re.match(r"(\d+)\s*(\w+)", unitt_str.strip())
+            if m:
+                config.time_step_length = int(m.group(1))
+                config.time_step_unit = TimeUnit.from_string(m.group(2))
+            else:
+                config.time_step_unit = TimeUnit.from_string(unitt_str)
+
+        edt_str = _next_data_or_empty(f)
+        if edt_str:
+            config.end_date = _parse_iwfm_datetime(edt_str)
+
+    def _read_processing_options(self, f: TextIO, config: SimulationConfig) -> None:
+        """Section 4 — ISTRT (restart output), KDEB (debug), cache size."""
+        istrt_str = _next_data_or_empty(f)
+        if istrt_str:
+            config.restart_output_flag = int(istrt_str)
+
+        kdeb_str = _next_data_or_empty(f)
+        if kdeb_str:
+            config.debug_flag = int(kdeb_str)
+
+        cache_str = _next_data_or_empty(f)
+        if cache_str:
+            config.cache_size = int(cache_str)
+
+    def _read_solver_settings(self, f: TextIO, config: SimulationConfig) -> None:
+        """Section 5 — MSOLVE, RELAX, MXITER, MXITERSP, STOPC, and the
+        optional STOPCVL / STOPCSP / KOPTDV tail.
+
+        The tail has two valid shapes:
+            * 6-line: STOPC, STOPCSP, KOPTDV
+            * 7-line: STOPC, STOPCVL, STOPCSP, KOPTDV
+        Disambiguation: KOPTDV is always an integer (no decimal point /
+        exponent); tolerances are floats. See :meth:`_looks_like_integer`.
+        """
+        msolve_str = _next_data_or_empty(f)
+        if msolve_str:
+            config.matrix_solver = int(msolve_str)
+
+        relax_str = _next_data_or_empty(f)
+        if relax_str:
+            config.relaxation = float(relax_str)
+
+        mxiter_str = _next_data_or_empty(f)
+        if mxiter_str:
+            config.max_iterations = int(mxiter_str)
+
+        mxitersp_str = _next_data_or_empty(f)
+        if mxitersp_str:
+            config.max_supply_iterations = int(mxitersp_str)
+
+        stopc_str = _next_data_or_empty(f)
+        if stopc_str:
+            config.convergence_tolerance = float(stopc_str)
+
+        self._read_convergence_tail(f, config)
+
+    def _read_convergence_tail(self, f: TextIO, config: SimulationConfig) -> None:
+        """Handle the ambiguous 6-vs-7-line convergence tail."""
+        first = _next_data_or_empty(f)
+        if not first:
+            return
+
+        second = _next_data_or_empty(f)
+        if not second:
+            # Only one more value: treat it as STOPCSP.
+            try:
+                config.convergence_supply = float(first)
+            except ValueError:
+                pass
+            return
+
+        if self._looks_like_integer(second):
+            # 6-line: first=STOPCSP, second=KOPTDV.
+            config.convergence_supply = float(first)
+            config.supply_adjust_option = int(float(second))
+            return
+
+        # 7-line: first=STOPCVL, second=STOPCSP, followed by KOPTDV.
+        config.convergence_volume = float(first)
+        config.convergence_supply = float(second)
+        kopt_str = _next_data_or_empty(f)
+        if kopt_str:
+            config.supply_adjust_option = int(float(kopt_str))
 
     @staticmethod
     def _looks_like_datetime(value: str) -> bool:

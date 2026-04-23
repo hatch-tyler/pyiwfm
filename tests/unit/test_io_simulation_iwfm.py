@@ -291,6 +291,68 @@ C Supply
         assert config.kc_file.name == "KC.dat"
         assert config.start_date == datetime(2020, 1, 2)
 
+    def _run_section(self, method_name: str, text: str, *args: object) -> SimulationConfig:
+        """Drive a single IWFMSimulationReader._read_* method via StringIO."""
+        import io
+
+        reader = IWFMSimulationReader()
+        config = SimulationConfig()
+        f = io.StringIO(text)
+        getattr(reader, method_name)(f, config, *args)
+        return config
+
+    def test_read_titles_takes_three_lines(self) -> None:
+        text = "C comment\nTitle 1\nTitle 2\nTitle 3\nAfter titles\n"
+        config = self._run_section("_read_titles", text)
+        assert config.title_lines == ["Title 1", "Title 2", "Title 3"]
+
+    def test_read_time_settings_bdt_already_read(self) -> None:
+        # BDT handled by _read_input_files; time settings skip it.
+        # _24:00 is IWFM's "end-of-day" convention -> midnight of next day.
+        text = "0\n1DAY\n01/31/2020_24:00\n"
+        config = self._run_section("_read_time_settings", text, True)
+        assert config.restart_flag == 0
+        assert config.time_step_length == 1
+        assert config.time_step_unit == TimeUnit.DAY
+        assert config.end_date == datetime(2020, 2, 1)
+        # start_date untouched when bdt_already_read is True (stays at dataclass default)
+        assert config.start_date == SimulationConfig().start_date
+
+    def test_read_time_settings_reads_bdt(self) -> None:
+        text = "01/01/2020_24:00\n0\n1MON\n01/31/2020_24:00\n"
+        config = self._run_section("_read_time_settings", text, False)
+        assert config.start_date == datetime(2020, 1, 2)
+        assert config.end_date == datetime(2020, 2, 1)
+
+    def test_read_processing_options(self) -> None:
+        text = "0\n1\n500000\n"
+        config = self._run_section("_read_processing_options", text)
+        assert config.restart_output_flag == 0
+        assert config.debug_flag == 1
+        assert config.cache_size == 500000
+
+    def test_read_solver_settings_7_line_tail(self) -> None:
+        """7-line tail: STOPCVL present."""
+        text = "2\n1.0\n1500\n50\n0.0001\n0.001\n0.001\n11\n"
+        config = self._run_section("_read_solver_settings", text)
+        assert config.matrix_solver == 2
+        assert config.relaxation == pytest.approx(1.0)
+        assert config.max_iterations == 1500
+        assert config.max_supply_iterations == 50
+        assert config.convergence_tolerance == pytest.approx(0.0001)
+        assert config.convergence_volume == pytest.approx(0.001)
+        assert config.convergence_supply == pytest.approx(0.001)
+        assert config.supply_adjust_option == 11
+
+    def test_read_solver_settings_6_line_tail(self) -> None:
+        """6-line tail: no STOPCVL, KOPTDV appears as the integer."""
+        text = "2\n1.0\n100\n10\n0.0001\n0.001\n11\n"
+        config = self._run_section("_read_solver_settings", text)
+        assert config.convergence_tolerance == pytest.approx(0.0001)
+        assert config.convergence_volume == 0.0  # unchanged default
+        assert config.convergence_supply == pytest.approx(0.001)
+        assert config.supply_adjust_option == 11
+
     def test_convenience_function(self, tmp_path: Path) -> None:
         """Test read_iwfm_simulation convenience function."""
         sim_file = tmp_path / "sim.in"
