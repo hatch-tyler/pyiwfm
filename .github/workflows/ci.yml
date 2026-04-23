@@ -10,8 +10,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -21,8 +21,8 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -36,8 +36,8 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       # gmsh (pulled in by [dev] -> [mesh]) needs libGLU at load time on Linux.
@@ -48,7 +48,7 @@ jobs:
       - run: pytest tests/unit/ -x --tb=short
       - run: pytest tests/unit/ --cov=pyiwfm --cov-report=xml
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v6
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         with:
           files: coverage.xml
@@ -59,19 +59,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Cache IWFM sample model
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pyiwfm/iwfm-2025.0.1747
           key: iwfm-sample-model-2025.0.1747
 
       - name: Cache IWFM executables
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.pyiwfm/bin
           key: iwfm-executables-2025.0.1747-linux
