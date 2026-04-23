@@ -525,6 +525,15 @@ class AppStream(BaseComponent):
         reach = self.reaches[reach_id]
         return [self.nodes[nid] for nid in reach.nodes if nid in self.nodes]
 
+    def get_gw_nodes_in_reach(self, reach_id: int) -> list[int | None]:
+        """Return the groundwater node ID for each stream node in a reach.
+
+        Row order matches :meth:`get_nodes_in_reach` (upstream to downstream).
+        Entries are ``None`` for stream nodes without a linked groundwater
+        node; filter if you only want interacting nodes.
+        """
+        return [n.gw_node for n in self.get_nodes_in_reach(reach_id)]
+
     def build_connectivity(self) -> None:
         """Build node connectivity maps from node data."""
         self._downstream_map.clear()

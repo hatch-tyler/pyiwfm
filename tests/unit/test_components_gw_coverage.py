@@ -289,13 +289,13 @@ class TestAquiferParametersMethods:
     def test_get_layer_kh_none(self) -> None:
         """kh not set -> ValueError."""
         params = AquiferParameters(n_nodes=4, n_layers=2, kh=None)
-        with pytest.raises(ValueError, match="kh not set"):
+        with pytest.raises(ValueError, match="'kh'.*not set"):
             params.get_layer_kh(0)
 
     def test_get_layer_kv_none(self) -> None:
         """kv not set -> ValueError."""
         params = AquiferParameters(n_nodes=4, n_layers=2, kv=None)
-        with pytest.raises(ValueError, match="kv not set"):
+        with pytest.raises(ValueError, match="'kv'.*not set"):
             params.get_layer_kv(0)
 
     def test_repr(self) -> None:

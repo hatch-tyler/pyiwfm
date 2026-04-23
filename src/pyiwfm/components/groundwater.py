@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -312,6 +312,17 @@ class AquiferParameters:
         aquitard_kv: Aquitard vertical hydraulic conductivity (n_nodes, n_layers)
     """
 
+    # Short parameter name -> attribute name. Used by the dispatch accessors
+    # (``get_array`` / ``get_layer`` / ``get_at``) so callers don't have to
+    # remember ``specific_storage`` vs ``ss``.
+    _PARAM_ATTRS: ClassVar[dict[str, str]] = {
+        "kh": "kh",
+        "kv": "kv",
+        "ss": "specific_storage",
+        "sy": "specific_yield",
+        "aquitard_kv": "aquitard_kv",
+    }
+
     n_nodes: int
     n_layers: int
     kh: NDArray[np.float64] | None = None
@@ -320,17 +331,43 @@ class AquiferParameters:
     specific_yield: NDArray[np.float64] | None = None
     aquitard_kv: NDArray[np.float64] | None = None
 
+    def get_array(self, param: str) -> NDArray[np.float64]:
+        """
+        Return the full ``(n_nodes, n_layers)`` array for a named parameter.
+
+        Args:
+            param: One of ``"kh"``, ``"kv"``, ``"ss"``, ``"sy"``,
+                ``"aquitard_kv"``.
+
+        Raises:
+            KeyError: If ``param`` is not a known parameter name.
+            ValueError: If the backing array is ``None`` (not set).
+        """
+        attr = self._PARAM_ATTRS.get(param)
+        if attr is None:
+            raise KeyError(
+                f"Unknown parameter {param!r}; expected one of {list(self._PARAM_ATTRS)}"
+            )
+        value = getattr(self, attr)
+        if value is None:
+            raise ValueError(f"Parameter {param!r} not set")
+        return value  # type: ignore[no-any-return]
+
+    def get_layer(self, param: str, layer: int) -> NDArray[np.float64]:
+        """Return the ``(n_nodes,)`` slice of ``param`` at ``layer``."""
+        return self.get_array(param)[:, layer]
+
+    def get_at(self, param: str, node_idx: int, layer: int) -> float:
+        """Return the scalar value of ``param`` at ``(node_idx, layer)``."""
+        return float(self.get_array(param)[node_idx, layer])
+
     def get_layer_kh(self, layer: int) -> NDArray[np.float64]:
         """Get horizontal K for a specific layer."""
-        if self.kh is None:
-            raise ValueError("kh not set")
-        return self.kh[:, layer]
+        return self.get_layer("kh", layer)
 
     def get_layer_kv(self, layer: int) -> NDArray[np.float64]:
         """Get vertical K for a specific layer."""
-        if self.kv is None:
-            raise ValueError("kv not set")
-        return self.kv[:, layer]
+        return self.get_layer("kv", layer)
 
     def __repr__(self) -> str:
         return f"AquiferParameters(n_nodes={self.n_nodes}, n_layers={self.n_layers})"

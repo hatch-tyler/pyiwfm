@@ -263,6 +263,64 @@ class TestAquiferParameters:
         np.testing.assert_array_equal(layer_kh, 10.0)
 
 
+class TestAquiferParametersDispatch:
+    """Tests for get_array / get_layer / get_at dispatch helpers."""
+
+    @staticmethod
+    def _make_params() -> AquiferParameters:
+        n_nodes, n_layers = 3, 2
+        return AquiferParameters(
+            n_nodes=n_nodes,
+            n_layers=n_layers,
+            kh=np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]),
+            kv=np.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]]),
+            specific_storage=np.array([[1e-5, 2e-5], [3e-5, 4e-5], [5e-5, 6e-5]]),
+            specific_yield=np.array([[0.10, 0.11], [0.12, 0.13], [0.14, 0.15]]),
+            aquitard_kv=np.array([[0.01, 0.02], [0.03, 0.04], [0.05, 0.06]]),
+        )
+
+    @pytest.mark.parametrize(
+        "name,attr",
+        [
+            ("kh", "kh"),
+            ("kv", "kv"),
+            ("ss", "specific_storage"),
+            ("sy", "specific_yield"),
+            ("aquitard_kv", "aquitard_kv"),
+        ],
+    )
+    def test_get_array_returns_backing_attribute(self, name: str, attr: str) -> None:
+        params = self._make_params()
+        expected = getattr(params, attr)
+        np.testing.assert_array_equal(params.get_array(name), expected)
+
+    def test_get_array_unknown_param_raises(self) -> None:
+        params = self._make_params()
+        with pytest.raises(KeyError, match="Unknown parameter"):
+            params.get_array("khv")
+
+    def test_get_array_unset_param_raises(self) -> None:
+        params = AquiferParameters(n_nodes=3, n_layers=2)  # all arrays None
+        with pytest.raises(ValueError, match="not set"):
+            params.get_array("kh")
+
+    def test_get_layer_slices_correctly(self) -> None:
+        params = self._make_params()
+        np.testing.assert_array_equal(params.get_layer("kh", 0), [1.0, 3.0, 5.0])
+        np.testing.assert_array_equal(params.get_layer("sy", 1), [0.11, 0.13, 0.15])
+
+    def test_get_at_returns_scalar(self) -> None:
+        params = self._make_params()
+        assert params.get_at("kh", 2, 1) == pytest.approx(6.0)
+        assert params.get_at("aquitard_kv", 0, 0) == pytest.approx(0.01)
+        assert isinstance(params.get_at("kh", 0, 0), float)
+
+    def test_legacy_layer_helpers_delegate_to_dispatch(self) -> None:
+        params = self._make_params()
+        np.testing.assert_array_equal(params.get_layer_kh(1), params.get_layer("kh", 1))
+        np.testing.assert_array_equal(params.get_layer_kv(0), params.get_layer("kv", 0))
+
+
 class TestAppGW:
     """Tests for groundwater application class."""
 

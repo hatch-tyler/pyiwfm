@@ -461,6 +461,25 @@ class TestAppStream:
         assert len(nodes) == 5
         assert [n.id for n in nodes] == [1, 2, 3, 4, 5]
 
+    def test_appstream_get_gw_nodes_in_reach(self) -> None:
+        """get_gw_nodes_in_reach returns gw_node for each stream node, in order."""
+        stream = AppStream()
+
+        # Stream node i -> gw_node 100+i
+        for i in range(1, 6):
+            stream.add_node(StrmNode(id=i, x=float(i * 100), y=0.0, gw_node=100 + i, reach_id=1))
+
+        stream.add_reach(
+            StrmReach(
+                id=1,
+                upstream_node=1,
+                downstream_node=5,
+                nodes=[1, 2, 3, 4, 5],
+            )
+        )
+
+        assert stream.get_gw_nodes_in_reach(1) == [101, 102, 103, 104, 105]
+
     def test_appstream_validate(self) -> None:
         """Test stream network validation."""
         stream = AppStream()
