@@ -355,3 +355,95 @@ class TestAquitardAccessors:
             aquitard_sum + aquifer_sum,
             strat.gs_elev - strat.bottom_elev[:, -1],
         )
+
+
+class TestFromThicknesses:
+    """Tests for Stratigraphy.from_thicknesses."""
+
+    def test_from_thicknesses_roundtrip(self) -> None:
+        """Round-trip aquitard/aquifer thicknesses through from_thicknesses."""
+        gs_elev = np.array([100.0, 110.0, 120.0])
+        aquitard = np.array([[5.0, 10.0], [0.0, 20.0], [2.0, 0.0]])
+        aquifer = np.array([[45.0, 40.0], [50.0, 40.0], [58.0, 60.0]])
+
+        strat = Stratigraphy.from_thicknesses(gs_elev, aquitard, aquifer)
+
+        assert strat.n_nodes == 3
+        assert strat.n_layers == 2
+        np.testing.assert_allclose(strat.gs_elev, gs_elev)
+        np.testing.assert_allclose(strat.get_all_aquitard_thicknesses(), aquitard)
+        # Aquifer thickness is top - bottom
+        np.testing.assert_allclose(strat.top_elev - strat.bottom_elev, aquifer)
+
+    def test_from_thicknesses_zero_aquitards(self) -> None:
+        """All-zero aquitards => consecutive layers touch (no gaps)."""
+        gs_elev = np.array([100.0, 100.0])
+        aquitard = np.zeros((2, 3))
+        aquifer = np.array([[30.0, 40.0, 20.0], [25.0, 35.0, 15.0]])
+
+        strat = Stratigraphy.from_thicknesses(gs_elev, aquitard, aquifer)
+
+        np.testing.assert_allclose(strat.top_elev[:, 0], gs_elev)
+        # Layer k top == layer k-1 bottom when aquitard k is zero
+        np.testing.assert_allclose(strat.top_elev[:, 1], strat.bottom_elev[:, 0])
+        np.testing.assert_allclose(strat.top_elev[:, 2], strat.bottom_elev[:, 1])
+        np.testing.assert_allclose(strat.get_all_aquitard_thicknesses(), 0.0, atol=1e-12)
+
+    def test_from_thicknesses_matches_reader(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
+        """from_thicknesses + write_stratigraphy + read_stratigraphy round-trip."""
+        from pyiwfm.io.ascii import read_stratigraphy, write_stratigraphy
+
+        gs_elev = np.array([500.0, 600.0, 700.0])
+        aquitard = np.array([[5.0, 10.0], [0.0, 20.0], [2.0, 0.0]])
+        aquifer = np.array([[45.0, 40.0], [50.0, 40.0], [58.0, 60.0]])
+
+        strat = Stratigraphy.from_thicknesses(gs_elev, aquitard, aquifer)
+
+        out = tmp_path / "strat.dat"
+        write_stratigraphy(out, strat)
+        reread = read_stratigraphy(out)
+
+        np.testing.assert_allclose(reread.gs_elev, strat.gs_elev, atol=1e-3)
+        np.testing.assert_allclose(reread.top_elev, strat.top_elev, atol=1e-3)
+        np.testing.assert_allclose(reread.bottom_elev, strat.bottom_elev, atol=1e-3)
+
+    def test_from_thicknesses_shape_mismatch_raises(self) -> None:
+        gs = np.array([100.0, 110.0])
+        aquitard = np.zeros((2, 3))
+        aquifer_wrong = np.zeros((2, 2))  # different n_layers
+        with pytest.raises(StratigraphyError, match="shape"):
+            Stratigraphy.from_thicknesses(gs, aquitard, aquifer_wrong)
+
+    def test_from_thicknesses_gs_shape_mismatch_raises(self) -> None:
+        gs_wrong = np.array([100.0])  # n_nodes=1, but thicknesses say 2
+        aquitard = np.zeros((2, 2))
+        aquifer = np.zeros((2, 2))
+        with pytest.raises(StratigraphyError, match="gs_elev"):
+            Stratigraphy.from_thicknesses(gs_wrong, aquitard, aquifer)
+
+    def test_from_thicknesses_negative_raises(self) -> None:
+        gs = np.array([100.0, 110.0])
+        aquitard = np.array([[5.0, 10.0], [-1.0, 20.0]])  # negative
+        aquifer = np.array([[45.0, 40.0], [50.0, 40.0]])
+        with pytest.raises(StratigraphyError, match="[Nn]egative"):
+            Stratigraphy.from_thicknesses(gs, aquitard, aquifer)
+
+    def test_from_thicknesses_default_active_node(self) -> None:
+        """Default active_node: True where aquifer thickness > 0."""
+        gs = np.array([100.0, 100.0])
+        aquitard = np.zeros((2, 2))
+        # Node 0 active in both layers; node 1 inactive in layer 1
+        aquifer = np.array([[30.0, 20.0], [30.0, 0.0]])
+        strat = Stratigraphy.from_thicknesses(gs, aquitard, aquifer)
+        assert strat.is_node_active(0, 0) is True
+        assert strat.is_node_active(0, 1) is True
+        assert strat.is_node_active(1, 0) is True
+        assert strat.is_node_active(1, 1) is False
+
+    def test_from_thicknesses_explicit_active_node(self) -> None:
+        gs = np.array([100.0, 100.0])
+        aquitard = np.zeros((2, 2))
+        aquifer = np.ones((2, 2)) * 10.0
+        custom = np.array([[True, False], [False, True]])
+        strat = Stratigraphy.from_thicknesses(gs, aquitard, aquifer, active_node=custom)
+        np.testing.assert_array_equal(strat.active_node, custom)

@@ -161,6 +161,51 @@ surface and the top of aquifer layer 0):
 By IWFM convention ``strat.n_aquitards == strat.n_layers``; a thickness of
 zero is valid and simply indicates no aquitard at that layer boundary.
 
+Building Stratigraphy from Aquitard/Aquifer Thicknesses
+-------------------------------------------------------
+
+The IWFM stratigraphy file format stores alternating *aquitard–aquifer*
+thicknesses per node. The :func:`Stratigraphy.from_thicknesses`
+classmethod lets you construct a ``Stratigraphy`` directly from those
+thickness arrays (in any NumPy-friendly shape) without hand-rolling the
+cumulative elevation math:
+
+.. code-block:: python
+
+    import numpy as np
+    from pyiwfm.core.stratigraphy import Stratigraphy
+
+    # 3 nodes, 2 layers
+    gs_elev = np.array([100.0, 110.0, 120.0])
+
+    # Aquitard k sits above aquifer layer k. Aquitard 0 is the top
+    # aquitard between ground surface and aquifer layer 0. A thickness
+    # of 0.0 is valid and simply indicates no aquitard at that boundary.
+    aquitard = np.array(
+        [
+            [5.0, 10.0],   # node 0: 5 ft confining, then 10 ft inter-layer
+            [0.0, 20.0],   # node 1: no top confining
+            [2.0,  0.0],   # node 2: thin top, no inter-layer
+        ]
+    )
+
+    aquifer = np.array(
+        [
+            [45.0, 40.0],
+            [50.0, 40.0],
+            [58.0, 60.0],
+        ]
+    )
+
+    strat = Stratigraphy.from_thicknesses(gs_elev, aquitard, aquifer)
+    # Top/bottom elevations are computed for you; aquitards are recovered
+    # via strat.get_aquitard_thickness(k) or .get_all_aquitard_thicknesses().
+
+By default, nodes/layers where the aquifer thickness is zero are marked
+inactive; pass ``active_node=`` to override. The math is vectorised via
+``np.cumsum``, so the classmethod scales to large meshes without a
+Python-level loop.
+
 Loading Stratigraphy from Arrays
 --------------------------------
 

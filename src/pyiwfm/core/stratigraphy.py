@@ -43,6 +43,96 @@ class Stratigraphy:
     bottom_elev: NDArray[np.float64]
     active_node: NDArray[np.bool_]
 
+    @classmethod
+    def from_thicknesses(
+        cls,
+        gs_elev: NDArray[np.float64],
+        aquitard_thicknesses: NDArray[np.float64],
+        aquifer_thicknesses: NDArray[np.float64],
+        active_node: NDArray[np.bool_] | None = None,
+    ) -> Stratigraphy:
+        """
+        Build a Stratigraphy from per-layer aquitard and aquifer thicknesses.
+
+        Matches the IWFM stratigraphy-file convention where aquitard ``k``
+        sits above aquifer layer ``k`` (k = 0 is the top aquitard between
+        the ground surface and aquifer layer 0). Zero thicknesses are valid
+        and indicate that no aquitard (or no aquifer) exists at that layer
+        for that node.
+
+        Args:
+            gs_elev: Ground surface elevation at each node, shape
+                ``(n_nodes,)``.
+            aquitard_thicknesses: Thicknesses of each aquitard at each
+                node, shape ``(n_nodes, n_layers)``.
+            aquifer_thicknesses: Thicknesses of each aquifer layer at each
+                node, shape ``(n_nodes, n_layers)``.
+            active_node: Optional active-node flags, shape
+                ``(n_nodes, n_layers)``. When ``None`` (default), layers
+                with zero aquifer thickness are marked inactive.
+
+        Returns:
+            Stratigraphy object with top/bottom elevations computed from
+            the input thicknesses.
+
+        Raises:
+            StratigraphyError: If input shapes are inconsistent or any
+                thickness is negative.
+        """
+        gs_elev = np.asarray(gs_elev, dtype=np.float64)
+        aquitard_thicknesses = np.asarray(aquitard_thicknesses, dtype=np.float64)
+        aquifer_thicknesses = np.asarray(aquifer_thicknesses, dtype=np.float64)
+
+        if aquitard_thicknesses.shape != aquifer_thicknesses.shape:
+            raise StratigraphyError(
+                f"aquitard_thicknesses shape {aquitard_thicknesses.shape} "
+                f"does not match aquifer_thicknesses shape "
+                f"{aquifer_thicknesses.shape}"
+            )
+        if aquifer_thicknesses.ndim != 2:
+            raise StratigraphyError(
+                f"aquifer_thicknesses must be 2D (n_nodes, n_layers); "
+                f"got shape {aquifer_thicknesses.shape}"
+            )
+        if np.any(aquitard_thicknesses < 0) or np.any(aquifer_thicknesses < 0):
+            raise StratigraphyError(
+                "Negative thicknesses are not allowed in aquitard_thicknesses "
+                "or aquifer_thicknesses"
+            )
+
+        n_nodes, n_layers = aquifer_thicknesses.shape
+        if gs_elev.shape != (n_nodes,):
+            raise StratigraphyError(
+                f"gs_elev shape {gs_elev.shape} does not match expected "
+                f"({n_nodes},) inferred from aquifer_thicknesses"
+            )
+
+        # Cumulative depth below ground surface at the bottom of each
+        # aquifer layer: sum of all aquitards and aquifers down through
+        # layer k. Top-of-layer-k depth is that sum minus aquifer k itself.
+        cumulative = np.cumsum(aquitard_thicknesses + aquifer_thicknesses, axis=1)
+        depth_to_layer_bottom = cumulative
+        depth_to_layer_top = cumulative - aquifer_thicknesses
+
+        top_elev = gs_elev[:, None] - depth_to_layer_top
+        bottom_elev = gs_elev[:, None] - depth_to_layer_bottom
+
+        if active_node is None:
+            # IWFM convention: a layer with zero aquifer thickness at a
+            # node is inactive there.
+            active_node = aquifer_thicknesses > 0
+        else:
+            active_node = np.asarray(active_node, dtype=np.bool_)
+
+        return cls(
+            n_layers=n_layers,
+            n_nodes=n_nodes,
+            gs_elev=gs_elev,
+            top_elev=top_elev,
+            bottom_elev=bottom_elev,
+            active_node=active_node,
+        )
+
     def __post_init__(self) -> None:
         """Validate array dimensions after initialization."""
         # Validate gs_elev

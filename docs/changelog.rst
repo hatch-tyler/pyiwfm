@@ -12,7 +12,7 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 ~~~~~
 
-**Stratigraphy Aquitard Accessors** (``pyiwfm.core.stratigraphy``)
+**Stratigraphy Aquitard Accessors and Builder** (``pyiwfm.core.stratigraphy``)
 
 - ``Stratigraphy.n_aquitards`` property (equals ``n_layers``)
 - ``Stratigraphy.get_aquitard_thickness(aquitard)`` — single aquitard
@@ -22,8 +22,14 @@ Added
   ``(n_nodes, n_aquitards)`` array
 - ``Stratigraphy.get_node_aquitards(node_idx)`` — list of aquitard thicknesses
   at a specific node, mirroring ``get_node_elevations``
-- The stratigraphy writer now uses these helpers so aquitard math has a
-  single owner
+- ``Stratigraphy.from_thicknesses(gs_elev, aquitard_thicknesses,
+  aquifer_thicknesses, active_node=None)`` classmethod — construct a
+  Stratigraphy directly from per-layer aquitard + aquifer thickness
+  arrays (vectorised via ``np.cumsum``). Matches the IWFM file-format
+  convention so users no longer need to hand-roll cumulative elevation
+  math when programmatically generating stratigraphies with aquitards.
+- The stratigraphy writer and ``read_stratigraphy`` now both delegate
+  the aquitard math to these helpers so it has a single owner.
 
 **AquiferParameters Dispatcher** (``pyiwfm.components.groundwater``)
 

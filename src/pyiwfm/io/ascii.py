@@ -429,54 +429,34 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
         if n_nodes == 0:
             raise FileFormatError("No stratigraphy data found in file")
 
-        # Build a node_id -> array_idx mapping. Node IDs in the stratigraphy
-        # file are not guaranteed to be 1-based-contiguous, so we can't rely on
-        # ``idx = node_id - 1``. Rows are stored in file order; duplicate IDs
-        # are an error.
+        # Node IDs in the stratigraphy file are not guaranteed to be
+        # 1-based-contiguous, so we can't rely on ``idx = node_id - 1``.
+        # Rows follow file order; duplicate IDs are an error.
         id_to_idx: dict[int, int] = {}
         for row_idx, (node_id, _values) in enumerate(node_data):
             if node_id in id_to_idx:
                 raise FileFormatError(f"Duplicate node ID {node_id} in stratigraphy file")
             id_to_idx[node_id] = row_idx
 
-        # Initialize arrays
-        gs_elev = np.zeros(n_nodes)
-        top_elev = np.zeros((n_nodes, n_layers))
-        bottom_elev = np.zeros((n_nodes, n_layers))
-        active_node = np.ones((n_nodes, n_layers), dtype=bool)
+        # Unpack file-order rows into a per-node arrays: ground surface,
+        # alternating aquitard/aquifer thicknesses (W(2k) = aquitard k,
+        # W(2k+1) = aquifer k). Delegate the thickness -> elevation math
+        # to Stratigraphy.from_thicknesses so the loop lives in one place.
+        gs_elev = np.zeros(n_nodes, dtype=np.float64)
+        aquitard_thick = np.zeros((n_nodes, n_layers), dtype=np.float64)
+        aquifer_thick = np.zeros((n_nodes, n_layers), dtype=np.float64)
 
-        # Process node data - compute top/bottom elevations from thicknesses
         for node_id, values in node_data:
             idx = id_to_idx[node_id]
-
-            gs = values[0]  # Ground surface elevation
-            gs_elev[idx] = gs
-
-            # W values are alternating aquitard/aquifer thicknesses
-            # Compute layer elevations
-            elevation = gs
+            gs_elev[idx] = values[0]
             for layer in range(n_layers):
-                # W(layer*2) = aquitard thickness (skip this for top)
-                # W(layer*2 + 1) = aquifer thickness
-                aquitard_thick = values[1 + layer * 2]
-                aquifer_thick = values[1 + layer * 2 + 1]
+                aquitard_thick[idx, layer] = values[1 + layer * 2]
+                aquifer_thick[idx, layer] = values[1 + layer * 2 + 1]
 
-                elevation -= aquitard_thick
-                top_elev[idx, layer] = elevation
-                elevation -= aquifer_thick
-                bottom_elev[idx, layer] = elevation
-
-                # Mark as inactive if zero thickness
-                if top_elev[idx, layer] == bottom_elev[idx, layer]:
-                    active_node[idx, layer] = False
-
-    return Stratigraphy(
-        n_layers=n_layers,
-        n_nodes=n_nodes,
+    return Stratigraphy.from_thicknesses(
         gs_elev=gs_elev,
-        top_elev=top_elev,
-        bottom_elev=bottom_elev,
-        active_node=active_node,
+        aquitard_thicknesses=aquitard_thick,
+        aquifer_thicknesses=aquifer_thick,
     )
 
 
