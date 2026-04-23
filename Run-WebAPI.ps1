@@ -223,26 +223,31 @@ if ($DebugMode) {
 Write-Host ""
 
 # ── Find Python 3.10+ ────────────────────────────────────────────────
+# Returns an absolute path to a python.exe (resolved via sys.executable) so
+# downstream `& $Python ...` calls work uniformly, whether Python was reached
+# via the `py` launcher or directly on PATH.
 function Find-Python {
-    $pythonCommands = @("python", "python3", "py -3")
+    $candidates = @(
+        @{ Exe = "py";      Args = @("-3") },
+        @{ Exe = "py";      Args = @() },
+        @{ Exe = "python3"; Args = @() },
+        @{ Exe = "python";  Args = @() }
+    )
 
-    foreach ($cmd in $pythonCommands) {
+    foreach ($c in $candidates) {
         try {
-            $cmdParts = $cmd -split " "
-            $exe = $cmdParts[0]
-            $extraArgs = if ($cmdParts.Length -gt 1) { $cmdParts[1..($cmdParts.Length - 1)] } else { @() }
+            $version = (& $c.Exe @($c.Args) --version 2>&1 | Out-String).Trim()
+            if ($version -notmatch "Python 3\.(\d+)") { continue }
+            if ([int]$Matches[1] -lt 10) { continue }
 
-            $version = & $exe @extraArgs --version 2>&1
-            if ($version -match "Python 3\.(\d+)") {
-                $minor = [int]$Matches[1]
-                if ($minor -ge 10) {
-                    Write-Host "  Python          : $version" -ForegroundColor Green
-                    return $cmd
-                }
-            }
+            $exePath = (& $c.Exe @($c.Args) -c "import sys; print(sys.executable)" 2>&1 | Out-String).Trim()
+            if (-not (Test-Path -LiteralPath $exePath)) { continue }
+
+            Write-Host "  Python          : $version ($exePath)" -ForegroundColor Green
+            return $exePath
         }
         catch {
-            # Try next command
+            # Try next candidate
         }
     }
 
@@ -264,8 +269,7 @@ if ($UseVenv) {
     if (-not (Test-Path $VenvDir)) {
         Write-Host ""
         Write-Host "Creating virtual environment..." -ForegroundColor Yellow
-        $pythonParts = $Python -split " "
-        & $pythonParts[0] @($pythonParts[1..($pythonParts.Length - 1)] + @("-m", "venv", $VenvDir))
+        & $Python -m venv $VenvDir
 
         if ($LASTEXITCODE -ne 0) {
             Write-Host "ERROR: Failed to create virtual environment" -ForegroundColor Red
