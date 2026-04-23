@@ -5,8 +5,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-# Skip tests if gmsh is not installed
-gmsh = pytest.importorskip("gmsh")
+# Skip tests if gmsh is not installed OR if its shared library can't load
+# (e.g. headless Linux CI without libGLU).  importorskip only catches
+# ImportError, so wrap the load ourselves.
+try:
+    import gmsh  # noqa: F401
+except (ImportError, OSError) as exc:
+    pytest.skip(f"gmsh unavailable: {exc}", allow_module_level=True)
 
 from pyiwfm.mesh_generation.constraints import (  # noqa: E402
     Boundary,
