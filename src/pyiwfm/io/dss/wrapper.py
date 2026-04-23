@@ -276,15 +276,26 @@ class DSSFile:
         ...     dss.write_regular_timeseries("/A/B/C2/D/E/F/", values * 2, times[0])
     """
 
+    _VALID_MODES = ("r", "w", "rw")
+
     def __init__(self, filepath: Path | str, mode: str = "r") -> None:
         """
         Initialize DSS file handle.
 
         Args:
             filepath: Path to DSS file
-            mode: File mode ('r' = read, 'w' = write, 'rw' = read/write)
+            mode: Advisory file mode (``'r'``, ``'w'``, or ``'rw'``). Stored
+                for introspection; HEC-DSS 7's ``zopenExtended`` does not
+                expose per-mode open semantics at the C API level, so the
+                underlying library opens the file the same way regardless.
+
+        Raises:
+            ValueError: If ``mode`` is not one of ``'r'``, ``'w'``, ``'rw'``.
         """
         check_dss_available()
+
+        if mode not in self._VALID_MODES:
+            raise ValueError(f"Invalid DSS file mode {mode!r}; expected one of {self._VALID_MODES}")
 
         self.filepath = Path(filepath)
         self.mode = mode
@@ -306,20 +317,16 @@ class DSSFile:
         self.close()
 
     def open(self) -> None:
-        """Open the DSS file."""
+        """Open the DSS file.
+
+        ``self.mode`` is advisory (see :meth:`__init__`); the underlying
+        HEC-DSS 7 open call does not take a mode argument.
+        """
         if self._is_open:
             return
 
         # Create IFLTAB array (64-bit integers for DSS 7)
         self._ifltab = np.zeros(IFLTAB_SIZE, dtype=np.int64)
-
-        # Determine access mode
-        if self.mode == "r":
-            pass  # Read only
-        elif self.mode == "w":
-            pass  # Write (create new)
-        else:
-            pass  # Read/write
 
         # Open via zopenExtended (Windows DLL) or hec_dss_zopen (Linux upstream)
         assert _dss_lib is not None  # guaranteed by check_dss_available() in __init__

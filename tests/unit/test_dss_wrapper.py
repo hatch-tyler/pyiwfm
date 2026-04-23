@@ -203,6 +203,20 @@ class TestDSSFileInit:
                 assert dss.mode == "r"
                 assert not dss._is_open
 
+    @pytest.mark.parametrize("mode", ["r", "w", "rw"])
+    def test_init_accepts_valid_modes(self, tmp_path: Path, mode: str) -> None:
+        with patch("pyiwfm.io.dss.wrapper.HAS_DSS_LIBRARY", True):
+            with patch("pyiwfm.io.dss.wrapper.check_dss_available"):
+                dss = DSSFile(tmp_path / "test.dss", mode=mode)
+                assert dss.mode == mode
+
+    @pytest.mark.parametrize("mode", ["", "x", "r+", "READ", "rwa"])
+    def test_init_rejects_invalid_mode(self, tmp_path: Path, mode: str) -> None:
+        with patch("pyiwfm.io.dss.wrapper.HAS_DSS_LIBRARY", True):
+            with patch("pyiwfm.io.dss.wrapper.check_dss_available"):
+                with pytest.raises(ValueError, match="Invalid DSS file mode"):
+                    DSSFile(tmp_path / "test.dss", mode=mode)
+
 
 class TestDSSFileMethods:
     """Tests for DSSFile methods with mocked library."""
