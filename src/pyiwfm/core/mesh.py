@@ -334,6 +334,8 @@ class AppGrid:
     _y_cache: NDArray[np.float64] | None = field(default=None, repr=False)
     _vertex_cache: NDArray[np.int32] | None = field(default=None, repr=False)
     _node_id_to_idx: dict[int, int] | None = field(default=None, repr=False)
+    _centroid_cache: NDArray[np.float64] | None = field(default=None, repr=False)
+    _element_id_to_idx: dict[int, int] | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize internal mappings."""
@@ -345,6 +347,8 @@ class AppGrid:
         self._y_cache = None
         self._vertex_cache = None
         self._node_id_to_idx = None
+        self._centroid_cache = None
+        self._element_id_to_idx = None
 
     def _build_node_mapping(self) -> None:
         """Build mapping from node ID to array index."""
@@ -432,17 +436,73 @@ class AppGrid:
         """Get a face by ID. Raises KeyError if not found."""
         return self.faces[face_id]
 
+    @property
+    def element_centroids(self) -> NDArray[np.float64]:
+        """
+        Return element centroids as an ``(n_elements, 2)`` array.
+
+        Centroids are computed once (vectorized) on first access and cached
+        until the mesh is mutated (see :meth:`_invalidate_cache`). Row ordering
+        follows the sorted-by-ID order used by :attr:`vertex`.
+        """
+        if self._centroid_cache is None:
+            self._build_centroid_cache()
+        assert self._centroid_cache is not None
+        return self._centroid_cache
+
+    def _build_centroid_cache(self) -> None:
+        """
+        Build the element centroid cache in a single vectorized pass.
+
+        Uses :attr:`vertex` (0-based indices into :attr:`x`/:attr:`y`, with
+        the 4th column zero-padded for triangles) and a per-element
+        ``n_vertices`` count to mask out triangle padding before averaging.
+        """
+        sorted_elem_ids = sorted(self.elements.keys())
+        n_elem = len(sorted_elem_ids)
+
+        if n_elem == 0:
+            self._centroid_cache = np.zeros((0, 2), dtype=np.float64)
+            self._element_id_to_idx = {}
+            return
+
+        v = self.vertex  # (n_elem, 4)
+        x = self.x  # (n_nodes,)
+        y = self.y  # (n_nodes,)
+
+        n_vertices = np.fromiter(
+            (len(self.elements[eid].vertices) for eid in sorted_elem_ids),
+            dtype=np.int32,
+            count=n_elem,
+        )
+
+        # Mask triangle padding: column j is valid iff j < n_vertices[i]
+        col = np.arange(v.shape[1], dtype=np.int32)
+        mask = col[np.newaxis, :] < n_vertices[:, np.newaxis]
+
+        vx = x[v]
+        vy = y[v]
+
+        centroids = np.empty((n_elem, 2), dtype=np.float64)
+        counts = n_vertices.astype(np.float64)
+        centroids[:, 0] = np.where(mask, vx, 0.0).sum(axis=1) / counts
+        centroids[:, 1] = np.where(mask, vy, 0.0).sum(axis=1) / counts
+
+        self._centroid_cache = centroids
+        self._element_id_to_idx = {eid: i for i, eid in enumerate(sorted_elem_ids)}
+
     def get_element_centroid(self, element_id: int) -> tuple[float, float]:
-        """Calculate centroid of an element."""
-        elem = self.elements[element_id]
-        x_sum = 0.0
-        y_sum = 0.0
-        for vid in elem.vertices:
-            node = self.nodes[vid]
-            x_sum += node.x
-            y_sum += node.y
-        n = len(elem.vertices)
-        return (x_sum / n, y_sum / n)
+        """Return the centroid ``(x, y)`` of an element.
+
+        Backed by a cached ``(n_elements, 2)`` array built on first use; scalar
+        lookups are O(1) dict + array-index after the first call.
+        """
+        if self._centroid_cache is None:
+            self._build_centroid_cache()
+        assert self._element_id_to_idx is not None
+        idx = self._element_id_to_idx[element_id]
+        cx, cy = self.element_centroids[idx]
+        return (float(cx), float(cy))
 
     def get_elements_in_subregion(self, subregion_id: int) -> list[int]:
         """Return list of element IDs in a subregion."""

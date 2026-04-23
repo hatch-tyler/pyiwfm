@@ -879,6 +879,8 @@ class TestAppGridAdditional:
         assert grid._y_cache is None
         assert grid._vertex_cache is None
         assert grid._node_id_to_idx is None
+        assert grid._centroid_cache is None
+        assert grid._element_id_to_idx is None
 
     def test_appgrid_centroid_triangle(self) -> None:
         """Test centroid for a triangle element."""
@@ -892,6 +894,65 @@ class TestAppGridAdditional:
         cx, cy = grid.get_element_centroid(1)
         assert cx == pytest.approx(3.0)
         assert cy == pytest.approx(2.0)
+
+    def test_element_centroids_array_matches_scalar(self) -> None:
+        """The vectorized centroid array must match scalar get_element_centroid."""
+        nodes = {
+            1: Node(id=1, x=0.0, y=0.0),
+            2: Node(id=2, x=10.0, y=0.0),
+            3: Node(id=3, x=20.0, y=0.0),
+            4: Node(id=4, x=0.0, y=10.0),
+            5: Node(id=5, x=10.0, y=10.0),
+            6: Node(id=6, x=20.0, y=10.0),
+        }
+        # Mixed: triangle + quad
+        elements = {
+            1: Element(id=1, vertices=(1, 2, 5, 4)),  # quad -> (5, 5)
+            2: Element(id=2, vertices=(2, 3, 6)),  # triangle -> ((10+20+20)/3, 10/3)
+        }
+        grid = AppGrid(nodes=nodes, elements=elements)
+
+        arr = grid.element_centroids
+        assert arr.shape == (2, 2)
+        assert arr.dtype == np.float64
+
+        # Scalar and array must agree for every element.
+        for eid in elements:
+            cx_scalar, cy_scalar = grid.get_element_centroid(eid)
+            idx = grid._element_id_to_idx[eid]  # type: ignore[index]
+            assert arr[idx, 0] == pytest.approx(cx_scalar)
+            assert arr[idx, 1] == pytest.approx(cy_scalar)
+
+        # Spot-check known values.
+        quad_idx = grid._element_id_to_idx[1]  # type: ignore[index]
+        tri_idx = grid._element_id_to_idx[2]  # type: ignore[index]
+        assert arr[quad_idx, 0] == pytest.approx(5.0)
+        assert arr[quad_idx, 1] == pytest.approx(5.0)
+        assert arr[tri_idx, 0] == pytest.approx(50.0 / 3.0)
+        assert arr[tri_idx, 1] == pytest.approx(10.0 / 3.0)
+
+    def test_element_centroids_cached_until_invalidated(self) -> None:
+        nodes = {
+            1: Node(id=1, x=0.0, y=0.0),
+            2: Node(id=2, x=1.0, y=0.0),
+            3: Node(id=3, x=0.5, y=1.0),
+        }
+        elements = {1: Element(id=1, vertices=(1, 2, 3))}
+        grid = AppGrid(nodes=nodes, elements=elements)
+
+        arr1 = grid.element_centroids
+        arr2 = grid.element_centroids
+        assert arr1 is arr2  # cached, same object
+
+        grid._invalidate_cache()
+        arr3 = grid.element_centroids
+        assert arr3 is not arr1  # rebuilt after invalidation
+        np.testing.assert_allclose(arr3, arr1)  # but values unchanged
+
+    def test_element_centroids_empty_mesh(self) -> None:
+        grid = AppGrid(nodes={}, elements={})
+        arr = grid.element_centroids
+        assert arr.shape == (0, 2)
 
     def test_appgrid_elements_in_nonexistent_subregion(
         self, small_grid_nodes: list[dict], small_grid_elements: list[dict]
