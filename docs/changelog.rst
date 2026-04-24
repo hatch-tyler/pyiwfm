@@ -18,6 +18,27 @@ Changed
 Fixed
 ~~~~~
 
+[1.1.3] - 2026-04-23
+--------------------
+
+Added
+~~~~~
+
+- Python 3.14 support: CI now tests Ubuntu + Windows × 3.14, and
+  ``Programming Language :: Python :: 3.14`` added to the classifiers.
+
+Fixed
+~~~~~
+
+- Tighten ``[viz]`` and ``[webapi]`` extras to ``vtk>=9.6`` and
+  (for ``[webapi]``) ``pyvista>=0.47``. vtk 9.6.0 is the first
+  version with Python 3.14 wheels, so the previous ``vtk>=9.0`` pin
+  let pip backtrack through older vtk versions during resolution and
+  emit a misleading ResolutionImpossible error in some user
+  environments on Python 3.14. The new minimums keep pip on vtk
+  versions that have 3.14 wheels and align with pyvista 0.47's
+  transitive ``vtk>=9.2.2,<9.7.0`` constraint.
+
 [1.1.2] - 2026-04-23
 --------------------
 
