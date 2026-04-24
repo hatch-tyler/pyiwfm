@@ -230,6 +230,172 @@ def make_simple_grid() -> AppGrid:
     return AppGrid(nodes=nodes, elements=elements, subregions=subregions)
 
 
+# ---------------------------------------------------------------------------
+# Shared webapi-model fixtures
+#
+# Used by tests that need to spin up the FastAPI app against a mock IWFMModel
+# (e.g. tests/unit/test_webapi_smoke.py). Per-file `_make_mock_model` helpers
+# in legacy route-test files predate these and are not yet migrated.
+# ---------------------------------------------------------------------------
+
+
+def _make_webapi_grid():
+    """Simple 4-node quad grid for webapi tests."""
+    from pyiwfm.core.mesh import AppGrid, Element, Node
+
+    nodes = {
+        1: Node(id=1, x=0.0, y=0.0),
+        2: Node(id=2, x=100.0, y=0.0),
+        3: Node(id=3, x=100.0, y=100.0),
+        4: Node(id=4, x=0.0, y=100.0),
+    }
+    elements = {1: Element(id=1, vertices=(1, 2, 3, 4), subregion=1)}
+    grid = AppGrid(nodes=nodes, elements=elements)
+    grid.compute_connectivity()
+    grid.compute_areas()
+    return grid
+
+
+def make_webapi_mock_model(
+    *,
+    with_streams: bool = True,
+    with_groundwater: bool = True,
+    with_stratigraphy: bool = True,
+):
+    """Return a MagicMock IWFMModel with enough shape for webapi routes.
+
+    Kept aligned with `tests/unit/test_webapi_routes_full.py::_make_mock_model`
+    so the smoke test exercises the same model contract existing route tests
+    assume.
+    """
+    from unittest.mock import MagicMock
+
+    model = MagicMock()
+    model.name = "TestModel"
+    model.grid = _make_webapi_grid()
+    model.metadata = {}
+    model.has_streams = with_streams
+    model.has_lakes = False
+    model.n_nodes = 4
+    model.n_elements = 1
+    model.n_layers = 2
+    model.n_lakes = 0
+    model.n_stream_nodes = 2 if with_streams else 0
+
+    if with_stratigraphy:
+        strat = MagicMock()
+        strat.n_layers = 2
+        strat.n_nodes = 4
+        strat.gs_elev = np.array([100.0, 100.0, 100.0, 100.0])
+        strat.top_elev = np.full((4, 2), 100.0)
+        strat.top_elev[:, 1] = 50.0
+        strat.bottom_elev = np.zeros((4, 2))
+        strat.bottom_elev[:, 0] = 50.0
+        strat.bottom_elev[:, 1] = 0.0
+        model.stratigraphy = strat
+    else:
+        model.stratigraphy = None
+
+    if with_streams:
+        streams = MagicMock()
+        streams.n_nodes = 2
+        sn1 = MagicMock()
+        sn1.id = 1
+        sn1.groundwater_node = 1
+        sn2 = MagicMock()
+        sn2.id = 2
+        sn2.groundwater_node = 2
+        reach = MagicMock()
+        reach.id = 1
+        reach.stream_nodes = [sn1, sn2]
+        streams.reaches = [reach]
+        model.streams = streams
+    else:
+        model.streams = None
+
+    if with_groundwater:
+        gw = MagicMock()
+        gw.n_hydrograph_locations = 2
+        loc1 = MagicMock()
+        loc1.x = 50.0
+        loc1.y = 50.0
+        loc1.name = "Well-1"
+        loc1.layer = 1
+        loc2 = MagicMock()
+        loc2.x = 75.0
+        loc2.y = 75.0
+        loc2.name = "Well-2"
+        loc2.layer = 2
+        gw.hydrograph_locations = [loc1, loc2]
+        gw.aquifer_params = None
+        model.groundwater = gw
+    else:
+        model.groundwater = None
+
+    return model
+
+
+def reset_webapi_model_state(model_state) -> None:
+    """Clear `ModelState` singleton back to a clean slate."""
+    model_state._model = None
+    model_state._mesh_3d = None
+    model_state._mesh_surface = None
+    model_state._surface_json_data = None
+    model_state._bounds = None
+    model_state._pv_mesh_3d = None
+    model_state._layer_surface_cache = {}
+    model_state._crs = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
+    model_state._transformer = None
+    model_state._geojson_cache = {}
+    model_state._head_loader = None
+    model_state._gw_hydrograph_reader = None
+    model_state._stream_hydrograph_reader = None
+    model_state._budget_readers = {}
+    model_state._observations = {}
+    model_state._results_dir = None
+    model_state._node_id_to_idx = None
+    model_state._sorted_elem_ids = None
+    model_state._elem_id_to_idx = None
+    model_state._hydrograph_locations_cache = None
+    for attr in (
+        "get_budget_reader",
+        "get_available_budgets",
+        "reproject_coords",
+        "get_stream_reach_boundaries",
+        "get_head_loader",
+        "get_gw_hydrograph_reader",
+        "get_stream_hydrograph_reader",
+        "get_area_manager",
+        "get_subsidence_reader",
+    ):
+        if attr in model_state.__dict__:
+            del model_state.__dict__[attr]
+
+
+@pytest.fixture
+def webapi_mock_model():
+    """A fully-loaded mock IWFMModel for webapi tests."""
+    return make_webapi_mock_model()
+
+
+@pytest.fixture
+def webapi_client(webapi_mock_model):
+    """FastAPI TestClient with `webapi_mock_model` loaded into ModelState."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from pyiwfm.visualization.webapi.config import model_state
+    from pyiwfm.visualization.webapi.server import create_app
+
+    reset_webapi_model_state(model_state)
+    model_state._model = webapi_mock_model
+    app = create_app()
+    try:
+        yield TestClient(app)
+    finally:
+        reset_webapi_model_state(model_state)
+
+
 @pytest.fixture
 def mock_model_dir(tmp_path: Path) -> Path:
     """Create a mock model directory with known file structure."""

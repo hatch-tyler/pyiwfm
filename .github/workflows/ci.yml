@@ -55,6 +55,25 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  webapi-smoke:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      # Linux: vtk / gmsh need GLU + GL at load time.
+      - name: Install graphics runtime deps (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libglu1-mesa libgl1
+      - run: pip install -e ".[webapi,dev]"
+      - run: pytest tests/unit/test_webapi_smoke.py -v
+
   integration:
     runs-on: ubuntu-latest
     timeout-minutes: 30
