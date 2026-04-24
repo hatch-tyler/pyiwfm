@@ -44,14 +44,14 @@ mesh = [
     "gmsh>=4.11",
 ]
 viz = [
-    "vtk>=9.0",
+    "vtk>=9.6",
 ]
 webapi = [
     "fastapi>=0.104",
     "uvicorn[standard]>=0.24",
     "pydantic>=2.0",
-    "pyvista>=0.43",
-    "vtk>=9.0",
+    "pyvista>=0.47",
+    "vtk>=9.6",
     "pyproj>=3.4",
     "python-multipart>=0.0.6",
 ]
