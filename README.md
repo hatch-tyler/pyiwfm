@@ -30,6 +30,51 @@ pip install "pyiwfm[all]"
 pip install -e ".[dev]"
 ```
 
+### Windows install pitfalls
+
+These are environmental issues we've seen in the wild — none are
+pyiwfm bugs, but the fixes aren't always obvious.
+
+**1. Use a clean virtual environment.** Layering `[webapi]` on top of
+an interpreter that already has matplotlib / numpy / vtk installed
+is the most common source of import errors on Windows. Start from a
+fresh venv and install the extras you need in one shot:
+
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\activate
+pip install "pyiwfm[webapi]"
+```
+
+**2. `ImportError: cannot import name '_c_internal_utils'` from
+matplotlib.** This is a known matplotlib-on-Windows install
+corruption (often after antivirus or OneDrive interferes with a
+`.pyd` write). Reinstall matplotlib:
+
+```powershell
+pip install --force-reinstall matplotlib
+```
+
+**3. `WinError 206 The filename or extension is too long`.** Windows
+limits paths to 260 characters by default. Models nested under
+`OneDrive`-synced or deeply-named user directories can exceed this.
+Two fixes:
+
+- *System-wide (recommended):* enable Windows long-path support, then
+  reboot. Affects every tool on the system, not just pyiwfm:
+  ```powershell
+  reg add HKLM\SYSTEM\CurrentControlSet\Control\FileSystem /v LongPathsEnabled /t REG_DWORD /d 1 /f
+  ```
+- *Per-model workaround:* move the model to a shallower path such as
+  `C:\iwfm\<model_name>`, away from OneDrive-synced or deeply-nested
+  user paths.
+
+**4. Install extras upfront, not incrementally.** `pip install
+pyiwfm` followed later by `pip install pyiwfm[webapi]` should work
+in theory, but the second resolver pass can leave half-installed
+state if anything errors mid-stream (Windows AV, OneDrive latency).
+Prefer a single `pip install "pyiwfm[webapi]"` in a fresh venv.
+
 ## Budget Post-Processing
 
 Export IWFM budget and zone budget results to Excel workbooks:
