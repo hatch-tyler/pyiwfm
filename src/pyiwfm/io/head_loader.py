@@ -1,6 +1,13 @@
 """
 Lazy nodal data loader for IWFM HDF5 output.
 
+**Read-only by design.** This module reads IWFM simulation output that
+the model itself generated; there is no writer because heads are not a
+user-editable input. To produce different heads, edit the model inputs
+(initial heads via ``gw_main_writer``, aquifer parameters via
+:meth:`~pyiwfm.core.model.IWFMModel.set_aquifer_parameter`, etc.) and
+re-run IWFM. See ``docs/user_guide/inputs_vs_outputs.rst``.
+
 This module provides the LazyHeadDataLoader class for loading
 time-varying nodal data (heads or subsidence) from HDF5 files without
 reading all timesteps into memory at once.

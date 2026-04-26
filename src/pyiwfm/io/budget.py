@@ -1,6 +1,11 @@
 """
 Budget file reader for IWFM simulation output.
 
+**Read-only by design.** Budgets are computed by IWFM; this module reads
+them. Stakeholder-friendly Excel exports go through ``budget_excel``
+(see ``pyiwfm budget`` CLI). See
+``docs/user_guide/inputs_vs_outputs.rst``.
+
 This module provides classes for reading IWFM budget binary and HDF5 files,
 which contain water balance data for groundwater, streams, lakes, root zone,
 and other model components.

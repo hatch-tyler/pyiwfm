@@ -37,6 +37,8 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm.core.ids import to_index
+
 if TYPE_CHECKING:
     from pyiwfm.core.mesh import AppGrid
 
@@ -173,8 +175,9 @@ class ZoneDefinition:
         """
         if self.element_zones is None:
             return 0
-        idx = element_id - 1  # Convert to 0-based index
-        if idx < 0 or idx >= len(self.element_zones):
+        try:
+            idx = to_index(element_id, len(self.element_zones), kind="element")
+        except ValueError:
             return 0
         return int(self.element_zones[idx])
 
@@ -257,7 +260,7 @@ class ZoneDefinition:
                     subregion_areas[sr_id] = 0.0
                 subregion_elements[sr_id].append(elem_id)
                 subregion_areas[sr_id] += elem.area
-                element_zones[elem_id - 1] = sr_id
+                element_zones[to_index(elem_id, max_elem_id, kind="element")] = sr_id
 
         # Create Zone objects
         for sr_id, elem_list in subregion_elements.items():
@@ -326,7 +329,7 @@ class ZoneDefinition:
                     zone_areas[zone_id] = 0.0
                 zone_elements[zone_id].append(elem_id)
                 zone_areas[zone_id] += element_areas.get(elem_id, 0.0)
-                element_zones[elem_id - 1] = zone_id
+                element_zones[to_index(elem_id, max_elem_id, kind="element")] = zone_id
 
         # Create Zone objects
         zones: dict[int, Zone] = {}
@@ -367,7 +370,9 @@ class ZoneDefinition:
                 self.element_zones = new_arr
 
             for elem_id in zone.elements:
-                self.element_zones[elem_id - 1] = zone.id
+                self.element_zones[to_index(elem_id, len(self.element_zones), kind="element")] = (
+                    zone.id
+                )
 
     def remove_zone(self, zone_id: int) -> Zone | None:
         """

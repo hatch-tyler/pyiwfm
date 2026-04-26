@@ -1,6 +1,11 @@
 """
 Lazy hydrograph data loader backed by HDF5.
 
+**Read-only by design.** This module reads IWFM hydrograph output that
+the simulation produced; it has no writer because hydrographs are
+computed output, not editable input. See
+``docs/user_guide/inputs_vs_outputs.rst``.
+
 Provides the same interface as ``IWFMHydrographReader`` but reads from
 HDF5 cache files produced by ``hydrograph_converter.py``.  This avoids
 loading the full text file into memory and enables LRU-cached access.

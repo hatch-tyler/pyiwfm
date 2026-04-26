@@ -34,16 +34,21 @@ class TestStreamDepletion:
     """Tests for stream depletion computation."""
 
     def test_depletion_positive_when_pumping_reduces_flow(self) -> None:
-        """Depletion should be positive when scenario has less GW gain."""
+        """Depletion should be positive when scenario has less GW gain.
+
+        Phase 2.2.a-iv switched to exact column-name matching, so this
+        test now passes the legacy ``"Gain from GW (+)"`` header explicitly
+        — the default ``DEFAULT_SA_COLUMN`` matches the IWFM v5+
+        ``"Stream-Aquifer Interaction Within Model"`` column.
+        """
         from pyiwfm.io.stream_depletion import _extract_stream_flow
 
         headers = ["Upstream Inflow (+)", "Gain from GW (+)", "Outflow (-)"]
-        # Baseline has more GW gain
         base_vals = np.array([[100, 50, -120], [100, 55, -125]], dtype=np.float64)
         scen_vals = np.array([[100, 30, -100], [100, 35, -105]], dtype=np.float64)
 
-        base_flow = _extract_stream_flow(headers, base_vals)
-        scen_flow = _extract_stream_flow(headers, scen_vals)
+        base_flow = _extract_stream_flow(headers, base_vals, "Gain from GW (+)")
+        scen_flow = _extract_stream_flow(headers, scen_vals, "Gain from GW (+)")
 
         depletion = base_flow - scen_flow
         assert all(d > 0 for d in depletion)
@@ -99,24 +104,31 @@ class TestStreamDepletion:
         assert d["n_reaches"] == 1
         assert len(d["reaches"]) == 1  # type: ignore[arg-type]
 
-    def test_extract_stream_flow_fallback_to_inflow_outflow(self) -> None:
-        """When no GW column exists, should sum inflows and outflows."""
+    def test_extract_stream_flow_missing_column_raises_keyerror(self) -> None:
+        """Phase 2.2.a-iv: when the requested column isn't present, fail fast
+        with a KeyError that lists the available columns. The previous
+        behavior (silently summing ``(+)`` and ``(-)`` columns as a fallback)
+        was removed because it could misclassify columns and produce
+        depletion numbers that didn't reflect stream-aquifer interaction.
+        """
+        import pytest
+
         from pyiwfm.io.stream_depletion import _extract_stream_flow
 
         headers = ["Upstream Inflow (+)", "Downstream Outflow (-)"]
         values = np.array([[100, -60], [120, -80]], dtype=np.float64)
 
-        flow = _extract_stream_flow(headers, values)
-        np.testing.assert_array_almost_equal(flow, [40.0, 40.0])
+        with pytest.raises(KeyError, match="not found in budget headers"):
+            _extract_stream_flow(headers, values)
 
-    def test_extract_stream_flow_gw_column(self) -> None:
-        """Should prefer the GW interaction column when available."""
+    def test_extract_stream_flow_exact_column_match(self) -> None:
+        """Exact column header match returns the named column verbatim."""
         from pyiwfm.io.stream_depletion import _extract_stream_flow
 
         headers = ["Upstream Inflow (+)", "Gain from GW (+)", "Outflow (-)"]
         values = np.array([[100, 50, -120], [100, 30, -100]], dtype=np.float64)
 
-        flow = _extract_stream_flow(headers, values)
+        flow = _extract_stream_flow(headers, values, "Gain from GW (+)")
         np.testing.assert_array_almost_equal(flow, [50.0, 30.0])
 
     def test_find_stream_budget_raises_when_not_found(self) -> None:

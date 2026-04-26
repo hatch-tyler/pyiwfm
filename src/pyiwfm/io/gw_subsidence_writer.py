@@ -199,28 +199,25 @@ def _write_parametric_grids(f: TextIO, config: SubsidenceConfig) -> None:
             parts = "  ".join(f"{v + 1:>6d}" for v in elem)
             f.write(f"     {parts}\n")
 
-        # Node data: first line has ID X Y P1..P5, continuation lines have P1..P5
+        # Node data: first line has ID X Y P1..P5, continuation lines have P1..P5.
+        # Coalesce all rows into a single f.write to avoid n_nodes * n_layers syscalls.
         n_layers = grid.node_values.shape[1] if grid.node_values.ndim == 3 else 1
+        rows: list[str] = []
         for i in range(grid.n_nodes):
             for layer_idx in range(n_layers):
-                # Reverse conversion factors
-                vals = []
-                for p in range(5):
-                    raw = grid.node_values[i, layer_idx, p] / param_factors[p]
-                    vals.append(raw)
-
+                vals = [grid.node_values[i, layer_idx, p] / param_factors[p] for p in range(5)]
                 if layer_idx == 0:
-                    # First layer: node ID, coordinates, then params
                     px = grid.node_coords[i, 0] / fx if fx != 0.0 else grid.node_coords[i, 0]
                     py = grid.node_coords[i, 1] / fx if fx != 0.0 else grid.node_coords[i, 1]
                     line = f"    {i + 1:>4d}      {px:>10.1f}       {py:>10.1f}"
                     for v in vals:
                         line += f"         {v:.1f}"
-                    f.write(line + "\n")
+                    rows.append(line + "\n")
                 else:
-                    # Continuation line: params only
                     parts_str = "  ".join(f"{v:>12.1f}" for v in vals)
-                    f.write(f"                                           {parts_str}\n")
+                    rows.append(f"                                           {parts_str}\n")
+        if rows:
+            f.write("".join(rows))
 
 
 def write_subsidence_ic(config: SubsidenceConfig, filepath: Path | str) -> Path:

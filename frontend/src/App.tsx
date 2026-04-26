@@ -20,6 +20,7 @@ import { ResultsMapView } from './components/ResultsMap/ResultsMapView';
 import { BudgetView } from './components/BudgetDashboard/BudgetView';
 import { ZBudgetView } from './components/ZBudgetDashboard';
 import { DiagnosticsView } from './components/Diagnostics';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { useViewerStore } from './stores/viewerStore';
 import { fetchModelInfo, fetchBounds, fetchResultsInfo, fetchProperties, fetchObservations } from './api/client';
 
@@ -156,61 +157,75 @@ export default function App() {
         </Alert>
       )}
 
-      {/* Tab Panels */}
+      {/* Tab Panels — each tab is wrapped in its own ErrorBoundary so a
+          render-time crash (Plotly, vtk.js, deck.gl) is contained to that
+          tab and the rest of the app stays usable. */}
       <Box sx={{ flexGrow: 1, overflow: 'hidden', display: 'flex' }}>
         {/* Tab 0: Overview */}
         {activeTab === 0 && (
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-            <ModelOverview />
+            <ErrorBoundary scope="Overview tab">
+              <ModelOverview />
+            </ErrorBoundary>
           </Box>
         )}
 
         {/* Tab 1: 3D Mesh */}
         {activeTab === 1 && (
-          <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
-            <Box sx={{ flexGrow: 1, position: 'relative' }}>
-              <Viewer3D />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 16,
-                  left: 16,
-                  maxWidth: 350,
-                }}
-              >
-                <InfoPanel />
+          <ErrorBoundary scope="3D Mesh tab">
+            <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
+              <Box sx={{ flexGrow: 1, position: 'relative' }}>
+                <Viewer3D />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 16,
+                    left: 16,
+                    maxWidth: 350,
+                  }}
+                >
+                  <InfoPanel />
+                </Box>
+                <CrossSectionPanel />
               </Box>
-              <CrossSectionPanel />
+              <ControlPanel />
             </Box>
-            <ControlPanel />
-          </Box>
+          </ErrorBoundary>
         )}
 
         {/* Tab 2: Results Map */}
         {activeTab === 2 && (
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-            <ResultsMapView />
+            <ErrorBoundary scope="Results Map tab">
+              <ResultsMapView />
+            </ErrorBoundary>
           </Box>
         )}
 
         {/* Tab 3: Budgets */}
         {activeTab === 3 && (
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-            <BudgetView />
+            <ErrorBoundary scope="Budgets tab">
+              <BudgetView />
+            </ErrorBoundary>
           </Box>
         )}
 
         {/* Tab 4: Z-Budgets */}
         {activeTab === 4 && (
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-            <ZBudgetView />
+            <ErrorBoundary scope="Z-Budgets tab">
+              <ZBudgetView />
+            </ErrorBoundary>
           </Box>
         )}
 
         {/* Tab 5: Diagnostics */}
         {activeTab === 5 && (
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-            <DiagnosticsView />
+            <ErrorBoundary scope="Diagnostics tab">
+              <DiagnosticsView />
+            </ErrorBoundary>
           </Box>
         )}
       </Box>

@@ -1,6 +1,12 @@
 """
 Reader for IWFM hydrograph output text files (.out).
 
+**Read-only by design.** Hydrographs are computed by IWFM during
+simulation; this module has no writer. To change observed-vs-simulated
+output, edit model inputs (observation-well locations, aquifer
+parameters, etc.) and re-run IWFM. See
+``docs/user_guide/inputs_vs_outputs.rst``.
+
 Parses both GW and stream hydrograph output files which share the same
 IWFM text format with header metadata and whitespace-delimited time series.
 """

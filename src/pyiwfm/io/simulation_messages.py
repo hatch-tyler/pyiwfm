@@ -1,6 +1,10 @@
 """
 Parser for IWFM SimulationMessages.out files.
 
+**Read-only by design.** SimulationMessages.out is an IWFM-generated log;
+this module parses it for diagnostics. See
+``docs/user_guide/inputs_vs_outputs.rst``.
+
 SimulationMessages.out is produced by IWFM during simulation and contains
 warnings, errors, and informational messages with spatial context (node IDs,
 element IDs, reach IDs, layer IDs).  Additionally parses convergence iteration

@@ -177,7 +177,7 @@ class TestFromPreprocessorStreamFallback:
         rs.name = "Reach1"
 
         mock_stream_reader = MagicMock()
-        mock_stream_reader.read_stream_nodes.side_effect = RuntimeError("fail")
+        mock_stream_reader.read_stream_nodes.side_effect = ValueError("fail")
 
         mock_spec_reader = MagicMock()
         mock_spec_reader.read.return_value = (1, 0, [rs])
@@ -218,11 +218,13 @@ class TestFromPreprocessorStreamFallback:
         mock_mesh.nodes = {1: MagicMock(), 2: MagicMock()}
         mock_mesh.elements = {1: MagicMock()}
 
+        # Real parsers raise ValueError on bad data; the outer try/except in
+        # from_preprocessor narrows its catch to expected parser exceptions.
         mock_stream_reader = MagicMock()
-        mock_stream_reader.read_stream_nodes.side_effect = RuntimeError("first fail")
+        mock_stream_reader.read_stream_nodes.side_effect = ValueError("first fail")
 
         mock_spec_reader = MagicMock()
-        mock_spec_reader.read.side_effect = RuntimeError("second fail")
+        mock_spec_reader.read.side_effect = ValueError("second fail")
 
         with (
             patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_pp_config),
@@ -317,6 +319,10 @@ class TestFromSimWithPPGroundwater:
         bc_config.n_specified_head = 0
         bc_config.n_general_head = 0
         bc_config.n_constrained_gh = 1
+        # n_bc_output_nodes is compared to int (> 0); set explicitly so the
+        # comparison doesn't TypeError when the helper formerly hidden by
+        # the over-broad except now reaches it.
+        bc_config.n_bc_output_nodes = 0
         bc_config.specified_head_bcs = []
         bc_config.specified_flow_bcs = []
         bc_config.general_head_bcs = []
@@ -479,7 +485,7 @@ class TestFromSimWithPPGroundwater:
             patch("pyiwfm.io.groundwater.GroundwaterReader") as mock_gw_reader_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
-            mock_pump_cls.return_value.read.side_effect = RuntimeError("pump fail")
+            mock_pump_cls.return_value.read.side_effect = ValueError("pump fail")
             mock_gw_reader_cls.return_value.read_wells.return_value = {1: mock_well}
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
 
@@ -581,7 +587,7 @@ class TestFromSimWithPPGroundwater:
             patch("pyiwfm.io.gw_tiledrain.TileDrainReader") as mock_td_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
-            mock_td_cls.return_value.read.side_effect = RuntimeError("td fail")
+            mock_td_cls.return_value.read.side_effect = ValueError("td fail")
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
 
         assert model.groundwater is not None
@@ -673,7 +679,7 @@ class TestFromSimWithPPGroundwater:
             patch("pyiwfm.io.gw_subsidence.SubsidenceReader") as mock_subs_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
-            mock_subs_cls.return_value.read.side_effect = RuntimeError("subs fail")
+            mock_subs_cls.return_value.read.side_effect = ValueError("subs fail")
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
 
         assert model.groundwater is not None
@@ -707,7 +713,7 @@ class TestFromSimWithPPGroundwater:
             patch("pyiwfm.io.groundwater.GWMainFileReader") as mock_gw_cls,
             patch(
                 "pyiwfm.core.model._apply_parametric_grids",
-                side_effect=RuntimeError("pgrid fail"),
+                side_effect=ValueError("pgrid fail"),
             ),
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
@@ -746,7 +752,7 @@ class TestFromSimWithPPGroundwater:
             patch("pyiwfm.io.groundwater.GWMainFileReader") as mock_gw_cls,
             patch(
                 "pyiwfm.core.model._apply_kh_anomalies",
-                side_effect=RuntimeError("anom fail"),
+                side_effect=ValueError("anom fail"),
             ),
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
@@ -764,7 +770,7 @@ class TestFromSimWithPPGroundwater:
         with (
             patch(
                 "pyiwfm.components.groundwater.AppGW",
-                side_effect=RuntimeError("gw init fail"),
+                side_effect=ValueError("gw init fail"),
             ),
         ):
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
@@ -1107,7 +1113,9 @@ class TestFromSimWithPPStreamDetails:
         stream_file = tmp_path / "stream.dat"
         stream_file.write_text("fake")
 
-        mock_node = MagicMock()
+        # reach_id needs an explicit int — _build_reaches_from_node_reach_ids
+        # compares it to 0 and the auto-MagicMock attribute would TypeError.
+        mock_node = MagicMock(reach_id=0, id=1)
 
         sim_cfg = _sim_config(tmp_path, streams_file=str(stream_file))
 
@@ -1115,7 +1123,7 @@ class TestFromSimWithPPStreamDetails:
             patch("pyiwfm.io.streams.StreamMainFileReader") as mock_sc_cls,
             patch("pyiwfm.io.streams.StreamReader") as mock_sr_cls,
         ):
-            mock_sc_cls.return_value.read.side_effect = RuntimeError("main fail")
+            mock_sc_cls.return_value.read.side_effect = ValueError("main fail")
             mock_sr_cls.return_value.read_stream_nodes.return_value = {1: mock_node}
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
 
@@ -1131,7 +1139,7 @@ class TestFromSimWithPPStreamDetails:
         with (
             patch(
                 "pyiwfm.components.stream.AppStream",
-                side_effect=RuntimeError("stream init fail"),
+                side_effect=ValueError("stream init fail"),
             ),
         ):
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
@@ -1335,7 +1343,7 @@ class TestFromSimWithPPRootZone:
             patch("pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x"),
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
-            mock_p_cls.return_value.read.side_effect = RuntimeError("ponded fail")
+            mock_p_cls.return_value.read.side_effect = ValueError("ponded fail")
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
 
         assert model.rootzone is not None
@@ -1360,7 +1368,7 @@ class TestFromSimWithPPRootZone:
             patch("pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x"),
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
-            mock_u_cls.return_value.read.side_effect = RuntimeError("urban fail")
+            mock_u_cls.return_value.read.side_effect = ValueError("urban fail")
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
 
         assert model.rootzone is not None
@@ -1385,7 +1393,7 @@ class TestFromSimWithPPRootZone:
             patch("pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x") as mock_n_cls,
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
-            mock_n_cls.return_value.read.side_effect = RuntimeError("native fail")
+            mock_n_cls.return_value.read.side_effect = ValueError("native fail")
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
 
         assert model.rootzone is not None
@@ -1480,10 +1488,10 @@ class TestFromSimWithPPRootZone:
             patch("pyiwfm.io.rootzone_native.NativeRiparianReader") as mock_nr_cls,
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
-            mock_np_cls.return_value.read.side_effect = RuntimeError("np fail")
-            mock_p_cls.return_value.read.side_effect = RuntimeError("p fail")
-            mock_u_cls.return_value.read.side_effect = RuntimeError("u fail")
-            mock_nr_cls.return_value.read.side_effect = RuntimeError("nr fail")
+            mock_np_cls.return_value.read.side_effect = ValueError("np fail")
+            mock_p_cls.return_value.read.side_effect = ValueError("p fail")
+            mock_u_cls.return_value.read.side_effect = ValueError("u fail")
+            mock_nr_cls.return_value.read.side_effect = ValueError("nr fail")
             model = self._run_sim_with_pp(tmp_path, sim_cfg)
 
         assert model.rootzone is not None
@@ -1505,7 +1513,7 @@ class TestFromSimWithPPRootZone:
         np_cfg.root_depth_data = [MagicMock(max_root_depth=3.0)]
         # Set area_data_file to something that will cause an error when is_absolute called
         area_file = MagicMock()
-        area_file.is_absolute.side_effect = RuntimeError("path error")
+        area_file.is_absolute.side_effect = ValueError("path error")
         np_cfg.area_data_file = area_file
         np_cfg.elemental_area_file = None
 
@@ -1567,7 +1575,7 @@ class TestValidateComponentsSWUZ:
         """Small watershed validation failure is captured."""
         model = IWFMModel(name="Test")
         mock_sw = MagicMock()
-        mock_sw.validate.side_effect = Exception("SW error")
+        mock_sw.validate.side_effect = ValueError("SW error")
         model.small_watersheds = mock_sw
 
         warnings = model.validate_components()
@@ -1578,7 +1586,7 @@ class TestValidateComponentsSWUZ:
         """Unsaturated zone validation failure is captured."""
         model = IWFMModel(name="Test")
         mock_uz = MagicMock()
-        mock_uz.validate.side_effect = Exception("UZ error")
+        mock_uz.validate.side_effect = ValueError("UZ error")
         model.unsaturated_zone = mock_uz
 
         warnings = model.validate_components()

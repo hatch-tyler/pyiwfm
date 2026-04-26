@@ -58,6 +58,11 @@ pyiwfm iwfm2obs --obs o.smp --sim s.smp --output out.smp   # Explicit SMP interp
 pyiwfm iwfm2obs --model C2VSimFG.in --obs-gw o.smp --output-gw out.smp  # Model discovery mode
 pyiwfm calctyphyd --water-levels wl.smp --weights w.txt --output typhyd.smp  # Typical hydrographs
 pyiwfm calctyphyd --config CalcTypeHyd.in  # Fortran config mode with PEST output
+pyiwfm depletion <baseline_dir> <scenario_dir> [--output report.xlsx --plot all --map]  # Stream depletion analysis (reach or --node-level)
+pyiwfm drawdown <model_dir> --mode {timeseries,snapshot,max} [--locations 1,1;42,2 | --timestep N] [--output ... --map]  # Drawdown analysis
+pyiwfm package --model-dir /path/to/model --output model.zip  # Package model dir into a ZIP
+pyiwfm run --model-dir /path/to/model --download-executables  # Generate run scripts (.bat/.ps1/.sh)
+pyiwfm pest <subcommand>                   # PEST++ parameter-estimation workflow
 ```
 
 ### Frontend
@@ -138,7 +143,9 @@ The viewer is a FastAPI backend + React SPA frontend with 6 tabs: Overview, 3D M
 - `config.py` — `ModelState` singleton that holds the loaded `IWFMModel` and provides lazy getters for head data, subsidence surface data, budget data, stream reach boundaries, etc. Caches `node_id_to_idx`, `elem_id_to_idx`, and hydrograph locations for performance.
 - `server.py` — FastAPI app creation with CRS configuration and static file serving
 - `routes/` — 13 route modules: model (+ comparison), mesh, results (+ drawdown pagination, statistics, subsidence surface), groundwater, streams, lakes, rootzone, small_watersheds, budgets, export (+ GeoPackage, matplotlib plots), observations, slices, properties
-- Data loaders (`head_loader`, `hydrograph_reader`, `hydrograph_loader`, `area_loader`, `cache_builder`, `cache_loader`) now live in `io/`; backward-compat shims remain in `webapi/`
+- Data loaders (`head_loader`, `hydrograph_reader`, `hydrograph_loader`, `area_loader`, `cache_builder`, `cache_loader`) now live in `io/`; thin re-export shims remain in `webapi/` for backward compatibility
+- `webapi/slicing.py` and `webapi/properties.py` are full implementations (not shims) — `slicing.py` is consumed by `routes/slices.py`, `properties.py` by `_mesh_state.py`. They have no web-only dependency and could move to `io/` in a future major release.
+- Frontend features that exist and may not be obvious from a quick grep: cross-section drawing (click-to-draw on the Results Map → `ResultsMapView.tsx` + `CrossSectionPanel.tsx` + `CrossSectionChart.tsx`); Z-Budget zone upload (`ZBudgetDashboard/ZoneUploadDialog.tsx`, two-step shapefile/GeoJSON dialog); model comparison (`Overview/ModelComparison.tsx` calling `compareModels`)
 - Coordinate reprojection: server-side via `pyproj` (model CRS → WGS84), `--crs` CLI flag
 
 **Frontend** (`frontend/`):

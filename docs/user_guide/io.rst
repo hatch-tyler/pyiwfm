@@ -31,7 +31,7 @@ Loading a Complete Model
     model = load_complete_model("Simulation/Simulation.in")
 
     # Access model components
-    print(f"Grid: {model.grid.n_nodes} nodes, {model.grid.n_elements} elements")
+    print(f"Grid: {model.mesh.n_nodes} nodes, {model.mesh.n_elements} elements")
     print(f"Stratigraphy layers: {model.stratigraphy.n_layers}")
 
     # Access component data (if loaded)
