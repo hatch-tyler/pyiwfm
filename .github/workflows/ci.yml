@@ -45,9 +45,14 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libglu1-mesa
       - run: pip install -e ".[dev]"
-      # mypy runs across the full matrix so 3.10–3.14 type errors surface in PR
-      # rather than after merge. Cheap to run; rules out version-specific drift.
-      - run: mypy src/pyiwfm/
+      # NOTE: mypy is intentionally NOT run inside the test matrix. mypy's
+      # behavior depends on the numpy/pandas-stubs versions transitively
+      # installed by pip, and those resolve to OLDER versions on Python
+      # 3.10 (since recent stubs dropped 3.10 support). The older stubs
+      # report ~27 false-positive errors against ndarray shape/dtype
+      # parameterization that don't appear on 3.11+. mypy still runs in
+      # the standalone `typecheck` job on Python 3.12, which uses the
+      # current stubs and is the project's canonical type-check surface.
       - run: pytest tests/unit/ -x --tb=short
       - run: pytest tests/unit/ --cov=pyiwfm --cov-report=xml
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
