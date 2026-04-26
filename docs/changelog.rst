@@ -18,6 +18,188 @@ Changed
 Fixed
 ~~~~~
 
+[1.2.0] - 2026-04-25
+--------------------
+
+Major minor release from a comprehensive code review (see
+``docs/V2_ROADMAP.md`` for what's deferred to v2.0). Non-breaking;
+existing v1.1.x code keeps working without modification.
+
+Added
+~~~~~
+
+**Python API for editing loaded models** (``pyiwfm.core.model.IWFMModel``)
+
+- ``IWFMModel.set_aquifer_parameter(param, layer, values)`` — replace
+  an aquifer-parameter array (``"kh"``, ``"kv"``, ``"ss"``, ``"sy"``,
+  ``"aquitard_kv"``) for a single layer.
+- ``IWFMModel.set_aquifer_parameter_at(param, node_id, layer, value)`` —
+  set a single ``(node, layer)`` cell.
+- ``IWFMModel.set_stratigraphy_from_thicknesses(gs_elev,
+  aquitard_thicknesses, aquifer_thicknesses, active_node=None)`` —
+  rebuild stratigraphy from thickness arrays with mesh-consistency check.
+- ``IWFMModel.add_observation_well(node_id, layer, x, y, name="")``
+  and ``remove_observation_well(name)`` — manage groundwater hydrograph
+  output locations.
+- ``IWFMModel.mark_dirty(component_name)`` plus internal ``_dirty: set[str]``
+  field — track which components have been mutated since the last load/save.
+- New user guide page ``docs/user_guide/mutating_models.rst`` walks
+  through the calibration workflow.
+
+**Stream depletion analysis suite** (``pyiwfm.io.stream_depletion``,
+``pyiwfm.visualization.{plot,map}_depletion``, ``pyiwfm depletion`` CLI)
+
+- ``BudgetOutputMissingError`` raised when a model required for
+  comparative analysis didn't declare or didn't produce a stream
+  reach/node budget; message tells the operator which IWFM input line
+  to fix (``STRMRCHBUDFL`` / ``STNDBUDFL``).
+- ``compute_stream_depletion_from_models(baseline_model,
+  scenario_model, *, reach_ids=None, sa_column=...)`` — model-driven
+  reach-level depletion; resolves budget paths from
+  ``model.metadata['stream_budget_file']``.
+- ``compute_stream_node_depletion(baseline_model, scenario_model, *,
+  node_ids=None, sa_column=...)`` and
+  ``StreamNodeDepletionResult`` / ``StreamNodeDepletionReport`` —
+  per-stream-node analysis using the stream node budget HDF.
+- ``DEFAULT_SA_COLUMN`` constant (``"Stream-Aquifer Interaction Within Model"``,
+  the IWFM v5+ canonical column name); override via ``sa_column=...``
+  for older models that emit ``"Gain from GW (+)"``.
+- Tabular writers: ``write_stream_depletion_csv`` /
+  ``write_stream_depletion_json`` / ``write_stream_depletion_excel``,
+  plus ``StreamDepletionReport.write(path, format=None)`` dispatcher.
+- Time-series plots in ``pyiwfm.visualization.plot_depletion``:
+  ``plot_cumulative_depletion`` (with optional ``pumping_timeseries``
+  overlay), ``plot_depletion_timeseries``, ``plot_depletion_summary_bar``.
+- Spatial maps in ``pyiwfm.visualization.map_depletion``:
+  ``plot_depletion_map`` (reach-level color polylines),
+  ``plot_stream_node_depletion_map`` (per-node scatter),
+  ``plot_depletion_along_reach`` (longitudinal profile),
+  ``export_depletion_geojson`` and
+  ``export_stream_node_depletion_geojson``.
+- ``pyiwfm depletion <baseline> <scenario>`` CLI subcommand wires the
+  above together: ``--output``, ``--plot``, ``--map``, ``--node-level``,
+  ``--metric``, ``--reach-ids`` / ``--node-ids``, ``--sa-column``,
+  ``--crs``.
+
+**Drawdown analysis suite** (``pyiwfm.io.drawdown``,
+``pyiwfm.visualization.{plot,map}_drawdown``, ``pyiwfm drawdown`` CLI)
+
+- ``DrawdownAtLocation`` / ``DrawdownTimeSeriesReport`` — drawdown vs
+  time at a chosen set of ``(node, layer)`` locations.
+- ``DrawdownSnapshot`` — per-node drawdown at a single timestep
+  (``kind="single"``) or per-node max across all timesteps
+  (``kind="max"``).
+- ``DrawdownComputer.build_timeseries_report(locations,
+  reference_timestep)``, ``build_snapshot(timestep, layer,
+  reference_timestep)``, ``build_max_snapshot(layer, reference_timestep)``.
+- Tabular writers: ``write_drawdown_timeseries_csv`` / ``_json`` /
+  ``_excel`` plus ``DrawdownTimeSeriesReport.write()`` dispatcher.
+- Plots in ``pyiwfm.visualization.plot_drawdown``:
+  ``plot_drawdown_timeseries``, ``plot_drawdown_summary_bar``.
+- Maps in ``pyiwfm.visualization.map_drawdown``: ``plot_drawdown_map``
+  (cone-of-depression scatter), ``export_drawdown_geojson``.
+- ``pyiwfm drawdown <model_dir>`` CLI subcommand with
+  ``--mode {timeseries,snapshot,max}``, ``--locations 1,1;42,2``,
+  ``--reference-timestep``, ``--output``, ``--plot``, ``--no-map``,
+  ``--crs``, ``--heads-hdf``.
+
+**Documentation: editable inputs vs. computed outputs**
+
+- New user guide page ``docs/user_guide/inputs_vs_outputs.rst``
+  enumerates every model component (with its writer module and the
+  Phase 2.1 mutation helper) versus every read-only analysis module
+  (heads, hydrographs, subsidence, budgets, etc.).
+- "Read-only by design" docstring annotations on ``head_loader``,
+  ``hydrograph_loader``, ``hydrograph_reader``, ``area_loader``,
+  ``budget``, ``zbudget``, ``simulation_messages``, ``drawdown``,
+  ``stream_depletion``.
+
+**Structured exception handling for model loading** (``pyiwfm.core.exceptions``,
+``pyiwfm.core.model``)
+
+- New ``ComponentLoadError(component_name, source_file, cause)`` —
+  raised by ``IWFMModel.from_preprocessor`` and
+  ``from_simulation_with_preprocessor`` when called with the new
+  ``strict=True`` kwarg and a component fails to parse.
+- ``IWFMModel.from_preprocessor(..., *, strict=False)`` and
+  ``IWFMModel.from_simulation_with_preprocessor(..., *, strict=False)``
+  — pass ``strict=True`` from calibration / analysis pipelines that
+  require a complete model. The default lenient mode (``strict=False``)
+  preserves the historical behavior: log a structured warning, record
+  the error in ``model.metadata``, and continue with whatever components
+  loaded.
+- ``_COMPONENT_LOAD_EXCEPTIONS`` tuple replaces the previous
+  ``except Exception`` catch-all at every component-load boundary in
+  ``core/model.py`` (47 sites: 2 in ``from_preprocessor``, 35 in
+  ``from_simulation_with_preprocessor``, plus the inner format-
+  detection fallbacks). Programmer errors (``TypeError``,
+  ``AttributeError``, ``NameError``, ``RuntimeError``) now bubble up
+  instead of being silently swallowed.
+
+**Centralized 1-based ID validation** (``pyiwfm.core.ids``)
+
+- New ``to_index(one_based_id, n_items, *, kind="id") -> int`` and
+  ``to_indices(one_based_ids, n_items, *, kind="id") -> NDArray[int64]``
+  helpers replace inline ``id - 1`` arithmetic. Both validate bounds
+  and raise ``ValueError`` with a self-documenting message that
+  includes ``kind`` (``"element"`` / ``"node"`` / ``"reach"``) and the
+  offending value(s).
+- Adopted in ``core/zones.py`` (4 sites) and ``core/aggregation.py``,
+  closing a class of silent-overwrite bugs where invalid IDs would
+  write past the end of preallocated arrays.
+
+**Frontend error containment** (``frontend/src/components/common/ErrorBoundary.tsx``)
+
+- New React class component wraps each viewer tab body in
+  ``frontend/src/App.tsx`` so a render-time crash in one tab
+  (Plotly, vtk.js, deck.gl) leaves the other tabs usable. Renders a
+  fallback UI with a "Try again" button.
+
+**CI hardening** (``.github/workflows/ci.yml``)
+
+- ``mypy src/pyiwfm/`` now runs across the full Python 3.10–3.14 ×
+  Ubuntu/Windows test matrix instead of only Python 3.12 / Ubuntu.
+- New ``docs`` job runs ``sphinx-build -W docs docs/_build`` so
+  documentation rot (broken refs, missing modules, malformed RST)
+  fails CI instead of silently shipping.
+
+Changed
+~~~~~~~
+
+- ``pyiwfm.io.stream_depletion._extract_stream_flow`` now requires an
+  exact column-name match (default ``"Stream-Aquifer Interaction
+  Within Model"``). The previous substring matching against
+  ``"gain from gw"`` / ``"stream-aquifer"`` and the ``(+)/(-)`` column
+  sum-fallback were removed because they could silently misclassify
+  columns. Older models that emit ``"Gain from GW (+)"`` should pass
+  ``sa_column="Gain from GW (+)"`` explicitly.
+
+Fixed
+~~~~~
+
+- ``pyiwfm.io.gw_main_writer.write_gw_main_file`` now coalesces the
+  per-cell ``f.write`` loop for aquifer parameters (and similarly for
+  initial heads) into a single write per block. On a C2VSimFG-class
+  model (~30k nodes × 4 layers) this collapses ~120k syscalls into one,
+  making ``save_complete_model`` substantially faster. Output is
+  byte-identical to v1.1.x; locked in by ``tests/unit/test_gw_writer_vectorized.py``.
+- Same coalescing applied to ``gw_subsidence_writer``'s parametric grid
+  block.
+- ``pyiwfm.visualization.webapi.routes.export`` — five ``json.dumps``
+  call sites (mesh GeoJSON export, model report, three records-export
+  endpoints) now use a shared ``_json_default`` callable that handles
+  ``np.integer``, ``np.floating`` (NaN → null), ``np.ndarray``,
+  ``pd.Timestamp``, and ``bytes``. Mesh GeoJSON exports no longer fail
+  with ``TypeError: Object of type int64 is not JSON serializable``
+  on models with NumPy ``int64`` element indices.
+- ``docs/user_guide/io.rst`` — example code uses ``model.mesh.n_nodes``
+  instead of the alias ``model.grid.n_nodes`` (``mesh`` is the canonical
+  attribute per CLAUDE.md).
+- ``CLAUDE.md`` line 141 — corrected stale comment claiming
+  ``webapi/slicing.py`` and ``webapi/properties.py`` are shims (they
+  are 600-line full implementations imported by ``routes/slices.py``
+  and ``_mesh_state.py`` respectively).
+
 [1.1.3] - 2026-04-23
 --------------------
 
