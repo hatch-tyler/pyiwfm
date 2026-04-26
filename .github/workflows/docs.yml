@@ -2,9 +2,13 @@ name: Docs
 
 on:
   push:
-    branches: [master]
+    # Build docs on the v2 development branch too so docstring drift
+    # surfaces during PR review, not at v2.0.0a1 release time. The
+    # deploy job below is gated on `master` only — `next` builds verify
+    # but don't publish.
+    branches: [master, next]
   pull_request:
-    branches: [master]
+    branches: [master, next]
 
 permissions:
   contents: read

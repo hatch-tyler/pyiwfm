@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    # `next` is the long-running development branch for v2.0; see
+    # docs/V2_ROADMAP.md. Both branches run the full test matrix.
+    branches: [master, next]
   pull_request:
-    branches: [master]
+    branches: [master, next]
 
 jobs:
   lint:
@@ -52,6 +54,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         with:
           files: coverage.xml
+          # Tag uploads from `next` separately so v2 coverage doesn't
+          # mix into v1.x coverage trend on the codecov dashboard.
+          flags: ${{ github.ref == 'refs/heads/next' && 'next' || 'master' }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
