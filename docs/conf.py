@@ -119,8 +119,14 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
+    # Internal planning / design documents — not part of the user-facing
+    # docs site, but kept in-tree so they version with the code.
     "PEST_INTERFACE_DESIGN.md",
     "PLAN_Complete_IO_Implementation.md",
+    "V2_ROADMAP.md",
+    # MIGRATION_v1_to_v2.md is currently a template; move it INTO the
+    # toctree (not the exclude list) when v2.0.0a1 is tagged.
+    "MIGRATION_v1_to_v2.md",
 ]
 
 # Source suffix

@@ -1,6 +1,11 @@
 """
 Zone budget (ZBudget) file reader for IWFM simulation output.
 
+**Read-only by design.** ZBudget files are computed by IWFM; this module
+reads them. Stakeholder-friendly exports go through ``zbudget_excel``
+(see ``pyiwfm zbudget`` CLI). See
+``docs/user_guide/inputs_vs_outputs.rst``.
+
 This module provides classes for reading IWFM zone budget HDF5 files,
 which contain spatially aggregated water balance data by user-defined zones.
 

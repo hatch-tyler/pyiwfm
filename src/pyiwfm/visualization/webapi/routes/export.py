@@ -40,6 +40,30 @@ def _safe_filename(name: str) -> str:
     return safe.strip("_")
 
 
+def _json_default(obj: object) -> object:
+    """``default=`` callable for ``json.dumps`` covering NumPy / pandas types.
+
+    GeoJSON payloads built from mesh data contain ``np.int64`` indices, and
+    timeseries records may contain ``np.float64``/``pd.Timestamp`` values
+    that ``json.dumps`` cannot serialize without help.
+    """
+    import numpy as np
+    import pandas as pd
+
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        f = float(obj)
+        return f if math.isfinite(f) else None
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, pd.Timestamp | np.datetime64):
+        return pd.Timestamp(obj).isoformat()
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
 router = APIRouter(prefix="/api/export", tags=["export"])
 
 
@@ -112,7 +136,7 @@ def export_mesh_geojson(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return Response(
-        content=json.dumps(geojson),
+        content=json.dumps(geojson, default=_json_default),
         media_type="application/geo+json",
         headers={"Content-Disposition": f"attachment; filename=mesh_layer{layer}.geojson"},
     )
@@ -589,7 +613,7 @@ def export_model_report(
 
     if format == "json":
         report_data = _build_report_data(model)
-        content = json.dumps(report_data, indent=2, default=str)
+        content = json.dumps(report_data, indent=2, default=_json_default)
         return Response(
             content=content,
             media_type="application/json",
@@ -760,7 +784,7 @@ def export_timeseries_head(
         for row in rows:
             records.append({"datetime": row[0], "head_value": row[1] if row[1] != "" else None})
         return Response(
-            content=json.dumps(records),
+            content=json.dumps(records, default=_json_default),
             media_type="application/json",
         )
 
@@ -877,7 +901,7 @@ def export_timeseries_hydrograph(
         for row in rows:
             records.append({"datetime": row[0], value_label: row[1] if row[1] != "" else None})
         return Response(
-            content=json.dumps(records),
+            content=json.dumps(records, default=_json_default),
             media_type="application/json",
         )
 
@@ -954,7 +978,7 @@ def export_timeseries_budget(
                 record[header] = val if val != "" else None
             records.append(record)
         return Response(
-            content=json.dumps(records),
+            content=json.dumps(records, default=_json_default),
             media_type="application/json",
         )
 

@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm.core.ids import to_index
 from pyiwfm.core.zones import ZoneDefinition
 
 if TYPE_CHECKING:
@@ -333,6 +334,6 @@ def create_aggregator_from_grid(grid: AppGrid) -> DataAggregator:
     areas = np.zeros(max_elem_id, dtype=np.float64)
 
     for elem_id, elem in grid.elements.items():
-        areas[elem_id - 1] = elem.area
+        areas[to_index(elem_id, max_elem_id, kind="element")] = elem.area
 
     return DataAggregator(element_areas=areas)

@@ -503,7 +503,7 @@ class TestFromPreprocessor:
             patches[3],
             patch(
                 "pyiwfm.io.streams.StreamReader",
-                side_effect=RuntimeError("stream parse fail"),
+                side_effect=ValueError("stream parse fail"),
             ),
         ):
             model = IWFMModel.from_preprocessor(tmp_path / "pp.in")
@@ -551,7 +551,7 @@ class TestFromPreprocessor:
             patches[3],
             patch(
                 "pyiwfm.io.lakes.LakeReader",
-                side_effect=RuntimeError("lake parse fail"),
+                side_effect=ValueError("lake parse fail"),
             ),
         ):
             model = IWFMModel.from_preprocessor(tmp_path / "pp.in")
@@ -724,7 +724,7 @@ class TestFromSimWithPP_Metadata:
             ),
             patch(
                 "pyiwfm.io.supply_adjust.read_supply_adjustment",
-                side_effect=RuntimeError("bad file"),
+                side_effect=ValueError("bad file"),
             ),
         ):
             model = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
@@ -871,6 +871,7 @@ class TestFromSimWithPP_Groundwater:
         bc_config.n_specified_head = 2
         bc_config.n_general_head = 1
         bc_config.n_constrained_gh = 0
+        bc_config.n_bc_output_nodes = 0
         bc_config.ts_data_file = None
         bc_config.specified_head_bcs = [
             MagicMock(node_id=1, head_value=100.0, layer=1),
@@ -1006,7 +1007,7 @@ class TestFromSimWithPP_Groundwater:
             ),
             patch(
                 "pyiwfm.io.gw_pumping.PumpingReader.read",
-                side_effect=RuntimeError("bad pump file"),
+                side_effect=ValueError("bad pump file"),
             ),
             patch(
                 "pyiwfm.io.groundwater.GroundwaterReader",
@@ -1426,7 +1427,7 @@ class TestFromSimWithPP_Groundwater:
             ),
             patch(
                 "pyiwfm.io.groundwater.GWMainFileReader.read",
-                side_effect=RuntimeError("bad gw main file"),
+                side_effect=ValueError("bad gw main file"),
             ),
             patch(
                 "pyiwfm.io.groundwater.GroundwaterReader",
@@ -1729,8 +1730,10 @@ class TestFromSimWithPP_Streams:
         sim_file, pp_file, sim_config, mock_model = self._setup_stream(tmp_path)
 
         mock_stream_reader = MagicMock()
+        # reach_id needs an explicit int value — _build_reaches_from_node_reach_ids
+        # compares it to 0; without this the auto-MagicMock attribute would TypeError.
         mock_stream_reader.read_stream_nodes.return_value = {
-            1: MagicMock(id=1),
+            1: MagicMock(id=1, reach_id=0),
         }
 
         with (
@@ -1745,7 +1748,7 @@ class TestFromSimWithPP_Streams:
             ),
             patch(
                 "pyiwfm.io.streams.StreamMainFileReader.read",
-                side_effect=RuntimeError("bad stream main"),
+                side_effect=ValueError("bad stream main"),
             ),
             patch(
                 "pyiwfm.io.streams.StreamReader",
@@ -1941,7 +1944,7 @@ class TestFromSimWithPP_Lakes:
             ),
             patch(
                 "pyiwfm.io.lakes.LakeMainFileReader.read",
-                side_effect=RuntimeError("bad lake main"),
+                side_effect=ValueError("bad lake main"),
             ),
             patch(
                 "pyiwfm.io.lakes.LakeReader",
@@ -1969,7 +1972,7 @@ class TestFromSimWithPP_Lakes:
             ),
             patch(
                 "pyiwfm.components.lake.AppLake",
-                side_effect=RuntimeError("cannot create AppLake"),
+                side_effect=ValueError("cannot create AppLake"),
             ),
         ):
             model = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
@@ -2053,7 +2056,7 @@ class TestFromSimWithPP_RootZone:
             ),
             patch(
                 "pyiwfm.io.rootzone.RootZoneMainFileReader.read",
-                side_effect=RuntimeError("bad rz main"),
+                side_effect=ValueError("bad rz main"),
             ),
             patch(
                 "pyiwfm.io.rootzone.RootZoneReader",
@@ -2081,7 +2084,7 @@ class TestFromSimWithPP_RootZone:
             ),
             patch(
                 "pyiwfm.components.rootzone.RootZone",
-                side_effect=RuntimeError("cannot create RootZone"),
+                side_effect=ValueError("cannot create RootZone"),
             ),
         ):
             model = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
@@ -2271,7 +2274,7 @@ class TestSummaryAndValidation:
     def test_validate_components_with_small_watersheds(self) -> None:
         """validate_components calls validate on small_watersheds."""
         sw = MagicMock()
-        sw.validate.side_effect = RuntimeError("sw invalid")
+        sw.validate.side_effect = ValueError("sw invalid")
         model = IWFMModel(name="Test", small_watersheds=sw)
         warnings = model.validate_components()
         assert any("Small watershed" in w for w in warnings)
@@ -2279,7 +2282,7 @@ class TestSummaryAndValidation:
     def test_validate_components_with_unsaturated_zone(self) -> None:
         """validate_components calls validate on unsaturated_zone."""
         uz = MagicMock()
-        uz.validate.side_effect = RuntimeError("uz invalid")
+        uz.validate.side_effect = ValueError("uz invalid")
         model = IWFMModel(name="Test", unsaturated_zone=uz)
         warnings = model.validate_components()
         assert any("Unsaturated zone" in w for w in warnings)
@@ -2314,9 +2317,9 @@ class TestSummaryAndValidation:
     def test_validate_components_multiple_failures(self) -> None:
         """Multiple component validation failures all reported."""
         gw = MagicMock()
-        gw.validate.side_effect = RuntimeError("gw fail")
+        gw.validate.side_effect = ValueError("gw fail")
         streams = MagicMock()
-        streams.validate.side_effect = RuntimeError("stream fail")
+        streams.validate.side_effect = ValueError("stream fail")
         model = IWFMModel(name="Test", groundwater=gw, streams=streams)
         warnings = model.validate_components()
         assert len(warnings) == 2
@@ -2662,7 +2665,7 @@ class TestStreamDeepLoading:
             ),
             patch(
                 "pyiwfm.io.stream_diversion.DiversionSpecReader.read",
-                side_effect=RuntimeError("bad div file"),
+                side_effect=ValueError("bad div file"),
             ),
         ):
             model = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
@@ -2697,7 +2700,7 @@ class TestStreamDeepLoading:
             ),
             patch(
                 "pyiwfm.io.stream_bypass.BypassSpecReader.read",
-                side_effect=RuntimeError("bad bypass file"),
+                side_effect=ValueError("bad bypass file"),
             ),
         ):
             model = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
@@ -2730,7 +2733,7 @@ class TestStreamDeepLoading:
             ),
             patch(
                 "pyiwfm.io.stream_inflow.InflowReader.read",
-                side_effect=RuntimeError("bad inflow file"),
+                side_effect=ValueError("bad inflow file"),
             ),
         ):
             model = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
@@ -3000,7 +3003,7 @@ class TestStreamDeepLoading:
             ),
             patch(
                 "pyiwfm.components.stream.AppStream",
-                side_effect=RuntimeError("cannot create AppStream"),
+                side_effect=ValueError("cannot create AppStream"),
             ),
         ):
             model = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
@@ -3512,7 +3515,7 @@ class TestSmallWatershedDeepLoading:
             ),
             patch(
                 "pyiwfm.io.small_watershed.SmallWatershedMainReader.read",
-                side_effect=RuntimeError("bad sw file"),
+                side_effect=ValueError("bad sw file"),
             ),
         ):
             model = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
@@ -3621,7 +3624,7 @@ class TestUnsatZoneDeepLoading:
             ),
             patch(
                 "pyiwfm.io.unsaturated_zone.UnsatZoneMainReader.read",
-                side_effect=RuntimeError("bad uz file"),
+                side_effect=ValueError("bad uz file"),
             ),
         ):
             model = IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)

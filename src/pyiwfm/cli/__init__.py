@@ -23,6 +23,8 @@ def main(argv: list[str] | None = None) -> int:
     # Register subcommands
     from pyiwfm.cli.budget import add_budget_parser
     from pyiwfm.cli.calctyphyd import add_calctyphyd_parser
+    from pyiwfm.cli.depletion import add_depletion_parser
+    from pyiwfm.cli.drawdown import add_drawdown_parser
     from pyiwfm.cli.export import add_export_parser
     from pyiwfm.cli.iwfm2obs import add_iwfm2obs_parser
     from pyiwfm.cli.package import add_package_parser
@@ -37,6 +39,8 @@ def main(argv: list[str] | None = None) -> int:
     add_zbudget_parser(subparsers)
     add_iwfm2obs_parser(subparsers)
     add_calctyphyd_parser(subparsers)
+    add_depletion_parser(subparsers)
+    add_drawdown_parser(subparsers)
     add_package_parser(subparsers)
     add_run_parser(subparsers)
     add_pest_parser(subparsers)

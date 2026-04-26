@@ -13,7 +13,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from pyiwfm.core.exceptions import ValidationError
+import numpy as np
+
+from pyiwfm.core.exceptions import (
+    ComponentError,
+    ComponentLoadError,
+    IWFMIOError,
+    ValidationError,
+)
 from pyiwfm.core.model_factory import (
     apply_kh_anomalies as _apply_kh_anomalies,
 )
@@ -35,7 +42,67 @@ from pyiwfm.core.model_factory import (
 
 logger = logging.getLogger(__name__)
 
+# Exceptions we expect during component-file parsing. Anything outside this
+# tuple is a programmer error (TypeError, AttributeError, NameError, etc.)
+# and should bubble up rather than be swallowed.
+#
+# Includes:
+#   - Python builtins for I/O / parsing failures (OSError covers
+#     FileNotFoundError + permission errors; ValueError covers bad numeric
+#     conversions; KeyError / IndexError cover malformed dicts/arrays).
+#   - ImportError: pyiwfm has many optional dependencies (triangle, gmsh,
+#     dss, vtk, etc.) and component readers may import them lazily. A
+#     missing optional dep is a legitimate "feature unavailable" condition,
+#     not a programmer error.
+#   - pyiwfm's own IWFMIOError (parent of FileFormatError) and
+#     ComponentError, raised by domain readers for format-specific issues.
+_COMPONENT_LOAD_EXCEPTIONS: tuple[type[BaseException], ...] = (
+    OSError,
+    ValueError,
+    KeyError,
+    IndexError,
+    UnicodeDecodeError,
+    ImportError,
+    IWFMIOError,
+    ComponentError,
+)
+
+
+def _record_component_failure(
+    model: IWFMModel,
+    component_name: str,
+    source_file: Path | None,
+    exc: BaseException,
+    *,
+    strict: bool,
+) -> None:
+    """Common handling for a failed component load.
+
+    With ``strict=False`` (default): logs a structured warning with full
+    traceback and stores the error in ``model.metadata`` for backward
+    compatibility. The model retains whatever components loaded
+    successfully.
+
+    With ``strict=True``: logs the warning, then raises
+    :class:`ComponentLoadError` chained from ``exc``. Callers that need a
+    complete model (calibration, analysis pipelines) should pass this.
+    """
+    logger.warning(
+        "Failed to load %s component from %s: %s: %s",
+        component_name,
+        source_file,
+        type(exc).__name__,
+        exc,
+        exc_info=True,
+    )
+    model.metadata[f"{component_name}_load_error"] = f"{type(exc).__name__}: {exc}"
+    if strict:
+        raise ComponentLoadError(component_name, source_file, exc) from exc
+
+
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
     from pyiwfm.components.groundwater import AppGW
     from pyiwfm.components.lake import AppLake
     from pyiwfm.components.rootzone import RootZone
@@ -83,6 +150,13 @@ class IWFMModel:
     metadata: dict[str, Any] = field(default_factory=dict)
     source_files: dict[str, Path] = field(default_factory=dict)
 
+    # Components mutated since the last load/save. Populated by the
+    # mutation helpers (set_aquifer_parameter, set_stratigraphy_*,
+    # add_observation_well, etc.) so save_complete_model can warn or
+    # log if a dirty component fails to write. Not user-facing state —
+    # tests should reach into it directly.
+    _dirty: set[str] = field(default_factory=set, repr=False)
+
     # ========================================================================
     # Class Methods for Loading Models
     # ========================================================================
@@ -93,6 +167,8 @@ class IWFMModel:
         pp_file: Path | str,
         load_streams: bool = True,
         load_lakes: bool = True,
+        *,
+        strict: bool = False,
     ) -> IWFMModel:
         """
         Load a model from PreProcessor input files.
@@ -110,6 +186,12 @@ class IWFMModel:
             pp_file: Path to the main PreProcessor input file
             load_streams: If True, load stream network geometry
             load_lakes: If True, load lake geometry
+            strict: If True, raise :class:`~pyiwfm.core.exceptions.ComponentLoadError`
+                when an optional component file cannot be parsed. The default
+                (``False``) preserves the historical lenient behavior: log a
+                warning, record the error in ``model.metadata``, and continue
+                with whatever components loaded. Use ``strict=True`` from
+                calibration / analysis pipelines that require a complete model.
 
         Returns:
             IWFMModel instance with mesh, stratigraphy, and optionally
@@ -243,8 +325,8 @@ class IWFMModel:
                 _build_reaches_from_node_reach_ids(stream)
 
                 model.streams = stream
-            except Exception as e:
-                model.metadata["streams_load_error"] = str(e)
+            except _COMPONENT_LOAD_EXCEPTIONS as e:
+                _record_component_failure(model, "streams", config.streams_file, e, strict=strict)
 
         # Load lake geometry if requested
         if load_lakes and config.lakes_file and config.lakes_file.exists():
@@ -262,8 +344,8 @@ class IWFMModel:
                         lakes.add_lake_element(LakeElement(element_id=elem_id, lake_id=lake.id))
 
                 model.lakes = lakes
-            except Exception as e:
-                model.metadata["lakes_load_error"] = str(e)
+            except _COMPONENT_LOAD_EXCEPTIONS as e:
+                _record_component_failure(model, "lakes", config.lakes_file, e, strict=strict)
 
         model.metadata["source"] = "preprocessor"
         _resolve_stream_node_coordinates(model)
@@ -334,6 +416,8 @@ class IWFMModel:
         simulation_file: Path | str,
         preprocessor_file: Path | str,
         load_timeseries: bool = False,
+        *,
+        strict: bool = False,
     ) -> IWFMModel:
         """
         Load a complete IWFM model using both simulation and preprocessor files.
@@ -351,6 +435,13 @@ class IWFMModel:
             simulation_file: Path to the simulation main input file
             preprocessor_file: Path to the preprocessor main input file
             load_timeseries: If True, also load time series data (slower)
+            strict: If True, raise :class:`~pyiwfm.core.exceptions.ComponentLoadError`
+                when an optional component (groundwater, streams, lakes, rootzone,
+                small watersheds, unsaturated zone) cannot be parsed. The default
+                (``False``) preserves the historical lenient behavior: log a
+                structured warning, record the error in ``model.metadata``, and
+                continue with whatever components loaded. Use ``strict=True`` from
+                calibration / analysis pipelines that require a complete model.
 
         Returns:
             IWFMModel instance with all components loaded
@@ -430,12 +521,8 @@ class IWFMModel:
                     from pyiwfm.io.supply_adjust import read_supply_adjustment
 
                     model.supply_adjustment = read_supply_adjustment(sa_path)
-                except Exception:
-                    logger.warning(
-                        "Could not parse supply adjustment file: %s",
-                        sa_path,
-                        exc_info=True,
-                    )
+                except _COMPONENT_LOAD_EXCEPTIONS as e:
+                    _record_component_failure(model, "supply_adjustment", sa_path, e, strict=strict)
         if sim_config.precipitation_file:
             model.metadata["precipitation_file"] = str(sim_config.precipitation_file)
             model.source_files["precipitation_ts"] = _resolve_path(
@@ -575,7 +662,7 @@ class IWFMModel:
                                     gw.bc_output_file_raw = bc_config.bc_output_file_raw
                                     if bc_config.bc_output_file:
                                         gw.bc_output_file = str(bc_config.bc_output_file)
-                            except Exception:
+                            except _COMPONENT_LOAD_EXCEPTIONS:
                                 pass
 
                         # Load pumping from sub-file
@@ -652,14 +739,14 @@ class IWFMModel:
                                 # Store pumping TS file path
                                 if pump_config.ts_data_file:
                                     gw.pumping_ts_file = pump_config.ts_data_file
-                            except Exception:
+                            except _COMPONENT_LOAD_EXCEPTIONS:
                                 # Fall back to simple well reader
                                 try:
                                     gw_reader = GroundwaterReader()
                                     wells = gw_reader.read_wells(gw_config.pumping_file)
                                     for well in wells.values():
                                         gw.add_well(well)
-                                except Exception:
+                                except _COMPONENT_LOAD_EXCEPTIONS:
                                     pass
 
                         # Load tile drains from sub-file
@@ -728,7 +815,7 @@ class IWFMModel:
                                     }
                                     for s in td_config.td_hydro_specs
                                 ]
-                            except Exception:
+                            except _COMPONENT_LOAD_EXCEPTIONS:
                                 pass
 
                         # Load subsidence from sub-file
@@ -820,7 +907,7 @@ class IWFMModel:
                                 model.metadata["subsidence_n_hydrograph_outputs"] = (
                                     subs_config.n_hydrograph_outputs
                                 )
-                            except Exception:
+                            except _COMPONENT_LOAD_EXCEPTIONS:
                                 pass
 
                         # Load aquifer parameters (inline in GW main file)
@@ -852,7 +939,7 @@ class IWFMModel:
                                     model.metadata["gw_parametric_grids"] = len(
                                         gw_config.parametric_grids
                                     )
-                            except Exception:
+                            except _COMPONENT_LOAD_EXCEPTIONS:
                                 pass
 
                         # Apply Kh anomaly overwrites
@@ -865,7 +952,7 @@ class IWFMModel:
                                 )
                                 model.metadata["gw_kh_anomaly_count"] = len(gw_config.kh_anomalies)
                                 model.metadata["gw_kh_anomaly_applied"] = applied
-                            except Exception:
+                            except _COMPONENT_LOAD_EXCEPTIONS:
                                 pass
 
                         # Load initial heads (inline in GW main file)
@@ -882,19 +969,19 @@ class IWFMModel:
                         # Store full GW main config for roundtrip fidelity
                         gw.gw_main_config = gw_config
 
-                    except Exception:
+                    except _COMPONENT_LOAD_EXCEPTIONS:
                         # Fall back to treating file as wells file directly
                         try:
                             gw_reader = GroundwaterReader()
                             wells = gw_reader.read_wells(gw_file)
                             for well in wells.values():
                                 gw.add_well(well)
-                        except Exception:
+                        except _COMPONENT_LOAD_EXCEPTIONS:
                             pass  # File format not recognized
 
                     model.groundwater = gw
-                except Exception as e:
-                    model.metadata["groundwater_load_error"] = str(e)
+                except _COMPONENT_LOAD_EXCEPTIONS as e:
+                    _record_component_failure(model, "groundwater", gw_file, e, strict=strict)
 
         # Load streams component using hierarchical reader
         # Always enter when streams_file exists — simulation data (diversions,
@@ -1013,7 +1100,7 @@ class IWFMModel:
                                 stream.diversion_recharge_zones = div_config.recharge_zones
                                 stream.diversion_spill_zones = div_config.spill_zones
                                 stream.diversion_has_spills = div_config.has_spills
-                            except Exception:
+                            except _COMPONENT_LOAD_EXCEPTIONS:
                                 pass
 
                         # Load bypasses from sub-file
@@ -1062,7 +1149,7 @@ class IWFMModel:
                                 for sz in byp_config.seepage_zones:
                                     if sz.bypass_id in stream.bypasses:
                                         stream.bypasses[sz.bypass_id].seepage_locations.append(sz)
-                            except Exception:
+                            except _COMPONENT_LOAD_EXCEPTIONS:
                                 pass
 
                         # Load inflow info from sub-file
@@ -1072,7 +1159,7 @@ class IWFMModel:
                                 inflow_config = inflow_reader.read(stream_config.inflow_file)
                                 model.metadata["stream_n_inflows"] = inflow_config.n_inflows
                                 model.metadata["stream_inflow_nodes"] = inflow_config.inflow_nodes
-                            except Exception:
+                            except _COMPONENT_LOAD_EXCEPTIONS:
                                 pass
 
                         # Populate stream bed parameters from main file
@@ -1159,14 +1246,14 @@ class IWFMModel:
                         if stream_config.final_flow_file:
                             stream.final_flow_file = str(stream_config.final_flow_file)
 
-                    except Exception:
+                    except _COMPONENT_LOAD_EXCEPTIONS:
                         # Fall back to treating file as stream nodes file
                         try:
                             stream_reader = StreamReader()
                             nodes = stream_reader.read_stream_nodes(stream_file)
                             for node in nodes.values():
                                 stream.add_node(node)
-                        except Exception:
+                        except _COMPONENT_LOAD_EXCEPTIONS:
                             pass
 
                     model.streams = stream
@@ -1223,7 +1310,7 @@ class IWFMModel:
                                             name=rs.name,
                                         )
                                     )
-                        except Exception as e:
+                        except _COMPONENT_LOAD_EXCEPTIONS as e:
                             logger.warning(
                                 "Could not enrich stream reaches from preprocessor: %s",
                                 e,
@@ -1239,8 +1326,8 @@ class IWFMModel:
                         len(stream.reaches) if stream.reaches else 0,
                     )
 
-                except Exception as e:
-                    model.metadata["streams_load_error"] = str(e)
+                except _COMPONENT_LOAD_EXCEPTIONS as e:
+                    _record_component_failure(model, "streams", stream_file, e, strict=strict)
 
         # Load lakes component using hierarchical reader
         if sim_config.lakes_file and model.lakes is None:
@@ -1295,7 +1382,7 @@ class IWFMModel:
                                 lake_config.outflow_ratings
                             )
 
-                    except Exception:
+                    except _COMPONENT_LOAD_EXCEPTIONS:
                         # Fall back to reading as lake definitions file
                         try:
                             lake_reader = LakeReader()
@@ -1306,12 +1393,12 @@ class IWFMModel:
                                     lakes.add_lake_element(
                                         LakeElement(element_id=elem_id, lake_id=lake.id)
                                     )
-                        except Exception:
+                        except _COMPONENT_LOAD_EXCEPTIONS:
                             pass
 
                     model.lakes = lakes
-                except Exception as e:
-                    model.metadata["lakes_load_error"] = str(e)
+                except _COMPONENT_LOAD_EXCEPTIONS as e:
+                    _record_component_failure(model, "lakes", lake_file, e, strict=strict)
 
         # Load rootzone component using hierarchical reader
         if sim_config.rootzone_file:
@@ -1487,7 +1574,7 @@ class IWFMModel:
                                         rz_config.nonponded_crop_file,
                                         base_dir,
                                     )
-                                except Exception as exc:
+                                except _COMPONENT_LOAD_EXCEPTIONS as exc:
                                     logger.warning(
                                         "Failed to read nonponded sub-file (v5): %s",
                                         exc,
@@ -1499,7 +1586,7 @@ class IWFMModel:
                                         rz_config.ponded_crop_file,
                                         base_dir,
                                     )
-                                except Exception as exc:
+                                except _COMPONENT_LOAD_EXCEPTIONS as exc:
                                     logger.warning(
                                         "Failed to read ponded sub-file (v5): %s",
                                         exc,
@@ -1515,7 +1602,7 @@ class IWFMModel:
                                         rz_config.urban_file,
                                         base_dir,
                                     )
-                                except Exception as exc:
+                                except _COMPONENT_LOAD_EXCEPTIONS as exc:
                                     logger.warning(
                                         "Failed to read urban sub-file (v5): %s",
                                         exc,
@@ -1527,7 +1614,7 @@ class IWFMModel:
                                         rz_config.native_veg_file,
                                         base_dir,
                                     )
-                                except Exception as exc:
+                                except _COMPONENT_LOAD_EXCEPTIONS as exc:
                                     logger.warning(
                                         "Failed to read native/riparian sub-file (v5): %s",
                                         exc,
@@ -1551,7 +1638,7 @@ class IWFMModel:
                                         rz_config.nonponded_crop_file,
                                         base_dir,
                                     )
-                                except Exception as exc:
+                                except _COMPONENT_LOAD_EXCEPTIONS as exc:
                                     logger.warning(
                                         "Failed to read nonponded sub-file: %s",
                                         exc,
@@ -1563,7 +1650,7 @@ class IWFMModel:
                                     rootzone.ponded_config = ponded_reader.read(
                                         rz_config.ponded_crop_file, base_dir
                                     )
-                                except Exception as exc:
+                                except _COMPONENT_LOAD_EXCEPTIONS as exc:
                                     logger.warning(
                                         "Failed to read ponded sub-file: %s",
                                         exc,
@@ -1575,7 +1662,7 @@ class IWFMModel:
                                     rootzone.urban_config = urban_reader.read(
                                         rz_config.urban_file, base_dir
                                     )
-                                except Exception as exc:
+                                except _COMPONENT_LOAD_EXCEPTIONS as exc:
                                     logger.warning(
                                         "Failed to read urban sub-file: %s",
                                         exc,
@@ -1588,7 +1675,7 @@ class IWFMModel:
                                         rz_config.native_veg_file,
                                         base_dir,
                                     )
-                                except Exception as exc:
+                                except _COMPONENT_LOAD_EXCEPTIONS as exc:
                                     logger.warning(
                                         "Failed to read native/riparian sub-file: %s",
                                         exc,
@@ -1630,14 +1717,14 @@ class IWFMModel:
                                     CropType(id=crop_id, name=name, root_depth=depth)
                                 )
 
-                    except Exception:
+                    except _COMPONENT_LOAD_EXCEPTIONS:
                         # Fall back to treating file as crop types file
                         try:
                             rz_reader = RootZoneReader()
                             crops = rz_reader.read_crop_types(rz_file)
                             for crop in crops.values():
                                 rootzone.add_crop_type(crop)
-                        except Exception:
+                        except _COMPONENT_LOAD_EXCEPTIONS:
                             pass
 
                     # Wire area data file paths for lazy loading.
@@ -1668,12 +1755,12 @@ class IWFMModel:
                                     resolved,
                                     resolved.exists(),
                                 )
-                    except Exception as exc:
+                    except _COMPONENT_LOAD_EXCEPTIONS as exc:
                         logger.warning("Failed to wire area data file paths: %s", exc)
 
                     model.rootzone = rootzone
-                except Exception as e:
-                    model.metadata["rootzone_load_error"] = str(e)
+                except _COMPONENT_LOAD_EXCEPTIONS as e:
+                    _record_component_failure(model, "rootzone", rz_file, e, strict=strict)
 
         # Load small watershed component (optional)
         if sim_config.small_watershed_file:
@@ -1696,8 +1783,10 @@ class IWFMModel:
                     # Build component from config
                     if sw_config.n_watersheds > 0:
                         model.small_watersheds = AppSmallWatershed.from_config(sw_config)
-                except Exception as e:
-                    model.metadata["small_watershed_load_error"] = str(e)
+                except _COMPONENT_LOAD_EXCEPTIONS as e:
+                    # Metadata key uses singular "small_watershed" for
+                    # backward compatibility with callers that read this key.
+                    _record_component_failure(model, "small_watershed", sw_file, e, strict=strict)
 
         # Load unsaturated zone component (optional)
         if sim_config.unsaturated_zone_file:
@@ -1720,8 +1809,11 @@ class IWFMModel:
                     # Build component from config
                     if uz_config.n_layers > 0:
                         model.unsaturated_zone = AppUnsatZone.from_config(uz_config)
-                except Exception as e:
-                    model.metadata["unsat_zone_load_error"] = str(e)
+                except _COMPONENT_LOAD_EXCEPTIONS as e:
+                    # The metadata key is "unsat_zone_load_error" (not
+                    # "unsaturated_zone_load_error") for backward
+                    # compatibility with callers that read this key.
+                    _record_component_failure(model, "unsat_zone", uz_file, e, strict=strict)
 
         _resolve_stream_node_coordinates(model)
         return model
@@ -2098,6 +2190,259 @@ class IWFMModel:
         lines.append(f"Source: {source}")
 
         return "\n".join(lines)
+
+    # ========================================================================
+    # Model mutation helpers
+    # ========================================================================
+    #
+    # These convenience methods provide an ergonomic, validated path for
+    # editing a loaded model in place. The underlying component attributes
+    # (``model.groundwater.aquifer_params.kh``, etc.) are still accessible
+    # for advanced use, but the helpers below are the documented, supported
+    # API for callers building scenarios, calibration runs, or diff tools.
+    #
+    # Each helper:
+    #   - validates inputs (raises ``ValueError`` with helpful messages)
+    #   - records the modified component in ``self._dirty`` so save paths
+    #     can warn if a dirty component fails to write
+    #   - is non-breaking: existing direct-attribute mutation still works
+    #
+    # See ``docs/user_guide/mutating_models.rst`` for end-to-end examples.
+
+    def mark_dirty(self, component_name: str) -> None:
+        """Mark ``component_name`` as modified since the last load/save.
+
+        Call this from custom mutation paths so :meth:`to_simulation` and
+        related save methods can surface incomplete writes.
+        """
+        self._dirty.add(component_name)
+
+    def set_aquifer_parameter(
+        self,
+        param: str,
+        layer: int,
+        values: NDArray[np.float64] | list[float],
+    ) -> None:
+        """Replace an aquifer parameter array for a single layer.
+
+        Parameters
+        ----------
+        param
+            One of ``"kh"``, ``"kv"``, ``"ss"``, ``"sy"``, ``"aquitard_kv"``
+            (matches the :class:`AquiferParameters._PARAM_ATTRS` dispatcher).
+        layer
+            1-based aquifer layer (IWFM convention).
+        values
+            Array-like of length ``n_nodes`` with the new values for this
+            layer.
+
+        Raises
+        ------
+        ValueError
+            If groundwater isn't loaded, the layer is out of range, the
+            named parameter array isn't allocated, or the values length
+            doesn't match ``n_nodes``.
+        KeyError
+            If ``param`` isn't a recognized parameter name.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> new_kh = np.full(model.groundwater.n_nodes, 1e-4)
+        >>> model.set_aquifer_parameter("kh", layer=1, values=new_kh)
+        """
+        from pyiwfm.core.ids import to_index
+
+        if self.groundwater is None:
+            raise ValueError("groundwater component is not loaded")
+        params = self.groundwater.aquifer_params
+        if params is None:
+            raise ValueError("aquifer_params is not set on groundwater component")
+
+        layer_idx = to_index(layer, params.n_layers, kind="layer")
+
+        # Trigger KeyError for unknown param names, ValueError if unset.
+        arr = params.get_array(param)
+
+        values_arr = np.asarray(values, dtype=np.float64)
+        if values_arr.shape != (params.n_nodes,):
+            raise ValueError(
+                f"values for {param!r} layer {layer} must have shape "
+                f"({params.n_nodes},); got {values_arr.shape}"
+            )
+        arr[:, layer_idx] = values_arr
+        self.mark_dirty("groundwater")
+
+    def set_aquifer_parameter_at(
+        self,
+        param: str,
+        node_id: int,
+        layer: int,
+        value: float,
+    ) -> None:
+        """Set a single (node, layer) cell of an aquifer parameter.
+
+        Parameters
+        ----------
+        param
+            See :meth:`set_aquifer_parameter`.
+        node_id
+            1-based node ID (IWFM convention).
+        layer
+            1-based aquifer layer.
+        value
+            New scalar value.
+
+        Raises
+        ------
+        ValueError
+            If groundwater isn't loaded, IDs are out of range, or the
+            parameter array isn't allocated.
+        """
+        from pyiwfm.core.ids import to_index
+
+        if self.groundwater is None:
+            raise ValueError("groundwater component is not loaded")
+        params = self.groundwater.aquifer_params
+        if params is None:
+            raise ValueError("aquifer_params is not set on groundwater component")
+
+        node_idx = to_index(node_id, params.n_nodes, kind="node")
+        layer_idx = to_index(layer, params.n_layers, kind="layer")
+        params.get_array(param)[node_idx, layer_idx] = float(value)
+        self.mark_dirty("groundwater")
+
+    def set_stratigraphy_from_thicknesses(
+        self,
+        gs_elev: NDArray[np.float64] | list[float],
+        aquitard_thicknesses: NDArray[np.float64] | list[list[float]],
+        aquifer_thicknesses: NDArray[np.float64] | list[list[float]],
+        active_node: NDArray[np.bool_] | None = None,
+    ) -> None:
+        """Replace ``self.stratigraphy`` with one built from thickness arrays.
+
+        Wraps :meth:`Stratigraphy.from_thicknesses` and validates the result
+        is consistent with the current mesh (if loaded).
+
+        Parameters
+        ----------
+        gs_elev
+            Ground surface elevations, shape ``(n_nodes,)``.
+        aquitard_thicknesses
+            Aquitard thicknesses, shape ``(n_nodes, n_layers)``. IWFM
+            convention: aquitard ``k`` sits above aquifer layer ``k``.
+        aquifer_thicknesses
+            Aquifer thicknesses, shape ``(n_nodes, n_layers)``.
+        active_node
+            Optional active-node flags, shape ``(n_nodes, n_layers)``.
+
+        Raises
+        ------
+        StratigraphyError
+            If thickness shapes are inconsistent or any thickness is
+            negative (validation comes from
+            :meth:`Stratigraphy.from_thicknesses`).
+        ValueError
+            If a mesh is loaded and ``gs_elev`` length doesn't match
+            ``mesh.n_nodes``.
+        """
+        from pyiwfm.core.stratigraphy import Stratigraphy
+
+        gs_arr = np.asarray(gs_elev, dtype=np.float64)
+        if self.mesh is not None and gs_arr.shape != (self.mesh.n_nodes,):
+            raise ValueError(
+                f"gs_elev shape {gs_arr.shape} does not match mesh ({self.mesh.n_nodes},)"
+            )
+
+        self.stratigraphy = Stratigraphy.from_thicknesses(
+            gs_arr,
+            np.asarray(aquitard_thicknesses, dtype=np.float64),
+            np.asarray(aquifer_thicknesses, dtype=np.float64),
+            active_node,
+        )
+        self.mark_dirty("stratigraphy")
+
+    def add_observation_well(
+        self,
+        node_id: int,
+        layer: int,
+        x: float,
+        y: float,
+        name: str = "",
+    ) -> None:
+        """Append a groundwater hydrograph observation point.
+
+        Mirrors the IWFM convention where each hydrograph location is
+        identified by ``(node_id, layer)`` plus optional ``(x, y)`` for
+        rendering and a free-form ``name``.
+
+        Parameters
+        ----------
+        node_id
+            1-based mesh node ID.
+        layer
+            1-based aquifer layer.
+        x, y
+            Coordinates (model CRS).
+        name
+            Optional descriptor (e.g. well name).
+
+        Raises
+        ------
+        ValueError
+            If groundwater isn't loaded, or IDs are out of range against
+            the GW component's ``n_nodes`` / ``n_layers``.
+        """
+        from pyiwfm.components.groundwater import HydrographLocation
+        from pyiwfm.core.ids import to_index
+
+        if self.groundwater is None:
+            raise ValueError("groundwater component is not loaded")
+
+        # Validate IDs (raises ValueError if out of range)
+        to_index(node_id, self.groundwater.n_nodes, kind="node")
+        to_index(layer, self.groundwater.n_layers, kind="layer")
+
+        self.groundwater.add_hydrograph_location(
+            HydrographLocation(
+                node_id=node_id,
+                layer=layer,
+                x=float(x),
+                y=float(y),
+                name=name,
+            )
+        )
+        self.mark_dirty("groundwater")
+
+    def remove_observation_well(self, name: str) -> int:
+        """Remove all groundwater hydrograph locations whose ``name`` matches.
+
+        Parameters
+        ----------
+        name
+            Exact-match name (case-sensitive). To remove unnamed locations,
+            pass an empty string.
+
+        Returns
+        -------
+        int
+            Number of locations removed.
+
+        Raises
+        ------
+        ValueError
+            If groundwater isn't loaded.
+        """
+        if self.groundwater is None:
+            raise ValueError("groundwater component is not loaded")
+        before = len(self.groundwater.hydrograph_locations)
+        self.groundwater.hydrograph_locations = [
+            loc for loc in self.groundwater.hydrograph_locations if loc.name != name
+        ]
+        removed = before - len(self.groundwater.hydrograph_locations)
+        if removed:
+            self.mark_dirty("groundwater")
+        return removed
 
     def validate_components(self) -> list[str]:
         """

@@ -11,6 +11,8 @@ This user guide provides comprehensive documentation for using pyiwfm.
    mesh
    stratigraphy
    io
+   inputs_vs_outputs
+   mutating_models
    calibration
    web_viewer
    diagnostics

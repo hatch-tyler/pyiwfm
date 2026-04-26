@@ -50,7 +50,9 @@ class TestFromPreprocessorStreamLoadError:
             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
             patch("pyiwfm.io.streams.StreamReader") as MockStreamReader,
         ):
-            MockStreamReader.return_value.read_stream_nodes.side_effect = Exception(
+            # Real parsers raise ValueError on bad data; from_preprocessor
+            # narrows its catch tuple to expected parser exceptions.
+            MockStreamReader.return_value.read_stream_nodes.side_effect = ValueError(
                 "Stream parse error"
             )
             model = IWFMModel.from_preprocessor(tmp_path / "preprocessor.in", load_streams=True)
@@ -92,7 +94,7 @@ class TestFromPreprocessorLakeLoadError:
             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
             patch("pyiwfm.io.lakes.LakeReader") as MockLakeReader,
         ):
-            MockLakeReader.return_value.read_lake_definitions.side_effect = Exception(
+            MockLakeReader.return_value.read_lake_definitions.side_effect = ValueError(
                 "Lake parse error"
             )
             model = IWFMModel.from_preprocessor(tmp_path / "preprocessor.in", load_lakes=True)
@@ -445,8 +447,8 @@ class TestFromSimulationWithPreprocessor:
         ):
             MockSimReader.return_value.read.return_value = sim_config
             # Make hierarchical reader fail, triggering fallback to direct reader
-            MockGWMainReader.return_value.read.side_effect = Exception("GW main file error")
-            MockGWReader.return_value.read_wells.side_effect = Exception("GW error")
+            MockGWMainReader.return_value.read.side_effect = ValueError("GW main file error")
+            MockGWReader.return_value.read_wells.side_effect = ValueError("GW error")
 
             IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
 
@@ -490,8 +492,10 @@ class TestFromSimulationWithPreprocessor:
         ):
             MockSimReader.return_value.read.return_value = sim_config
             # Make hierarchical reader fail, triggering fallback to direct reader
-            MockStreamMainReader.return_value.read.side_effect = Exception("Stream main file error")
-            MockStreamReader.return_value.read_stream_nodes.side_effect = Exception("Stream error")
+            MockStreamMainReader.return_value.read.side_effect = ValueError(
+                "Stream main file error"
+            )
+            MockStreamReader.return_value.read_stream_nodes.side_effect = ValueError("Stream error")
 
             IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
 
@@ -534,8 +538,8 @@ class TestFromSimulationWithPreprocessor:
             patch("pyiwfm.io.preprocessor._resolve_path", side_effect=lambda base, p: Path(p)),
         ):
             MockSimReader.return_value.read.return_value = sim_config
-            MockLakeMainReader.return_value.read.side_effect = Exception("Lake main file error")
-            MockLakeReader.return_value.read_lake_definitions.side_effect = Exception("Lake error")
+            MockLakeMainReader.return_value.read.side_effect = ValueError("Lake main file error")
+            MockLakeReader.return_value.read_lake_definitions.side_effect = ValueError("Lake error")
 
             IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
 
@@ -579,8 +583,8 @@ class TestFromSimulationWithPreprocessor:
         ):
             MockSimReader.return_value.read.return_value = sim_config
             # Make hierarchical reader fail, triggering fallback to direct reader
-            MockRZMainReader.return_value.read.side_effect = Exception("RZ main file error")
-            MockRZReader.return_value.read_crop_types.side_effect = Exception("RZ error")
+            MockRZMainReader.return_value.read.side_effect = ValueError("RZ main file error")
+            MockRZReader.return_value.read_crop_types.side_effect = ValueError("RZ error")
 
             IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
 

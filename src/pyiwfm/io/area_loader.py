@@ -1,6 +1,12 @@
 """
 Lazy area data loader for IWFM web visualization.
 
+**Read-only by design.** This module reads HDF5 caches generated downstream
+of the rootzone pipeline; the canonical input writer is
+``io.rootzone_writer``. There is no parallel writer here because that would
+drift from the source-of-truth path. See
+``docs/user_guide/inputs_vs_outputs.rst``.
+
 Provides ``LazyAreaDataLoader`` for loading time-varying land-use area data
 from HDF5 files without reading all timesteps into memory, and
 ``AreaDataManager`` which manages all four land-use area file types.

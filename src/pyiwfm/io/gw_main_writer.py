@@ -9,7 +9,9 @@ specs, aquifer parameters, Kh anomalies, and initial heads).
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TextIO
+from typing import TYPE_CHECKING, TextIO
+
+import numpy as np
 
 from pyiwfm.io.groundwater import GWMainFileConfig
 from pyiwfm.io.iwfm_writer import (
@@ -22,6 +24,11 @@ from pyiwfm.io.iwfm_writer import (
     write_value as _write_value,
 )
 
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from pyiwfm.components.groundwater import AquiferParameters
+
 
 def _write_path(f: TextIO, path: Path | None, description: str = "") -> None:
     """Write a file path line (or blank if None)."""
@@ -29,6 +36,49 @@ def _write_path(f: TextIO, path: Path | None, description: str = "") -> None:
         _write_value(f, str(path), description)
     else:
         _write_value(f, "", description)
+
+
+def _format_aquifer_params_block(params: AquiferParameters) -> str:
+    """Format the aquifer-parameter rows as a single string.
+
+    Output is byte-identical to the previous per-cell ``f.write`` loop:
+    layer 0 rows carry the 1-based node ID, continuation rows are indented.
+    Coalescing avoids ``n_nodes * n_layers`` write syscalls on large models.
+    """
+    n_nodes = params.n_nodes
+    n_layers = params.n_layers
+    zero = np.zeros((n_nodes, n_layers), dtype=np.float64)
+    kh = params.kh if params.kh is not None else zero
+    kv = params.kv if params.kv is not None else zero
+    ss = params.specific_storage if params.specific_storage is not None else zero
+    sy = params.specific_yield if params.specific_yield is not None else zero
+    akv = params.aquitard_kv if params.aquitard_kv is not None else zero
+
+    parts: list[str] = []
+    append = parts.append
+    for i in range(n_nodes):
+        for layer in range(n_layers):
+            if layer == 0:
+                append(f"     {i + 1:>6d}  ")
+            else:
+                append("             ")
+            append(
+                f"{kh[i, layer]:>12.6g}  {ss[i, layer]:>12.6g}  "
+                f"{sy[i, layer]:>12.6g}  {kv[i, layer]:>12.6g}  "
+                f"{akv[i, layer]:>12.6g}\n"
+            )
+    return "".join(parts)
+
+
+def _format_initial_heads_block(heads: NDArray[np.float64]) -> str:
+    """Format initial-head rows as a single string. Byte-identical to the
+    previous per-node ``f.write`` loop."""
+    n_nodes, n_layers = heads.shape
+    parts: list[str] = []
+    for i in range(n_nodes):
+        vals = "  ".join(f"{heads[i, j]:>12.4f}" for j in range(n_layers))
+        parts.append(f"     {i + 1:>6d}  {vals}\n")
+    return "".join(parts)
 
 
 def write_gw_main_file(config: GWMainFileConfig, filepath: Path | str) -> Path:
@@ -106,32 +156,9 @@ def write_gw_main_file(config: GWMainFileConfig, filepath: Path | str) -> Path:
             # Write conversion factors (all 1.0 since values are already converted)
             f.write("     1.0  1.0  1.0  1.0  1.0  1.0  / Conversion factors\n")
             f.write("     1DAY                          / Time unit\n")
-            # Write per-node data
-            for i in range(params.n_nodes):
-                for layer in range(params.n_layers):
-                    kh = params.kh[i, layer] if params.kh is not None else 0.0
-                    kv = params.kv[i, layer] if params.kv is not None else 0.0
-                    ss = (
-                        params.specific_storage[i, layer]
-                        if params.specific_storage is not None
-                        else 0.0
-                    )
-                    sy = (
-                        params.specific_yield[i, layer]
-                        if params.specific_yield is not None
-                        else 0.0
-                    )
-                    akv = params.aquitard_kv[i, layer] if params.aquitard_kv is not None else 0.0
-                    if layer == 0:
-                        f.write(
-                            f"     {i + 1:>6d}  {kh:>12.6g}  {ss:>12.6g}  "
-                            f"{sy:>12.6g}  {kv:>12.6g}  {akv:>12.6g}\n"
-                        )
-                    else:
-                        f.write(
-                            f"             {kh:>12.6g}  {ss:>12.6g}  "
-                            f"{sy:>12.6g}  {kv:>12.6g}  {akv:>12.6g}\n"
-                        )
+            # Write per-node data — coalesced into a single f.write to avoid
+            # n_nodes * n_layers syscalls on large models (~120k for C2VSimFG).
+            f.write(_format_aquifer_params_block(params))
 
         # Kh anomalies
         _write_value(f, len(config.kh_anomalies), "NEBK")
@@ -142,10 +169,6 @@ def write_gw_main_file(config: GWMainFileConfig, filepath: Path | str) -> Path:
         if config.initial_heads is not None:
             _write_comment(f, "Initial Groundwater Heads")
             _write_value(f, 1.0, "FACTICL")
-            heads = config.initial_heads
-            n_nodes, n_layers = heads.shape
-            for i in range(n_nodes):
-                vals = "  ".join(f"{heads[i, j]:>12.4f}" for j in range(n_layers))
-                f.write(f"     {i + 1:>6d}  {vals}\n")
+            f.write(_format_initial_heads_block(config.initial_heads))
 
     return filepath

@@ -47,6 +47,9 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libglu1-mesa
       - run: pip install -e ".[dev]"
+      # mypy runs across the full matrix so 3.10–3.14 type errors surface in PR
+      # rather than after merge. Cheap to run; rules out version-specific drift.
+      - run: mypy src/pyiwfm/
       - run: pytest tests/unit/ -x --tb=short
       - run: pytest tests/unit/ --cov=pyiwfm --cov-report=xml
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
@@ -59,6 +62,19 @@ jobs:
           flags: ${{ github.ref == 'refs/heads/next' && 'next' || 'master' }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y libglu1-mesa
+      - run: pip install -e ".[docs]"
+      # -W escalates Sphinx warnings to errors so doc-rot (broken refs,
+      # missing modules, malformed RST) fails CI instead of silently shipping.
+      - run: sphinx-build -W docs docs/_build
 
   webapi-smoke:
     runs-on: ${{ matrix.os }}
