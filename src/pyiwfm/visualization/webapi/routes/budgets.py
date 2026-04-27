@@ -481,12 +481,21 @@ def get_budget_summary(
     except (KeyError, IndexError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    totals = {}
-    averages = {}
-    for i, name in enumerate(headers):
-        col_vals = values_arr[:, i]
-        totals[name] = _safe_float(float(np.nansum(col_vals)))
-        averages[name] = _safe_float(float(np.nanmean(col_vals)))
+    # Compute per-column totals/means in a single vectorized pass instead of
+    # iterating with np.nansum / np.nanmean per column.
+    totals_arr = np.nansum(values_arr, axis=0)
+    with np.errstate(invalid="ignore"):
+        averages_arr = np.nanmean(values_arr, axis=0)
+    totals_list = totals_arr.tolist()
+    averages_list = averages_arr.tolist()
+    totals = {
+        name: _safe_float(totals_list[i] if i < len(totals_list) else float("nan"))
+        for i, name in enumerate(headers)
+    }
+    averages = {
+        name: _safe_float(averages_list[i] if i < len(averages_list) else float("nan"))
+        for i, name in enumerate(headers)
+    }
 
     return {
         "location": location or reader.locations[0],
