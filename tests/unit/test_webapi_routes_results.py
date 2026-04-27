@@ -425,6 +425,64 @@ class TestResultsHeadDiff:
         assert data["datetime_a"] is not None
         assert data["datetime_b"] is None
 
+    def test_diff_values_match_legacy_per_index_formula(self, client: TestClient) -> None:
+        """Vectorized diff list must match the legacy per-index formula
+        ``[None if mask[i] else round(float(diff[i]), 3) for i in range(...)]``
+        byte-for-byte, including banker's-rounding edge cases and dry cells."""
+        model_state._model = _make_mock_model()
+
+        # Hand-crafted frames exercise: positive/negative diffs, banker-rounding
+        # boundaries (.5 ties), dry cells in vals_a only, dry cells in vals_b
+        # only, and dry cells in both.
+        frame_a = np.array(
+            [
+                [10.0, 0.0],
+                [-10000.0, 0.0],  # dry in a only
+                [5.1235, 0.0],  # diff = 0.0005 -> 0.0 (banker rounds to even)
+                [5.1245, 0.0],  # diff = -0.0005 -> -0.0 (banker rounds to even)
+                [100.0, 0.0],
+                [-10000.0, 0.0],  # dry in both
+            ],
+            dtype=np.float64,
+        )
+        frame_b = np.array(
+            [
+                [10.5678, 0.0],
+                [10.0, 0.0],
+                [5.1240, 0.0],
+                [5.1240, 0.0],
+                [-10000.0, 0.0],  # dry in b only
+                [-10000.0, 0.0],
+            ],
+            dtype=np.float64,
+        )
+        loader = MagicMock()
+        loader.n_frames = 2
+        loader.times = [datetime(2020, 1, 1), datetime(2020, 2, 1)]
+
+        def _get_frame(ts: int) -> np.ndarray:
+            return frame_a if ts == 0 else frame_b
+
+        loader.get_frame = MagicMock(side_effect=_get_frame)
+        model_state._head_loader = loader
+
+        resp = client.get("/api/results/head-diff?timestep_a=0&timestep_b=1&layer=1")
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # Reproduce the legacy formula and compare element-by-element.
+        vals_a = frame_a[:, 0]
+        vals_b = frame_b[:, 0]
+        diff = vals_b - vals_a
+        mask = (vals_a < -9000) | (vals_b < -9000)
+        legacy = [None if mask[i] else round(float(diff[i]), 3) for i in range(len(diff))]
+        assert data["values"] == legacy
+        # Sanity-check a few specific cells.
+        assert data["values"][1] is None  # dry in a
+        assert data["values"][4] is None  # dry in b
+        assert data["values"][5] is None  # dry in both
+        assert data["values"][0] == round(0.5678, 3)
+
 
 # ===========================================================================
 # 4. GET /api/results/head-times

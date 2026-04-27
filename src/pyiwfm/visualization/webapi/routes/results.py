@@ -105,9 +105,14 @@ def get_head_diff(
 
     diff = vals_b - vals_a
 
-    # Replace extreme values (dry cells) with NaN
+    # Replace extreme values (dry cells) with None.
+    # Round once at C speed, then null out dry cells via a list comprehension
+    # over Python primitives — avoids per-index NumPy indexing on the hot path.
     mask = (vals_a < -9000) | (vals_b < -9000)
-    diff_list = [None if mask[i] else round(float(diff[i]), 3) for i in range(len(diff))]
+    rounded = np.round(diff, 3).tolist()
+    diff_list: list[float | None] = [
+        None if m else v for m, v in zip(mask.tolist(), rounded, strict=True)
+    ]
 
     valid = diff[~mask]
     vmin = float(np.min(valid)) if len(valid) > 0 else 0.0
