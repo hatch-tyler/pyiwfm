@@ -18,6 +18,70 @@ Changed
 Fixed
 ~~~~~
 
+[1.3.0] - 2026-04-26
+--------------------
+
+Quick-win patch series surfaced by a fresh post-v1.2.0 audit. All
+non-breaking; bigger refactors (Phase 3 + 4.B) bundle into v2.0 on the
+``next`` branch.
+
+Changed
+~~~~~~~
+
+- **Vectorize webapi route hot paths.** Three ``for i in range(...)``
+  loops over NumPy arrays were pure overhead in the webapi serving path:
+
+  - ``GET /api/results/head-diff`` (``routes/results.py:110``) now
+    rounds and masks dry cells in one ``np.round`` + list comprehension
+    over Python primitives instead of indexing element-by-element.
+  - ``GET /api/budgets/{type}/summary`` (``routes/budgets.py:486``)
+    computes per-column totals and means via ``axis=0`` reductions
+    instead of looping with ``np.nansum`` / ``np.nanmean`` per column.
+  - ``GET /api/export/budget-csv`` and ``GET /api/export/timeseries/budget``
+    pre-round the entire matrix once with ``np.round`` and zip rows
+    instead of rounding each cell inside two nested Python loops.
+
+  Added a byte-for-byte equivalence test (``test_diff_values_match_legacy_per_index_formula``)
+  asserting the new ``head-diff`` rounds identically to the legacy
+  ``round(float(diff[i]), 3)`` formula on banker's-rounding ties and
+  dry-cell edge cases.
+
+- **Replace ``"No model loaded"`` boilerplate with ``ModelState`` methods.**
+  Add ``ModelState.require_loaded()`` and ``ModelState.require_model()``
+  methods that pair with the existing module-level ``require_model()``
+  helper but resolve through the *caller's* ``model_state`` binding (so
+  ``patch("...routes.foo.model_state", state)`` tests substitute their
+  fixture transparently). Replace 23 instances of the two-line
+  ``if not model_state.is_loaded: raise HTTPException(...)`` pattern
+  across results / budgets / zbudgets / export / mesh / model /
+  observations / properties routes; net –74/+59 lines.
+
+- **Consolidate ``_make_config_v40`` and ``_make_config_v50`` test
+  fixtures** in ``test_io_gw_subsidence_writer.py`` into a single
+  version-parameterized factory. The two original helpers shared 22 of
+  25 default fields verbatim.
+
+- **Extract ``cli/_parsers.py::add_control_file_subcommand``** for the
+  shared ``budget`` / ``zbudget`` parser-registration pattern.
+
+Notes
+~~~~~
+
+- ``@cached_property`` audit found no conversions are warranted in
+  v1.3.x: the expensive properties (``AppGrid.x``, ``y``, ``vertex``,
+  ``element_centroids``) are already hand-cached with explicit
+  ``_invalidate_cache()`` hooks that the test suite asserts directly.
+  ``n_*`` count properties cannot safely be cached because the underlying
+  collections are mutated by the v1.2.0 mutation helpers. The remaining
+  ``@property`` declarations are trivial accessors where caching adds
+  bookkeeping overhead exceeding the saved work.
+
+- Cross-test-file fixture consolidation (broader than the within-file
+  v40/v50 case above) was rejected after audit: each ``_make_config``
+  helper across ``test_io_*_writer.py`` builds a different writer-config
+  dataclass with unique defaults, so moving them to a shared
+  ``_writer_fixtures.py`` would relocate lines rather than delete them.
+
 [1.2.0] - 2026-04-25
 --------------------
 
