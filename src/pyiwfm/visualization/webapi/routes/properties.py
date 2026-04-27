@@ -95,8 +95,7 @@ def get_property(
     layer: int = Query(default=0, ge=0, description="Layer filter (0 for all)"),
 ) -> PropertyData:
     """Get property values as an array."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     values = _compute_property_values(property_id, layer)
     if values is None:

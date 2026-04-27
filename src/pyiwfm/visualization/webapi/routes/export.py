@@ -125,8 +125,7 @@ def export_mesh_geojson(
 
     Returns element polygons in WGS84 as a downloadable GeoJSON file.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     from pyiwfm.visualization.webapi.routes.mesh import get_mesh_geojson
 
@@ -270,8 +269,7 @@ def export_hydrograph_csv(
     """
     Export hydrograph time series as a CSV file.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     if type == "gw":
         reader = model_state.get_gw_hydrograph_reader()
@@ -405,11 +403,8 @@ def export_geopackage(
     Creates a multi-layer GeoPackage containing nodes, elements,
     and optionally streams, subregions, and boundary polygon.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
-    if model is None or model.grid is None:
+    model = model_state.require_model()
+    if model.grid is None:
         raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
     from pyiwfm.visualization.gis_export import GISExporter
@@ -475,11 +470,8 @@ def export_plot(
     - streams: Stream network colored by reach
     - elements: Elements colored by subregion
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
-    if model is None or model.grid is None:
+    model = model_state.require_model()
+    if model.grid is None:
         raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
     import matplotlib
@@ -811,8 +803,7 @@ def export_timeseries_hydrograph(
 
     Delegates to the appropriate hydrograph reader based on *type*.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     value_label: str
     if type == "gw":

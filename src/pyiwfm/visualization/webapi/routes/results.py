@@ -24,8 +24,7 @@ router = APIRouter(prefix="/api/results", tags=["results"])
 @router.get("/info")
 def get_results_info() -> dict[str, Any]:
     """Get summary of available results data."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
     return model_state.get_results_info()
 
 
@@ -187,8 +186,7 @@ def get_head_range(
 @router.get("/hydrograph-locations")
 def get_hydrograph_locations() -> dict[str, Any]:
     """Get all hydrograph locations with WGS84 coordinates."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
     return model_state.get_hydrograph_locations()
 
 
@@ -202,10 +200,7 @@ def get_hydrograph(
     For GW: location_id is the 1-based hydrograph index (column in output file).
     For stream: location_id is the stream node ID.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = model_state.require_model()
 
     if type == "gw":
         # location_id is a 1-based *physical* location index.  When the
@@ -496,10 +491,7 @@ def get_gw_hydrograph_all_layers(
     values at the actual observation coordinates for all layers).  Falls
     back to head HDF5 node extraction when no hydrograph file is available.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
+    model = model_state.require_model()
     phys_locs = model_state.get_gw_physical_locations()
     location_index = location_id - 1
 
@@ -646,11 +638,8 @@ def get_subsidence_all_layers(
     Groups subsidence specs by physical location (matching node_id) and
     returns one timeseries per layer.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
-    if model is None or model.groundwater is None:
+    model = model_state.require_model()
+    if model.groundwater is None:
         raise HTTPException(status_code=404, detail="No groundwater component")
 
     subs_config = getattr(model.groundwater, "subsidence_config", None)
@@ -748,8 +737,7 @@ def get_hydrographs_multi(
 
     Returns a list of hydrograph data objects, one per requested ID.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model = model_state.require_model()
 
     try:
         id_list = [int(x.strip()) for x in ids.split(",") if x.strip()]
@@ -760,8 +748,6 @@ def get_hydrographs_multi(
 
     if not id_list:
         raise HTTPException(status_code=400, detail="No IDs provided")
-
-    model = model_state.model
     results: list[dict[str, Any]] = []
 
     if type == "gw":

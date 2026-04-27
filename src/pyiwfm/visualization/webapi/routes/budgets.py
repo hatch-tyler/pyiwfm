@@ -326,8 +326,7 @@ def _get_budget_units_metadata(budget_type: str, reader: BudgetReader) -> dict[s
 @router.get("/types")
 def get_budget_types() -> list[str]:
     """Get list of available budget types."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
     return model_state.get_available_budgets()
 
 
@@ -732,8 +731,7 @@ def budget_sanity_check(
     tolerance: float = Query(default=1.0, ge=0.01, le=100),
 ) -> dict[str, Any]:
     """Run mass balance sanity check on a budget."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     reader = model_state.get_budget_reader(budget_type)
     if reader is None:
@@ -786,8 +784,7 @@ def get_water_balance() -> dict[str, Any]:
     Returns nodes (components) and links (flows) for a Plotly Sankey chart.
     Each link represents a flow pathway between model components.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     available = model_state.get_available_budgets()
     if not available:

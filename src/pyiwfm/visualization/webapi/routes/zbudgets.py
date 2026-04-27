@@ -151,8 +151,7 @@ def _sanitize_values(values: list[float | None]) -> list[float | None]:
 @router.get("/types")
 def get_zbudget_types() -> list[str]:
     """Get list of available zbudget types."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
     return model_state.get_available_zbudgets()
 
 
