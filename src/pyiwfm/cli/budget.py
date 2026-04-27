@@ -15,13 +15,15 @@ from pathlib import Path
 
 def add_budget_parser(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     """Register the ``pyiwfm budget`` subcommand."""
-    p = subparsers.add_parser(
-        "budget",
+    from pyiwfm.cli._parsers import add_control_file_subcommand
+
+    add_control_file_subcommand(
+        subparsers,
+        name="budget",
         help="Export budget data to Excel from a budget control file",
+        file_help="Budget control/input file (.bud/.in)",
+        runner=run_budget,
     )
-    p.add_argument("control_file", type=str, help="Budget control/input file (.bud/.in)")
-    p.add_argument("--output-dir", type=str, default=None, help="Override output directory")
-    p.set_defaults(func=run_budget)
 
 
 def run_budget(args: argparse.Namespace) -> int:
