@@ -54,10 +54,17 @@ def _make_node_params(
     )
 
 
-def _make_config_v40(**overrides: object) -> SubsidenceConfig:
-    """Build a minimal v4.0 SubsidenceConfig with sensible defaults."""
+def _make_subsidence_config(version: str = "4.0", **overrides: object) -> SubsidenceConfig:
+    """Build a minimal :class:`SubsidenceConfig` with version-appropriate defaults.
+
+    Only ``version``, ``interbed_dz``, and ``conversion_factors`` differ between
+    v4.0 and v5.0 in the writer's eyes; v5.0 adds a 7th conversion factor and
+    defaults ``interbed_dz`` to a non-zero value.
+    """
+    n_factors = 7 if version.startswith("5") else 6
+    interbed_dz = 5.0 if version.startswith("5") else 0.0
     defaults: dict[str, object] = {
-        "version": "4.0",
+        "version": version,
         "ic_file": None,
         "tecplot_file": None,
         "final_subs_file": None,
@@ -67,9 +74,9 @@ def _make_config_v40(**overrides: object) -> SubsidenceConfig:
         "hydrograph_coord_factor": 1.0,
         "hydrograph_output_file": None,
         "hydrograph_specs": [],
-        "interbed_dz": 0.0,
+        "interbed_dz": interbed_dz,
         "n_parametric_grids": 0,
-        "conversion_factors": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+        "conversion_factors": [1.0] * n_factors,
         "node_params": [],
         "n_nodes": 0,
         "n_layers": 0,
@@ -84,38 +91,16 @@ def _make_config_v40(**overrides: object) -> SubsidenceConfig:
     }
     defaults.update(overrides)
     return SubsidenceConfig(**defaults)  # type: ignore[arg-type]
+
+
+def _make_config_v40(**overrides: object) -> SubsidenceConfig:
+    """Build a minimal v4.0 SubsidenceConfig with sensible defaults."""
+    return _make_subsidence_config("4.0", **overrides)
 
 
 def _make_config_v50(**overrides: object) -> SubsidenceConfig:
     """Build a minimal v5.0 SubsidenceConfig."""
-    defaults: dict[str, object] = {
-        "version": "5.0",
-        "ic_file": None,
-        "tecplot_file": None,
-        "final_subs_file": None,
-        "output_factor": 1.0,
-        "output_unit": "FEET",
-        "n_hydrograph_outputs": 0,
-        "hydrograph_coord_factor": 1.0,
-        "hydrograph_output_file": None,
-        "hydrograph_specs": [],
-        "interbed_dz": 5.0,
-        "n_parametric_grids": 0,
-        "conversion_factors": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-        "node_params": [],
-        "n_nodes": 0,
-        "n_layers": 0,
-        "ic_factor": 1.0,
-        "ic_interbed_thick": None,
-        "ic_precompact_head": None,
-        "parametric_grids": [],
-        "_raw_ic_file": "",
-        "_raw_tecplot_file": "",
-        "_raw_final_subs_file": "",
-        "_raw_hydrograph_output_file": "",
-    }
-    defaults.update(overrides)
-    return SubsidenceConfig(**defaults)  # type: ignore[arg-type]
+    return _make_subsidence_config("5.0", **overrides)
 
 
 # ---------------------------------------------------------------------------

@@ -125,8 +125,7 @@ def export_mesh_geojson(
 
     Returns element polygons in WGS84 as a downloadable GeoJSON file.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     from pyiwfm.visualization.webapi.routes.mesh import get_mesh_geojson
 
@@ -184,14 +183,16 @@ def export_budget_csv(
     else:
         time_strings = [str(t) for t in times_arr.tolist()]
 
+    import numpy as np
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["datetime"] + headers)
-    for i in range(len(time_strings)):
-        row = [time_strings[i]] + [
-            round(float(values_arr[i, j]), 4) for j in range(values_arr.shape[1])
-        ]
-        writer.writerow(row)
+    # Vectorize the per-cell round(float(...), 4) — np.round runs at C speed
+    # and .tolist() yields native Python floats for csv.writer to format.
+    rounded_rows = np.round(np.asarray(values_arr, dtype=float), 4).tolist()
+    for ts_str, vals in zip(time_strings, rounded_rows, strict=True):
+        writer.writerow([ts_str, *vals])
 
     loc_name = location or reader.locations[0]
     safe_name = _safe_filename(loc_name)
@@ -268,8 +269,7 @@ def export_hydrograph_csv(
     """
     Export hydrograph time series as a CSV file.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     if type == "gw":
         reader = model_state.get_gw_hydrograph_reader()
@@ -403,11 +403,8 @@ def export_geopackage(
     Creates a multi-layer GeoPackage containing nodes, elements,
     and optionally streams, subregions, and boundary polygon.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
-    if model is None or model.grid is None:
+    model = model_state.require_model()
+    if model.grid is None:
         raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
     from pyiwfm.visualization.gis_export import GISExporter
@@ -473,11 +470,8 @@ def export_plot(
     - streams: Stream network colored by reach
     - elements: Elements colored by subregion
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
-
-    model = model_state.model
-    if model is None or model.grid is None:
+    model = model_state.require_model()
+    if model.grid is None:
         raise HTTPException(status_code=404, detail="No mesh/grid loaded")
 
     import matplotlib
@@ -809,8 +803,7 @@ def export_timeseries_hydrograph(
 
     Delegates to the appropriate hydrograph reader based on *type*.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     value_label: str
     if type == "gw":
@@ -958,14 +951,22 @@ def export_timeseries_budget(
     else:
         time_strings = [str(t) for t in times_arr.tolist()]
 
-    # Build rows with sanitized values
-    rows: list[list[object]] = []
-    for i, ts_str in enumerate(time_strings):
-        row: list[object] = [ts_str]
-        for j in range(values_arr.shape[1]):
-            clean = _sanitize_value(float(values_arr[i, j]))
-            row.append(clean if clean is not None else "")
-        rows.append(row)
+    # Build rows with sanitized values. Vectorize the round + NaN/Inf check
+    # over the whole matrix; the per-cell `_sanitize_value(float(...))` loop
+    # was the hot spot when exporting wide budget tables.
+    import numpy as np
+
+    arr = np.asarray(values_arr, dtype=float)
+    finite_mask = np.isfinite(arr)
+    rounded_rows = np.round(arr, 4).tolist()
+    finite_rows = finite_mask.tolist()
+    rows: list[list[object]] = [
+        [
+            ts_str,
+            *(v if ok else "" for v, ok in zip(row_vals, row_ok, strict=True)),
+        ]
+        for ts_str, row_vals, row_ok in zip(time_strings, rounded_rows, finite_rows, strict=True)
+    ]
 
     all_headers = ["datetime"] + col_headers
 

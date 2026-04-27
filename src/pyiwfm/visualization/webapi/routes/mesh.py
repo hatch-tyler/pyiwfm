@@ -42,8 +42,7 @@ def get_mesh() -> Response:
     Returns the model mesh as a VTK XML UnstructuredGrid (.vtu) file.
     This includes all layers with cell data for layer numbers.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     vtu_data = model_state.get_mesh_3d()
 
@@ -62,8 +61,7 @@ def get_surface_mesh() -> Response:
     Returns only the 2D surface mesh (top view) without stratigraphy.
     This is faster to load for initial display.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     vtu_data = model_state.get_mesh_surface()
 
@@ -96,8 +94,7 @@ def get_mesh_json(
     - polys: [nV, v0, v1, ..., nV, v0, v1, ...] (VTK cell array format)
     - layer: layer number per surface polygon
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     if layer > 0 and model_state.model and model_state.model.stratigraphy:
         n_layers = model_state.model.stratigraphy.n_layers
@@ -126,8 +123,7 @@ def get_mesh_geojson(
     GeoJsonLayer rendering. Coordinates are reprojected from the model
     CRS to WGS84 (EPSG:4326) server-side.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     return model_state.get_mesh_geojson(layer=layer)
 

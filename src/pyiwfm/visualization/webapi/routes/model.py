@@ -61,8 +61,7 @@ def get_model_info() -> ModelInfo:
 @router.get("/bounds", response_model=BoundsInfo)
 def get_model_bounds() -> BoundsInfo:
     """Get model bounding box."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     bounds = model_state.get_bounds()
 
@@ -531,8 +530,7 @@ def compare_models(body: dict[str, Any]) -> dict[str, Any]:
     Request body:
         {"path": "/path/to/other/model/Preprocessor.in"}
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     other_path = body.get("path")
     if not other_path:

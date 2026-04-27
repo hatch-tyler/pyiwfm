@@ -326,8 +326,7 @@ def _get_budget_units_metadata(budget_type: str, reader: BudgetReader) -> dict[s
 @router.get("/types")
 def get_budget_types() -> list[str]:
     """Get list of available budget types."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
     return model_state.get_available_budgets()
 
 
@@ -481,12 +480,21 @@ def get_budget_summary(
     except (KeyError, IndexError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    totals = {}
-    averages = {}
-    for i, name in enumerate(headers):
-        col_vals = values_arr[:, i]
-        totals[name] = _safe_float(float(np.nansum(col_vals)))
-        averages[name] = _safe_float(float(np.nanmean(col_vals)))
+    # Compute per-column totals/means in a single vectorized pass instead of
+    # iterating with np.nansum / np.nanmean per column.
+    totals_arr = np.nansum(values_arr, axis=0)
+    with np.errstate(invalid="ignore"):
+        averages_arr = np.nanmean(values_arr, axis=0)
+    totals_list = totals_arr.tolist()
+    averages_list = averages_arr.tolist()
+    totals = {
+        name: _safe_float(totals_list[i] if i < len(totals_list) else float("nan"))
+        for i, name in enumerate(headers)
+    }
+    averages = {
+        name: _safe_float(averages_list[i] if i < len(averages_list) else float("nan"))
+        for i, name in enumerate(headers)
+    }
 
     return {
         "location": location or reader.locations[0],
@@ -723,8 +731,7 @@ def budget_sanity_check(
     tolerance: float = Query(default=1.0, ge=0.01, le=100),
 ) -> dict[str, Any]:
     """Run mass balance sanity check on a budget."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     reader = model_state.get_budget_reader(budget_type)
     if reader is None:
@@ -777,8 +784,7 @@ def get_water_balance() -> dict[str, Any]:
     Returns nodes (components) and links (flows) for a Plotly Sankey chart.
     Each link represents a flow pathway between model components.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     available = model_state.get_available_budgets()
     if not available:

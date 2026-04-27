@@ -162,8 +162,7 @@ async def upload_observation(
     delimited formats, specify which columns contain dates, values, and
     optionally location identifiers.
     """
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     content = await file.read()
     filename = file.filename or "upload.txt"
@@ -341,8 +340,7 @@ async def scan_directory_endpoint(
     recursive: bool = Query(default=False, description="Scan subdirectories"),
 ) -> dict[str, Any]:
     """Scan a directory for loadable observation files."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     from pyiwfm.visualization.webapi.services.observation_loader import (
         scan_directory,
@@ -384,8 +382,7 @@ async def load_files_endpoint(
     files: list[dict[str, Any]] = Body(..., description="List of {path, type} to load"),  # noqa: B008
 ) -> dict[str, Any]:
     """Load specific observation files by path and type."""
-    if not model_state.is_loaded:
-        raise HTTPException(status_code=404, detail="No model loaded")
+    model_state.require_loaded()
 
     from pyiwfm.visualization.webapi.services.observation_loader import (
         _load_single_file,

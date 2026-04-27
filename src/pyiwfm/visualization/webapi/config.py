@@ -112,6 +112,32 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         """Check if a model is loaded."""
         return self._model is not None
 
+    def require_loaded(self) -> None:
+        """Raise ``HTTPException(404, "No model loaded")`` if no model is loaded.
+
+        Method form of :func:`require_loaded` — prefer this in route handlers
+        because it resolves through whatever ``model_state`` reference the
+        caller's module currently holds, which makes the existing
+        ``patch("...routes.foo.model_state", state)`` tests substitute cleanly.
+        """
+        from starlette.exceptions import HTTPException
+
+        if self._model is None:
+            raise HTTPException(status_code=404, detail="No model loaded")
+
+    def require_model(self) -> IWFMModel:
+        """Return the loaded model or raise ``HTTPException(404)``.
+
+        Method form of :func:`require_model` — see :meth:`require_loaded` for
+        the rationale. Use this when the route also needs the ``IWFMModel``
+        object (it narrows ``model | None`` to ``IWFMModel`` for mypy).
+        """
+        from starlette.exceptions import HTTPException
+
+        if self._model is None:
+            raise HTTPException(status_code=404, detail="No model loaded")
+        return self._model
+
     def set_model(
         self,
         model: IWFMModel,
@@ -242,13 +268,9 @@ model_state = ModelState()
 def require_model() -> IWFMModel:
     """Return the loaded model or raise HTTPException(404).
 
-    Use this in route handlers to narrow ``model_state.model`` from
-    ``IWFMModel | None`` to ``IWFMModel``, satisfying mypy while also
-    giving a clean API error when no model is loaded.
+    Module-level shim that delegates to :meth:`ModelState.require_model` on
+    the global ``model_state`` singleton. New code should prefer
+    ``model_state.require_model()`` so tests that patch the per-module
+    ``model_state`` reference work transparently.
     """
-    from starlette.exceptions import HTTPException
-
-    m = model_state.model
-    if m is None:
-        raise HTTPException(status_code=404, detail="No model loaded")
-    return m
+    return model_state.require_model()

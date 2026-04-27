@@ -15,13 +15,15 @@ from pathlib import Path
 
 def add_zbudget_parser(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg]
     """Register the ``pyiwfm zbudget`` subcommand."""
-    p = subparsers.add_parser(
-        "zbudget",
+    from pyiwfm.cli._parsers import add_control_file_subcommand
+
+    add_control_file_subcommand(
+        subparsers,
+        name="zbudget",
         help="Export zone budget data to Excel from a zbudget control file",
+        file_help="ZBudget control/input file",
+        runner=run_zbudget,
     )
-    p.add_argument("control_file", type=str, help="ZBudget control/input file")
-    p.add_argument("--output-dir", type=str, default=None, help="Override output directory")
-    p.set_defaults(func=run_zbudget)
 
 
 def run_zbudget(args: argparse.Namespace) -> int:
