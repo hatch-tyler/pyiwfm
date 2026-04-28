@@ -20,15 +20,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TextIO
 
-from pyiwfm.io.iwfm_writer import (
-    ensure_parent_dir as _ensure_parent_dir,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_comment as _write_comment,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_value as _write_value,
-)
+from pyiwfm.io.iwfm_writer import open_iwfm_file as _open_iwfm_file
+from pyiwfm.io.iwfm_writer import write_element_group as _shared_write_element_group
+from pyiwfm.io.iwfm_writer import write_value as _write_value
 from pyiwfm.io.stream_diversion import DiversionSpecConfig
 
 
@@ -47,11 +41,7 @@ def write_diversion_spec(config: DiversionSpecConfig, filepath: Path | str) -> P
         Path to written file
     """
     filepath = Path(filepath)
-    _ensure_parent_dir(filepath)
-
-    with open(filepath, "w") as f:
-        _write_comment(f, "IWFM Diversion Specification File")
-
+    with _open_iwfm_file(filepath, "IWFM Diversion Specification File") as f:
         # NDiver
         _write_value(f, config.n_diversions, "NDiver")
 
@@ -76,7 +66,6 @@ def write_diversion_spec(config: DiversionSpecConfig, filepath: Path | str) -> P
         if config.has_spills:
             for sz in config.spill_zones:
                 _write_recharge_zone(f, sz)
-
     return filepath
 
 
@@ -135,9 +124,9 @@ def _write_diversion_line(
 def _write_element_group(f: TextIO, group: object) -> None:
     """Write a single element group.
 
-    Format:
-        GroupID  NElements  FirstElementID
-        ElementID  (one per subsequent line)
+    Thin adapter around :func:`pyiwfm.io.iwfm_writer.write_element_group`
+    that unwraps the ``ElementGroup`` dataclass into the (id, elements)
+    primitives the shared helper expects.
 
     Args:
         f: Open file handle
@@ -146,17 +135,7 @@ def _write_element_group(f: TextIO, group: object) -> None:
     from pyiwfm.io.stream_diversion import ElementGroup
 
     assert isinstance(group, ElementGroup)
-
-    n_elements = len(group.elements)
-
-    if n_elements > 0:
-        # Header line with first element
-        f.write(f"     {group.id:>6d}  {n_elements:>4d}  {group.elements[0]:>6d}\n")
-        # Remaining elements
-        for elem_id in group.elements[1:]:
-            f.write(f"     {elem_id:>6d}\n")
-    else:
-        f.write(f"     {group.id:>6d}  {0:>4d}\n")
+    _shared_write_element_group(f, group.id, group.elements)
 
 
 def _write_recharge_zone(f: TextIO, rz: object) -> None:

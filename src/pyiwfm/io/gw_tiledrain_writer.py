@@ -10,15 +10,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from pyiwfm.io.gw_tiledrain import TileDrainConfig
-from pyiwfm.io.iwfm_writer import (
-    ensure_parent_dir as _ensure_parent_dir,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_comment as _write_comment,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_value as _write_value,
-)
+from pyiwfm.io.iwfm_writer import open_iwfm_file as _open_iwfm_file
+from pyiwfm.io.iwfm_writer import write_value as _write_value
 
 
 def write_tile_drain_file(config: TileDrainConfig, filepath: Path | str) -> Path:
@@ -32,11 +25,7 @@ def write_tile_drain_file(config: TileDrainConfig, filepath: Path | str) -> Path
         Path to written file
     """
     filepath = Path(filepath)
-    _ensure_parent_dir(filepath)
-
-    with open(filepath, "w") as f:
-        _write_comment(f, "IWFM Tile Drain / Sub-Irrigation File")
-
+    with _open_iwfm_file(filepath, "IWFM Tile Drain / Sub-Irrigation File") as f:
         # Version header
         if config.version:
             f.write(f"#{config.version}\n")
@@ -77,5 +66,4 @@ def write_tile_drain_file(config: TileDrainConfig, filepath: Path | str) -> Path
                 if config.subirig_conductance_factor not in (0.0, 1.0):
                     cond = cond / config.subirig_conductance_factor
                 f.write(f"     {si.id:>6d}  {si.gw_node:>6d}  {elev:>12.4f}  {cond:>12.6f}\n")
-
     return filepath

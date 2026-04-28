@@ -17,13 +17,17 @@ from pyiwfm.io.gw_boundary import (
     SpecifiedHeadBC,
 )
 from pyiwfm.io.gw_boundary_writer import (
-    _write_comment,
-    _write_value,
     write_bc_main,
     write_constrained_gh_bc,
     write_general_head_bc,
     write_specified_flow_bc,
     write_specified_head_bc,
+)
+from pyiwfm.io.iwfm_writer import (
+    write_comment as _write_comment,
+)
+from pyiwfm.io.iwfm_writer import (
+    write_value as _write_value,
 )
 
 # ---------------------------------------------------------------------------

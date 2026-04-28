@@ -12,15 +12,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from pyiwfm.io.gw_pumping import PumpingConfig
-from pyiwfm.io.iwfm_writer import (
-    ensure_parent_dir as _ensure_parent_dir,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_comment as _write_comment,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_value as _write_value,
-)
+from pyiwfm.io.iwfm_writer import open_iwfm_file as _open_iwfm_file
+from pyiwfm.io.iwfm_writer import write_element_group as _write_element_group
+from pyiwfm.io.iwfm_writer import write_value as _write_value
 
 
 def write_pumping_main(config: PumpingConfig, filepath: Path | str) -> Path:
@@ -34,10 +28,7 @@ def write_pumping_main(config: PumpingConfig, filepath: Path | str) -> Path:
         Path to written file
     """
     filepath = Path(filepath)
-    _ensure_parent_dir(filepath)
-
-    with open(filepath, "w") as f:
-        _write_comment(f, "IWFM Pumping Main File")
+    with _open_iwfm_file(filepath, "IWFM Pumping Main File") as f:
         if config.version:
             f.write(f"#{config.version}\n")
 
@@ -45,7 +36,6 @@ def write_pumping_main(config: PumpingConfig, filepath: Path | str) -> Path:
         _write_value(f, str(config.elem_pump_file or ""), "Element pumping file")
         _write_value(f, str(config.ts_data_file or ""), "Time series data file")
         _write_value(f, str(config.output_file or ""), "Output file")
-
     return filepath
 
 
@@ -60,10 +50,7 @@ def write_well_spec_file(config: PumpingConfig, filepath: Path | str) -> Path:
         Path to written file
     """
     filepath = Path(filepath)
-    _ensure_parent_dir(filepath)
-
-    with open(filepath, "w") as f:
-        _write_comment(f, "IWFM Well Specification File")
+    with _open_iwfm_file(filepath, "IWFM Well Specification File") as f:
         _write_value(f, len(config.well_specs), "NWELL")
         _write_value(f, config.factor_xy, "FACTXY")
         _write_value(f, config.factor_radius, "FACTR")
@@ -98,12 +85,7 @@ def write_well_spec_file(config: PumpingConfig, filepath: Path | str) -> Path:
         # Element groups
         _write_value(f, len(config.well_groups), "NGROUPS")
         for grp in config.well_groups:
-            for i, elem_id in enumerate(grp.elements):
-                if i == 0:
-                    f.write(f"     {grp.id:>6d}  {len(grp.elements):>4d}  {elem_id:>6d}\n")
-                else:
-                    f.write(f"     {elem_id:>6d}\n")
-
+            _write_element_group(f, grp.id, grp.elements)
     return filepath
 
 
@@ -119,10 +101,7 @@ def write_elem_pump_file(config: PumpingConfig, filepath: Path | str, n_layers: 
         Path to written file
     """
     filepath = Path(filepath)
-    _ensure_parent_dir(filepath)
-
-    with open(filepath, "w") as f:
-        _write_comment(f, "IWFM Element Pumping Specification File")
+    with _open_iwfm_file(filepath, "IWFM Element Pumping Specification File") as f:
         _write_value(f, len(config.elem_pumping_specs), "NSINK")
 
         for eps in config.elem_pumping_specs:
@@ -139,10 +118,5 @@ def write_elem_pump_file(config: PumpingConfig, filepath: Path | str, n_layers: 
         # Element groups
         _write_value(f, len(config.elem_groups), "NGROUPS")
         for grp in config.elem_groups:
-            for i, elem_id in enumerate(grp.elements):
-                if i == 0:
-                    f.write(f"     {grp.id:>6d}  {len(grp.elements):>4d}  {elem_id:>6d}\n")
-                else:
-                    f.write(f"     {elem_id:>6d}\n")
-
+            _write_element_group(f, grp.id, grp.elements)
     return filepath

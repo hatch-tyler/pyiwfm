@@ -15,15 +15,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pyiwfm.io.iwfm_writer import (
-    ensure_parent_dir as _ensure_parent_dir,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_comment as _write_comment,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_value as _write_value,
-)
+from pyiwfm.io.iwfm_writer import open_iwfm_file as _open_iwfm_file
+from pyiwfm.io.iwfm_writer import write_value as _write_value
 from pyiwfm.io.stream_bypass import BypassSpecConfig
 
 
@@ -42,11 +35,7 @@ def write_bypass_spec(config: BypassSpecConfig, filepath: Path | str) -> Path:
         Path to written file
     """
     filepath = Path(filepath)
-    _ensure_parent_dir(filepath)
-
-    with open(filepath, "w") as f:
-        _write_comment(f, "IWFM Bypass Specification File")
-
+    with _open_iwfm_file(filepath, "IWFM Bypass Specification File") as f:
         # NBypass
         _write_value(f, config.n_bypasses, "NBypass")
 
@@ -102,5 +91,4 @@ def write_bypass_spec(config: BypassSpecConfig, filepath: Path | str) -> Path:
             else:
                 # No recharge zones: ID 0 0 0
                 f.write(f"     {sz.bypass_id:>6d}  {0:>4d}  {0:>6d}  {0.0:>10.6f}\n")
-
     return filepath

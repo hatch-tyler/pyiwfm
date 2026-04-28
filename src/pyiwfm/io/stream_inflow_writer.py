@@ -17,15 +17,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pyiwfm.io.iwfm_writer import (
-    ensure_parent_dir as _ensure_parent_dir,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_comment as _write_comment,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_value as _write_value,
-)
+from pyiwfm.io.iwfm_writer import open_iwfm_file as _open_iwfm_file
+from pyiwfm.io.iwfm_writer import write_value as _write_value
 from pyiwfm.io.stream_inflow import InflowConfig
 
 
@@ -43,11 +36,7 @@ def write_stream_inflow(config: InflowConfig, filepath: Path | str) -> Path:
         Path to written file
     """
     filepath = Path(filepath)
-    _ensure_parent_dir(filepath)
-
-    with open(filepath, "w") as f:
-        _write_comment(f, "IWFM Stream Inflow File")
-
+    with _open_iwfm_file(filepath, "IWFM Stream Inflow File") as f:
         # Conversion factor
         _write_value(f, config.conversion_factor, "Conversion factor")
 
@@ -63,5 +52,4 @@ def write_stream_inflow(config: InflowConfig, filepath: Path | str) -> Path:
         # Inflow specifications: InflowID StreamNodeID
         for spec in config.inflow_specs:
             f.write(f"     {spec.inflow_id:>6d}  {spec.stream_node:>6d}\n")
-
     return filepath

@@ -393,6 +393,80 @@ without `cd`-ing into a subdirectory.
 
 ---
 
+## 5b. Component-writer scaffolding (PR 7)
+
+### `pyiwfm.io.iwfm_writer.open_iwfm_file` and `write_element_group` (new helpers)
+
+**Status:** _internal restructuring_; **no public API change**.
+
+Six small component-writer modules
+(``gw_boundary_writer``, ``gw_pumping_writer``, ``gw_tiledrain_writer``,
+``stream_diversion_writer``, ``stream_bypass_writer``,
+``stream_inflow_writer``) all opened a similar wrapper at the top of
+every ``write_*`` function: convert ``filepath`` to ``Path``, call
+``ensure_parent_dir``, ``open(...)`` for write, write the standard
+``C  IWFM ...`` header. PR 7 collapses that 4-line pattern into a
+single ``with open_iwfm_file(filepath, header) as f:`` context
+manager (in :mod:`pyiwfm.io.iwfm_writer`).
+
+In addition, the element-group block format
+(``GroupID  N_elements  FirstElement`` followed by element-per-line)
+appeared inline three times across the writers (twice in
+``gw_pumping_writer.py``, once as a private helper in
+``stream_diversion_writer.py``). PR 7 extracts a shared
+:func:`pyiwfm.io.iwfm_writer.write_element_group` and routes all three
+sites through it.
+
+**Per-module line reductions:**
+
+| Module | v1.x lines | v2.x lines | Δ |
+|---|---|---|---|
+| ``gw_boundary_writer.py`` | 172 | 144 | −28 |
+| ``gw_pumping_writer.py`` | 148 | 122 | −26 |
+| ``gw_tiledrain_writer.py`` | 81 | 69 | −12 |
+| ``stream_diversion_writer.py`` | 193 | 172 | −21 |
+| ``stream_bypass_writer.py`` | 106 | 94 | −12 |
+| ``stream_inflow_writer.py`` | 67 | 55 | −12 |
+| **Net (consolidated)** | **767** | **656** | **−111** |
+| ``iwfm_writer.py`` (shared, +helpers) | 70 | 142 | +72 |
+| **Total replacement** | **837** | **798** | **−39** |
+
+The bigger win again isn't the line count — it's that the boilerplate
+no longer sits at the top of every writer where it can drift, and
+the element-group format change can be made in one place.
+
+### What was deferred and why
+
+The original v2.0 roadmap proposed a strategy-based
+``BaseComponentWriter`` class hierarchy where each writer module would
+become a small config dataclass (``WriteSpec``: header, sections,
+formatters) consumed by a base class. A PR 7 audit found this would
+not produce the projected savings: each writer has unique format
+strings, conditional logic for empty vs populated sections, and
+factor-application patterns that don't fit a uniform ``WriteSpec``
+schema. Pushing that variation into config objects would just
+relocate the code, not reduce it.
+
+The same audit-and-defer pattern as PR 5 (writer/cache splits) and
+PR 3 (BaseComponent abstract methods) applies here: the duplication
+that did warrant extraction (the ``open_iwfm_file`` boilerplate and
+the element-group block format) was extracted; the wholesale
+class-hierarchy refactor was not, because no current caller would
+benefit and the project rule (CLAUDE.md "don't add abstractions
+beyond what the task requires") pushes back on speculative
+indirection.
+
+### Element-group helper rename within `stream_diversion_writer`
+
+The private ``_write_element_group(f, group)`` helper inside
+``stream_diversion_writer.py`` is now a thin adapter that unwraps the
+``ElementGroup`` dataclass and delegates to the shared
+:func:`~pyiwfm.io.iwfm_writer.write_element_group`. External callers
+of ``stream_diversion_writer._write_element_group`` are unaffected
+(the function signature is unchanged).
+
+---
+
 ## 6. Rootzone v5+ reader consolidation
 
 ### `pyiwfm.io._rootzone_base._RootzoneReaderBase` (new internal base)
