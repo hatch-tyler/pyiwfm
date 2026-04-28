@@ -393,6 +393,72 @@ without `cd`-ing into a subdirectory.
 
 ---
 
+## 6. Rootzone v5+ reader consolidation
+
+### `pyiwfm.io._rootzone_base._RootzoneReaderBase` (new internal base)
+
+**Status:** _internal restructuring_; **public API unchanged**.
+
+In v1.x the three v5+ rootzone variant readers
+(:class:`~pyiwfm.io.rootzone_native.NativeRiparianReader`,
+:class:`~pyiwfm.io.rootzone_nonponded.NonPondedCropReader`,
+:class:`~pyiwfm.io.rootzone_urban.UrbanLandUseReader`) each carried
+their own copies of:
+
+- `_resolve(base_dir, filepath)` — byte-identical 4-line method, 3
+  copies.
+- `_read_rows(buf, min_cols, [n_expected])` — ~30-line tabular-section
+  reader, 3 copies (urban differed only in accepting a per-call
+  ``n_expected`` override).
+- Inline `try: float(val); except ValueError: raise FileFormatError(...)`
+  blocks at every scalar-read site (~6 places per reader × 3 readers).
+
+PR 6 extracts this scaffolding into ``pyiwfm.io._rootzone_base._RootzoneReaderBase``
+(168 lines) with shared `_resolve`, `_read_rows`, `_parse_float`, and
+`_parse_int` helpers. The three concrete readers now inherit from it.
+
+**Per-module line reductions:**
+
+| Module | v1.x lines | v2.x lines | Δ |
+|---|---|---|---|
+| `rootzone_native.py` | 318 | 255 | −63 |
+| `rootzone_nonponded.py` | 458 | 389 | −69 |
+| `rootzone_urban.py` | 367 | 299 | −68 |
+| `_rootzone_base.py` (new) | — | 168 | +168 |
+| **Net** | **1,143** | **1,111** | **−32** |
+
+The bigger win isn't the line count — it's that the readers no longer
+have triplicate copies of the same parsing scaffolding to keep in sync,
+and a future v5+ rootzone variant slots in by inheriting the same base.
+
+**v4.x readers are unchanged.** ``rootzone_v4x.py`` already had its
+own ``_V4xReaderBase`` shipped before v2.0; that base remains and was
+not touched. The original v2.0 roadmap proposed unifying v4.x and v5+
+under one common ABC, but the two file-format generations have
+sufficiently different shapes (different scalar-field orders, different
+section types) that a single base would just push the variation into a
+config object — adding indirection without functional gain.
+
+**No public API changes.** All three concrete reader classes keep the
+same constructor signatures, public ``read()`` method, and return
+types. External callers don't see the inheritance change.
+
+If you imported one of the now-removed private helpers
+(`_is_comment_line`, `_LineBuffer`, `_strip_comment` re-exports) from
+``pyiwfm.io.rootzone_nonponded`` directly (rare; the test suite did
+this in two places before PR 6), update to import from the canonical
+:mod:`pyiwfm.io.iwfm_reader`:
+
+```python
+# v1.x:
+from pyiwfm.io.rootzone_nonponded import _is_comment_line
+
+# v2.x:
+from pyiwfm.io.iwfm_reader import is_comment_line as _is_comment_line
+```
+
+---
+
 ## Migration checklist
 
 Run through this list when bumping your project's pinned `pyiwfm`

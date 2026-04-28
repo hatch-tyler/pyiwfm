@@ -17,15 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.iwfm_reader import (
-    LineBuffer as _LineBuffer,
-)
-from pyiwfm.io.iwfm_reader import (
-    is_comment_line as _is_comment_line,
-)
-from pyiwfm.io.iwfm_reader import (
-    strip_inline_comment as _strip_comment,
-)
+from pyiwfm.io._rootzone_base import _RootzoneReaderBase
+from pyiwfm.io.iwfm_reader import LineBuffer as _LineBuffer
 
 # ── Data classes ──────────────────────────────────────────────────────
 
@@ -170,12 +163,14 @@ class NonPondedCropConfig:
 # ── Reader ────────────────────────────────────────────────────────────
 
 
-class NonPondedCropReader:
+class NonPondedCropReader(_RootzoneReaderBase):
     """Reader for IWFM non-ponded agricultural crop sub-file.
 
     This parses the positional-sequential file referenced as *AGNPFL* in
     the RootZone component main file.  The format matches
-    ``Class_AgLandUse_v50::New()`` in the Fortran source.
+    ``Class_AgLandUse_v50::New()`` in the Fortran source. Inherits
+    ``_resolve``, ``_read_rows``, ``_parse_float``, and ``_parse_int``
+    from :class:`_RootzoneReaderBase` (v2.0 PR 6).
 
     Args:
         n_subregions: Number of subregions in the model.  If provided,
@@ -184,9 +179,6 @@ class NonPondedCropReader:
             comment lines (i.e. a comment line after data rows ends
             the section).
     """
-
-    def __init__(self, n_subregions: int | None = None) -> None:
-        self._n_sub = n_subregions
 
     def read(
         self,
@@ -213,14 +205,7 @@ class NonPondedCropReader:
         config = NonPondedCropConfig()
 
         # 1. NCrops
-        val = buf.next_data()
-        try:
-            config.n_crops = int(val)
-        except ValueError as exc:
-            raise FileFormatError(
-                f"Invalid NCrops value: '{val}'",
-                line_number=buf.line_num,
-            ) from exc
+        config.n_crops = self._parse_int(buf.next_data(), "NCrops value", buf.line_num)
 
         # 2. Subregional crop-area data file
         val = buf.next_data_or_empty()
@@ -314,61 +299,7 @@ class NonPondedCropReader:
 
         return config
 
-    # ── internal helpers ──────────────────────────────────────────────
-
-    @staticmethod
-    def _resolve(base_dir: Path, filepath: str) -> Path:
-        p = Path(filepath.strip())
-        if p.is_absolute():
-            return p
-        return base_dir / p
-
-    # ── tabular-data helpers ──────────────────────────────────────────
-
-    def _read_rows(self, buf: _LineBuffer, min_cols: int) -> list[list[str]]:
-        """Read tabular data rows from the buffer.
-
-        If ``n_subregions`` was provided, reads exactly that many data
-        rows (skipping comments within).  Otherwise, reads data rows
-        until a comment line or a line with fewer than *min_cols*
-        columns is encountered, pushing that line back.
-
-        Returns:
-            List of split-value lists (one per row).
-        """
-        rows: list[list[str]] = []
-        n_expected = self._n_sub
-        started = False
-
-        while True:
-            raw = buf.next_line()
-            if raw is None:
-                break
-
-            if _is_comment_line(raw):
-                if n_expected is not None:
-                    # Known count: skip comments within the section
-                    continue
-                if started:
-                    # Unknown count: comment after data = section end
-                    buf.pushback()
-                    break
-                continue
-
-            value, _ = _strip_comment(raw)
-            parts = value.split()
-
-            if len(parts) < min_cols:
-                buf.pushback()
-                break
-
-            rows.append(parts)
-            started = True
-
-            if n_expected is not None and len(rows) >= n_expected:
-                break
-
-        return rows
+    # ── per-row parsers ───────────────────────────────────────────────
 
     def _read_cn_rows(self, buf: _LineBuffer) -> list[CurveNumberRow]:
         raw_rows = self._read_rows(buf, min_cols=2)

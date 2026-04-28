@@ -16,16 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.iwfm_reader import (
-    LineBuffer as _LineBuffer,
-)
-from pyiwfm.io.iwfm_reader import (
-    is_comment_line as _is_comment_line,
-)
-from pyiwfm.io.iwfm_reader import (
-    strip_inline_comment as _strip_comment,
-)
+from pyiwfm.io._rootzone_base import _RootzoneReaderBase
+from pyiwfm.io.iwfm_reader import LineBuffer as _LineBuffer
 
 # ── Data classes ──────────────────────────────────────────────────────
 
@@ -104,18 +96,17 @@ class NativeRiparianConfig:
 # ── Reader ────────────────────────────────────────────────────────────
 
 
-class NativeRiparianReader:
+class NativeRiparianReader(_RootzoneReaderBase):
     """Reader for IWFM native/riparian vegetation sub-file.
 
     Parses the positional-sequential file referenced as *NVRVFL* in
-    the RootZone component main file.
+    the RootZone component main file. Inherits ``_resolve``,
+    ``_read_rows``, ``_parse_float``, and ``_parse_int`` from
+    :class:`_RootzoneReaderBase` (v2.0 PR 6).
 
     Args:
         n_subregions: Number of subregions (for exact row counts).
     """
-
-    def __init__(self, n_subregions: int | None = None) -> None:
-        self._n_sub = n_subregions
 
     def read(
         self,
@@ -147,34 +138,21 @@ class NativeRiparianReader:
             config.area_data_file = self._resolve(base_dir, val)
 
         # 2. Root-depth conversion factor
-        val = buf.next_data()
-        try:
-            config.root_depth_factor = float(val)
-        except ValueError as exc:
-            raise FileFormatError(
-                f"Invalid root depth factor: '{val}'",
-                line_number=buf.line_num,
-            ) from exc
+        config.root_depth_factor = self._parse_float(
+            buf.next_data(), "root depth factor", buf.line_num
+        )
 
         # 3. Native vegetation root depth
-        val = buf.next_data()
-        try:
-            config.native_root_depth = float(val) * config.root_depth_factor
-        except ValueError as exc:
-            raise FileFormatError(
-                f"Invalid native root depth: '{val}'",
-                line_number=buf.line_num,
-            ) from exc
+        config.native_root_depth = (
+            self._parse_float(buf.next_data(), "native root depth", buf.line_num)
+            * config.root_depth_factor
+        )
 
         # 4. Riparian vegetation root depth
-        val = buf.next_data()
-        try:
-            config.riparian_root_depth = float(val) * config.root_depth_factor
-        except ValueError as exc:
-            raise FileFormatError(
-                f"Invalid riparian root depth: '{val}'",
-                line_number=buf.line_num,
-            ) from exc
+        config.riparian_root_depth = (
+            self._parse_float(buf.next_data(), "riparian root depth", buf.line_num)
+            * config.root_depth_factor
+        )
 
         # 5. Curve-number data (per subregion: native + riparian)
         config.curve_numbers = self._read_cn_rows(buf)
@@ -187,48 +165,7 @@ class NativeRiparianReader:
 
         return config
 
-    # ── internal helpers ──────────────────────────────────────────────
-
-    @staticmethod
-    def _resolve(base_dir: Path, filepath: str) -> Path:
-        p = Path(filepath.strip())
-        if p.is_absolute():
-            return p
-        return base_dir / p
-
-    def _read_rows(self, buf: _LineBuffer, min_cols: int) -> list[list[str]]:
-        """Read tabular data rows with comment-based section boundaries."""
-        rows: list[list[str]] = []
-        n_expected = self._n_sub
-        started = False
-
-        while True:
-            raw = buf.next_line()
-            if raw is None:
-                break
-
-            if _is_comment_line(raw):
-                if n_expected is not None:
-                    continue
-                if started:
-                    buf.pushback()
-                    break
-                continue
-
-            value, _ = _strip_comment(raw)
-            parts = value.split()
-
-            if len(parts) < min_cols:
-                buf.pushback()
-                break
-
-            rows.append(parts)
-            started = True
-
-            if n_expected is not None and len(rows) >= n_expected:
-                break
-
-        return rows
+    # ── per-row parsers ───────────────────────────────────────────────
 
     def _read_cn_rows(self, buf: _LineBuffer) -> list[NativeRiparianCNRow]:
         """Read curve-number rows.
