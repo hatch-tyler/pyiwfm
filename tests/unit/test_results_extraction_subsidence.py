@@ -1,7 +1,7 @@
-"""Comprehensive tests for subsidence extraction via LazyHeadDataLoader and ResultsExtractor.
+"""Comprehensive tests for subsidence extraction via LazyNodalLoader and ResultsExtractor.
 
 Test groups:
-1. LazyHeadDataLoader — synthetic HDF5 (no external data dependency)
+1. LazyNodalLoader — synthetic HDF5 (no external data dependency)
 2. ResultsExtractor — synthetic data with layer aggregation
 3. Integration with real C2VSimFG data (skipped if file not found)
 """
@@ -20,7 +20,7 @@ from numpy.testing import assert_allclose
 h5py = pytest.importorskip("h5py")
 
 from pyiwfm.calibration.results_extraction import ExtractionSpec  # noqa: E402, I001
-from pyiwfm.io.head_loader import LazyHeadDataLoader  # noqa: E402, I001
+from pyiwfm.io.timeseries_io import LazyNodalLoader  # noqa: E402, I001
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +67,7 @@ def _make_iwfm_native_hdf5(
 
 
 # ============================================================================
-# Group 1: LazyHeadDataLoader — synthetic HDF5
+# Group 1: LazyNodalLoader — synthetic HDF5
 # ============================================================================
 
 
@@ -77,7 +77,7 @@ class TestLoaderHeadDetection:
     def test_load_iwfm_native_head_hdf5(self, tmp_path: Path) -> None:
         fp = tmp_path / "head.hdf"
         _make_iwfm_native_hdf5(fp, "GWHeadAtAllNodes", n_nodes=4, n_layers=2, n_timesteps=3)
-        loader = LazyHeadDataLoader(fp, n_layers=2)
+        loader = LazyNodalLoader(fp, n_layers=2)
         assert loader.data_type == "head"
         assert loader.n_nodes == 4
         assert loader.n_layers == 2
@@ -86,7 +86,7 @@ class TestLoaderHeadDetection:
     def test_load_iwfm_native_subsidence_hdf5(self, tmp_path: Path) -> None:
         fp = tmp_path / "subs.hdf"
         _make_iwfm_native_hdf5(fp, "SubsidenceAtAllNodes", n_nodes=4, n_layers=2, n_timesteps=3)
-        loader = LazyHeadDataLoader(fp, n_layers=2)
+        loader = LazyNodalLoader(fp, n_layers=2)
         assert loader.data_type == "subsidence"
         assert loader.n_nodes == 4
         assert loader.n_layers == 2
@@ -106,7 +106,7 @@ class TestLoaderReshape:
             n_layers=n_layers,
             n_timesteps=2,
         )
-        loader = LazyHeadDataLoader(fp, n_layers=n_layers)
+        loader = LazyNodalLoader(fp, n_layers=n_layers)
         frame = loader.get_frame(0)
         assert frame.shape == (n_nodes, n_layers)
 
@@ -132,7 +132,7 @@ class TestLoaderReshape:
             n_layers=n_layers,
             n_timesteps=2,
         )
-        loader = LazyHeadDataLoader(fp, n_layers=n_layers)
+        loader = LazyNodalLoader(fp, n_layers=n_layers)
         frame = loader.get_frame(1)
         assert frame.shape == (n_nodes, n_layers)
 
@@ -156,7 +156,7 @@ class TestLoaderNLayers:
         )
         # Pass n_layers=2 which differs from the attribute (3)
         # Explicit should win
-        loader = LazyHeadDataLoader(fp, n_layers=2)
+        loader = LazyNodalLoader(fp, n_layers=2)
         assert loader.n_layers == 2
         assert loader.n_nodes == 9  # 18 / 2
 
@@ -170,7 +170,7 @@ class TestLoaderNLayers:
             n_timesteps=1,
             write_nlayers_attr=True,
         )
-        loader = LazyHeadDataLoader(fp)
+        loader = LazyNodalLoader(fp)
         assert loader.n_layers == 3
         assert loader.n_nodes == 6
 
@@ -186,8 +186,8 @@ class TestLoaderNLayers:
         )
         import logging
 
-        with caplog.at_level(logging.WARNING, logger="pyiwfm.io.head_loader"):
-            loader = LazyHeadDataLoader(fp)
+        with caplog.at_level(logging.WARNING, logger="pyiwfm.io.timeseries_io"):
+            loader = LazyNodalLoader(fp)
         assert loader.n_layers == 1  # fallback
         assert loader.n_nodes == 18  # 6*3 columns / 1 layer
         assert "NLayers not provided" in caplog.text
@@ -205,7 +205,7 @@ class TestLoaderCache:
             n_layers=2,
             n_timesteps=5,
         )
-        loader = LazyHeadDataLoader(fp, n_layers=2)
+        loader = LazyNodalLoader(fp, n_layers=2)
         frame_a = loader.get_frame(2)
         frame_b = loader.get_frame(2)
         assert_allclose(frame_a, frame_b)
@@ -382,7 +382,7 @@ class TestC2VSimFGSubsidence:
             f"total_cols={total_cols} not divisible by n_layers={n_layers}"
         )
 
-        loader = LazyHeadDataLoader(_C2VSIMFG_SUBS_HDF, n_layers=n_layers)
+        loader = LazyNodalLoader(_C2VSIMFG_SUBS_HDF, n_layers=n_layers)
         assert loader.n_nodes == expected_nodes
         assert loader.n_layers == n_layers
 
@@ -395,6 +395,6 @@ class TestC2VSimFGSubsidence:
     def test_data_not_all_zeros(self) -> None:
         """Last timestep should have non-zero subsidence somewhere."""
         n_layers = 4
-        loader = LazyHeadDataLoader(_C2VSIMFG_SUBS_HDF, n_layers=n_layers)
+        loader = LazyNodalLoader(_C2VSIMFG_SUBS_HDF, n_layers=n_layers)
         frame = loader.get_frame(loader.n_frames - 1)
         assert np.any(frame != 0.0), "Subsidence data should not be all zeros"

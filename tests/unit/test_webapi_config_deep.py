@@ -191,7 +191,7 @@ class TestReconvertHeadHdf:
         ms._model = _mock_model()
 
         mock_loader = MagicMock()
-        with patch("pyiwfm.io.head_loader.LazyHeadDataLoader", return_value=mock_loader):
+        with patch("pyiwfm.io.timeseries_io.LazyNodalLoader", return_value=mock_loader):
             result = ms._reconvert_head_hdf(hdf_path, n_layers=4)
 
         assert result is mock_loader
@@ -208,8 +208,8 @@ class TestReconvertHeadHdf:
 
         mock_loader = MagicMock()
         with (
-            patch("pyiwfm.io.head_all_converter.convert_headall_to_hdf") as mock_convert,
-            patch("pyiwfm.io.head_loader.LazyHeadDataLoader", return_value=mock_loader),
+            patch("pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_headall_text") as mock_convert,
+            patch("pyiwfm.io.timeseries_io.LazyNodalLoader", return_value=mock_loader),
         ):
             result = ms._reconvert_head_hdf(hdf_path, n_layers=4)
 

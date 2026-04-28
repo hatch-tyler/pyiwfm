@@ -1,7 +1,7 @@
 """Tests for the Phase 2 drawdown report dataclasses, builders, and
 tabular writers.
 
-Uses a mock :class:`LazyHeadDataLoader` so the tests don't need real
+Uses a mock :class:`LazyNodalLoader` so the tests don't need real
 HDF5 files. The mock returns deterministic synthetic head fields so we
 can verify the drawdown arithmetic.
 """
@@ -34,7 +34,7 @@ def _make_loader(
     n_layers: int = 2,
     n_timesteps: int = 4,
 ) -> MagicMock:
-    """Build a mock LazyHeadDataLoader that returns synthetic heads.
+    """Build a mock LazyNodalLoader that returns synthetic heads.
 
     Synthetic head field: head[t, node, layer] = 100 - t * (node + layer)
     so drawdown(t, layer) at node n vs reference t=0 is t * (n + layer).

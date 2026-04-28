@@ -27,7 +27,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.io.head_loader import LazyHeadDataLoader
+    from pyiwfm.io.timeseries_io import LazyNodalLoader
 
 logger = logging.getLogger(__name__)
 
@@ -246,14 +246,14 @@ class SqliteCacheBuilder:
     def build(
         self,
         model: IWFMModel,
-        head_loader: LazyHeadDataLoader | None = None,
+        head_loader: LazyNodalLoader | None = None,
         budget_readers: dict[str, Any] | None = None,
         area_manager: Any | None = None,
         gw_hydrograph_reader: Any | None = None,
         stream_hydrograph_reader: Any | None = None,
         subsidence_reader: Any | None = None,
         tile_drain_reader: Any | None = None,
-        subsidence_loader: LazyHeadDataLoader | None = None,
+        subsidence_loader: LazyNodalLoader | None = None,
         progress_callback: Any | None = None,
     ) -> None:
         """Build the complete cache.
@@ -262,7 +262,7 @@ class SqliteCacheBuilder:
         ----------
         model : IWFMModel
             The loaded model.
-        head_loader : LazyHeadDataLoader, optional
+        head_loader : LazyNodalLoader, optional
             Head data loader (HDF5-backed).
         budget_readers : dict, optional
             Mapping of budget_type -> BudgetReader.
@@ -272,7 +272,7 @@ class SqliteCacheBuilder:
         stream_hydrograph_reader : IWFMHydrographReader, optional
         subsidence_reader : IWFMHydrographReader, optional
         tile_drain_reader : IWFMHydrographReader, optional
-        subsidence_loader : LazyHeadDataLoader, optional
+        subsidence_loader : LazyNodalLoader, optional
             Subsidence surface data loader (SubsidenceAtAllNodes HDF5).
         progress_callback : callable, optional
             Called with (step_name, pct) for progress reporting.
@@ -337,7 +337,7 @@ class SqliteCacheBuilder:
         self,
         conn: sqlite3.Connection,
         model: IWFMModel,
-        head_loader: LazyHeadDataLoader | None,
+        head_loader: LazyNodalLoader | None,
         progress_callback: Any | None,
     ) -> None:
         if head_loader is None or head_loader.n_frames == 0:
@@ -452,7 +452,7 @@ class SqliteCacheBuilder:
         self,
         conn: sqlite3.Connection,
         model: IWFMModel,
-        subsidence_loader: LazyHeadDataLoader | None,
+        subsidence_loader: LazyNodalLoader | None,
         progress_callback: Any | None,
     ) -> None:
         if subsidence_loader is None or subsidence_loader.n_frames == 0:
@@ -690,7 +690,7 @@ class SqliteCacheBuilder:
         self,
         conn: sqlite3.Connection,
         model: IWFMModel,
-        head_loader: LazyHeadDataLoader | None,
+        head_loader: LazyNodalLoader | None,
         gw_reader: Any | None,
         stream_reader: Any | None,
         subsidence_reader: Any | None,
@@ -756,7 +756,9 @@ class SqliteCacheBuilder:
         times = getattr(reader, "times", None) or []
         times_blob = zlib.compress("\n".join(str(t) for t in times).encode("utf-8"), level=1)
 
-        # Try bulk HDF5 read path (LazyHydrographDataLoader has _file_path).
+        # Try bulk HDF5 read path (LazyTabularLoader has _source._file_path,
+        # IWFMHydrographReader has _filepath — neither attribute is uniform,
+        # so we duck-type via _file_path which the legacy lazy loader exposed).
         hdf_path = getattr(reader, "_file_path", None)
         CHUNK = 500  # columns per chunk
 

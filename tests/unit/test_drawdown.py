@@ -9,7 +9,7 @@ import pytest
 
 
 def _make_mock_loader(n_frames: int = 5, n_nodes: int = 4, n_layers: int = 2):
-    """Create a mock LazyHeadDataLoader with deterministic data."""
+    """Create a mock LazyNodalLoader with deterministic data."""
     loader = MagicMock()
     loader.n_frames = n_frames
     loader.n_nodes = n_nodes

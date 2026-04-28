@@ -653,32 +653,29 @@ hydrographs, land-use areas).  They were moved from ``visualization.webapi``
 so that CLI tools, notebooks, and scripts can use them without importing the
 web viewer.
 
-Head Data Loader
-~~~~~~~~~~~~~~~~
+Time-Series I/O (heads + hydrographs)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Lazy HDF5 reader for time-varying groundwater head data.
+Unified lazy HDF5 readers and text-to-HDF5 converters for IWFM nodal
+output (heads, subsidence) and tabular hydrograph output. v2.0 merged
+the v1.x ``head_loader`` / ``head_all_converter`` / ``hydrograph_loader`` /
+``hydrograph_converter`` modules into this single namespace; see
+``docs/MIGRATION_v1_to_v2.md`` for the rename map.
 
-.. automodule:: pyiwfm.io.head_loader
+.. automodule:: pyiwfm.io.timeseries_io
    :members:
    :undoc-members:
    :show-inheritance:
 
-Hydrograph Reader
-~~~~~~~~~~~~~~~~~
+Hydrograph Text Reader
+~~~~~~~~~~~~~~~~~~~~~~
 
-Parser for IWFM ``.out`` text hydrograph files.
+Parser for IWFM ``.out`` text hydrograph files. Eager-load semantics
+make this one separate from the lazy :class:`~pyiwfm.io.timeseries_io.LazyTabularLoader`
+(which reads the HDF5 cache produced by
+:meth:`~pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_hydrograph_text`).
 
 .. automodule:: pyiwfm.io.hydrograph_reader
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Hydrograph Loader
-~~~~~~~~~~~~~~~~~
-
-Lazy HDF5-backed hydrograph loader (same interface as ``IWFMHydrographReader``).
-
-.. automodule:: pyiwfm.io.hydrograph_loader
    :members:
    :undoc-members:
    :show-inheritance:

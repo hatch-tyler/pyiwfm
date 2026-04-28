@@ -120,7 +120,7 @@ class TestGetOrConvertHydrograph:
     """Cover _get_or_convert_hydrograph HDF5 loading and text fallback."""
 
     def test_hdf5_path_success(self, tmp_path: Path) -> None:
-        """Lines 766-779: HDF5 suffix loads via LazyHydrographDataLoader."""
+        """Lines 766-779: HDF5 suffix loads via LazyTabularLoader."""
         hdf_path = tmp_path / "hydro.hdf"
         hdf_path.write_text("dummy")
 
@@ -132,7 +132,7 @@ class TestGetOrConvertHydrograph:
         mock_loader.n_columns = 3
 
         with patch(
-            "pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader",
+            "pyiwfm.io.timeseries_io.LazyTabularLoader",
             return_value=mock_loader,
         ):
             result = ms._get_or_convert_hydrograph(hdf_path)
@@ -148,7 +148,7 @@ class TestGetOrConvertHydrograph:
         ms._model = _mock_model()
 
         with patch(
-            "pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader",
+            "pyiwfm.io.timeseries_io.LazyTabularLoader",
             side_effect=Exception("corrupt HDF5"),
         ):
             result = ms._get_or_convert_hydrograph(hdf_path)
@@ -169,10 +169,10 @@ class TestGetOrConvertHydrograph:
 
         with (
             patch(
-                "pyiwfm.io.hydrograph_converter.convert_hydrograph_to_hdf",
+                "pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_hydrograph_text",
             ) as mock_convert,
             patch(
-                "pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader",
+                "pyiwfm.io.timeseries_io.LazyTabularLoader",
                 return_value=mock_loader,
             ),
         ):
@@ -195,7 +195,7 @@ class TestGetOrConvertHydrograph:
 
         with (
             patch(
-                "pyiwfm.io.hydrograph_converter.convert_hydrograph_to_hdf",
+                "pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_hydrograph_text",
                 side_effect=Exception("convert fail"),
             ),
             patch(

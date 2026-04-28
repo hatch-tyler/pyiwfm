@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from pyiwfm.core.mesh import AppGrid
-    from pyiwfm.io.head_loader import LazyHeadDataLoader
+    from pyiwfm.io.timeseries_io import LazyNodalLoader
 
 logger = logging.getLogger(__name__)
 
@@ -54,11 +54,11 @@ class DrawdownComputer:
 
     Parameters
     ----------
-    head_loader : LazyHeadDataLoader
+    head_loader : LazyNodalLoader
         Loader providing lazy access to per-timestep head arrays.
     """
 
-    def __init__(self, head_loader: LazyHeadDataLoader) -> None:
+    def __init__(self, head_loader: LazyNodalLoader) -> None:
         self._loader = head_loader
 
     # ------------------------------------------------------------------
@@ -465,13 +465,13 @@ class DrawdownComputer:
 # ---------------------------------------------------------------------------
 
 
-def _format_loader_times(loader: LazyHeadDataLoader) -> list[str]:
+def _format_loader_times(loader: LazyNodalLoader) -> list[str]:
     """Convert the loader's ``datetime`` timestamps to ISO date strings."""
     times = loader.times
     return [t.isoformat()[:19] if hasattr(t, "isoformat") else str(t) for t in times]
 
 
-def _format_timestep(loader: LazyHeadDataLoader, timestep: int) -> str:
+def _format_timestep(loader: LazyNodalLoader, timestep: int) -> str:
     """Format a single timestep index as an ISO date string when possible."""
     if 0 <= timestep < len(loader.times):
         t = loader.times[timestep]

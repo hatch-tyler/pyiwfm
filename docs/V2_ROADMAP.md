@@ -339,17 +339,21 @@ collects the migration notes in one place. Each entry has the form:
 ```markdown
 ### `pyiwfm.io.head_loader.LazyHeadDataLoader`
 
-**v1.x (still works in v2.x with DeprecationWarning, removed in v3.0):**
+**v1.x:**
 ```python
 from pyiwfm.io.head_loader import LazyHeadDataLoader
-loader = LazyHeadDataLoader("heads.hdf")
+loader = LazyHeadDataLoader("heads.hdf", n_layers=4)
 ```
 
-**v2.x (preferred):**
+**v2.x (hard rename — no shim):**
 ```python
-from pyiwfm.io.timeseries_io import LazyTimeSeriesLoader
-loader = LazyTimeSeriesLoader("heads.hdf", source="iwfm_head_hdf5")
+from pyiwfm.io.timeseries_io import LazyNodalLoader
+loader = LazyNodalLoader("heads.hdf", n_layers=4)
 ```
+
+PR 1 documented why the original "one source-agnostic loader" idea was
+dropped in favor of two thin shape-specific classes (`LazyNodalLoader`
+for `(t, n, layer)`, `LazyTabularLoader` for `(t, columns)`).
 ```
 
 ---

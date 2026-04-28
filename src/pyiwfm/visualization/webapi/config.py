@@ -22,9 +22,9 @@ if TYPE_CHECKING:
     from pyiwfm.io.area_loader import AreaDataManager
     from pyiwfm.io.budget import BudgetReader
     from pyiwfm.io.cache_loader import SqliteCacheLoader
-    from pyiwfm.io.head_loader import LazyHeadDataLoader
     from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
     from pyiwfm.io.simulation_messages import SimulationMessagesResult
+    from pyiwfm.io.timeseries_io import LazyNodalLoader
     from pyiwfm.io.zbudget import ZBudgetReader
 
 logger = logging.getLogger(__name__)
@@ -81,8 +81,8 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         self._crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs"
         self._transformer: Any = None  # pyproj Transformer (lazy)
         self._geojson_cache: dict[int, dict[str, Any]] = {}  # layer -> GeoJSON in WGS84
-        self._head_loader: LazyHeadDataLoader | None = None
-        self._subsidence_loader: LazyHeadDataLoader | None = None
+        self._head_loader: LazyNodalLoader | None = None
+        self._subsidence_loader: LazyNodalLoader | None = None
         self._gw_hydrograph_reader: IWFMHydrographReader | None = None
         self._stream_hydrograph_reader: IWFMHydrographReader | None = None
         self._subsidence_reader: IWFMHydrographReader | None = None

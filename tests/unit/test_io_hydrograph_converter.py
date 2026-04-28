@@ -1,4 +1,9 @@
-"""Unit tests for pyiwfm.io.hydrograph_converter."""
+"""Unit tests for the IWFM hydrograph text-to-HDF5 converter.
+
+In v2.0 ``convert_hydrograph_to_hdf`` was folded into
+:meth:`TimeSeriesCache.from_iwfm_hydrograph_text`; this module exercises
+the new entrypoint plus the shared header-parsing helper.
+"""
 
 from __future__ import annotations
 
@@ -10,42 +15,49 @@ h5py = pytest.importorskip("h5py")
 
 import numpy as np  # noqa: E402
 
-from pyiwfm.io.hydrograph_converter import (  # noqa: E402
-    _parse_timestamp,
-    convert_hydrograph_to_hdf,
-)
+from pyiwfm.io.timeseries_io import TimeSeriesCache, _parse_hydrograph_header  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# _parse_timestamp
+# _parse_hydrograph_header — shared helper used by the converter
 # ---------------------------------------------------------------------------
 
 
-class TestParseTimestamp:
-    """Tests for the IWFM timestamp parser."""
+class TestParseHydrographHeader:
+    """Tests for the shared header parser."""
 
-    def test_normal_timestamp(self) -> None:
-        result = _parse_timestamp("01/31/2020_12:00")
-        assert result == "2020-01-31T12:00:00"
+    def test_extracts_all_three(self) -> None:
+        header = [
+            "* HYDROGRAPH ID  1  2  3",
+            "* LAYER  1  1  1",
+            "* NODE  10  20  30",
+        ]
+        ids, layers, nodes = _parse_hydrograph_header(header)
+        assert ids == [1, 2, 3]
+        assert layers == [1, 1, 1]
+        assert nodes == [10, 20, 30]
 
-    def test_24_00_wraps_to_next_day(self) -> None:
-        result = _parse_timestamp("01/31/2020_24:00")
-        assert result == "2020-02-01T00:00:00"
+    def test_element_keyword_recognized(self) -> None:
+        """Stream hydrographs use ELEMENT instead of NODE."""
+        header = ["* ELEMENT  100  200  300"]
+        _, _, nodes = _parse_hydrograph_header(header)
+        assert nodes == [100, 200, 300]
 
-    def test_midnight(self) -> None:
-        result = _parse_timestamp("06/15/2019_00:00")
-        assert result == "2019-06-15T00:00:00"
+    def test_missing_sections_default_to_empty(self) -> None:
+        header = ["* something else"]
+        ids, layers, nodes = _parse_hydrograph_header(header)
+        assert ids == []
+        assert layers == []
+        assert nodes == []
 
-    def test_with_whitespace(self) -> None:
-        result = _parse_timestamp("  03/01/2021_06:30  ")
-        assert result == "2021-03-01T06:30:00"
-
-    def test_end_of_year_24_00(self) -> None:
-        result = _parse_timestamp("12/31/2020_24:00")
-        assert result == "2021-01-01T00:00:00"
+    def test_handles_non_integer_in_node_list(self) -> None:
+        """Non-integer tokens in the NODE row are silently skipped."""
+        header = ["* NODE  10  abc  30"]
+        _, _, nodes = _parse_hydrograph_header(header)
+        assert nodes == [10, 30]
 
 
 # ---------------------------------------------------------------------------
-# convert_hydrograph_to_hdf
+# TimeSeriesCache.from_iwfm_hydrograph_text  (integration)
 # ---------------------------------------------------------------------------
 
 _SAMPLE_HYDROGRAPH = """\
@@ -60,14 +72,14 @@ _SAMPLE_HYDROGRAPH = """\
 """
 
 
-class TestConvertHydrographToHdf:
-    """Tests for convert_hydrograph_to_hdf()."""
+class TestFromIwfmHydrographText:
+    """Tests for the public converter entrypoint."""
 
     def test_default_output_path(self, tmp_path: Path) -> None:
         txt_file = tmp_path / "GW_Hydrographs.out"
         txt_file.write_text(_SAMPLE_HYDROGRAPH)
 
-        result = convert_hydrograph_to_hdf(txt_file)
+        result = TimeSeriesCache.from_iwfm_hydrograph_text(txt_file)
         expected = txt_file.with_suffix(".hydrograph_cache.hdf")
         assert result == expected
         assert expected.exists()
@@ -77,7 +89,7 @@ class TestConvertHydrographToHdf:
         txt_file.write_text(_SAMPLE_HYDROGRAPH)
         hdf_out = tmp_path / "custom_output.hdf"
 
-        result = convert_hydrograph_to_hdf(txt_file, hdf_out)
+        result = TimeSeriesCache.from_iwfm_hydrograph_text(txt_file, hdf_out)
         assert result == hdf_out
         assert hdf_out.exists()
 
@@ -86,18 +98,18 @@ class TestConvertHydrographToHdf:
         txt_file.write_text(_SAMPLE_HYDROGRAPH)
         hdf_out = tmp_path / "test.hdf"
 
-        convert_hydrograph_to_hdf(txt_file, hdf_out)
+        TimeSeriesCache.from_iwfm_hydrograph_text(txt_file, hdf_out)
 
         with h5py.File(hdf_out, "r") as f:
             data = f["data"][:]
-            assert data.shape == (3, 3)  # 3 timesteps, 3 columns
+            assert data.shape == (3, 3)
 
     def test_data_values(self, tmp_path: Path) -> None:
         txt_file = tmp_path / "test.out"
         txt_file.write_text(_SAMPLE_HYDROGRAPH)
         hdf_out = tmp_path / "test.hdf"
 
-        convert_hydrograph_to_hdf(txt_file, hdf_out)
+        TimeSeriesCache.from_iwfm_hydrograph_text(txt_file, hdf_out)
 
         with h5py.File(hdf_out, "r") as f:
             data = f["data"][:]
@@ -110,7 +122,7 @@ class TestConvertHydrographToHdf:
         txt_file.write_text(_SAMPLE_HYDROGRAPH)
         hdf_out = tmp_path / "test.hdf"
 
-        convert_hydrograph_to_hdf(txt_file, hdf_out)
+        TimeSeriesCache.from_iwfm_hydrograph_text(txt_file, hdf_out)
 
         with h5py.File(hdf_out, "r") as f:
             raw = f["times"][:]
@@ -118,7 +130,6 @@ class TestConvertHydrographToHdf:
             assert len(times) == 3
             assert times[0] == "2020-01-31T12:00:00"
             assert times[1] == "2020-02-29T12:00:00"
-            # 24:00 wraps to next day
             assert times[2] == "2020-04-01T00:00:00"
 
     def test_hydrograph_ids(self, tmp_path: Path) -> None:
@@ -126,7 +137,7 @@ class TestConvertHydrographToHdf:
         txt_file.write_text(_SAMPLE_HYDROGRAPH)
         hdf_out = tmp_path / "test.hdf"
 
-        convert_hydrograph_to_hdf(txt_file, hdf_out)
+        TimeSeriesCache.from_iwfm_hydrograph_text(txt_file, hdf_out)
 
         with h5py.File(hdf_out, "r") as f:
             ids = f["hydrograph_ids"][:].tolist()
@@ -137,7 +148,7 @@ class TestConvertHydrographToHdf:
         txt_file.write_text(_SAMPLE_HYDROGRAPH)
         hdf_out = tmp_path / "test.hdf"
 
-        convert_hydrograph_to_hdf(txt_file, hdf_out)
+        TimeSeriesCache.from_iwfm_hydrograph_text(txt_file, hdf_out)
 
         with h5py.File(hdf_out, "r") as f:
             lyrs = f["layers"][:].tolist()
@@ -148,7 +159,7 @@ class TestConvertHydrographToHdf:
         txt_file.write_text(_SAMPLE_HYDROGRAPH)
         hdf_out = tmp_path / "test.hdf"
 
-        convert_hydrograph_to_hdf(txt_file, hdf_out)
+        TimeSeriesCache.from_iwfm_hydrograph_text(txt_file, hdf_out)
 
         with h5py.File(hdf_out, "r") as f:
             nids = f["node_ids"][:].tolist()
@@ -159,7 +170,7 @@ class TestConvertHydrographToHdf:
         txt_file.write_text(_SAMPLE_HYDROGRAPH)
         hdf_out = tmp_path / "test.hdf"
 
-        convert_hydrograph_to_hdf(txt_file, hdf_out)
+        TimeSeriesCache.from_iwfm_hydrograph_text(txt_file, hdf_out)
 
         with h5py.File(hdf_out, "r") as f:
             assert f.attrs["n_columns"] == 3
@@ -171,4 +182,4 @@ class TestConvertHydrographToHdf:
         txt_file.write_text("* Header only\n* No data\n")
 
         with pytest.raises(ValueError, match="No data found"):
-            convert_hydrograph_to_hdf(txt_file)
+            TimeSeriesCache.from_iwfm_hydrograph_text(txt_file)

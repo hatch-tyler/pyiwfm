@@ -235,10 +235,10 @@ class ResultsExtractor:
         -------
         ExtractionResult
         """
-        from pyiwfm.io.head_loader import LazyHeadDataLoader
+        from pyiwfm.io.timeseries_io import LazyNodalLoader
 
         n_layers = self._model.n_layers
-        loader = LazyHeadDataLoader(self._results_path, n_layers=n_layers)
+        loader = LazyNodalLoader(self._results_path, n_layers=n_layers)
         all_times = loader.times
 
         if timesteps is not None:

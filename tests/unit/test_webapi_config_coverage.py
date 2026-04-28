@@ -407,7 +407,7 @@ class TestHeadLoader:
         mock_loader = MagicMock()
         mock_loader.n_frames = 10
         with patch(
-            "pyiwfm.io.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.timeseries_io.LazyNodalLoader",
             return_value=mock_loader,
         ):
             result = state.get_head_loader()
@@ -425,7 +425,7 @@ class TestHeadLoader:
         # shape must match model's n_layers to avoid triggering re-conversion
         mock_loader.shape = (100, 2)
         with patch(
-            "pyiwfm.io.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.timeseries_io.LazyNodalLoader",
             return_value=mock_loader,
         ) as mock_cls:
             first = state.get_head_loader()
@@ -441,7 +441,7 @@ class TestHeadLoader:
         model.metadata["gw_head_all_file"] = str(head_file)
 
         with patch(
-            "pyiwfm.io.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.timeseries_io.LazyNodalLoader",
             side_effect=RuntimeError("corrupt file"),
         ):
             result = state.get_head_loader()
@@ -1135,7 +1135,7 @@ class TestHeadLoaderRelativePath:
         mock_loader = MagicMock()
         mock_loader.n_frames = 5
         with patch(
-            "pyiwfm.io.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.timeseries_io.LazyNodalLoader",
             return_value=mock_loader,
         ):
             result = state.get_head_loader()

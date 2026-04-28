@@ -1098,11 +1098,11 @@ class TestHeadLoaderBranches:
 
         with (
             patch(
-                "pyiwfm.io.head_loader.LazyHeadDataLoader",
+                "pyiwfm.io.timeseries_io.LazyNodalLoader",
                 return_value=mock_loader,
             ),
             patch(
-                "pyiwfm.io.head_all_converter.convert_headall_to_hdf",
+                "pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_headall_text",
                 mock_convert,
             ),
         ):
@@ -1133,7 +1133,7 @@ class TestHeadLoaderBranches:
         mock_loader.n_frames = 5
 
         with patch(
-            "pyiwfm.io.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.timeseries_io.LazyNodalLoader",
             return_value=mock_loader,
         ):
             result = state.get_head_loader()
@@ -1162,11 +1162,11 @@ class TestHeadLoaderBranches:
 
         with (
             patch(
-                "pyiwfm.io.head_loader.LazyHeadDataLoader",
+                "pyiwfm.io.timeseries_io.LazyNodalLoader",
                 return_value=mock_loader,
             ),
             patch(
-                "pyiwfm.io.head_all_converter.convert_headall_to_hdf",
+                "pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_headall_text",
                 mock_convert,
             ),
         ):
@@ -1186,7 +1186,7 @@ class TestHeadLoaderBranches:
         mock_loader.n_frames = 2
 
         with patch(
-            "pyiwfm.io.head_loader.LazyHeadDataLoader",
+            "pyiwfm.io.timeseries_io.LazyNodalLoader",
             return_value=mock_loader,
         ):
             result = state.get_head_loader()
@@ -1207,11 +1207,11 @@ class TestHeadLoaderBranches:
 
         with (
             patch(
-                "pyiwfm.io.head_loader.LazyHeadDataLoader",
+                "pyiwfm.io.timeseries_io.LazyNodalLoader",
                 return_value=mock_loader,
             ),
             patch(
-                "pyiwfm.io.head_all_converter.convert_headall_to_hdf",
+                "pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_headall_text",
                 mock_convert,
             ),
         ):

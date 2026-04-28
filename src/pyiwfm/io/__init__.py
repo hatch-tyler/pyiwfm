@@ -432,8 +432,9 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "is_cache_stale": ("pyiwfm.io.cache_builder", "is_cache_stale"),
     "SqliteCacheLoader": ("pyiwfm.io.cache_loader", "SqliteCacheLoader"),
     "DrawdownComputer": ("pyiwfm.io.drawdown", "DrawdownComputer"),
-    "LazyHeadDataLoader": ("pyiwfm.io.head_loader", "LazyHeadDataLoader"),
-    "LazyHydrographDataLoader": ("pyiwfm.io.hydrograph_loader", "LazyHydrographDataLoader"),
+    "LazyNodalLoader": ("pyiwfm.io.timeseries_io", "LazyNodalLoader"),
+    "LazyTabularLoader": ("pyiwfm.io.timeseries_io", "LazyTabularLoader"),
+    "TimeSeriesCache": ("pyiwfm.io.timeseries_io", "TimeSeriesCache"),
     "IWFMHydrographReader": ("pyiwfm.io.hydrograph_reader", "IWFMHydrographReader"),
     # SimulationMessages.out Parser
     "ConvergenceHotspot": ("pyiwfm.io.simulation_messages", "ConvergenceHotspot"),
@@ -473,10 +474,13 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "write_timeseries_to_dss": ("pyiwfm.io.dss", "write_timeseries_to_dss"),
 }
 
-# Note: pyiwfm.io.head_all_converter is intentionally NOT imported here.
-# It is a script-capable module (python -m pyiwfm.io.head_all_converter)
-# and eagerly importing it from __init__.py causes a runpy RuntimeWarning.
-# Import directly: from pyiwfm.io.head_all_converter import convert_headall_to_hdf
+# v2.0: ``head_all_converter`` and ``hydrograph_converter`` were merged
+# into :class:`TimeSeriesCache` (see ``pyiwfm.io.timeseries_io``). Use
+# ``TimeSeriesCache.from_iwfm_headall_text(...)`` and
+# ``TimeSeriesCache.from_iwfm_hydrograph_text(...)`` instead. The old
+# loader classes (``LazyHeadDataLoader`` / ``LazyHydrographDataLoader``)
+# were renamed to ``LazyNodalLoader`` / ``LazyTabularLoader`` to match
+# the data shape (see ``docs/MIGRATION_v1_to_v2.md``).
 
 # Build __all__ from the mapping (excluding internal aliases)
 _DSS_NAMES = {

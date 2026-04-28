@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
     from pyiwfm.io.drawdown import DrawdownComputer, DrawdownSnapshot
-    from pyiwfm.io.head_loader import LazyHeadDataLoader
+    from pyiwfm.io.timeseries_io import LazyNodalLoader
 
 logger = logging.getLogger(__name__)
 
@@ -217,8 +217,8 @@ def _load_model_from_dir(model_dir: Path) -> IWFMModel:
     return IWFMModel.from_simulation(sim_file)
 
 
-def _open_heads_loader(model: IWFMModel, heads_hdf_override: str | None) -> LazyHeadDataLoader:
-    """Return a :class:`LazyHeadDataLoader` for the model's heads HDF.
+def _open_heads_loader(model: IWFMModel, heads_hdf_override: str | None) -> LazyNodalLoader:
+    """Return a :class:`LazyNodalLoader` for the model's heads HDF.
 
     Resolution order:
       1. ``heads_hdf_override`` (CLI ``--heads-hdf`` argument)
@@ -227,7 +227,7 @@ def _open_heads_loader(model: IWFMModel, heads_hdf_override: str | None) -> Lazy
     Raises :class:`SystemExit` with a remediation hint if neither is set
     or the file doesn't exist.
     """
-    from pyiwfm.io.head_loader import LazyHeadDataLoader
+    from pyiwfm.io.timeseries_io import LazyNodalLoader
 
     if heads_hdf_override:
         path = Path(heads_hdf_override)
@@ -249,7 +249,7 @@ def _open_heads_loader(model: IWFMModel, heads_hdf_override: str | None) -> Lazy
             )
 
     n_layers = model.groundwater.n_layers if model.groundwater else None
-    return LazyHeadDataLoader(path, n_layers=n_layers)
+    return LazyNodalLoader(path, n_layers=n_layers)
 
 
 def run_drawdown(args: argparse.Namespace) -> int:

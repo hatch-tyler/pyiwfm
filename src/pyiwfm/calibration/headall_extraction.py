@@ -5,7 +5,7 @@ Extracts head time series at arbitrary well locations from HeadAll HDF5 output
 using finite element interpolation and transmissivity-weighted multi-layer
 averaging.
 
-This module composes existing pyiwfm components (LazyHeadDataLoader,
+This module composes existing pyiwfm components (LazyNodalLoader,
 FEInterpolator, compute_multilayer_weights) into an end-to-end pipeline.
 
 Example
@@ -195,9 +195,9 @@ class HeadAllExtractor:
         -------
         ExtractionResult
         """
-        from pyiwfm.io.head_loader import LazyHeadDataLoader
+        from pyiwfm.io.timeseries_io import LazyNodalLoader
 
-        loader = LazyHeadDataLoader(self._headall_path)
+        loader = LazyNodalLoader(self._headall_path)
         all_times = loader.times
         n_layers = self._model.n_layers
 

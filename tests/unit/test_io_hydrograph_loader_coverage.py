@@ -1,4 +1,4 @@
-"""Unit tests for pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader."""
+"""Unit tests for pyiwfm.io.timeseries_io.LazyTabularLoader (formerly LazyTabularLoader)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ h5py = pytest.importorskip("h5py")
 
 import numpy as np  # noqa: E402
 
-from pyiwfm.io.hydrograph_loader import LazyHydrographDataLoader  # noqa: E402
+from pyiwfm.io.timeseries_io import LazyTabularLoader  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -63,27 +63,27 @@ class TestProperties:
     """Tests for metadata property access."""
 
     def test_n_timesteps(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         assert loader.n_timesteps == 4
 
     def test_n_columns(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         assert loader.n_columns == 3
 
     def test_hydrograph_ids(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         assert loader.hydrograph_ids == [1, 2, 3]
 
     def test_layers(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         assert loader.layers == [1, 1, 2]
 
     def test_node_ids(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         assert loader.node_ids == [100, 200, 300]
 
     def test_times(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         assert len(loader.times) == 4
         assert loader.times[0] == "2020-01-31T12:00:00"
 
@@ -97,7 +97,7 @@ class TestGetTimeSeries:
     """Tests for column retrieval."""
 
     def test_valid_column(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         times, values = loader.get_time_series(0)
         assert len(times) == 4
         assert len(values) == 4
@@ -105,18 +105,18 @@ class TestGetTimeSeries:
         assert values[3] == pytest.approx(13.0)
 
     def test_last_column(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         times, values = loader.get_time_series(2)
         assert values[0] == pytest.approx(30.0)
 
     def test_out_of_range_column_returns_empty(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         times, values = loader.get_time_series(99)
         assert times == []
         assert values == []
 
     def test_negative_column_returns_empty(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         times, values = loader.get_time_series(-1)
         assert times == []
         assert values == []
@@ -131,11 +131,11 @@ class TestFindColumnByNodeId:
     """Tests for node ID lookup."""
 
     def test_found(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         assert loader.find_column_by_node_id(200) == 1
 
     def test_not_found(self, hdf_file: Path) -> None:
-        loader = LazyHydrographDataLoader(hdf_file)
+        loader = LazyTabularLoader(hdf_file)
         assert loader.find_column_by_node_id(999) is None
 
 
@@ -148,7 +148,7 @@ class TestMissingFile:
     """Test graceful handling of missing HDF5."""
 
     def test_missing_file_does_not_crash(self, tmp_path: Path) -> None:
-        loader = LazyHydrographDataLoader(tmp_path / "does_not_exist.hdf")
+        loader = LazyTabularLoader(tmp_path / "does_not_exist.hdf")
         assert loader.n_timesteps == 0
         assert loader.n_columns == 0
         assert loader.hydrograph_ids == []

@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
     from pyiwfm.io.area_loader import AreaDataManager
-    from pyiwfm.io.head_loader import LazyHeadDataLoader
     from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
+    from pyiwfm.io.timeseries_io import LazyNodalLoader
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +24,8 @@ class ResultsStateMixin:
     _crs: str
     _transformer: Any
     _geojson_cache: dict[int, dict[str, Any]]
-    _head_loader: LazyHeadDataLoader | None
-    _subsidence_loader: LazyHeadDataLoader | None
+    _head_loader: LazyNodalLoader | None
+    _subsidence_loader: LazyNodalLoader | None
     _gw_hydrograph_reader: IWFMHydrographReader | None
     _stream_hydrograph_reader: IWFMHydrographReader | None
     _subsidence_reader: IWFMHydrographReader | None
@@ -52,7 +52,7 @@ class ResultsStateMixin:
         n = self._model.metadata.get("gw_aquifer_n_layers", 1)
         return n if n and n > 0 else 1
 
-    def get_head_loader(self) -> LazyHeadDataLoader | None:
+    def get_head_loader(self) -> LazyNodalLoader | None:
         """Get the lazy head data loader, initializing if needed."""
         if self._head_loader is not None:
             return self._head_loader
@@ -74,11 +74,11 @@ class ResultsStateMixin:
         n_layers = self._get_n_gw_layers()
 
         try:
-            from pyiwfm.io.head_loader import LazyHeadDataLoader
+            from pyiwfm.io.timeseries_io import LazyNodalLoader
 
             suffix = head_path.suffix.lower()
             if suffix in (".hdf", ".h5", ".he5", ".hdf5"):
-                loader = LazyHeadDataLoader(head_path)
+                loader = LazyNodalLoader(head_path)
                 # Validate layer count — a pyiwfm-converted file may have been
                 # created with the wrong n_layers (e.g. 1 instead of 4).  If so,
                 # look for the companion .out text file and re-convert.
@@ -95,13 +95,13 @@ class ResultsStateMixin:
                 # Convert text file to HDF on-the-fly, cache alongside the original
                 hdf_cache = head_path.with_suffix(".head_cache.hdf")
                 if not hdf_cache.exists() or hdf_cache.stat().st_mtime < head_path.stat().st_mtime:
-                    from pyiwfm.io.head_all_converter import convert_headall_to_hdf
+                    from pyiwfm.io.timeseries_io import TimeSeriesCache
 
-                    convert_headall_to_hdf(head_path, hdf_cache, n_layers=n_layers)
-                self._head_loader = LazyHeadDataLoader(hdf_cache)
+                    TimeSeriesCache.from_iwfm_headall_text(head_path, hdf_cache, n_layers=n_layers)
+                self._head_loader = LazyNodalLoader(hdf_cache)
             else:
                 # Unknown format, try loading directly as HDF
-                self._head_loader = LazyHeadDataLoader(head_path)
+                self._head_loader = LazyNodalLoader(head_path)
 
             if self._head_loader is not None:
                 logger.info(
@@ -116,14 +116,14 @@ class ResultsStateMixin:
 
         return self._head_loader
 
-    def _reconvert_head_hdf(self, hdf_path: Path, n_layers: int) -> LazyHeadDataLoader:
+    def _reconvert_head_hdf(self, hdf_path: Path, n_layers: int) -> LazyNodalLoader:
         """Re-convert a head HDF that has the wrong layer count.
 
         Looks for a companion ``.out`` text file (same stem) and converts it
         with the correct ``n_layers``, overwriting the bad HDF.  Falls back
         to the existing file if no text source is found.
         """
-        from pyiwfm.io.head_loader import LazyHeadDataLoader
+        from pyiwfm.io.timeseries_io import LazyNodalLoader
 
         # Look for companion text file
         text_candidates = [
@@ -135,9 +135,9 @@ class ResultsStateMixin:
 
         if text_source is None:
             logger.warning("No text source found for re-conversion; using existing HDF as-is")
-            return LazyHeadDataLoader(hdf_path)
+            return LazyNodalLoader(hdf_path)
 
-        from pyiwfm.io.head_all_converter import convert_headall_to_hdf
+        from pyiwfm.io.timeseries_io import TimeSeriesCache
 
         logger.info(
             "Re-converting %s -> %s with n_layers=%d",
@@ -145,15 +145,15 @@ class ResultsStateMixin:
             hdf_path.name,
             n_layers,
         )
-        convert_headall_to_hdf(text_source, hdf_path, n_layers=n_layers)
-        return LazyHeadDataLoader(hdf_path)
+        TimeSeriesCache.from_iwfm_headall_text(text_source, hdf_path, n_layers=n_layers)
+        return LazyNodalLoader(hdf_path)
 
     # ------------------------------------------------------------------
     # Subsidence surface data access
     # ------------------------------------------------------------------
 
-    def get_subsidence_loader(self) -> LazyHeadDataLoader | None:
-        """Get a LazyHeadDataLoader for SubsidenceAtAllNodes HDF5 data."""
+    def get_subsidence_loader(self) -> LazyNodalLoader | None:
+        """Get a LazyNodalLoader for SubsidenceAtAllNodes HDF5 data."""
         if self._subsidence_loader is not None:
             return self._subsidence_loader
 
@@ -173,9 +173,9 @@ class ResultsStateMixin:
                     p = self._results_dir / p
                 if p.exists():
                     try:
-                        from pyiwfm.io.head_loader import LazyHeadDataLoader
+                        from pyiwfm.io.timeseries_io import LazyNodalLoader
 
-                        loader = LazyHeadDataLoader(p)
+                        loader = LazyNodalLoader(p)
                         if loader.n_frames > 0:
                             self._subsidence_loader = loader
                             logger.info(
@@ -193,9 +193,9 @@ class ResultsStateMixin:
                 matches = list(self._results_dir.glob(pattern))
                 if matches:
                     try:
-                        from pyiwfm.io.head_loader import LazyHeadDataLoader
+                        from pyiwfm.io.timeseries_io import LazyNodalLoader
 
-                        loader = LazyHeadDataLoader(matches[0])
+                        loader = LazyNodalLoader(matches[0])
                         if loader.n_frames > 0:
                             self._subsidence_loader = loader
                             logger.info(
@@ -258,7 +258,7 @@ class ResultsStateMixin:
         """Load a hydrograph file, auto-converting text to HDF5 cache.
 
         Mirrors the head loader auto-conversion pattern:
-        - HDF5 files -> ``LazyHydrographDataLoader`` directly
+        - HDF5 files -> ``LazyTabularLoader`` directly
         - Text files -> convert to ``{name}.hydrograph_cache.hdf``, then lazy-load
         - Falls back to ``IWFMHydrographReader`` if conversion fails
         """
@@ -266,11 +266,9 @@ class ResultsStateMixin:
 
         if suffix in (".hdf", ".h5", ".he5", ".hdf5"):
             try:
-                from pyiwfm.io.hydrograph_loader import (
-                    LazyHydrographDataLoader,
-                )
+                from pyiwfm.io.timeseries_io import LazyTabularLoader
 
-                loader = LazyHydrographDataLoader(path)
+                loader = LazyTabularLoader(path)
                 if loader.n_timesteps > 0:
                     logger.info(
                         "Hydrograph HDF5 loaded: %d columns, %d timesteps from %s",
@@ -287,17 +285,13 @@ class ResultsStateMixin:
             hdf_cache = path.parent / (path.name + ".hydrograph_cache.hdf")
             try:
                 if not hdf_cache.exists() or hdf_cache.stat().st_mtime < path.stat().st_mtime:
-                    from pyiwfm.io.hydrograph_converter import (
-                        convert_hydrograph_to_hdf,
-                    )
+                    from pyiwfm.io.timeseries_io import TimeSeriesCache
 
-                    convert_hydrograph_to_hdf(path, hdf_cache)
+                    TimeSeriesCache.from_iwfm_hydrograph_text(path, hdf_cache)
 
-                from pyiwfm.io.hydrograph_loader import (
-                    LazyHydrographDataLoader,
-                )
+                from pyiwfm.io.timeseries_io import LazyTabularLoader
 
-                loader = LazyHydrographDataLoader(hdf_cache)
+                loader = LazyTabularLoader(hdf_cache)
                 if loader.n_timesteps > 0:
                     logger.info(
                         "Hydrograph auto-converted: %d columns, %d timesteps from %s",

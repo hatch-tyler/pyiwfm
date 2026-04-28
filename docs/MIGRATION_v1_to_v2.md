@@ -87,71 +87,105 @@ the canonical replacement for each public name.
 
 > _Entries below are placeholders; they get filled in when PR 1 lands._
 
-### `pyiwfm.io.head_loader.LazyHeadDataLoader`
+### `pyiwfm.io.head_loader.LazyHeadDataLoader` → `pyiwfm.io.timeseries_io.LazyNodalLoader`
 
-**Status:** _shimmed_ (DeprecationWarning in v2.x, removed in v3.0).
+**Status:** _hard break_ — module deleted, class renamed. No deprecation
+shim (v2.0 is the breaking-release window — see the design notes in PR 1
+for the rationale on why a clean rename was preferred over shims).
 
-**Why:** Replaced by the source-agnostic `LazyTimeSeriesLoader`, which
-also covers hydrograph data and any future per-node time-series
-formats.
+**Why:** The data shape (3-D nodal `(t, n, layer)`) is what the class
+actually represents; the new name reflects that. The shared LRU + HDF5
+scaffolding now lives in a private mixin used by both
+`LazyNodalLoader` and `LazyTabularLoader`.
 
 **v1.x:**
 ```python
 from pyiwfm.io.head_loader import LazyHeadDataLoader
-loader = LazyHeadDataLoader("Results/HeadAll.hdf")
+loader = LazyHeadDataLoader("Results/HeadAll.hdf", n_layers=4)
 heads_at_t0 = loader[loader.times[0]]
 ```
 
 **v2.x:**
 ```python
-from pyiwfm.io.timeseries_io import LazyTimeSeriesLoader
-loader = LazyTimeSeriesLoader("Results/HeadAll.hdf", source="iwfm_head_hdf5")
+from pyiwfm.io.timeseries_io import LazyNodalLoader
+loader = LazyNodalLoader("Results/HeadAll.hdf", n_layers=4)
 heads_at_t0 = loader[loader.times[0]]
 ```
 
-The `__getitem__`, `times`, `n_frames`, `n_nodes`, `n_layers` interface
-is unchanged.
+The constructor signature, `__getitem__`, `times`, `n_frames`,
+`n_nodes`, `n_layers`, `shape`, `data_type`, `get_frame`, `get_head`,
+`get_composite_subsidence`, `get_layer_range`, `to_dict`, and
+`clear_cache` are all preserved verbatim.
 
-### `pyiwfm.io.head_all_converter.convert_headall_to_hdf`
+### `pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader` → `pyiwfm.io.timeseries_io.LazyTabularLoader`
 
-**Status:** _shimmed_ (DeprecationWarning in v2.x, removed in v3.0).
+**Status:** _hard break_ — module deleted, class renamed.
 
-**Why:** Replaced by `TimeSeriesCache.from_text()`, which handles head
-and hydrograph text outputs through one path.
+**Why:** Same shape-naming argument as above — this loader handles
+flat `(t, columns)` data, hence "tabular".
+
+**v1.x:**
+```python
+from pyiwfm.io.hydrograph_loader import LazyHydrographDataLoader
+loader = LazyHydrographDataLoader("hydrograph_cache.hdf")
+times, vals = loader.get_time_series(col_idx=0)
+```
+
+**v2.x:**
+```python
+from pyiwfm.io.timeseries_io import LazyTabularLoader
+loader = LazyTabularLoader("hydrograph_cache.hdf")
+times, vals = loader.get_time_series(col_idx=0)
+```
+
+All public methods (`get_row`, `get_time_series`,
+`find_column_by_node_id`, plus `n_columns`, `n_timesteps`, `times`,
+`hydrograph_ids`, `layers`, `node_ids`) are preserved verbatim.
+
+### `pyiwfm.io.head_all_converter.convert_headall_to_hdf` → `pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_headall_text`
+
+**Status:** _hard break_ — module deleted, function moved to a static
+method on `TimeSeriesCache`.
 
 **v1.x:**
 ```python
 from pyiwfm.io.head_all_converter import convert_headall_to_hdf
-convert_headall_to_hdf("GWALLOUTFL.out", "HeadAll.hdf")
+convert_headall_to_hdf("GWALLOUTFL.out", "HeadAll.hdf", n_layers=4)
 ```
 
 **v2.x:**
 ```python
 from pyiwfm.io.timeseries_io import TimeSeriesCache
-TimeSeriesCache.from_text(
-    "GWALLOUTFL.out",
-    output="HeadAll.hdf",
-    source="iwfm_head_text",
-)
+TimeSeriesCache.from_iwfm_headall_text("GWALLOUTFL.out", "HeadAll.hdf", n_layers=4)
 ```
 
-### `pyiwfm.io.hydrograph_loader.HydrographLoader`
+The argument order and semantics are unchanged. The CLI entrypoint
+(`python -m pyiwfm.io.head_all_converter ...`) was removed; if you used
+it, write a small driver script that calls the static method directly.
 
-**Status:** _shimmed_.
+### `pyiwfm.io.hydrograph_converter.convert_hydrograph_to_hdf` → `pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_hydrograph_text`
 
-> _Fill in v1 → v2 example when PR 1 lands._
+**Status:** _hard break_ — module deleted, function moved to a static
+method on `TimeSeriesCache`.
 
-### `pyiwfm.io.hydrograph_converter.convert_hydrograph_to_hdf`
+**v1.x:**
+```python
+from pyiwfm.io.hydrograph_converter import convert_hydrograph_to_hdf
+convert_hydrograph_to_hdf("GW_Hydrograph.out", "hydrograph_cache.hdf")
+```
 
-**Status:** _shimmed_.
-
-> _Fill in v1 → v2 example when PR 1 lands._
+**v2.x:**
+```python
+from pyiwfm.io.timeseries_io import TimeSeriesCache
+TimeSeriesCache.from_iwfm_hydrograph_text("GW_Hydrograph.out", "hydrograph_cache.hdf")
+```
 
 ### `pyiwfm.io.hydrograph_reader.IWFMHydrographReader`
 
-**Status:** _kept_ — name and import path unchanged. Loses its
-conversion responsibility (use `TimeSeriesCache` for that), but the
-text-reading interface is identical.
+**Status:** _kept_ — name and import path unchanged. The class is
+already separate from the converter (which lived in
+`hydrograph_converter.py`); v2.0 just deletes the converter module —
+the reader's API is identical.
 
 ---
 

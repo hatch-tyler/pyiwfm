@@ -140,7 +140,7 @@ def _make_head_loader(
     with_dry_cells: bool = False,
     short_times: bool = False,
 ) -> MagicMock:
-    """Create a mock LazyHeadDataLoader."""
+    """Create a mock LazyNodalLoader."""
     loader = MagicMock()
     loader.n_frames = n_frames
     base = datetime(2020, 1, 1)
