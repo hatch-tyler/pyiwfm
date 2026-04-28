@@ -230,113 +230,54 @@ before; this is purely an additional surface for callers who want it.
 
 ---
 
-## 3. Broaden the `BaseComponent` contract
+## 3. `BaseComponent` docstring fix (PR 3)
 
-> **⚠ Hard break.** This is the only v2.0 change without a shim. If
-> you subclass :class:`~pyiwfm.core.base_component.BaseComponent` (rare
-> — it's intended for internal pyiwfm use), your subclass must
-> implement four new abstract methods. Code that only **uses**
-> components (without subclassing) is unaffected.
+### `BaseComponent.validate()` contract
 
-### `BaseComponent` — new abstract methods
+**Status:** _docstring clarified_; **no behavioral change**.
 
-**Status:** _hard break_ for subclassers.
-
-**Why:** Phase-1 verification confirmed `BaseComponent` is already
-an ABC with `validate()` and `n_items`. The four new methods enable
-generic JSON / HDF5 serialization, scenario diff, deep-copy, and
-mesh-aware validation across all components — without per-class
-bespoke code.
+**Why:** A v2.0 PR 3 audit found the v1.x class docstring described
+`validate()` as returning "a list of validation error strings" while
+its method signature was `-> None` and the docstring said "Raises
+ValidationError." All six shipped component implementations
+(`AppGW`, `AppStream`, `AppLake`, `RootZone`, `AppSmallWatershed`,
+`AppUnsatZone`) consistently raise
+:class:`~pyiwfm.core.exceptions.ComponentError` on invalid state and
+return ``None`` on success — the docstring was simply wrong about
+the list-of-strings shape. v2.0 corrects the docstring to match.
 
 **v1.x:**
 ```python
-from pyiwfm.core.base_component import BaseComponent
-
-class MyCustomComponent(BaseComponent):
-    def validate(self) -> list[str]:
-        return []
-
-    @property
-    def n_items(self) -> int:
-        return 0
+errors = component.validate()  # docstring lied — actually raises
+                               # ComponentError or returns None
 ```
 
-**v2.x:**
+**v2.x (the contract every implementation has always followed):**
 ```python
-from pyiwfm.core.base_component import BaseComponent
-from pyiwfm.core.serialization import default_to_dict, default_from_dict
-
-class MyCustomComponent(BaseComponent):
-    def validate(self) -> list[str]:
-        return []
-
-    @property
-    def n_items(self) -> int:
-        return 0
-
-    # NEW required methods — for simple dataclass-style components,
-    # the helpers in pyiwfm.core.serialization implement these for you:
-    def to_dict(self) -> dict[str, object]:
-        return default_to_dict(self)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, object]) -> "MyCustomComponent":
-        return default_from_dict(cls, data)
-
-    def clone(self) -> "MyCustomComponent":
-        return self.from_dict(self.to_dict())
-
-    def validate_against(self, grid) -> list[str]:
-        # Mesh-aware validation: e.g. check that all node references
-        # exist in the supplied grid. Return [] if no mesh-cross-checks
-        # apply.
-        return []
+try:
+    component.validate()
+except ComponentError as e:
+    print(f"{component} failed validation: {e}")
 ```
 
-For component classes that already define `to_dict` / `from_dict`
-informally (most of pyiwfm's built-in components do), you can simply
-remove the `default_*` helpers and the existing methods satisfy the
-contract.
+### What was deferred and why
 
-If you need to interact with a `BaseComponent` polymorphically (across
-multiple subclasses), use the new contract:
+The original v2.0 roadmap also proposed adding `to_dict` / `from_dict`
+/ `clone` / `validate_against(grid)` as new abstract methods on
+`BaseComponent`. A concrete-call audit during PR 3 found **no current
+caller** invokes any of those methods on a `BaseComponent` subclass —
+the `.to_dict()` calls in the codebase are all on unrelated dataclasses
+(reports, metrics). Adding 4 abstract methods × 6 component
+implementations for code that nothing calls would violate the
+project's "don't design for hypothetical future requirements" rule
+(see CLAUDE.md "Doing tasks"), so these additions are deferred.
 
-```python
-# v2 generic snapshot:
-snapshot = {name: comp.to_dict() for name, comp in model.iter_components()}
-
-# v2 generic diff:
-def diff(a: BaseComponent, b: BaseComponent) -> dict:
-    return {k: (a.to_dict()[k], b.to_dict()[k])
-            for k in a.to_dict()
-            if a.to_dict().get(k) != b.to_dict().get(k)}
-```
-
-### `BaseComponent.validate()` return type
-
-**Status:** _signature clarified_, not a hard break for most callers.
-
-**Why:** Phase-1 verification found the v1 docstring was internally
-inconsistent — the class docstring said `validate()` returns "a list
-of validation error strings", but the method signature said
-`-> None`. v2.0 commits to the list-returning convention.
-
-**v1.x:**
-```python
-errors = component.validate()  # returned None on some subclasses,
-                               # list[str] on others — caller had to guess
-```
-
-**v2.x:**
-```python
-errors: list[str] = component.validate()
-if errors:
-    raise ValidationError(f"{component} failed validation: {errors}")
-```
-
-Callers that only checked truthiness (`if not errors:`) continue to
-work because `None` and `[]` are both falsy — but the new contract is
-unambiguous.
+If a real caller emerges later (HDF5 scenario diffs, JSON snapshots,
+generic deep-copy), the methods can be added in a single non-breaking
+PR by giving them default implementations on `BaseComponent` itself
+— they'd only become abstract if the project decides every subclass
+must override them, which is a stronger constraint that needs
+justification at the time.
 
 ---
 
