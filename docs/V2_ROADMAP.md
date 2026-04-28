@@ -1,14 +1,56 @@
 # Roadmap: pyiwfm v2.0
 
+> **Status (2026-04-27):** All seven implementation PRs landed on the
+> `next` branch. See [§ Implementation status](#implementation-status)
+> for the per-PR outcomes. The migration guide
+> ([`docs/MIGRATION_v1_to_v2.md`](MIGRATION_v1_to_v2.md)) is finalized.
+> Awaiting `v2.0.0a1` tag.
+
 ## Executive Summary
 
 v2.0 collects the breaking refactors from the comprehensive review that
 intentionally were **not** shipped in v1.2.x / v1.3.x because they
-remove or rename public API. They land on a long-running `next` branch
-and ship as a single major release once the v1 line is stable enough
-to leave behind.
+remove or rename public API. They landed on the long-running `next`
+branch and will ship as a single major release once the v1 line is
+stable enough to leave behind.
 
-The five v2 items, all from the Phase 3 section of the review:
+The original roadmap targeted five Phase-3 items. Mid-implementation,
+two additional items from Phase 4.B were promoted in (rootzone variant
+ABC, BaseComponentWriter), bringing the actual scope to **seven PRs**.
+Three of the seven (PRs 3, 5, 7) deferred speculative scope after
+audit, with deferral reasoning recorded in
+[`docs/MIGRATION_v1_to_v2.md`](MIGRATION_v1_to_v2.md).
+
+None of these changes are user-functional improvements. They are
+architectural cleanups that pay down accumulated debt and unblock
+future work.
+
+---
+
+## Implementation status
+
+| PR | Topic | Commit | Outcome vs. plan |
+|---|---|---|---|
+| 1 | Head/hydrograph cluster | `f37a96a` | **As designed** (with two thin classes instead of one — divergent data shapes). 5 modules → 2 (`io/timeseries_io.py` + `io/hydrograph_reader.py`). Net 1,402 → 1,275 lines. |
+| 2 | `core/model.py` constructor split | `094d383` | **Exceeded.** `core/model.py` 2,498 → 958 lines (−61%). Loader bodies moved to `core/loaders/` package. |
+| 3 | `BaseComponent` contract | `7a284c1` | **Partial.** Docstring fix shipped; speculative `to_dict`/`from_dict`/`clone`/`validate_against` abstract methods deferred (no current caller). |
+| 4 | webapi → io move | `426faea` | **As designed.** `slicing.py` + `properties.py` moved with `git mv` (history preserved). |
+| 5 | Large writer splits | `2fb3b44` | **Partial.** `runner/pest.py` 1,456 → package with 6 files. Splits of `gw_writer`/`stream_writer`/`cache_builder` deferred (single-class methods, would need mixins for cosmetic gain). |
+| 6 | Rootzone v5+ ABC | `dabb865` | **Smaller than projected.** Plan's −1,575 line target assumed all 5 modules duplicated; actual was 3 v5+ modules and netted −32 lines. The architectural seam (shared `_RootzoneReaderBase`) is the real win. |
+| 7 | Component-writer scaffolding | `bbde3c2` | **Partial.** Shipped `open_iwfm_file` + `write_element_group` shared helpers (−111 lines across 6 writers). Deferred the speculative `BaseComponentWriter` strategy class. |
+| 8 | Migration guide finalization | (this PR) | Pure docs polish. |
+
+The "deferred" items in PRs 3, 5, and 7 follow the same pattern: an
+audit during implementation found no concrete caller would benefit
+from the proposed abstraction, and CLAUDE.md's "don't add abstractions
+beyond what the task requires" pushed back. Each deferral is documented
+in `docs/MIGRATION_v1_to_v2.md` with a recovery path if a real consumer
+appears later.
+
+The original five-item plan, kept below for historical context (the
+descriptions in §3 still describe the originally-proposed scope, not
+the final shipped scope — see the per-PR notes in
+`docs/MIGRATION_v1_to_v2.md` for what actually landed):
 
 1. **Consolidate the head/hydrograph cluster** (1,384 lines of
    near-duplicate readers/loaders/converters → ~500 lines of one
@@ -23,9 +65,7 @@ The five v2 items, all from the Phase 3 section of the review:
    `stream_writer.py` 1,102, `cache_builder.py` 964, `runner/pest.py`
    1,456 → focused submodules)
 
-None of these changes are user-functional improvements. They are
-architectural cleanups that pay down accumulated debt and unblock
-future work.
+The two added Phase-4.B items shipped as PRs 6 and 7.
 
 ---
 
@@ -314,7 +354,15 @@ beyond verifying that the re-export shape matches.
 
 ## 4. Deprecation & Migration Policy
 
-The contract for v1 → v2:
+> **Note (2026-04-27):** the policy below describes the original plan
+> assumption that v2.0 would ship with deprecation shims. During
+> implementation we landed on a different policy: **clean rename, no
+> shims** — see [`docs/MIGRATION_v1_to_v2.md`](MIGRATION_v1_to_v2.md)
+> § TL;DR for the rationale (small audience, every user reads the
+> changelog, shims defer pain rather than eliminate it). The original
+> shim policy is kept below for historical context.
+
+The original contract proposal for v1 → v2:
 
 1. **Every removed public name** (functions, classes, module paths)
    gets a deprecation shim in v2.0.0–v2.x that:
@@ -360,17 +408,17 @@ for `(t, n, layer)`, `LazyTabularLoader` for `(t, columns)`).
 
 ## 5. Release Cadence
 
-Tentative cadence (subject to scope changes):
+The original cadence anticipated one alpha per PR. In practice all
+seven implementation PRs (1–7) plus the migration guide finalization
+(PR 8) landed back-to-back on `next` between 2026-04-27 and the
+v2.0.0a1 tag, so we collapse to one alpha for the bundle:
 
 | Tag | Trigger | What's in it |
 |---|---|---|
-| `v2.0.0a1` | First breaking PR merges to `next` | Refactor 1 + shims |
-| `v2.0.0a2` | After PR 2 | + constructors split |
-| `v2.0.0a3` | After PR 3 | + BaseComponent broadening |
-| `v2.0.0a4` | After PR 4 | + webapi shim moves |
-| `v2.0.0a5` | After PR 5 | + writer splits |
-| `v2.0.0b1` | All 5 PRs merged, API frozen | First beta |
-| `v2.0.0b2`+ | Bug fixes only | Iterate based on user feedback |
+| `v2.0.0a1` | All 8 PRs merged, migration guide finalized | All v2.0 refactors (PRs 1–7) + migration guide |
+| `v2.0.0a2`+ | Only if a follow-up audit lands a behavior fix | Iterate based on alpha user feedback |
+| `v2.0.0b1` | API frozen, no `[v2]` issues open >1 week | First beta |
+| `v2.0.0b2`+ | Bug fixes only | Iterate |
 | `v2.0.0rc1` | After ≥30 days of beta with no API changes | Release candidate |
 | `v2.0.0rc2`+ | Only for blocker fixes | |
 | `v2.0.0` | After ≥14 days of rc with no blockers | Final |

@@ -1,25 +1,34 @@
 # Migrating from pyiwfm v1.x to v2.0
 
-> **Status:** Template / work in progress. v2.0 is being developed on
-> the [`next` branch](V2_ROADMAP.md). This document is currently
-> excluded from the user-facing docs build via `docs/conf.py`. **Move
-> it into the user-guide toctree when `v2.0.0a1` is tagged**, and
-> announce it from the v2.0.0a1 PyPI release notes.
+> **Status:** v2.0 implementation complete on the
+> [`next` branch](V2_ROADMAP.md) as of 2026-04-27. Seven PRs landed
+> (see [§ Implementation status](#implementation-status) below). This
+> guide is ready to ship with the `v2.0.0a1` tag. The maintainer
+> tagging the alpha should also remove this file from `exclude_patterns`
+> in `docs/conf.py` so it appears in the published docs.
 
 This guide walks you through upgrading a project from pyiwfm v1.x to
-v2.0. v2.0 is a major version with intentional breaking changes; see
-the [v2 roadmap](V2_ROADMAP.md) for the design rationale.
+v2.0. See the [v2 roadmap](V2_ROADMAP.md) for the design rationale and
+the per-PR audit notes.
 
 ## TL;DR
 
-- **Most code keeps working unchanged in v2.x** thanks to deprecation
-  shims at every removed import path.
-- **You'll see `DeprecationWarning`s** on the first use of any moved
-  or renamed API. Each warning includes the new path.
-- **Shims are removed in v3.0**, so plan to migrate before then.
-- **One subclassing change is a hard break** (no shim possible): if
-  you subclass `BaseComponent`, you must implement four new abstract
-  methods. See [Section 3](#3-broaden-the-basecomponent-contract).
+- **No deprecation shims.** v2.0 is a clean break — every renamed
+  module / class / function landed as a hard rename. The migration
+  guide (this document) carries the rename mapping.
+- **What changed in practice is small.** PR 1 renamed two loader
+  classes and consolidated converter functions; PR 4 moved two files
+  from `webapi/` to `io/`. Everything else (PRs 2, 5, 6, 7) was
+  internal restructuring with public APIs unchanged.
+- **`IWFMModel.from_*` classmethods are unchanged** — PR 2 split their
+  bodies into `core/loaders/` but the dispatchers stay.
+- **`BaseComponent` users:** the v1.x docstring was misleading about
+  `validate()` returning a list of error strings. PR 3 corrected the
+  docstring; the actual contract (raise `ComponentError` on invalid
+  state, return `None` on success) was already what every shipped
+  component did. **No new abstract methods were added** — the
+  speculative `to_dict`/`from_dict`/`clone`/`validate_against`
+  proposals were deferred (see [Section 3](#3-basecomponent-docstring-fix-pr-3)).
 
 ## Try v2 today
 
@@ -29,63 +38,76 @@ pip install --pre 'pyiwfm>=2.0.0a1,<3'
 
 # Run your existing v1 code
 python your_script.py
-# → Watch for DeprecationWarnings; each one points to the new API.
 ```
 
-To make warnings visible in scripts that suppress them:
+If your code is affected by the renames in [Sections 1](#1-headhydrograph-cluster-consolidation)
+or [4](#4-move-webapislicingpy-and-webapipropertiespy-to-io), you'll
+see `ImportError` on first run. The error message names the missing
+module — match it against the corresponding section below to find the
+new path.
 
-```python
-import warnings
-warnings.filterwarnings("default", category=DeprecationWarning, module=r"pyiwfm.*")
-```
+## Implementation status
+
+All seven PRs landed on the `next` branch between 2026-04-27 and
+the v2.0.0a1 tag. The "Outcome" column flags what differed from the
+original [v2 roadmap](V2_ROADMAP.md) targets:
+
+| § | PR | Topic | Outcome |
+|---|---|---|---|
+| [1](#1-headhydrograph-cluster-consolidation) | 1 | Head/hydrograph cluster | Two classes (`LazyNodalLoader`, `LazyTabularLoader`) instead of one — divergent data shapes |
+| [2](#2-coremodelpy-constructor-split) | 2 | `core/model.py` constructor split | As designed: 2,498 → 958 lines |
+| [3](#3-basecomponent-docstring-fix-pr-3) | 3 | `BaseComponent` contract | **Deferred** speculative `to_dict`/`from_dict`/`clone`/`validate_against` (no current caller); shipped docstring fix only |
+| [4](#4-move-webapislicingpy-and-webapipropertiespy-to-io) | 4 | webapi → io move | As designed: pure rename |
+| [5](#5-split-runnerpestpy-into-a-package-writercache-splits-deferred) | 5 | Large writer splits | **Partial:** `runner/pest.py` split as designed; `gw_writer`/`stream_writer`/`cache_builder` deferred (single-class methods, would need mixins for cosmetic gain) |
+| [6](#6-rootzone-v5-reader-consolidation) | 6 | Rootzone v5+ ABC | **Smaller than projected:** plan's −1,575 line target was based on assuming all 5 modules duplicated; actual was 3 modules and netted −32 lines, but real win is the architectural seam |
+| [7](#7-component-writer-scaffolding-pr-7) | 7 | BaseComponentWriter ABC | **Partial:** shipped `open_iwfm_file` + `write_element_group` shared helpers; deferred the speculative `BaseComponentWriter` strategy class (per-writer format diversity makes a uniform `WriteSpec` schema awkward) |
+
+The "deferred" items in PRs 3, 5, and 7 follow the same pattern: an
+audit found no concrete caller would benefit from the proposed
+abstraction, and CLAUDE.md's "don't add abstractions beyond what the
+task requires" pushes back. Each deferral is documented in its
+section below with a recovery path if a real consumer appears later.
 
 ## How to read this guide
 
-The five subsections below correspond one-to-one with the five PRs
-that land in v2.0 (see `V2_ROADMAP.md` § 3 for the breakdown):
+The seven subsections below correspond one-to-one with the seven PRs
+that shipped to v2.0:
 
-1. [Head/hydrograph cluster consolidation](#1-headhydrograph-cluster-consolidation)
-2. [`core/model.py` constructor split](#2-coremodelpy-constructor-split)
-3. [Broaden the `BaseComponent` contract](#3-broaden-the-basecomponent-contract)
-4. [Move `webapi/slicing.py` and `webapi/properties.py` to `io/`](#4-move-webapislicingpy-and-webapipropertiespy-to-io)
-5. [Split the 1,000+-line writers](#5-split-the-1000-line-writers)
+1. [Head/hydrograph cluster consolidation (PR 1)](#1-headhydrograph-cluster-consolidation)
+2. [`core/model.py` constructor split (PR 2)](#2-coremodelpy-constructor-split)
+3. [`BaseComponent` docstring fix (PR 3)](#3-basecomponent-docstring-fix-pr-3)
+4. [Move `webapi/slicing.py` and `webapi/properties.py` to `io/` (PR 4)](#4-move-webapislicingpy-and-webapipropertiespy-to-io)
+5. [Split `runner/pest.py` into a package (PR 5)](#5-split-runnerpestpy-into-a-package-writercache-splits-deferred)
+6. [Rootzone v5+ reader consolidation (PR 6)](#6-rootzone-v5-reader-consolidation)
+7. [Component-writer scaffolding (PR 7)](#7-component-writer-scaffolding-pr-7)
 
 Within each section, every individual API change uses this template:
 
-> ### `<old qualified name>`
+> ### `<old qualified name>` → `<new qualified name>`
 >
-> **Status:** _shimmed_ (continues working with `DeprecationWarning` through
-> v2.x, removed in v3.0) **or** _hard break_ (no shim; v2.0 requires the
-> code change).
->
-> **Why:** one-sentence reason for the change. Link to the PR/commit
-> if it's not obvious from `V2_ROADMAP.md`.
+> **Status:** _hard rename_ (v2.0 requires the code change) **or**
+> _internal restructuring_ (no public-API change).
 >
 > **v1.x:**
 > ```python
 > # the old code
 > ```
 >
-> **v2.x (preferred):**
+> **v2.x:**
 > ```python
 > # the new code
 > ```
-
-The maintainer adding the change is responsible for filling in their
-section's entries when their PR lands. PRs that introduce a public-API
-change but don't update this file should be requested-changes by the
-reviewer.
 
 ---
 
 ## 1. Head/hydrograph cluster consolidation
 
-Consolidates 1,384 lines across five near-duplicate modules into a
-single `pyiwfm.io.timeseries_io` abstraction. The five removed modules
-keep working as deprecation shims through v2.x; entries below document
-the canonical replacement for each public name.
-
-> _Entries below are placeholders; they get filled in when PR 1 lands._
+Consolidates 1,402 lines across five near-duplicate modules into two:
+``pyiwfm.io.timeseries_io`` (the new lazy-loader + cache namespace)
+and ``pyiwfm.io.hydrograph_reader`` (kept as the eager text reader).
+The five v1.x modules are **deleted in v2.0** — there are no
+deprecation shims. Entries below document the canonical replacement
+for each public name; update your imports accordingly.
 
 ### `pyiwfm.io.head_loader.LazyHeadDataLoader` → `pyiwfm.io.timeseries_io.LazyNodalLoader`
 
@@ -393,7 +415,73 @@ without `cd`-ing into a subdirectory.
 
 ---
 
-## 5b. Component-writer scaffolding (PR 7)
+## 6. Rootzone v5+ reader consolidation
+
+### `pyiwfm.io._rootzone_base._RootzoneReaderBase` (new internal base)
+
+**Status:** _internal restructuring_; **public API unchanged**.
+
+In v1.x the three v5+ rootzone variant readers
+(:class:`~pyiwfm.io.rootzone_native.NativeRiparianReader`,
+:class:`~pyiwfm.io.rootzone_nonponded.NonPondedCropReader`,
+:class:`~pyiwfm.io.rootzone_urban.UrbanLandUseReader`) each carried
+their own copies of:
+
+- `_resolve(base_dir, filepath)` — byte-identical 4-line method, 3
+  copies.
+- `_read_rows(buf, min_cols, [n_expected])` — ~30-line tabular-section
+  reader, 3 copies (urban differed only in accepting a per-call
+  ``n_expected`` override).
+- Inline `try: float(val); except ValueError: raise FileFormatError(...)`
+  blocks at every scalar-read site (~6 places per reader × 3 readers).
+
+PR 6 extracts this scaffolding into ``pyiwfm.io._rootzone_base._RootzoneReaderBase``
+(168 lines) with shared `_resolve`, `_read_rows`, `_parse_float`, and
+`_parse_int` helpers. The three concrete readers now inherit from it.
+
+**Per-module line reductions:**
+
+| Module | v1.x lines | v2.x lines | Δ |
+|---|---|---|---|
+| `rootzone_native.py` | 318 | 255 | −63 |
+| `rootzone_nonponded.py` | 458 | 389 | −69 |
+| `rootzone_urban.py` | 367 | 299 | −68 |
+| `_rootzone_base.py` (new) | — | 168 | +168 |
+| **Net** | **1,143** | **1,111** | **−32** |
+
+The bigger win isn't the line count — it's that the readers no longer
+have triplicate copies of the same parsing scaffolding to keep in sync,
+and a future v5+ rootzone variant slots in by inheriting the same base.
+
+**v4.x readers are unchanged.** ``rootzone_v4x.py`` already had its
+own ``_V4xReaderBase`` shipped before v2.0; that base remains and was
+not touched. The original v2.0 roadmap proposed unifying v4.x and v5+
+under one common ABC, but the two file-format generations have
+sufficiently different shapes (different scalar-field orders, different
+section types) that a single base would just push the variation into a
+config object — adding indirection without functional gain.
+
+**No public API changes.** All three concrete reader classes keep the
+same constructor signatures, public ``read()`` method, and return
+types. External callers don't see the inheritance change.
+
+If you imported one of the now-removed private helpers
+(`_is_comment_line`, `_LineBuffer`, `_strip_comment` re-exports) from
+``pyiwfm.io.rootzone_nonponded`` directly (rare; the test suite did
+this in two places before PR 6), update to import from the canonical
+:mod:`pyiwfm.io.iwfm_reader`:
+
+```python
+# v1.x:
+from pyiwfm.io.rootzone_nonponded import _is_comment_line
+
+# v2.x:
+from pyiwfm.io.iwfm_reader import is_comment_line as _is_comment_line
+```
+
+---
+
+## 7. Component-writer scaffolding (PR 7)
 
 ### `pyiwfm.io.iwfm_writer.open_iwfm_file` and `write_element_group` (new helpers)
 
@@ -467,90 +555,35 @@ of ``stream_diversion_writer._write_element_group`` are unaffected
 
 ---
 
-## 6. Rootzone v5+ reader consolidation
-
-### `pyiwfm.io._rootzone_base._RootzoneReaderBase` (new internal base)
-
-**Status:** _internal restructuring_; **public API unchanged**.
-
-In v1.x the three v5+ rootzone variant readers
-(:class:`~pyiwfm.io.rootzone_native.NativeRiparianReader`,
-:class:`~pyiwfm.io.rootzone_nonponded.NonPondedCropReader`,
-:class:`~pyiwfm.io.rootzone_urban.UrbanLandUseReader`) each carried
-their own copies of:
-
-- `_resolve(base_dir, filepath)` — byte-identical 4-line method, 3
-  copies.
-- `_read_rows(buf, min_cols, [n_expected])` — ~30-line tabular-section
-  reader, 3 copies (urban differed only in accepting a per-call
-  ``n_expected`` override).
-- Inline `try: float(val); except ValueError: raise FileFormatError(...)`
-  blocks at every scalar-read site (~6 places per reader × 3 readers).
-
-PR 6 extracts this scaffolding into ``pyiwfm.io._rootzone_base._RootzoneReaderBase``
-(168 lines) with shared `_resolve`, `_read_rows`, `_parse_float`, and
-`_parse_int` helpers. The three concrete readers now inherit from it.
-
-**Per-module line reductions:**
-
-| Module | v1.x lines | v2.x lines | Δ |
-|---|---|---|---|
-| `rootzone_native.py` | 318 | 255 | −63 |
-| `rootzone_nonponded.py` | 458 | 389 | −69 |
-| `rootzone_urban.py` | 367 | 299 | −68 |
-| `_rootzone_base.py` (new) | — | 168 | +168 |
-| **Net** | **1,143** | **1,111** | **−32** |
-
-The bigger win isn't the line count — it's that the readers no longer
-have triplicate copies of the same parsing scaffolding to keep in sync,
-and a future v5+ rootzone variant slots in by inheriting the same base.
-
-**v4.x readers are unchanged.** ``rootzone_v4x.py`` already had its
-own ``_V4xReaderBase`` shipped before v2.0; that base remains and was
-not touched. The original v2.0 roadmap proposed unifying v4.x and v5+
-under one common ABC, but the two file-format generations have
-sufficiently different shapes (different scalar-field orders, different
-section types) that a single base would just push the variation into a
-config object — adding indirection without functional gain.
-
-**No public API changes.** All three concrete reader classes keep the
-same constructor signatures, public ``read()`` method, and return
-types. External callers don't see the inheritance change.
-
-If you imported one of the now-removed private helpers
-(`_is_comment_line`, `_LineBuffer`, `_strip_comment` re-exports) from
-``pyiwfm.io.rootzone_nonponded`` directly (rare; the test suite did
-this in two places before PR 6), update to import from the canonical
-:mod:`pyiwfm.io.iwfm_reader`:
-
-```python
-# v1.x:
-from pyiwfm.io.rootzone_nonponded import _is_comment_line
-
-# v2.x:
-from pyiwfm.io.iwfm_reader import is_comment_line as _is_comment_line
-```
-
----
-
 ## Migration checklist
 
 Run through this list when bumping your project's pinned `pyiwfm`
 version from `<2` to `>=2,<3`:
 
-- [ ] Read [§ TL;DR](#tldr) and [§ Try v2 today](#try-v2-today)
+- [ ] Read [§ TL;DR](#tldr) and [§ Implementation status](#implementation-status)
 - [ ] Pin to `pyiwfm>=2.0.0a1,<3` in your test environment
-- [ ] Enable `DeprecationWarning` filtering for `pyiwfm.*` (snippet above)
-- [ ] Run your full test suite under v2 alpha; capture every warning
-- [ ] For each warning, follow the link to the canonical v2 path; update
-      the import. Most warnings name the exact module/symbol to use.
-- [ ] If you subclass `BaseComponent`, implement the four new abstract
-      methods (see [§ 3](#3-broaden-the-basecomponent-contract))
-- [ ] Re-run your test suite; warnings should be gone
+- [ ] Run your full test suite under v2 alpha; the failures will be
+      `ImportError`s pointing at one of the renamed paths in
+      [§ 1](#1-headhydrograph-cluster-consolidation) or
+      [§ 4](#4-move-webapislicingpy-and-webapipropertiespy-to-io)
+- [ ] For each `ImportError`, look up the new path in the corresponding
+      section below. The renames are mechanical:
+      - `pyiwfm.io.head_loader.LazyHeadDataLoader` → `pyiwfm.io.timeseries_io.LazyNodalLoader`
+      - `pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader` → `pyiwfm.io.timeseries_io.LazyTabularLoader`
+      - `convert_headall_to_hdf(...)` → `TimeSeriesCache.from_iwfm_headall_text(...)`
+      - `convert_hydrograph_to_hdf(...)` → `TimeSeriesCache.from_iwfm_hydrograph_text(...)`
+      - `pyiwfm.visualization.webapi.{slicing,properties}` → `pyiwfm.io.{slicing,properties}`
+- [ ] Re-run your test suite; should be green
 - [ ] Bump your project's pinned dependency to a real `>=2.0.0,<3`
       version once v2.0.0 final ships
 - [ ] (Optional) Open an issue at the [pyiwfm tracker](https://github.com/hatch-tyler/pyiwfm/issues)
       if any v2 API change is missing from this guide or unclear
+
+If you have an out-of-tree subclass of `BaseComponent` (rare —
+internal use), no changes are required. PR 3 deferred the speculative
+addition of `to_dict`/`from_dict`/`clone`/`validate_against` abstract
+methods because no concrete caller would benefit from them; see
+[§ 3](#3-basecomponent-docstring-fix-pr-3) for details.
 
 ## Getting help
 
