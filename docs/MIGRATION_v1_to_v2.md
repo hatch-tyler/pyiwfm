@@ -323,35 +323,73 @@ from pyiwfm.io.properties import PropertyVisualizer, PROPERTY_INFO
 
 ---
 
-## 5. Split the 1,000+-line writers
+## 5. Split `runner/pest.py` into a package (writer/cache splits deferred)
 
-Pure file reorganization. **No public API changes** — the package's
-`__init__.py` re-exports every previously-public name, so all your
-existing imports continue to work without warnings.
+### `pyiwfm.runner.pest` — single module → package
 
-The reorganized layout is below for reference; you only need to update
-your imports if you were importing from internal submodules (rare):
+**Status:** _internal restructuring_; **public API unchanged**.
+
+The 1,456-line `runner/pest.py` is now a package whose `__init__.py`
+re-exports every previously-public name. All your existing imports
+continue to work without warnings:
+
+```python
+# Still works in v2.x:
+from pyiwfm.runner.pest import (
+    Parameter,
+    Observation,
+    ObservationGroup,
+    TemplateFile,
+    InstructionFile,
+    PESTInterface,
+    write_pest_control_file,
+)
+```
+
+Internal layout (only relevant if you imported from internal helpers,
+which is rare):
 
 | v1 | v2 |
 |---|---|
-| `pyiwfm.io.gw_writer` (one 1,161-line module) | `pyiwfm.io.gw_writer` (package; submodules `main`, `parameters`, `boundary_conditions`, `pumping`, `subsidence`) |
-| `pyiwfm.io.stream_writer` | `pyiwfm.io.stream_writer` (package; submodules `main`, `nodes`, `reaches`, `diversions`, `bypasses`) |
-| `pyiwfm.io.cache_builder` | `pyiwfm.io.cache_builder` (package; submodules `mesh`, `heads`, `budgets`, `metadata`) |
-| `pyiwfm.runner.pest` | `pyiwfm.runner.pest` (package; submodules `manager`, `templates`, `instructions`, `params`, `observations`, `postprocessor`) |
+| `pyiwfm.runner.pest` (single 1,456-line module) | `pyiwfm.runner.pest` (package: `parameter`, `observation`, `template`, `instruction`, `interface`, `write_control_file`) |
 
-If your code accesses internal helpers (rare, e.g. some test fixtures
-in downstream projects), the import path within the package may have
-changed:
+The `PESTInterface` class itself stays whole — its 850 lines are tightly
+coupled around shared instance state and would require either a mixin
+chain or extracting methods to module-level helpers, both of which add
+indirection without functional gain.
 
-**v1.x (internal helper access):**
-```python
-from pyiwfm.io.gw_writer import _format_aquifer_params_block  # internal
-```
+### What was deferred and why
 
-**v2.x:**
-```python
-from pyiwfm.io.gw_writer.parameters import _format_aquifer_params_block
-```
+The original v2.0 roadmap also called for splitting three other large
+modules:
+
+- `io/gw_writer.py` (1,161 lines) — single `GWComponentWriter` class
+- `io/stream_writer.py` (1,102 lines) — single `StreamComponentWriter` class
+- `io/cache_builder.py` (964 lines, sub-1,000 — was at the threshold)
+
+A v2.0 PR 5 audit confirmed all three are single-class modules with
+methods tightly coupled to shared instance state (the writer
+configuration, file handles, format flags). Splitting would require
+either:
+
+1. **Mixin classes** — `class GWComponentWriter(MainMixin, BCMixin, ...)`,
+   adding MRO indirection without changing behavior.
+2. **Free functions** — extracting methods as module-level functions
+   that take `self` as their first argument, which is the same as
+   methods called externally.
+
+Both add abstractions for purely cosmetic gains (file boundaries
+inside one logical unit) and risk subtle behavior changes in
+attribute-access ordering. The CLAUDE.md guidance — "don't add
+abstractions beyond what the task requires" — pushes toward keeping
+these modules whole until a real second consumer of one of these
+sections appears (which would be the architectural seam that justifies
+the split). When that happens, the refactor can ship in a non-major
+release alongside the new caller.
+
+For navigation, all three modules already use comment-banner section
+headers so a reader can jump to "BC writing" or "subsidence section"
+without `cd`-ing into a subdirectory.
 
 ---
 
