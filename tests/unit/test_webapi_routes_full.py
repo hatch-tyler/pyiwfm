@@ -1895,7 +1895,7 @@ class TestSliceVTU:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
             patch(
@@ -1923,7 +1923,7 @@ class TestSliceVTU:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
             patch(
@@ -1947,7 +1947,7 @@ class TestSliceVTU:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
             patch(
@@ -1970,7 +1970,7 @@ class TestSliceVTU:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
         ):
@@ -1990,7 +1990,7 @@ class TestSliceVTU:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
             patch(
@@ -2061,7 +2061,7 @@ class TestSliceCrossSection:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
             patch(
@@ -2088,7 +2088,7 @@ class TestSliceCrossSection:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
         ):
@@ -2134,7 +2134,7 @@ class TestSliceInfo:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
         ):
@@ -2163,7 +2163,7 @@ class TestSliceInfo:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
         ):
@@ -2190,7 +2190,7 @@ class TestSliceInfo:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
         ):
@@ -2216,7 +2216,7 @@ class TestSliceInfo:
         with (
             patch("pyiwfm.visualization.vtk_export.VTKExporter") as MockExporter,
             patch(
-                "pyiwfm.visualization.webapi.slicing.SlicingController",
+                "pyiwfm.io.slicing.SlicingController",
                 return_value=mock_slicer,
             ),
         ):

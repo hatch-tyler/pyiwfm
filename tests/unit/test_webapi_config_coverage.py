@@ -312,7 +312,7 @@ class TestSliceJson:
 
         with (
             patch.object(state, "get_pyvista_3d", return_value=mock_pv),
-            patch("pyiwfm.visualization.webapi.slicing.SlicingController") as mock_slicer_cls,
+            patch("pyiwfm.io.slicing.SlicingController") as mock_slicer_cls,
         ):
             mock_slicer = mock_slicer_cls.return_value
             mock_slicer.normalized_to_position_along.return_value = (50.0, 50.0, 0.0)
@@ -338,7 +338,7 @@ class TestSliceJson:
 
         with (
             patch.object(state, "get_pyvista_3d", return_value=mock_pv),
-            patch("pyiwfm.visualization.webapi.slicing.SlicingController") as mock_slicer_cls,
+            patch("pyiwfm.io.slicing.SlicingController") as mock_slicer_cls,
         ):
             mock_slicer = mock_slicer_cls.return_value
             mock_slicer.normalized_to_position_along.return_value = (0.0, 0.0, 0.0)
@@ -366,7 +366,7 @@ class TestSliceJson:
 
         with (
             patch.object(state, "get_pyvista_3d", return_value=mock_pv),
-            patch("pyiwfm.visualization.webapi.slicing.SlicingController") as mock_slicer_cls,
+            patch("pyiwfm.io.slicing.SlicingController") as mock_slicer_cls,
         ):
             mock_slicer = mock_slicer_cls.return_value
             mock_slicer.normalized_to_position_along.return_value = (50.0, 50.0, 0.0)
@@ -1457,7 +1457,7 @@ class TestGetSliceJsonFullCoverage:
 
         with (
             patch.object(state, "get_pyvista_3d", return_value=mock_pv),
-            patch("pyiwfm.visualization.webapi.slicing.SlicingController") as mock_slicer_cls,
+            patch("pyiwfm.io.slicing.SlicingController") as mock_slicer_cls,
         ):
             mock_slicer = mock_slicer_cls.return_value
             mock_slicer.normalized_to_position_along.return_value = (50.0, 0.0, 0.0)

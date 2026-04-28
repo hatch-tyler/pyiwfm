@@ -80,22 +80,12 @@ Moved to :mod:`pyiwfm.io.hydrograph_reader`. See :doc:`io` for full docs.
 Properties
 ~~~~~~~~~~
 
-Property extraction and caching for the web viewer.
-
-.. automodule:: pyiwfm.visualization.webapi.properties
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Moved to :mod:`pyiwfm.io.properties` in v2.0. See :doc:`io` for full docs.
 
 Slicing
 ~~~~~~~
 
-Cross-section slice plane computation.
-
-.. automodule:: pyiwfm.visualization.webapi.slicing
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Moved to :mod:`pyiwfm.io.slicing` in v2.0. See :doc:`io` for full docs.
 
 API Routes
 ~~~~~~~~~~

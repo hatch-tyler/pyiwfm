@@ -786,3 +786,29 @@ Supported formats:
   and extents (horizontal/vertical)
 - **GeoJSON**: Standard geospatial format with geometry and properties for
   interoperability with GIS tools
+
+3-D Mesh Slicing
+----------------
+
+PyVista-backed slice-plane computation. Used by the web viewer's
+cross-section endpoints; v2.0 moved it from ``visualization/webapi/``
+to here because it has no web-only dependency and is reusable by any
+caller working with a PyVista UnstructuredGrid.
+
+.. automodule:: pyiwfm.io.slicing
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Property Metadata
+-----------------
+
+Lookup tables and helpers for property visualization (heads, parameters,
+geometry). Like ``slicing``, this module moved from
+``visualization/webapi/`` to ``io/`` in v2.0 — it's purely metadata
+with no web dependency.
+
+.. automodule:: pyiwfm.io.properties
+   :members:
+   :undoc-members:
+   :show-inheritance:

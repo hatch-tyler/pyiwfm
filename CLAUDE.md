@@ -96,7 +96,7 @@ src/pyiwfm/
 ├── runner/            # IWFMRunner (subprocess execution), PEST++ integration, Scenario manager
 ├── visualization/
 │   ├── webapi/        # FastAPI viewer: config.py, server.py, routes/, services/, static/
-│   │                  # Also contains slicing, properties (re-export shims for moved loaders)
+│   │                  # Re-export shims for v1.x loader paths (head_loader, hydrograph_*)
 │   ├── vtk_export.py  # VTKExporter (2D/3D mesh, PyVista)
 │   └── ...            # Matplotlib plots, GIS export
 ├── templates/         # Jinja2 templates for IWFM file generation
@@ -144,7 +144,7 @@ The viewer is a FastAPI backend + React SPA frontend with 6 tabs: Overview, 3D M
 - `server.py` — FastAPI app creation with CRS configuration and static file serving
 - `routes/` — 13 route modules: model (+ comparison), mesh, results (+ drawdown pagination, statistics, subsidence surface), groundwater, streams, lakes, rootzone, small_watersheds, budgets, export (+ GeoPackage, matplotlib plots), observations, slices, properties
 - Data loaders (`timeseries_io` (formerly the head/hydrograph cluster), `hydrograph_reader`, `area_loader`, `cache_builder`, `cache_loader`) now live in `io/`; thin re-export shims remain in `webapi/` for backward compatibility
-- `webapi/slicing.py` and `webapi/properties.py` are full implementations (not shims) — `slicing.py` is consumed by `routes/slices.py`, `properties.py` by `_mesh_state.py`. They have no web-only dependency and could move to `io/` in a future major release.
+- v2.0 PR 4: `webapi/slicing.py` and `webapi/properties.py` (full implementations, not shims) were moved to `io/slicing.py` and `io/properties.py` respectively. They have no web-only dependency. Importers were updated; the old paths no longer exist (no shim).
 - Frontend features that exist and may not be obvious from a quick grep: cross-section drawing (click-to-draw on the Results Map → `ResultsMapView.tsx` + `CrossSectionPanel.tsx` + `CrossSectionChart.tsx`); Z-Budget zone upload (`ZBudgetDashboard/ZoneUploadDialog.tsx`, two-step shapefile/GeoJSON dialog); model comparison (`Overview/ModelComparison.tsx` calling `compareModels`)
 - Coordinate reprojection: server-side via `pyproj` (model CRS → WGS84), `--crs` CLI flag
 

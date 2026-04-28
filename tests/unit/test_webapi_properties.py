@@ -11,7 +11,7 @@ pv = pytest.importorskip("pyvista", reason="PyVista not available")
 
 _rng = np.random.default_rng(42)
 
-from pyiwfm.visualization.webapi.properties import (  # noqa: E402
+from pyiwfm.io.properties import (  # noqa: E402
     PROPERTY_INFO,
     PropertyVisualizer,
 )

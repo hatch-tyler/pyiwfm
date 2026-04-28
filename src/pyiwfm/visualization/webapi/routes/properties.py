@@ -10,8 +10,8 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from pyiwfm.io.properties import PROPERTY_INFO
 from pyiwfm.visualization.webapi.config import model_state, require_model
-from pyiwfm.visualization.webapi.properties import PROPERTY_INFO
 from pyiwfm.visualization.webapi.utils import sanitize_values
 
 router = APIRouter(prefix="/api/properties", tags=["properties"])

@@ -191,7 +191,7 @@ class MeshStateMixin:
 
         import numpy as np
 
-        from pyiwfm.visualization.webapi.slicing import SlicingController
+        from pyiwfm.io.slicing import SlicingController
 
         pv_mesh = self.get_pyvista_3d()
         slicer = SlicingController(pv_mesh)  # type: ignore[arg-type]

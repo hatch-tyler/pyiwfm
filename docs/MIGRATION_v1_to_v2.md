@@ -283,15 +283,17 @@ justification at the time.
 
 ## 4. Move `webapi/slicing.py` and `webapi/properties.py` to `io/`
 
-Both modules are full implementations (600+ lines each), not
-webapi-specific shims. They have no web-only dependency and belong
-in the `io/` namespace alongside other domain logic. Old paths
-continue to work as forwarding shims through v2.x.
+Both modules were full implementations (600+ lines each), not
+webapi-specific shims — `slicing.py` is pure PyVista mesh slicing,
+`properties.py` is pure metadata/lookup tables. Neither has any
+web-only dependency. v2.0 PR 4 moved both to the `io/` namespace
+where they belong alongside other domain logic. **The old paths no
+longer exist (no shim).**
 
-### `pyiwfm.visualization.webapi.slicing`
+### `pyiwfm.visualization.webapi.slicing` → `pyiwfm.io.slicing`
 
-**Status:** _shimmed_ (forwarding `import *` from new location with
-DeprecationWarning).
+**Status:** _hard rename_ — module deleted from `webapi/`, recreated
+under `io/`. ``git mv`` was used so the file history follows the move.
 
 **v1.x:**
 ```python
@@ -303,18 +305,20 @@ from pyiwfm.visualization.webapi.slicing import SlicingController
 from pyiwfm.io.slicing import SlicingController
 ```
 
-### `pyiwfm.visualization.webapi.properties`
+The `SlicingController` class API itself is unchanged.
 
-**Status:** _shimmed_.
+### `pyiwfm.visualization.webapi.properties` → `pyiwfm.io.properties`
+
+**Status:** _hard rename_ — module moved.
 
 **v1.x:**
 ```python
-from pyiwfm.visualization.webapi.properties import PropertyVisualizer
+from pyiwfm.visualization.webapi.properties import PropertyVisualizer, PROPERTY_INFO
 ```
 
 **v2.x:**
 ```python
-from pyiwfm.io.properties import PropertyVisualizer
+from pyiwfm.io.properties import PropertyVisualizer, PROPERTY_INFO
 ```
 
 ---

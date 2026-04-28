@@ -8,7 +8,7 @@ import pytest
 
 pv = pytest.importorskip("pyvista", reason="PyVista not available")
 
-from pyiwfm.visualization.webapi.slicing import SlicingController  # noqa: E402
+from pyiwfm.io.slicing import SlicingController  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -364,7 +364,7 @@ def get_property_map(
     """
     import numpy as np
 
-    from pyiwfm.visualization.webapi.properties import PROPERTY_INFO
+    from pyiwfm.io.properties import PROPERTY_INFO
     from pyiwfm.visualization.webapi.routes.properties import _compute_property_values
 
     model = require_model()

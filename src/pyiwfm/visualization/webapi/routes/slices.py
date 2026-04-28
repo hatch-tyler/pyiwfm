@@ -56,8 +56,8 @@ def get_slice(
     if model.stratigraphy is None or model.grid is None:
         raise HTTPException(status_code=400, detail="Stratigraphy required for 3D slicing")
 
+    from pyiwfm.io.slicing import SlicingController
     from pyiwfm.visualization.vtk_export import VTKExporter
-    from pyiwfm.visualization.webapi.slicing import SlicingController
 
     exporter = VTKExporter(grid=model.grid, stratigraphy=model.stratigraphy)
     mesh = exporter.to_pyvista_3d()
@@ -152,8 +152,8 @@ def get_cross_section(
     if model.stratigraphy is None or model.grid is None:
         raise HTTPException(status_code=400, detail="Stratigraphy required for cross-sections")
 
+    from pyiwfm.io.slicing import SlicingController
     from pyiwfm.visualization.vtk_export import VTKExporter
-    from pyiwfm.visualization.webapi.slicing import SlicingController
 
     exporter = VTKExporter(grid=model.grid, stratigraphy=model.stratigraphy)
     mesh = exporter.to_pyvista_3d()
@@ -214,7 +214,7 @@ def get_cross_section_json(
 
     import pyvista as pv
 
-    from pyiwfm.visualization.webapi.slicing import SlicingController
+    from pyiwfm.io.slicing import SlicingController
 
     pv_mesh = cast(pv.UnstructuredGrid, model_state.get_pyvista_3d())
     slicer = SlicingController(pv_mesh)
@@ -383,8 +383,8 @@ def get_slice_info(
     if model.stratigraphy is None or model.grid is None:
         raise HTTPException(status_code=400, detail="Stratigraphy required for 3D slicing")
 
+    from pyiwfm.io.slicing import SlicingController
     from pyiwfm.visualization.vtk_export import VTKExporter
-    from pyiwfm.visualization.webapi.slicing import SlicingController
 
     exporter = VTKExporter(grid=model.grid, stratigraphy=model.stratigraphy)
     mesh = exporter.to_pyvista_3d()
