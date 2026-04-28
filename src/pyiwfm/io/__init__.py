@@ -21,14 +21,6 @@ from pyiwfm.components.stream import (  # noqa: F401
     CrossSectionData,
     StrmEvapNodeSpec,
 )
-from pyiwfm.io.ascii import (  # noqa: F401
-    read_elements,
-    read_nodes,
-    read_stratigraphy,
-    write_elements,
-    write_nodes,
-    write_stratigraphy,
-)
 from pyiwfm.io.base import (  # noqa: F401
     BaseReader,
     BaseWriter,
@@ -187,6 +179,14 @@ from pyiwfm.io.lakes import (  # noqa: F401
     read_lake_elements,
     read_lake_main_file,
     write_lakes,
+)
+from pyiwfm.io.mesh import (  # noqa: F401
+    read_elements,
+    read_nodes,
+    read_stratigraphy,
+    write_elements,
+    write_nodes,
+    write_stratigraphy,
 )
 from pyiwfm.io.model_loader import (  # noqa: F401
     CommentAwareModelLoader,

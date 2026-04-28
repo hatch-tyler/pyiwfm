@@ -14,11 +14,6 @@ from typing import Any
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.mesh import Subregion
 from pyiwfm.core.model import IWFMModel
-from pyiwfm.io.ascii import (
-    write_elements,
-    write_nodes,
-    write_stratigraphy,
-)
 from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
 )
@@ -27,6 +22,11 @@ from pyiwfm.io.iwfm_reader import (
 )
 from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
+)
+from pyiwfm.io.mesh import (
+    write_elements,
+    write_nodes,
+    write_stratigraphy,
 )
 
 

@@ -1,8 +1,10 @@
 """
-ASCII file I/O handlers for IWFM model files.
+Mesh and stratigraphy ASCII file readers/writers for IWFM preprocessor inputs.
 
-This module provides functions for reading and writing IWFM ASCII input files
-including node coordinates, element definitions, and stratigraphy data.
+This module owns I/O for the three subfiles named by ``Preprocessor.in``:
+node coordinates, element connectivity, and stratigraphy. Generic IWFM
+ASCII line-reading helpers live in :mod:`pyiwfm.io.iwfm_reader`; per-component
+readers (groundwater, streams, lakes, …) live in their own modules.
 """
 
 from __future__ import annotations

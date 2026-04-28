@@ -513,8 +513,8 @@ class TestIWFMModelFromPreprocessor:
     """Test from_preprocessor class method."""
 
     @patch("pyiwfm.io.preprocessor.read_preprocessor_main")
-    @patch("pyiwfm.io.ascii.read_nodes")
-    @patch("pyiwfm.io.ascii.read_elements")
+    @patch("pyiwfm.io.mesh.read_nodes")
+    @patch("pyiwfm.io.mesh.read_elements")
     @patch("pyiwfm.core.mesh.AppGrid")
     def test_from_preprocessor_basic(
         self, mock_grid_cls, mock_read_elements, mock_read_nodes, mock_read_pp
@@ -559,7 +559,7 @@ class TestIWFMModelFromPreprocessor:
         assert "Nodes file not specified" in str(exc_info.value)
 
     @patch("pyiwfm.io.preprocessor.read_preprocessor_main")
-    @patch("pyiwfm.io.ascii.read_nodes")
+    @patch("pyiwfm.io.mesh.read_nodes")
     def test_from_preprocessor_no_elements_file(self, mock_read_nodes, mock_read_pp):
         """Test error when elements file not specified."""
         mock_config = MagicMock()

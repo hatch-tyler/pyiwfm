@@ -63,7 +63,7 @@ def load_from_preprocessor(
     from pyiwfm.core.model_factory import (
         resolve_stream_node_coordinates as _resolve_stream_node_coordinates,
     )
-    from pyiwfm.io.ascii import read_elements, read_nodes, read_stratigraphy
+    from pyiwfm.io.mesh import read_elements, read_nodes, read_stratigraphy
     from pyiwfm.io.preprocessor import (
         read_preprocessor_main,
         read_subregions_file,

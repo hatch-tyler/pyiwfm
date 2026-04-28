@@ -16,7 +16,7 @@ ASCII Module
 
 The ASCII module provides readers and writers for IWFM's text-based file formats.
 
-.. automodule:: pyiwfm.io.ascii
+.. automodule:: pyiwfm.io.mesh
    :members:
    :undoc-members:
    :show-inheritance:

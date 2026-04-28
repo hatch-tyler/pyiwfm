@@ -10,7 +10,7 @@ import pytest
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.io.ascii import (
+from pyiwfm.io.mesh import (
     read_elements,
     read_nodes,
     read_stratigraphy,
@@ -367,7 +367,7 @@ class TestMeshRoundtrip:
 # Additional coverage tests
 # =============================================================================
 
-from pyiwfm.io.ascii import _is_comment_line, _strip_comment  # noqa: E402
+from pyiwfm.io.mesh import _is_comment_line, _strip_comment  # noqa: E402
 
 
 class TestIsCommentLine:

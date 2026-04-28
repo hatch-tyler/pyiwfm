@@ -45,8 +45,8 @@ class TestFromPreprocessorStreamLoadError:
 
         with (
             patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
-            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
-            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.io.mesh.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.mesh.read_elements", return_value=mock_elements),
             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
             patch("pyiwfm.io.streams.StreamReader") as MockStreamReader,
         ):
@@ -89,8 +89,8 @@ class TestFromPreprocessorLakeLoadError:
 
         with (
             patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
-            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
-            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.io.mesh.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.mesh.read_elements", return_value=mock_elements),
             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
             patch("pyiwfm.io.lakes.LakeReader") as MockLakeReader,
         ):
@@ -133,7 +133,7 @@ class TestFromPreprocessorMissingElements:
 
         with (
             patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
-            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.mesh.read_nodes", return_value=mock_nodes),
         ):
             with pytest.raises(FileFormatError, match="Elements file"):
                 IWFMModel.from_preprocessor(tmp_path / "preprocessor.in")
@@ -198,8 +198,8 @@ class TestFromPreprocessorSubregionsAndStratigraphy:
 
         with (
             patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
-            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
-            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.io.mesh.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.mesh.read_elements", return_value=mock_elements),
             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
             patch(
                 "pyiwfm.io.preprocessor.read_subregions_file", return_value=mock_subregions
@@ -234,10 +234,10 @@ class TestFromPreprocessorSubregionsAndStratigraphy:
 
         with (
             patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
-            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
-            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.io.mesh.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.mesh.read_elements", return_value=mock_elements),
             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
-            patch("pyiwfm.io.ascii.read_stratigraphy", return_value=mock_strat) as mock_read_strat,
+            patch("pyiwfm.io.mesh.read_stratigraphy", return_value=mock_strat) as mock_read_strat,
         ):
             model = IWFMModel.from_preprocessor(tmp_path / "pp.in")
             mock_read_strat.assert_called_once_with(strat_file)
@@ -276,8 +276,8 @@ class TestFromPreprocessorSuccessfulStreamLoading:
 
         with (
             patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
-            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
-            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.io.mesh.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.mesh.read_elements", return_value=mock_elements),
             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
             patch("pyiwfm.io.streams.StreamReader") as MockReader,
             patch("pyiwfm.components.stream.AppStream", return_value=mock_app_stream),
@@ -320,8 +320,8 @@ class TestFromPreprocessorSuccessfulLakeLoading:
 
         with (
             patch("pyiwfm.io.preprocessor.read_preprocessor_main", return_value=mock_config),
-            patch("pyiwfm.io.ascii.read_nodes", return_value=mock_nodes),
-            patch("pyiwfm.io.ascii.read_elements", return_value=mock_elements),
+            patch("pyiwfm.io.mesh.read_nodes", return_value=mock_nodes),
+            patch("pyiwfm.io.mesh.read_elements", return_value=mock_elements),
             patch("pyiwfm.core.mesh.AppGrid", return_value=mock_mesh),
             patch("pyiwfm.io.lakes.LakeReader") as MockReader,
             patch("pyiwfm.components.lake.AppLake", return_value=mock_app_lake),
