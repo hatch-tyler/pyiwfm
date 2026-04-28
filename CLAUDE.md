@@ -89,14 +89,14 @@ src/pyiwfm/
 ├── core/              # Mesh, Stratigraphy, TimeSeries, IWFMModel, BaseComponent ABC, model_factory
 ├── components/        # Groundwater, Stream, Lake, RootZone, SmallWatershed, UnsaturatedZone (all inherit BaseComponent)
 ├── io/                # 50+ file type readers/writers (ASCII, binary, HDF5, HEC-DSS), writer_config_base
-│                      # Also: head_loader, hydrograph_reader, hydrograph_loader, area_loader,
+│                      # Also: timeseries_io (LazyNodalLoader, LazyTabularLoader,
+│                      # TimeSeriesCache), hydrograph_reader (text), area_loader,
 │                      # cache_builder, cache_loader (generic data loaders, no web deps)
 ├── calibration/       # IWFM2OBS interpolation, model file discovery, obs well spec,
 │                      # multi-layer T-weighted averaging, CalcTypHyd, fuzzy c-means clustering
 ├── runner/            # IWFMRunner (subprocess execution), PEST++ integration, Scenario manager
 ├── visualization/
 │   ├── webapi/        # FastAPI viewer: config.py, server.py, routes/, services/, static/
-│   │                  # Re-export shims for v1.x loader paths (head_loader, hydrograph_*)
 │   ├── vtk_export.py  # VTKExporter (2D/3D mesh, PyVista)
 │   └── ...            # Matplotlib plots, GIS export
 ├── templates/         # Jinja2 templates for IWFM file generation
@@ -143,7 +143,7 @@ The viewer is a FastAPI backend + React SPA frontend with 6 tabs: Overview, 3D M
 - `config.py` — `ModelState` singleton that holds the loaded `IWFMModel` and provides lazy getters for head data, subsidence surface data, budget data, stream reach boundaries, etc. Caches `node_id_to_idx`, `elem_id_to_idx`, and hydrograph locations for performance.
 - `server.py` — FastAPI app creation with CRS configuration and static file serving
 - `routes/` — 13 route modules: model (+ comparison), mesh, results (+ drawdown pagination, statistics, subsidence surface), groundwater, streams, lakes, rootzone, small_watersheds, budgets, export (+ GeoPackage, matplotlib plots), observations, slices, properties
-- Data loaders (`timeseries_io` (formerly the head/hydrograph cluster), `hydrograph_reader`, `area_loader`, `cache_builder`, `cache_loader`) now live in `io/`; thin re-export shims remain in `webapi/` for backward compatibility
+- Data loaders (`timeseries_io` (formerly the head/hydrograph cluster), `hydrograph_reader`, `area_loader`, `cache_builder`, `cache_loader`) now live in `io/`; no shims in `webapi/` — see `docs/MIGRATION_v1_to_v2.md` for the rename map
 - v2.0 PR 4: `webapi/slicing.py` and `webapi/properties.py` (full implementations, not shims) were moved to `io/slicing.py` and `io/properties.py` respectively. They have no web-only dependency. Importers were updated; the old paths no longer exist (no shim).
 - Frontend features that exist and may not be obvious from a quick grep: cross-section drawing (click-to-draw on the Results Map → `ResultsMapView.tsx` + `CrossSectionPanel.tsx` + `CrossSectionChart.tsx`); Z-Budget zone upload (`ZBudgetDashboard/ZoneUploadDialog.tsx`, two-step shapefile/GeoJSON dialog); model comparison (`Overview/ModelComparison.tsx` calling `compareModels`)
 - Coordinate reprojection: server-side via `pyproj` (model CRS → WGS84), `--crs` CLI flag

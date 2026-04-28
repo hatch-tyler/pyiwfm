@@ -117,10 +117,10 @@ via :class:`~pyiwfm.runner.IWFMRunner`.
    * - Module
      - Source
      - Available report exports
-   * - ``io.head_loader.LazyHeadDataLoader``
+   * - ``io.timeseries_io.LazyNodalLoader``
      - IWFM HDF5 (``GWHeadAtAllNodes``)
      - none — see web-viewer download endpoints in ``visualization/webapi``
-   * - ``io.hydrograph_loader`` / ``hydrograph_reader``
+   * - ``io.timeseries_io.LazyTabularLoader`` / ``io.hydrograph_reader``
      - IWFM hydrograph output (.out)
      - same
    * - ``io.gw_subsidence`` (read side)
@@ -148,7 +148,7 @@ via :class:`~pyiwfm.runner.IWFMRunner`.
 Why this distinction matters
 ----------------------------
 
-A user editing ``LazyHeadDataLoader``-loaded heads on disk and saving
+A user editing ``LazyNodalLoader``-loaded heads on disk and saving
 them would see **no change** in the next IWFM run — IWFM would overwrite
 the heads HDF5 with whatever new heads the simulation produces. The
 model-update path is always: edit the inputs, re-run IWFM, read the new
