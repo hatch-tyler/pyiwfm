@@ -241,10 +241,7 @@ from pyiwfm.io.preprocessor_binary import (  # noqa: F401
 )
 from pyiwfm.io.preprocessor_writer import (  # noqa: F401
     PreProcessorWriter,
-    write_elements_file,
-    write_nodes_file,
     write_preprocessor_files,
-    write_stratigraphy_file,
 )
 from pyiwfm.io.rootzone import (  # noqa: F401
     ElementSoilParamRow,

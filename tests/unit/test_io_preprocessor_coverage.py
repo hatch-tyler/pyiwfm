@@ -22,10 +22,7 @@ import pytest
 from pyiwfm.io.config import PreProcessorFileConfig
 from pyiwfm.io.preprocessor_writer import (
     PreProcessorWriter,
-    write_elements_file,
-    write_nodes_file,
     write_preprocessor_files,
-    write_stratigraphy_file,
 )
 
 # =============================================================================
@@ -69,13 +66,18 @@ def _make_mock_model(
     grid.subregions = {1: SimpleNamespace(name="Region_1")}
     model.grid = grid
 
-    # Mock stratigraphy
-    strat = MagicMock()
-    strat.n_layers = n_layers
-    strat.gs_elev = np.array([100.0] * n_nodes)
-    strat.top_elev = np.tile(np.array([90.0, 70.0])[:n_layers], (n_nodes, 1))
-    strat.bottom_elev = np.tile(np.array([70.0, 50.0])[:n_layers], (n_nodes, 1))
-    model.stratigraphy = strat
+    # Real Stratigraphy so the canonical writer path
+    # (mesh.write_stratigraphy → get_all_aquitard_thicknesses) works.
+    from pyiwfm.core.stratigraphy import Stratigraphy
+
+    model.stratigraphy = Stratigraphy(
+        n_layers=n_layers,
+        n_nodes=n_nodes,
+        gs_elev=np.array([100.0] * n_nodes),
+        top_elev=np.tile(np.array([90.0, 70.0])[:n_layers], (n_nodes, 1)),
+        bottom_elev=np.tile(np.array([70.0, 50.0])[:n_layers], (n_nodes, 1)),
+        active_node=np.ones((n_nodes, n_layers), dtype=bool),
+    )
 
     # Mock streams
     if has_streams:
@@ -370,128 +372,6 @@ class TestConvenienceFunctions:
         results = write_preprocessor_files(model, str(tmp_path))
 
         assert "main" in results
-
-
-# =============================================================================
-# Standalone Writer Functions
-# =============================================================================
-
-
-class TestStandaloneWriterFunctions:
-    """Tests for standalone write_nodes_file, write_elements_file, etc."""
-
-    def test_write_nodes_file_basic(self, tmp_path: Path) -> None:
-        """Test write_nodes_file standalone function."""
-        filepath = write_nodes_file(
-            output_path=tmp_path / "nodes.dat",
-            node_ids=np.array([1, 2, 3], dtype=np.int32),
-            x_coords=np.array([100.0, 200.0, 300.0]),
-            y_coords=np.array([400.0, 500.0, 600.0]),
-        )
-
-        assert filepath.exists()
-        content = filepath.read_text()
-        assert "NNODES" in content
-        assert "3" in content
-
-    def test_write_nodes_file_with_factor(self, tmp_path: Path) -> None:
-        """Test write_nodes_file with custom coordinate factor."""
-        filepath = write_nodes_file(
-            output_path=tmp_path / "nodes.dat",
-            node_ids=np.array([1], dtype=np.int32),
-            x_coords=np.array([100.0]),
-            y_coords=np.array([200.0]),
-            coord_factor=0.3048,
-        )
-
-        content = filepath.read_text()
-        assert "0.304800" in content
-        assert "FACTXY" in content
-
-    def test_write_elements_file_basic(self, tmp_path: Path) -> None:
-        """Test write_elements_file standalone function."""
-        filepath = write_elements_file(
-            output_path=tmp_path / "elements.dat",
-            element_ids=np.array([1, 2], dtype=np.int32),
-            vertices=np.array([[1, 2, 3, 4], [3, 4, 5, 6]], dtype=np.int32),
-            subregions=np.array([1, 1], dtype=np.int32),
-        )
-
-        assert filepath.exists()
-        content = filepath.read_text()
-        assert "NELEM" in content
-        assert "NSUBREGION" in content
-
-    def test_write_elements_file_with_names(self, tmp_path: Path) -> None:
-        """Test write_elements_file with custom subregion names."""
-        filepath = write_elements_file(
-            output_path=tmp_path / "elements.dat",
-            element_ids=np.array([1, 2], dtype=np.int32),
-            vertices=np.array([[1, 2, 3, 4], [3, 4, 5, 6]], dtype=np.int32),
-            subregions=np.array([1, 2], dtype=np.int32),
-            subregion_names={1: "North", 2: "South"},
-        )
-
-        content = filepath.read_text()
-        assert "North" in content
-        assert "South" in content
-
-    def test_write_stratigraphy_file_basic(self, tmp_path: Path) -> None:
-        """Test write_stratigraphy_file standalone function."""
-        filepath = write_stratigraphy_file(
-            output_path=tmp_path / "strat.dat",
-            node_ids=np.array([1, 2, 3], dtype=np.int32),
-            ground_surface=np.array([100.0, 100.0, 100.0]),
-            layer_tops=np.array([[90.0], [90.0], [90.0]]),
-            layer_bottoms=np.array([[70.0], [70.0], [70.0]]),
-        )
-
-        assert filepath.exists()
-        content = filepath.read_text()
-        assert "NLAYERS" in content
-        assert "AQT_L1" in content
-        assert "AQF_L1" in content
-
-    def test_write_stratigraphy_file_multi_layer(self, tmp_path: Path) -> None:
-        """Test write_stratigraphy_file with multiple layers."""
-        filepath = write_stratigraphy_file(
-            output_path=tmp_path / "strat.dat",
-            node_ids=np.array([1, 2], dtype=np.int32),
-            ground_surface=np.array([100.0, 100.0]),
-            layer_tops=np.array([[90.0, 70.0], [90.0, 70.0]]),
-            layer_bottoms=np.array([[70.0, 50.0], [70.0, 50.0]]),
-        )
-
-        content = filepath.read_text()
-        assert "AQT_L2" in content
-        assert "AQF_L2" in content
-
-    def test_write_stratigraphy_file_with_factor(self, tmp_path: Path) -> None:
-        """Test write_stratigraphy_file with custom elevation factor."""
-        filepath = write_stratigraphy_file(
-            output_path=tmp_path / "strat.dat",
-            node_ids=np.array([1], dtype=np.int32),
-            ground_surface=np.array([100.0]),
-            layer_tops=np.array([[90.0]]),
-            layer_bottoms=np.array([[70.0]]),
-            elev_factor=0.3048,
-        )
-
-        content = filepath.read_text()
-        assert "0.304800" in content
-        assert "FACTEL" in content
-
-    def test_write_nodes_file_creates_parent_dir(self, tmp_path: Path) -> None:
-        """Test write_nodes_file creates parent directory."""
-        filepath = write_nodes_file(
-            output_path=tmp_path / "nested" / "dir" / "nodes.dat",
-            node_ids=np.array([1], dtype=np.int32),
-            x_coords=np.array([100.0]),
-            y_coords=np.array([200.0]),
-        )
-
-        assert filepath.exists()
-        assert filepath.parent.exists()
 
 
 # =============================================================================

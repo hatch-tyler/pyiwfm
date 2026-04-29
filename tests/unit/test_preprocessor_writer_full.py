@@ -1,7 +1,10 @@
 """
-Tests for pyiwfm.io.preprocessor_writer module.
+Tests for :class:`pyiwfm.io.preprocessor_writer.PreProcessorWriter`.
 
-Tests the PreProcessorWriter class and standalone file writing functions.
+These exercise *orchestration* — that the right files get written in the
+right order to the right paths. The on-disk IWFM ASCII format is tested
+in ``test_io_mesh.py`` against the canonical writers
+(:mod:`pyiwfm.io.mesh`) that ``PreProcessorWriter`` delegates to.
 """
 
 from __future__ import annotations
@@ -15,10 +18,7 @@ import pytest
 from pyiwfm.io.config import PreProcessorFileConfig
 from pyiwfm.io.preprocessor_writer import (
     PreProcessorWriter,
-    write_elements_file,
-    write_nodes_file,
     write_preprocessor_files,
-    write_stratigraphy_file,
 )
 
 
@@ -220,22 +220,26 @@ class TestPreProcessorWriterWriteStratigraphy:
 
     @pytest.fixture
     def mock_model(self) -> MagicMock:
-        """Create a mock model with stratigraphy."""
+        """Create a mock model with a real Stratigraphy attached.
+
+        ``write_stratigraphy`` calls into :mod:`pyiwfm.io.mesh`, which uses
+        ``Stratigraphy.get_all_aquitard_thicknesses()`` and reads
+        ``n_nodes`` / ``n_layers``. Use the real dataclass so we exercise
+        the real code path; the rest of the model can stay a ``MagicMock``.
+        """
+        from pyiwfm.core.stratigraphy import Stratigraphy
+
         model = MagicMock()
         model.n_nodes = 3
-
-        # Mock stratigraphy
-        strat = MagicMock()
-        strat.n_layers = 2
-        strat.gs_elev = np.array([100.0, 110.0, 120.0])
-        strat.top_elev = np.array([[90.0, 70.0], [100.0, 80.0], [110.0, 90.0]])
-        strat.bottom_elev = np.array([[70.0, 50.0], [80.0, 60.0], [90.0, 70.0]])
-        model.stratigraphy = strat
-
-        # Mock grid nodes
-        nodes = {i: MagicMock() for i in range(1, 4)}
-        model.grid.nodes = nodes
-
+        model.stratigraphy = Stratigraphy(
+            n_layers=2,
+            n_nodes=3,
+            gs_elev=np.array([100.0, 110.0, 120.0]),
+            top_elev=np.array([[90.0, 70.0], [100.0, 80.0], [110.0, 90.0]]),
+            bottom_elev=np.array([[70.0, 50.0], [80.0, 60.0], [90.0, 70.0]]),
+            active_node=np.ones((3, 2), dtype=bool),
+        )
+        model.grid.nodes = {i: MagicMock() for i in range(1, 4)}
         return model
 
     @pytest.fixture
@@ -485,14 +489,17 @@ class TestPreProcessorWriterWriteAll:
         model.grid.elements = elements
         model.grid.subregions = {}
 
-        # Mock stratigraphy
-        strat = MagicMock()
-        strat.n_layers = 1
-        strat.gs_elev = np.array([100.0, 110.0, 120.0, 130.0])
-        strat.top_elev = np.array([[90.0], [100.0], [110.0], [120.0]])
-        strat.bottom_elev = np.array([[70.0], [80.0], [90.0], [100.0]])
-        model.stratigraphy = strat
+        # Real Stratigraphy so the canonical writer path works as in production.
+        from pyiwfm.core.stratigraphy import Stratigraphy
 
+        model.stratigraphy = Stratigraphy(
+            n_layers=1,
+            n_nodes=4,
+            gs_elev=np.array([100.0, 110.0, 120.0, 130.0]),
+            top_elev=np.array([[90.0], [100.0], [110.0], [120.0]]),
+            bottom_elev=np.array([[70.0], [80.0], [90.0], [100.0]]),
+            active_node=np.ones((4, 1), dtype=bool),
+        )
         return model
 
     @pytest.fixture
@@ -576,13 +583,16 @@ class TestWritePreprocessorFiles:
         model.grid.elements = {1: elem}
         model.grid.subregions = {}
 
-        strat = MagicMock()
-        strat.n_layers = 1
-        strat.gs_elev = np.array([100.0, 110.0])
-        strat.top_elev = np.array([[90.0], [100.0]])
-        strat.bottom_elev = np.array([[70.0], [80.0]])
-        model.stratigraphy = strat
+        from pyiwfm.core.stratigraphy import Stratigraphy
 
+        model.stratigraphy = Stratigraphy(
+            n_layers=1,
+            n_nodes=2,
+            gs_elev=np.array([100.0, 110.0]),
+            top_elev=np.array([[90.0], [100.0]]),
+            bottom_elev=np.array([[70.0], [80.0]]),
+            active_node=np.ones((2, 1), dtype=bool),
+        )
         return model
 
     def test_write_preprocessor_files(self, mock_model: MagicMock, tmp_path: Path) -> None:
@@ -615,171 +625,6 @@ class TestWritePreprocessorFiles:
 
         assert "stream_config" in results
         assert "lake_config" in results
-
-
-class TestWriteNodesFile:
-    """Tests for write_nodes_file standalone function."""
-
-    def test_write_nodes_file_basic(self, tmp_path: Path) -> None:
-        """Test basic node file writing."""
-        output_path = tmp_path / "nodes.dat"
-        node_ids = np.array([1, 2, 3], dtype=np.int32)
-        x_coords = np.array([0.0, 100.0, 200.0])
-        y_coords = np.array([0.0, 100.0, 200.0])
-
-        result = write_nodes_file(output_path, node_ids, x_coords, y_coords)
-
-        assert result.exists()
-        content = result.read_text()
-        assert "NNODES" in content
-        assert "3" in content
-
-    def test_write_nodes_file_with_factor(self, tmp_path: Path) -> None:
-        """Test node file with coordinate factor."""
-        output_path = tmp_path / "nodes.dat"
-        node_ids = np.array([1], dtype=np.int32)
-        x_coords = np.array([100.0])
-        y_coords = np.array([200.0])
-
-        write_nodes_file(output_path, node_ids, x_coords, y_coords, coord_factor=0.3048)
-
-        content = output_path.read_text()
-        assert "0.304800" in content  # coord_factor
-
-    def test_write_nodes_file_creates_parent_dirs(self, tmp_path: Path) -> None:
-        """Test that parent directories are created."""
-        output_path = tmp_path / "deep" / "path" / "nodes.dat"
-        node_ids = np.array([1], dtype=np.int32)
-        x_coords = np.array([0.0])
-        y_coords = np.array([0.0])
-
-        result = write_nodes_file(output_path, node_ids, x_coords, y_coords)
-        assert result.exists()
-
-
-class TestWriteElementsFile:
-    """Tests for write_elements_file standalone function."""
-
-    def test_write_elements_file_basic(self, tmp_path: Path) -> None:
-        """Test basic element file writing."""
-        output_path = tmp_path / "elements.dat"
-        element_ids = np.array([1, 2], dtype=np.int32)
-        vertices = np.array([[1, 2, 3, 4], [2, 3, 4, 5]], dtype=np.int32)
-        subregions = np.array([1, 1], dtype=np.int32)
-
-        result = write_elements_file(output_path, element_ids, vertices, subregions)
-
-        assert result.exists()
-        content = result.read_text()
-        assert "NELEM" in content
-        assert "NSUBREGION" in content
-
-    def test_write_elements_file_with_names(self, tmp_path: Path) -> None:
-        """Test element file with subregion names."""
-        output_path = tmp_path / "elements.dat"
-        element_ids = np.array([1], dtype=np.int32)
-        vertices = np.array([[1, 2, 3, 4]], dtype=np.int32)
-        subregions = np.array([1], dtype=np.int32)
-        names = {1: "Sacramento Valley"}
-
-        write_elements_file(output_path, element_ids, vertices, subregions, subregion_names=names)
-
-        content = output_path.read_text()
-        assert "Sacramento Valley" in content
-
-    def test_write_elements_file_multiple_subregions(self, tmp_path: Path) -> None:
-        """Test element file with multiple subregions."""
-        output_path = tmp_path / "elements.dat"
-        element_ids = np.array([1, 2, 3], dtype=np.int32)
-        vertices = np.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]], dtype=np.int32)
-        subregions = np.array([1, 2, 1], dtype=np.int32)
-
-        write_elements_file(output_path, element_ids, vertices, subregions)
-
-        content = output_path.read_text()
-        assert "2" in content  # NSUBREGION = 2
-
-
-class TestWriteStratigraphyFile:
-    """Tests for write_stratigraphy_file standalone function."""
-
-    def test_write_stratigraphy_file_basic(self, tmp_path: Path) -> None:
-        """Test basic stratigraphy file writing."""
-        output_path = tmp_path / "strat.dat"
-        node_ids = np.array([1, 2], dtype=np.int32)
-        ground_surface = np.array([100.0, 110.0])
-        layer_tops = np.array([[90.0], [100.0]])
-        layer_bottoms = np.array([[70.0], [80.0]])
-
-        result = write_stratigraphy_file(
-            output_path, node_ids, ground_surface, layer_tops, layer_bottoms
-        )
-
-        assert result.exists()
-        content = result.read_text()
-        assert "NLAYERS" in content
-        assert "1" in content  # 1 layer
-
-    def test_write_stratigraphy_file_multiple_layers(self, tmp_path: Path) -> None:
-        """Test stratigraphy file with multiple layers."""
-        output_path = tmp_path / "strat.dat"
-        node_ids = np.array([1], dtype=np.int32)
-        ground_surface = np.array([100.0])
-        layer_tops = np.array([[90.0, 70.0]])
-        layer_bottoms = np.array([[70.0, 50.0]])
-
-        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
-
-        content = output_path.read_text()
-        assert "2" in content  # 2 layers
-        assert "AQT_L1" in content or "GSELEV" in content
-
-    def test_write_stratigraphy_file_with_factor(self, tmp_path: Path) -> None:
-        """Test stratigraphy file with elevation factor."""
-        output_path = tmp_path / "strat.dat"
-        node_ids = np.array([1], dtype=np.int32)
-        ground_surface = np.array([100.0])
-        layer_tops = np.array([[90.0]])
-        layer_bottoms = np.array([[70.0]])
-
-        write_stratigraphy_file(
-            output_path,
-            node_ids,
-            ground_surface,
-            layer_tops,
-            layer_bottoms,
-            elev_factor=0.3048,
-        )
-
-        content = output_path.read_text()
-        assert "0.304800" in content
-
-    def test_write_stratigraphy_file_thickness_calculation(self, tmp_path: Path) -> None:
-        """Test that thicknesses are calculated correctly."""
-        output_path = tmp_path / "strat.dat"
-        node_ids = np.array([1], dtype=np.int32)
-        ground_surface = np.array([100.0])
-        layer_tops = np.array([[90.0]])  # 10 ft below ground surface
-        layer_bottoms = np.array([[70.0]])  # 20 ft aquifer thickness
-
-        write_stratigraphy_file(output_path, node_ids, ground_surface, layer_tops, layer_bottoms)
-
-        # Read and verify data
-        content = output_path.read_text()
-        lines = content.strip().split("\n")
-        data_lines = [line for line in lines if not line.strip().startswith("C") and line.strip()]
-
-        # Find the data line (skip header lines with keywords)
-        for line in data_lines:
-            parts = line.split()
-            if len(parts) >= 4 and parts[0] == "1":  # Node ID 1
-                # Columns: ID, GSElev, AQT_L1, AQF_L1
-                # AQT_L1 should be 10.0 (100 - 90)
-                # AQF_L1 should be 20.0 (90 - 70)
-                assert float(parts[1]) == 100.0  # GSElev
-                assert float(parts[2]) == 10.0  # Aquitard thickness
-                assert float(parts[3]) == 20.0  # Aquifer thickness
-                break
 
 
 class TestPreProcessorWriterEdgeCases:
