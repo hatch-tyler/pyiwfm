@@ -12,8 +12,49 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 ~~~~~
 
+- ``pyiwfm.io.mesh.write_nodes`` / ``write_elements`` / ``write_stratigraphy``
+  gained keyword-only parameters for the canonical preprocessor format:
+  ``factor=`` (FACTXY for nodes, FACTEL for stratigraphy) and, for
+  ``write_elements``, ``subregion_names=`` / ``n_subregions=`` (the latter
+  is inferred from element ``.subregion`` values when omitted). All three
+  emit the IWFM-conventional ASCII-art title block by default and use the
+  ``AQT_L*/AQF_L*`` column legend.
+
 Changed
 ~~~~~~~
+
+- **Renamed** ``pyiwfm.io.ascii`` → ``pyiwfm.io.mesh``. The module
+  contained only the six mesh + stratigraphy preprocessor-subfile
+  functions (``read_nodes``, ``read_elements``, ``read_stratigraphy``,
+  and the ``write_*`` counterparts), not generic ASCII utilities; the
+  generic-reader role is filled by ``pyiwfm.io.iwfm_reader``. All
+  re-exports through ``pyiwfm.io`` keep the same names, so callers that
+  use ``from pyiwfm.io import read_nodes`` are unaffected. Direct
+  submodule imports must update ``from pyiwfm.io.ascii import ...`` →
+  ``from pyiwfm.io.mesh import ...``.
+
+- **Unified the IWFM ASCII writer for nodes / elements / stratigraphy**
+  on a single canonical implementation in ``pyiwfm.io.mesh``. The three
+  parallel writer surfaces that previously coexisted (``mesh.write_*``,
+  ``PreProcessorWriter.write_nodes/_elements/_stratigraphy``,
+  ``preprocessor_writer.write_*_file``) are now collapsed:
+  ``PreProcessorWriter`` mesh methods are thin orchestration delegates,
+  and the standalone array-shape functions are removed (see *Removed*
+  below). The canonical format always emits FACTXY/FACTEL factor lines,
+  uses the ``AQT_L*/AQF_L*`` column legend, and renders the IWFM
+  ASCII-art title block; ``header=`` continues to override.
+
+Removed
+~~~~~~~
+
+- ``pyiwfm.io.preprocessor_writer.write_nodes_file`` /
+  ``write_elements_file`` / ``write_stratigraphy_file`` (and their
+  ``pyiwfm.io`` re-exports) — replaced by the unified
+  ``pyiwfm.io.mesh.write_nodes`` / ``write_elements`` /
+  ``write_stratigraphy`` taking the canonical ``dict[int, Node]`` /
+  ``dict[int, Element]`` / ``Stratigraphy`` domain types. Callers
+  holding raw NumPy arrays should construct the domain objects (see
+  the migration guide).
 
 Fixed
 ~~~~~

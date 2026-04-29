@@ -555,6 +555,110 @@ of ``stream_diversion_writer._write_element_group`` are unaffected
 
 ---
 
+## 8. Mesh + stratigraphy writer unification
+
+Two changes that landed together after the original seven v2.0 PRs but
+before the v2.0.0a1 tag.
+
+### `pyiwfm.io.ascii` → `pyiwfm.io.mesh`
+
+**Status:** _hard rename_.
+
+`pyiwfm.io.ascii` was the only module under `pyiwfm/io/` named after a
+format rather than a domain. It contained only the six preprocessor
+mesh + stratigraphy functions (`read_nodes`, `read_elements`,
+`read_stratigraphy`, and the matching writers) — not generic ASCII
+utilities. The generic-reader role is filled by
+`pyiwfm.io.iwfm_reader`. The module was renamed to align with the
+domain-by-component pattern used everywhere else in `pyiwfm/io/`.
+
+Top-level re-exports through `pyiwfm.io` keep the same names, so most
+callers are unaffected.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.ascii import read_nodes, write_nodes
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.mesh import read_nodes, write_nodes
+
+# Or — preferred — the unchanged top-level re-export:
+from pyiwfm.io import read_nodes, write_nodes
+```
+
+`mock.patch` strings targeting the old path must update:
+
+```python
+# v1.x
+patch("pyiwfm.io.ascii.read_nodes", ...)
+
+# v2.x
+patch("pyiwfm.io.mesh.read_nodes", ...)
+```
+
+### `write_nodes_file` / `write_elements_file` / `write_stratigraphy_file` removed
+
+**Status:** _hard removal_ — the array-shape standalone writers in
+`pyiwfm.io.preprocessor_writer` are deleted. Use the canonical
+`pyiwfm.io.mesh.write_*` functions, which take the domain types
+directly.
+
+Three parallel writer surfaces previously coexisted: `mesh.write_*`
+took `dict[int, Node]`/`dict[int, Element]`/`Stratigraphy`,
+`PreProcessorWriter.write_*` took an `IWFMModel`, and the standalone
+`write_*_file` functions took raw NumPy arrays — each with its own
+slightly-different output format. They are now collapsed onto a single
+canonical implementation in `pyiwfm.io.mesh`. The class methods on
+`PreProcessorWriter` are thin orchestration delegates; the array-shape
+standalones are gone (zero production callers existed).
+
+**v1.x:**
+
+```python
+import numpy as np
+from pyiwfm.io.preprocessor_writer import write_nodes_file
+
+write_nodes_file(
+    "output/nodes.dat",
+    node_ids=np.array([1, 2, 3], dtype=np.int32),
+    x_coords=np.array([0.0, 100.0, 200.0]),
+    y_coords=np.array([0.0, 100.0, 100.0]),
+    coord_factor=0.3048,
+)
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.mesh import write_nodes
+from pyiwfm.core.mesh import Node
+
+nodes = {
+    int(nid): Node(id=int(nid), x=float(x), y=float(y))
+    for nid, x, y in zip(node_ids, x_coords, y_coords)
+}
+write_nodes("output/nodes.dat", nodes, factor=0.3048)
+```
+
+The same construct-then-call pattern applies to elements
+(`{int(eid): Element(id=int(eid), vertices=tuple(verts), subregion=int(sr))
+for eid, verts, sr in zip(...)}`) and stratigraphy (build a
+`pyiwfm.core.stratigraphy.Stratigraphy` from your arrays via its
+`from_thicknesses` classmethod and pass to `mesh.write_stratigraphy`).
+
+The canonical writer always emits `FACTXY` (nodes) / `FACTEL`
+(stratigraphy) factor lines — pass `factor=` to override the default of
+`1.0`. Subregion names round-trip through `mesh.write_elements` via
+`subregion_names=`; `n_subregions` is inferred from the element
+subregion IDs when omitted. Custom headers via `header=` continue to
+work as before.
+
+---
+
 ## Migration checklist
 
 Run through this list when bumping your project's pinned `pyiwfm`
@@ -573,6 +677,10 @@ version from `<2` to `>=2,<3`:
       - `convert_headall_to_hdf(...)` → `TimeSeriesCache.from_iwfm_headall_text(...)`
       - `convert_hydrograph_to_hdf(...)` → `TimeSeriesCache.from_iwfm_hydrograph_text(...)`
       - `pyiwfm.visualization.webapi.{slicing,properties}` → `pyiwfm.io.{slicing,properties}`
+      - `pyiwfm.io.ascii` → `pyiwfm.io.mesh` (see [§ 8](#8-mesh--stratigraphy-writer-unification))
+      - `pyiwfm.io.preprocessor_writer.write_{nodes,elements,stratigraphy}_file`
+        — removed; build domain objects and call
+        `pyiwfm.io.mesh.write_{nodes,elements,stratigraphy}` instead
 - [ ] Re-run your test suite; should be green
 - [ ] Bump your project's pinned dependency to a real `>=2.0.0,<3`
       version once v2.0.0 final ships
