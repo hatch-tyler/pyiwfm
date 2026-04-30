@@ -42,6 +42,15 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.streams.reader``** split: ``StreamMainFileReader`` /
+  ``StreamMainFileConfig`` moved to a new ``streams/main_reader.py``
+  (~590 LOC), and ``StreamSpecReader`` / ``StreamReachSpec`` moved to
+  a new ``streams/spec.py`` (~325 LOC). The package ``__init__.py``
+  re-exports every symbol unchanged, so callers that import from
+  ``pyiwfm.io.streams`` are unaffected. ``streams/reader.py`` drops
+  from 1503 to ~666 LOC. Internal-only follow-up to the io
+  restructure (no migration-guide entry needed).
+
 - **``pyiwfm.io.groundwater``** is now a package (was a module),
   the largest cluster in the io restructure. Eleven flat
   modules (``groundwater.py``, ``gw_writer.py``, ``gw_main_writer.py``,

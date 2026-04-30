@@ -8,10 +8,16 @@ per-feature modules (``stream_bypass``, ``stream_bypass_writer``,
 into one subpackage:
 
 - :mod:`pyiwfm.io.streams.reader` — was ``streams.py`` (`StreamReader`,
-  `StreamMainFileReader`, `StreamSpecReader`, the legacy `StreamWriter`,
-  + `StreamFileConfig`, `StreamMainFileConfig`, `read_stream_main_file`,
-  `read_stream_nodes`, `read_diversions`, `read_stream_spec`,
-  `write_stream`, plus version helpers).
+  the legacy `StreamWriter`, plus `StreamFileConfig`,
+  `read_stream_nodes`, `read_diversions`, `write_stream`).
+
+- :mod:`pyiwfm.io.streams.main_reader` — `StreamMainFileReader` +
+  `StreamMainFileConfig` (the hierarchical main-file dispatcher).
+  Split out of ``streams/reader.py`` once the package layout was in
+  place; now ~600 LOC instead of 1500.
+
+- :mod:`pyiwfm.io.streams.spec` — `StreamSpecReader` +
+  `StreamReachSpec` (the preprocessor StreamsSpec geometry file).
 
 - :mod:`pyiwfm.io.streams.writer` — was ``stream_writer.py``
   (`StreamComponentWriter`, `StreamWriterConfig`,
@@ -36,6 +42,12 @@ instead. See ``docs/MIGRATION_v1_to_v2.md`` § 10.
 
 from __future__ import annotations
 
+from pyiwfm.io.ascii.reader import (
+    parse_version as parse_stream_version,
+)
+from pyiwfm.io.ascii.reader import (
+    version_ge as stream_version_ge,
+)
 from pyiwfm.io.streams.bypass import (
     BypassRatingTable,
     BypassSeepageZone,
@@ -74,24 +86,26 @@ from pyiwfm.io.streams.inflow import (
     read_stream_inflow,
 )
 from pyiwfm.io.streams.inflow_writer import write_stream_inflow
+from pyiwfm.io.streams.main_reader import (
+    StreamMainFileConfig,
+    StreamMainFileReader,
+    read_stream_main_file,
+)
 from pyiwfm.io.streams.reader import (
     CrossSectionRow,
     StreamBedParamRow,
     StreamFileConfig,
     StreamInitialConditionRow,
-    StreamMainFileConfig,
-    StreamMainFileReader,
-    StreamReachSpec,
     StreamReader,
-    StreamSpecReader,
     StreamWriter,
-    parse_stream_version,
     read_diversions,
-    read_stream_main_file,
     read_stream_nodes,
-    read_stream_spec,
-    stream_version_ge,
     write_stream,
+)
+from pyiwfm.io.streams.spec import (
+    StreamReachSpec,
+    StreamSpecReader,
+    read_stream_spec,
 )
 from pyiwfm.io.streams.writer import (
     StreamComponentWriter,
