@@ -469,21 +469,21 @@ If you imported one of the now-removed private helpers
 (`_is_comment_line`, `_LineBuffer`, `_strip_comment` re-exports) from
 ``pyiwfm.io.rootzone_nonponded`` directly (rare; the test suite did
 this in two places before PR 6), update to import from the canonical
-:mod:`pyiwfm.io.iwfm_reader`:
+:mod:`pyiwfm.io.ascii.reader`:
 
 ```python
 # v1.x:
 from pyiwfm.io.rootzone_nonponded import _is_comment_line
 
 # v2.x:
-from pyiwfm.io.iwfm_reader import is_comment_line as _is_comment_line
+from pyiwfm.io.ascii.reader import is_comment_line as _is_comment_line
 ```
 
 ---
 
 ## 7. Component-writer scaffolding (PR 7)
 
-### `pyiwfm.io.iwfm_writer.open_iwfm_file` and `write_element_group` (new helpers)
+### `pyiwfm.io.ascii.writer.open_iwfm_file` and `write_element_group` (new helpers)
 
 **Status:** _internal restructuring_; **no public API change**.
 
@@ -495,14 +495,14 @@ every ``write_*`` function: convert ``filepath`` to ``Path``, call
 ``ensure_parent_dir``, ``open(...)`` for write, write the standard
 ``C  IWFM ...`` header. PR 7 collapses that 4-line pattern into a
 single ``with open_iwfm_file(filepath, header) as f:`` context
-manager (in :mod:`pyiwfm.io.iwfm_writer`).
+manager (in :mod:`pyiwfm.io.ascii.writer`).
 
 In addition, the element-group block format
 (``GroupID  N_elements  FirstElement`` followed by element-per-line)
 appeared inline three times across the writers (twice in
 ``gw_pumping_writer.py``, once as a private helper in
 ``stream_diversion_writer.py``). PR 7 extracts a shared
-:func:`pyiwfm.io.iwfm_writer.write_element_group` and routes all three
+:func:`pyiwfm.io.ascii.writer.write_element_group` and routes all three
 sites through it.
 
 **Per-module line reductions:**
@@ -549,7 +549,7 @@ indirection.
 The private ``_write_element_group(f, group)`` helper inside
 ``stream_diversion_writer.py`` is now a thin adapter that unwraps the
 ``ElementGroup`` dataclass and delegates to the shared
-:func:`~pyiwfm.io.iwfm_writer.write_element_group`. External callers
+:func:`~pyiwfm.io.ascii.writer.write_element_group`. External callers
 of ``stream_diversion_writer._write_element_group`` are unaffected
 (the function signature is unchanged).
 
@@ -569,7 +569,7 @@ format rather than a domain. It contained only the six preprocessor
 mesh + stratigraphy functions (`read_nodes`, `read_elements`,
 `read_stratigraphy`, and the matching writers) — not generic ASCII
 utilities. The generic-reader role is filled by
-`pyiwfm.io.iwfm_reader`. The module was renamed to align with the
+`pyiwfm.io.ascii.reader`. The module was renamed to align with the
 domain-by-component pattern used everywhere else in `pyiwfm/io/`.
 
 Top-level re-exports through `pyiwfm.io` keep the same names, so most
@@ -747,6 +747,67 @@ update to `from pyiwfm.io.binary import …`.
 to `mock.patch("pyiwfm.io.binary.X")` (re-exported on the package) —
 not `pyiwfm.io.binary.preprocessor.X`, because the consumers import
 through the package re-export, not the deep submodule.
+
+### `pyiwfm.io.ascii` (new package) — `iwfm_reader`, `iwfm_writer`, and the comment cluster (gone)
+
+`pyiwfm/io/iwfm_reader.py`, `pyiwfm/io/iwfm_writer.py`, and the three
+comment-preservation modules (`comment_extractor.py`,
+`comment_metadata.py`, `comment_writer.py`) were five flat ASCII helper
+modules. They're now the single package `pyiwfm/io/ascii/`:
+
+- `pyiwfm/io/ascii/reader.py` — was `iwfm_reader.py` (line-reading
+  helpers: `parse_int`, `parse_float`, `next_data_value`,
+  `next_data_line`, `next_data_or_empty`, `is_comment_line`,
+  `strip_inline_comment`, `resolve_path`, `parse_version`,
+  `version_ge`, `ReaderMixin`, `LineBuffer`, `COMMENT_CHARS`).
+
+- `pyiwfm/io/ascii/writer.py` — was `iwfm_writer.py` (line-writing
+  helpers: `write_comment`, `write_value`, `ensure_parent_dir`,
+  `open_iwfm_file`, `write_element_group`).
+
+- `pyiwfm/io/ascii/comment_extractor.py`,
+  `pyiwfm/io/ascii/comment_metadata.py`,
+  `pyiwfm/io/ascii/comment_writer.py` — round-trip comment
+  preservation. Public symbols unchanged: `LineType`, `ParsedLine`,
+  `CommentExtractor`, `extract_comments`, `extract_and_save_comments`,
+  `PreserveMode`, `SectionComments`, `CommentMetadata`,
+  `FileCommentMetadata`, `CommentWriter`, `CommentInjector`.
+
+`pyiwfm/io/ascii/__init__.py` re-exports every public symbol, so the
+canonical v2.x path is `from pyiwfm.io.ascii import …`.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.iwfm_reader import parse_int, next_data_value
+from pyiwfm.io.iwfm_writer import open_iwfm_file, write_comment
+from pyiwfm.io.comment_extractor import CommentExtractor
+from pyiwfm.io.comment_metadata import CommentMetadata
+from pyiwfm.io.comment_writer import CommentWriter
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.ascii import parse_int, next_data_value
+from pyiwfm.io.ascii import open_iwfm_file, write_comment
+from pyiwfm.io.ascii import CommentExtractor, CommentMetadata, CommentWriter
+
+# Or the deeper paths if you want to be explicit about which file the
+# symbol lives in:
+from pyiwfm.io.ascii.reader import parse_int
+from pyiwfm.io.ascii.writer import open_iwfm_file
+```
+
+The five v1.x paths (`pyiwfm.io.iwfm_reader`, `pyiwfm.io.iwfm_writer`,
+`pyiwfm.io.comment_extractor`, `pyiwfm.io.comment_metadata`,
+`pyiwfm.io.comment_writer`) are **gone**; update to
+`from pyiwfm.io.ascii import …`.
+
+`mock.patch("pyiwfm.io.iwfm_reader.X")` and the four sister patch
+strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
+package re-export, not the deep submodule, because the consumers
+import through the package.
 
 ---
 

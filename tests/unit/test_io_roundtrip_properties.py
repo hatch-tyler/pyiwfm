@@ -108,14 +108,14 @@ class TestIWFMReaderProperties:
 
     @given(st.text(min_size=0, max_size=200))
     def test_is_comment_line_returns_bool(self, line: str) -> None:
-        from pyiwfm.io.iwfm_reader import is_comment_line
+        from pyiwfm.io.ascii.reader import is_comment_line
 
         result = is_comment_line(line)
         assert isinstance(result, bool)
 
     @given(st.text(min_size=1, max_size=200))
     def test_strip_inline_comment_returns_pair(self, line: str) -> None:
-        from pyiwfm.io.iwfm_reader import strip_inline_comment
+        from pyiwfm.io.ascii.reader import strip_inline_comment
 
         value, desc = strip_inline_comment(line)
         assert isinstance(value, str)
@@ -123,7 +123,7 @@ class TestIWFMReaderProperties:
 
     @given(st.text(min_size=1, max_size=200).filter(lambda s: "/" not in s))
     def test_no_slash_means_no_comment(self, line: str) -> None:
-        from pyiwfm.io.iwfm_reader import strip_inline_comment
+        from pyiwfm.io.ascii.reader import strip_inline_comment
 
         value, desc = strip_inline_comment(line)
         assert desc == ""
@@ -134,7 +134,7 @@ class TestIWFMReaderProperties:
         st.text(min_size=0, max_size=20),
     )
     def test_parse_int_roundtrip(self, num_str: str, ctx: str) -> None:
-        from pyiwfm.io.iwfm_reader import parse_int
+        from pyiwfm.io.ascii.reader import parse_int
 
         result = parse_int(num_str, ctx)
         assert result == int(num_str)
@@ -143,7 +143,7 @@ class TestIWFMReaderProperties:
         st.floats(min_value=-1e10, max_value=1e10, allow_nan=False, allow_infinity=False),
     )
     def test_parse_float_roundtrip(self, num: float) -> None:
-        from pyiwfm.io.iwfm_reader import parse_float
+        from pyiwfm.io.ascii.reader import parse_float
 
         result = parse_float(str(num))
         np.testing.assert_allclose(result, num, rtol=1e-10)
@@ -163,7 +163,7 @@ class TestIWFMReaderProperties:
     )
     def test_parse_int_bad_input_raises(self, bad_str: str) -> None:
         from pyiwfm.core.exceptions import FileFormatError
-        from pyiwfm.io.iwfm_reader import parse_int
+        from pyiwfm.io.ascii.reader import parse_int
 
         with pytest.raises(FileFormatError):
             parse_int(bad_str, "test")

@@ -7,9 +7,9 @@ discovery logic from the old ``iwfm2obs_2015`` Fortran program.
 
 Reuses existing pyiwfm readers wherever possible:
 
-- :func:`pyiwfm.io.iwfm_reader.next_data_value` for line parsing
-- :func:`pyiwfm.io.iwfm_reader.resolve_path` for path resolution
-- :func:`pyiwfm.io.iwfm_reader.is_comment_line` for comment detection
+- :func:`pyiwfm.io.ascii.reader.next_data_value` for line parsing
+- :func:`pyiwfm.io.ascii.reader.resolve_path` for path resolution
+- :func:`pyiwfm.io.ascii.reader.is_comment_line` for comment detection
 """
 
 from __future__ import annotations
@@ -20,13 +20,13 @@ from pathlib import Path
 from typing import TextIO
 
 from pyiwfm.components.groundwater import HydrographLocation
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     is_comment_line as _is_comment_line,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     resolve_path as _resolve_path,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     strip_inline_comment as _strip_inline_comment,
 )
 

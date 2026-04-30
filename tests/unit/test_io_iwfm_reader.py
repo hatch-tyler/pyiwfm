@@ -7,7 +7,7 @@ import io
 import pytest
 
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     LineBuffer,
     is_comment_line,
     next_data_line,

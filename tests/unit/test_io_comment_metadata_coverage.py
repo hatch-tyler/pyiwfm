@@ -20,7 +20,7 @@ from unittest.mock import patch
 
 import pytest
 
-from pyiwfm.io.comment_metadata import (
+from pyiwfm.io.ascii.comment_metadata import (
     CommentMetadata,
     FileCommentMetadata,
     PreserveMode,

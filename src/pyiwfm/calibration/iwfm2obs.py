@@ -845,8 +845,8 @@ def _next_data_value_i2o(f: Any) -> str:
     Returns the data value with comment text removed, or empty string
     for blank data lines (which are significant in IWFM2OBS blocks).
     """
-    from pyiwfm.io.iwfm_reader import is_comment_line as _is_iwfm_comment
-    from pyiwfm.io.iwfm_reader import strip_inline_comment
+    from pyiwfm.io.ascii.reader import is_comment_line as _is_iwfm_comment
+    from pyiwfm.io.ascii.reader import strip_inline_comment
 
     for raw in f:
         raw_line = raw.rstrip("\n\r")

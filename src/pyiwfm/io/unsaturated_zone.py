@@ -25,13 +25,13 @@ from typing import TextIO
 import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     COMMENT_CHARS,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     next_data_or_empty as _next_data_or_empty,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     resolve_path as _resolve_path_f,
 )
 

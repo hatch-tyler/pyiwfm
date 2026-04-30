@@ -10,14 +10,14 @@ from pathlib import Path
 
 import pytest
 
+from pyiwfm.io.ascii.reader import is_comment_line as _is_comment_line
+from pyiwfm.io.ascii.reader import strip_inline_comment as _strip_comment
 from pyiwfm.io.gw_subsidence import (
     SubsidenceConfig,
     SubsidenceNodeParams,
     SubsidenceReader,
     read_gw_subsidence,
 )
-from pyiwfm.io.iwfm_reader import is_comment_line as _is_comment_line
-from pyiwfm.io.iwfm_reader import strip_inline_comment as _strip_comment
 
 # ---------------------------------------------------------------------------
 # Dataclass construction

@@ -14,16 +14,16 @@ from typing import Any
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.mesh import Subregion
 from pyiwfm.core.model import IWFMModel
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     is_comment_line as _is_comment_line,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     parse_int,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     resolve_path as _resolve_path,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     strip_inline_comment as _strip_comment,
 )
 from pyiwfm.io.mesh import (

@@ -19,10 +19,10 @@ from numpy.typing import NDArray
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     is_comment_line as _is_comment_line,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     strip_inline_comment as _strip_comment,
 )
 

@@ -12,6 +12,12 @@ from pathlib import Path
 
 import pytest
 
+from pyiwfm.io.ascii.reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (
+    strip_inline_comment as _strip_comment,
+)
 from pyiwfm.io.gw_boundary import (
     ConstrainedGeneralHeadBC,
     GeneralHeadBC,
@@ -47,12 +53,6 @@ from pyiwfm.io.gw_tiledrain import (
     TileDrainReader,
     TileDrainSpec,
     read_gw_tiledrain,
-)
-from pyiwfm.io.iwfm_reader import (
-    is_comment_line as _is_comment_line,
-)
-from pyiwfm.io.iwfm_reader import (
-    strip_inline_comment as _strip_comment,
 )
 
 # =============================================================================
@@ -312,7 +312,7 @@ class TestPumpingReaderExtended:
 
     def test_resolve_absolute_path(self, tmp_path: Path) -> None:
         """Absolute paths should not be resolved relative to base_dir."""
-        from pyiwfm.io.iwfm_reader import resolve_path
+        from pyiwfm.io.ascii.reader import resolve_path
 
         abs_path = str(tmp_path / "file.dat")
         result = resolve_path(Path("/other"), abs_path)
@@ -320,7 +320,7 @@ class TestPumpingReaderExtended:
 
     def test_resolve_relative_path(self, tmp_path: Path) -> None:
         """Relative paths should be resolved relative to base_dir."""
-        from pyiwfm.io.iwfm_reader import resolve_path
+        from pyiwfm.io.ascii.reader import resolve_path
 
         result = resolve_path(tmp_path, "subdir/file.dat")
         assert result == tmp_path / "subdir" / "file.dat"

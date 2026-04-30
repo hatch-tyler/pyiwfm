@@ -467,7 +467,7 @@ class TestResolvePathAbsolute:
 
     def test_absolute_path_returned_unchanged(self) -> None:
         """An absolute file path is returned unchanged by resolve_path."""
-        from pyiwfm.io.iwfm_reader import resolve_path
+        from pyiwfm.io.ascii.reader import resolve_path
 
         abs_path = Path("/some/absolute/path/bc.dat")
         result = resolve_path(Path("/base"), str(abs_path))

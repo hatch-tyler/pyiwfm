@@ -11,10 +11,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pyiwfm.io.ascii.writer import open_iwfm_file as _open_iwfm_file
+from pyiwfm.io.ascii.writer import write_element_group as _write_element_group
+from pyiwfm.io.ascii.writer import write_value as _write_value
 from pyiwfm.io.gw_pumping import PumpingConfig
-from pyiwfm.io.iwfm_writer import open_iwfm_file as _open_iwfm_file
-from pyiwfm.io.iwfm_writer import write_element_group as _write_element_group
-from pyiwfm.io.iwfm_writer import write_value as _write_value
 
 
 def write_pumping_main(config: PumpingConfig, filepath: Path | str) -> Path:

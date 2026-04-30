@@ -556,7 +556,19 @@ Central module for IWFM file line-reading, comment handling, version parsing,
 and path resolution.  All ``io/`` reader modules import helpers from here
 rather than defining their own copies.
 
-.. automodule:: pyiwfm.io.iwfm_reader
+.. automodule:: pyiwfm.io.ascii.reader
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+IWFM Writer Utilities
+~~~~~~~~~~~~~~~~~~~~~
+
+Central module for IWFM file line-writing helpers — comments, scalar
+values, parent-directory creation, and the standard
+``open_iwfm_file`` context manager.
+
+.. automodule:: pyiwfm.io.ascii.writer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -566,7 +578,7 @@ Comment Extractor
 
 Extracts comments from IWFM files for preservation during roundtrip I/O.
 
-.. automodule:: pyiwfm.io.comment_extractor
+.. automodule:: pyiwfm.io.ascii.comment_extractor
    :members:
    :undoc-members:
    :show-inheritance:
@@ -576,7 +588,7 @@ Comment Metadata
 
 Stores extracted comment metadata for use during file writing.
 
-.. automodule:: pyiwfm.io.comment_metadata
+.. automodule:: pyiwfm.io.ascii.comment_metadata
    :members:
    :undoc-members:
    :show-inheritance:
@@ -586,7 +598,7 @@ Comment Writer
 
 Injects preserved comments back into written IWFM files.
 
-.. automodule:: pyiwfm.io.comment_writer
+.. automodule:: pyiwfm.io.ascii.comment_writer
    :members:
    :undoc-members:
    :show-inheritance:

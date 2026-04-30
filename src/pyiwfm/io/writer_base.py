@@ -19,14 +19,14 @@ from typing import TYPE_CHECKING, Any, TextIO
 import numpy as np
 from numpy.typing import NDArray
 
+from pyiwfm.io.ascii.writer import ensure_parent_dir
 from pyiwfm.io.config import OutputFormat, TimeSeriesOutputConfig
-from pyiwfm.io.iwfm_writer import ensure_parent_dir
 from pyiwfm.templates.engine import TemplateEngine
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.io.comment_metadata import CommentMetadata
-    from pyiwfm.io.comment_writer import CommentWriter
+    from pyiwfm.io.ascii.comment_metadata import CommentMetadata
+    from pyiwfm.io.ascii.comment_writer import CommentWriter
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ class TemplateWriter(ABC):
             CommentWriter instance configured with our comment_metadata.
         """
         if self._comment_writer is None:
-            from pyiwfm.io.comment_writer import CommentWriter
+            from pyiwfm.io.ascii.comment_writer import CommentWriter
 
             self._comment_writer = CommentWriter(
                 self.comment_metadata,

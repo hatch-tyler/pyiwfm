@@ -16,16 +16,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
 
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     LineBuffer as _LineBuffer,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     resolve_path as _resolve_path_canonical,
 )
-from pyiwfm.io.iwfm_writer import (
+from pyiwfm.io.ascii.writer import (
     ensure_parent_dir as _ensure_parent_dir,
 )
-from pyiwfm.io.iwfm_writer import (
+from pyiwfm.io.ascii.writer import (
     write_comment as _write_comment,
 )
 

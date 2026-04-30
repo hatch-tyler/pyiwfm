@@ -19,9 +19,9 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+from pyiwfm.io.ascii.comment_metadata import CommentMetadata, SectionComments
+from pyiwfm.io.ascii.comment_writer import CommentWriter
 from pyiwfm.io.base import CommentAwareReader, CommentAwareWriter
-from pyiwfm.io.comment_metadata import CommentMetadata, SectionComments
-from pyiwfm.io.comment_writer import CommentWriter
 
 # =============================================================================
 # Concrete implementations for testing abstract classes
@@ -116,7 +116,7 @@ class TestCommentAwareReaderProperty:
         reader = _ConcreteCommentReader(test_file, preserve_comments=True)
 
         mock_metadata = CommentMetadata(source_file="test.in")
-        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
+        with patch("pyiwfm.io.ascii.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 
@@ -141,7 +141,7 @@ class TestCommentAwareReaderExtract:
         reader = _ConcreteCommentReader(test_file)
 
         mock_metadata = CommentMetadata(source_file="test.in")
-        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
+        with patch("pyiwfm.io.ascii.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 
@@ -163,7 +163,7 @@ class TestCommentAwareReaderExtract:
             source_file="test.in",
             header_block=["C  preserved header"],
         )
-        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
+        with patch("pyiwfm.io.ascii.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 
@@ -189,7 +189,7 @@ class TestEnsureCommentsExtracted:
         reader = _ConcreteCommentReader(test_file, preserve_comments=True)
 
         mock_metadata = CommentMetadata(source_file="test.in")
-        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
+        with patch("pyiwfm.io.ascii.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 
@@ -221,7 +221,7 @@ class TestEnsureCommentsExtracted:
         existing_metadata = CommentMetadata(source_file="test.in")
         reader._comment_metadata = existing_metadata
 
-        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
+        with patch("pyiwfm.io.ascii.comment_extractor.CommentExtractor") as MockExtractor:
             reader._ensure_comments_extracted()
 
         MockExtractor.assert_not_called()
@@ -235,7 +235,7 @@ class TestEnsureCommentsExtracted:
         reader = _ConcreteCommentReader(test_file, preserve_comments=True)
 
         mock_metadata = CommentMetadata(source_file="test.in")
-        with patch("pyiwfm.io.comment_extractor.CommentExtractor") as MockExtractor:
+        with patch("pyiwfm.io.ascii.comment_extractor.CommentExtractor") as MockExtractor:
             instance = MockExtractor.return_value
             instance.extract.return_value = mock_metadata
 

@@ -13,16 +13,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TextIO
 
-from pyiwfm.io.gw_subsidence import SubsidenceConfig
-from pyiwfm.io.iwfm_writer import (
+from pyiwfm.io.ascii.writer import (
     ensure_parent_dir as _ensure_parent_dir,
 )
-from pyiwfm.io.iwfm_writer import (
+from pyiwfm.io.ascii.writer import (
     write_comment as _write_comment,
 )
-from pyiwfm.io.iwfm_writer import (
+from pyiwfm.io.ascii.writer import (
     write_value as _write_value,
 )
+from pyiwfm.io.gw_subsidence import SubsidenceConfig
 
 
 def write_subsidence_main(config: SubsidenceConfig, filepath: Path | str) -> Path:

@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.io.comment_metadata import CommentMetadata
+    from pyiwfm.io.ascii.comment_metadata import CommentMetadata
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     is_comment_line,
     strip_inline_comment,
 )

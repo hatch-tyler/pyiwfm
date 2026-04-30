@@ -3,7 +3,7 @@ Mesh and stratigraphy ASCII file readers/writers for IWFM preprocessor inputs.
 
 This module owns I/O for the three subfiles named by ``Preprocessor.in``:
 node coordinates, element connectivity, and stratigraphy. Generic IWFM
-ASCII line-reading helpers live in :mod:`pyiwfm.io.iwfm_reader`; per-component
+ASCII line-reading helpers live in :mod:`pyiwfm.io.ascii.reader`; per-component
 readers (groundwater, streams, lakes, …) live in their own modules.
 
 The writers are the canonical serializers for these three files. Other
@@ -24,14 +24,14 @@ import numpy as np
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.mesh import Element, Node
 from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     is_comment_line as _is_comment_line,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     parse_float,
     parse_int,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     strip_inline_comment as _strip_comment,
 )
 

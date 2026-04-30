@@ -8,6 +8,12 @@ from __future__ import annotations
 import io
 from pathlib import Path
 
+from pyiwfm.io.ascii.writer import (
+    write_comment as _write_comment,
+)
+from pyiwfm.io.ascii.writer import (
+    write_value as _write_value,
+)
 from pyiwfm.io.gw_pumping import (
     ElementGroup,
     ElementPumpingSpec,
@@ -19,12 +25,6 @@ from pyiwfm.io.gw_pumping_writer import (
     write_elem_pump_file,
     write_pumping_main,
     write_well_spec_file,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_comment as _write_comment,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_value as _write_value,
 )
 
 

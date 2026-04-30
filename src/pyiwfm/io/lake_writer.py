@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 from numpy.typing import NDArray
 
-from pyiwfm.io.iwfm_reader import parse_version as _parse_version
+from pyiwfm.io.ascii.reader import parse_version as _parse_version
 from pyiwfm.io.writer_base import TemplateWriter
 from pyiwfm.io.writer_config_base import BaseComponentWriterConfig
 from pyiwfm.templates.engine import TemplateEngine

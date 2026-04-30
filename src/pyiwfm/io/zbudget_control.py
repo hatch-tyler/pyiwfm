@@ -11,9 +11,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pyiwfm.io.iwfm_reader import next_data_or_empty as _next_data_or_empty
-from pyiwfm.io.iwfm_reader import next_data_value as _next_data_value
-from pyiwfm.io.iwfm_reader import resolve_path as _resolve_path
+from pyiwfm.io.ascii.reader import next_data_or_empty as _next_data_or_empty
+from pyiwfm.io.ascii.reader import next_data_value as _next_data_value
+from pyiwfm.io.ascii.reader import resolve_path as _resolve_path
 
 
 @dataclass

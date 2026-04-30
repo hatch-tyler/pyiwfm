@@ -21,6 +21,23 @@ from pyiwfm.components.stream import (  # noqa: F401
     CrossSectionData,
     StrmEvapNodeSpec,
 )
+from pyiwfm.io.ascii.comment_extractor import (  # noqa: F401
+    CommentExtractor,
+    LineType,
+    ParsedLine,
+    extract_and_save_comments,
+    extract_comments,
+)
+from pyiwfm.io.ascii.comment_metadata import (  # noqa: F401
+    CommentMetadata,
+    FileCommentMetadata,
+    PreserveMode,
+    SectionComments,
+)
+from pyiwfm.io.ascii.comment_writer import (  # noqa: F401
+    CommentInjector,
+    CommentWriter,
+)
 from pyiwfm.io.base import (  # noqa: F401
     BaseReader,
     BaseWriter,
@@ -72,23 +89,6 @@ from pyiwfm.io.cache_builder import (  # noqa: F401
     is_cache_stale,
 )
 from pyiwfm.io.cache_loader import SqliteCacheLoader  # noqa: F401
-from pyiwfm.io.comment_extractor import (  # noqa: F401
-    CommentExtractor,
-    LineType,
-    ParsedLine,
-    extract_and_save_comments,
-    extract_comments,
-)
-from pyiwfm.io.comment_metadata import (  # noqa: F401
-    CommentMetadata,
-    FileCommentMetadata,
-    PreserveMode,
-    SectionComments,
-)
-from pyiwfm.io.comment_writer import (  # noqa: F401
-    CommentInjector,
-    CommentWriter,
-)
 from pyiwfm.io.config import (  # noqa: F401
     BudgetFileConfig,
     ModelOutputConfig,

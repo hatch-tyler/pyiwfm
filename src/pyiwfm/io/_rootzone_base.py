@@ -6,7 +6,7 @@ The three v5+ rootzone variant readers
 :class:`~pyiwfm.io.rootzone_urban.UrbanLandUseReader`) all parse a
 positional-sequential text file with the same scaffolding shape:
 
-1. Open the file, build a :class:`~pyiwfm.io.iwfm_reader.LineBuffer`.
+1. Open the file, build a :class:`~pyiwfm.io.ascii.reader.LineBuffer`.
 2. Read a sequence of scalar fields (factors, file paths, optional
    integers).
 3. Read one or more tabular sections, each delimited either by an
@@ -31,9 +31,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.iwfm_reader import LineBuffer as _LineBuffer
-from pyiwfm.io.iwfm_reader import is_comment_line as _is_comment_line
-from pyiwfm.io.iwfm_reader import strip_inline_comment as _strip_comment
+from pyiwfm.io.ascii.reader import LineBuffer as _LineBuffer
+from pyiwfm.io.ascii.reader import is_comment_line as _is_comment_line
+from pyiwfm.io.ascii.reader import strip_inline_comment as _strip_comment
 
 
 class _RootzoneReaderBase:

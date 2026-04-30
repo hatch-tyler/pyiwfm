@@ -14,14 +14,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
 
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     COMMENT_CHARS,
     ReaderMixin,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     next_data_or_empty as _next_data_or_empty,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     strip_inline_comment as _strip_comment,
 )
 

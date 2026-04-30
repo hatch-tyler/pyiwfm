@@ -623,7 +623,7 @@ class TestLineBufferEdgeCases:
 
     def test_empty_line_is_comment(self) -> None:
         """Empty string and blank lines are treated as comments."""
-        from pyiwfm.io.iwfm_reader import is_comment_line as _is_comment_line
+        from pyiwfm.io.ascii.reader import is_comment_line as _is_comment_line
 
         assert _is_comment_line("") is True
         assert _is_comment_line("   ") is True
@@ -631,13 +631,13 @@ class TestLineBufferEdgeCases:
 
     def test_hash_not_comment_line(self) -> None:
         """Lines starting with # (after whitespace) are not comments."""
-        from pyiwfm.io.iwfm_reader import is_comment_line as _is_comment_line
+        from pyiwfm.io.ascii.reader import is_comment_line as _is_comment_line
 
         assert _is_comment_line("  # version") is False
 
     def test_buffer_pushback_at_zero(self) -> None:
         """Pushback at position 0 does not go negative."""
-        from pyiwfm.io.iwfm_reader import LineBuffer as _LineBuffer
+        from pyiwfm.io.ascii.reader import LineBuffer as _LineBuffer
 
         buf = _LineBuffer(["data\n"])
         buf.pushback()  # pos is still 0
@@ -645,7 +645,7 @@ class TestLineBufferEdgeCases:
 
     def test_next_data_eof_raises(self) -> None:
         """next_data raises on empty buffer."""
-        from pyiwfm.io.iwfm_reader import LineBuffer as _LineBuffer
+        from pyiwfm.io.ascii.reader import LineBuffer as _LineBuffer
 
         buf = _LineBuffer([])
         with pytest.raises(FileFormatError, match="Unexpected end"):
@@ -653,7 +653,7 @@ class TestLineBufferEdgeCases:
 
     def test_next_data_skips_blank_value(self) -> None:
         """next_data skips lines with only a comment delimiter."""
-        from pyiwfm.io.iwfm_reader import LineBuffer as _LineBuffer
+        from pyiwfm.io.ascii.reader import LineBuffer as _LineBuffer
 
         buf = _LineBuffer(["C comment\n", "   \n", "42\n"])
         val = buf.next_data()
@@ -661,7 +661,7 @@ class TestLineBufferEdgeCases:
 
     def test_next_data_or_empty_at_eof(self) -> None:
         """next_data_or_empty returns empty string at EOF."""
-        from pyiwfm.io.iwfm_reader import LineBuffer as _LineBuffer
+        from pyiwfm.io.ascii.reader import LineBuffer as _LineBuffer
 
         buf = _LineBuffer([])
         assert buf.next_data_or_empty() == ""

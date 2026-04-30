@@ -13,16 +13,16 @@ from typing import TYPE_CHECKING, TextIO
 
 import numpy as np
 
-from pyiwfm.io.groundwater import GWMainFileConfig
-from pyiwfm.io.iwfm_writer import (
+from pyiwfm.io.ascii.writer import (
     ensure_parent_dir as _ensure_parent_dir,
 )
-from pyiwfm.io.iwfm_writer import (
+from pyiwfm.io.ascii.writer import (
     write_comment as _write_comment,
 )
-from pyiwfm.io.iwfm_writer import (
+from pyiwfm.io.ascii.writer import (
     write_value as _write_value,
 )
+from pyiwfm.io.groundwater import GWMainFileConfig
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray

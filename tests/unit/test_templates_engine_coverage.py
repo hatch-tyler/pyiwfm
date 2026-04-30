@@ -14,7 +14,7 @@ import pytest
 # Skip the entire module if jinja2 is not installed
 jinja2 = pytest.importorskip("jinja2")
 
-from pyiwfm.io.comment_metadata import (  # noqa: E402
+from pyiwfm.io.ascii.comment_metadata import (  # noqa: E402
     CommentMetadata,
     PreserveMode,
     SectionComments,

@@ -20,9 +20,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TextIO
 
-from pyiwfm.io.iwfm_writer import open_iwfm_file as _open_iwfm_file
-from pyiwfm.io.iwfm_writer import write_element_group as _shared_write_element_group
-from pyiwfm.io.iwfm_writer import write_value as _write_value
+from pyiwfm.io.ascii.writer import open_iwfm_file as _open_iwfm_file
+from pyiwfm.io.ascii.writer import write_element_group as _shared_write_element_group
+from pyiwfm.io.ascii.writer import write_value as _write_value
 from pyiwfm.io.stream_diversion import DiversionSpecConfig
 
 
@@ -124,7 +124,7 @@ def _write_diversion_line(
 def _write_element_group(f: TextIO, group: object) -> None:
     """Write a single element group.
 
-    Thin adapter around :func:`pyiwfm.io.iwfm_writer.write_element_group`
+    Thin adapter around :func:`pyiwfm.io.ascii.writer.write_element_group`
     that unwraps the ``ElementGroup`` dataclass into the (id, elements)
     primitives the shared helper expects.
 

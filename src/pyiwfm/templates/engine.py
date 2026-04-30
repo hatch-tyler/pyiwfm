@@ -17,7 +17,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
-    from pyiwfm.io.comment_metadata import CommentMetadata
+    from pyiwfm.io.ascii.comment_metadata import CommentMetadata
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -163,7 +163,7 @@ class TemplateEngine:
             return rendered
 
         # Inject comments using CommentInjector
-        from pyiwfm.io.comment_writer import CommentInjector
+        from pyiwfm.io.ascii.comment_writer import CommentInjector
 
         injector = CommentInjector(comment_metadata)
 

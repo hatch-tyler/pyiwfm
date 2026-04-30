@@ -19,10 +19,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     ReaderMixin,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     next_data_or_empty as _next_data_or_empty,
 )
 

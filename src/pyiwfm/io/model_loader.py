@@ -20,12 +20,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from pyiwfm.io.iwfm_reader import resolve_path as _resolve_path_base
+from pyiwfm.io.ascii.reader import resolve_path as _resolve_path_base
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.io.comment_extractor import CommentExtractor
-    from pyiwfm.io.comment_metadata import CommentMetadata
+    from pyiwfm.io.ascii.comment_extractor import CommentExtractor
+    from pyiwfm.io.ascii.comment_metadata import CommentMetadata
     from pyiwfm.io.simulation import SimulationConfig
 
 logger = logging.getLogger(__name__)
@@ -352,7 +352,7 @@ class CommentAwareModelLoader(CompleteModelLoader):
         Returns:
             Dictionary mapping file type to CommentMetadata.
         """
-        from pyiwfm.io.comment_extractor import CommentExtractor
+        from pyiwfm.io.ascii.comment_extractor import CommentExtractor
 
         comments: dict[str, CommentMetadata] = {}
         extractor = CommentExtractor()

@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from typing import TextIO
 
-from pyiwfm.io.comment_metadata import (
+from pyiwfm.io.ascii.comment_metadata import (
     CommentMetadata,
     SectionComments,
 )

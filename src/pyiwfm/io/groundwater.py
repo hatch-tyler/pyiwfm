@@ -25,20 +25,20 @@ from pyiwfm.components.groundwater import (
     Well,
 )
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     COMMENT_CHARS,
     parse_int,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     is_comment_line as _is_comment_line,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     next_data_or_empty as _next_data_or_empty,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     resolve_path as _resolve_path_f,
 )
-from pyiwfm.io.iwfm_reader import (
+from pyiwfm.io.ascii.reader import (
     strip_inline_comment as _strip_comment,
 )
 from pyiwfm.io.timeseries_ascii import TimeSeriesWriter

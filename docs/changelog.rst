@@ -42,6 +42,21 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.ascii``** is now a format-primitive package collecting
+  every IWFM ASCII helper. ``pyiwfm/io/iwfm_reader.py`` →
+  ``pyiwfm/io/ascii/reader.py``, ``pyiwfm/io/iwfm_writer.py`` →
+  ``pyiwfm/io/ascii/writer.py``, and the comment cluster
+  (``comment_extractor.py``, ``comment_metadata.py``,
+  ``comment_writer.py``) moved into ``pyiwfm/io/ascii/`` as well. The
+  package ``__init__.py`` re-exports the full public API surface, so
+  ``from pyiwfm.io.ascii import parse_int, write_comment,
+  CommentExtractor`` works regardless of which submodule each symbol
+  lives in. The five v1.x paths
+  (``pyiwfm.io.iwfm_reader``/``iwfm_writer``/``comment_extractor``/
+  ``comment_metadata``/``comment_writer``) are **gone** in v2.0 — update
+  imports and ``mock.patch`` strings. See
+  ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.binary``** is now a package (was a module). The file
   ``pyiwfm/io/binary.py`` moved to ``pyiwfm/io/binary/fortran.py``
   (Fortran unformatted-sequential primitives), and
@@ -88,7 +103,7 @@ Changed
   contained only the six mesh + stratigraphy preprocessor-subfile
   functions (``read_nodes``, ``read_elements``, ``read_stratigraphy``,
   and the ``write_*`` counterparts), not generic ASCII utilities; the
-  generic-reader role is filled by ``pyiwfm.io.iwfm_reader``. All
+  generic-reader role is filled by ``pyiwfm.io.ascii.reader``. All
   re-exports through ``pyiwfm.io`` keep the same names, so callers that
   use ``from pyiwfm.io import read_nodes`` are unaffected. Direct
   submodule imports must update ``from pyiwfm.io.ascii import ...`` →
@@ -514,7 +529,7 @@ Fixed
   been removed — HEC-DSS 7's ``zopenExtended`` does not expose per-mode
   open semantics, so the branches had no effect.
 - ``pyiwfm.io.supply_adjust`` now imports ``COMMENT_CHARS`` and
-  ``strip_inline_comment`` from ``pyiwfm.io.iwfm_reader`` instead of
+  ``strip_inline_comment`` from ``pyiwfm.io.ascii.reader`` instead of
   duplicating them locally (per CLAUDE.md's "never duplicate these
   helpers" rule). Blank-line-as-data semantics for the DSSFL slot are
   preserved via a small local ``_is_fortran_comment`` wrapper.
@@ -759,7 +774,7 @@ Fixed
 Changed
 ~~~~~~~
 
-**I/O Reader Deduplication** (``pyiwfm.io.iwfm_reader``)
+**I/O Reader Deduplication** (``pyiwfm.io.ascii.reader``)
 
 - Centralized ``resolve_path()``, ``next_data_or_empty()``, ``parse_version()``,
   and ``version_ge()`` into ``iwfm_reader.py`` — the canonical module for all

@@ -9,6 +9,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pyiwfm.io.ascii.writer import (
+    write_comment as _write_comment,
+)
+from pyiwfm.io.ascii.writer import (
+    write_value as _write_value,
+)
 from pyiwfm.io.gw_boundary import (
     ConstrainedGeneralHeadBC,
     GeneralHeadBC,
@@ -22,12 +28,6 @@ from pyiwfm.io.gw_boundary_writer import (
     write_general_head_bc,
     write_specified_flow_bc,
     write_specified_head_bc,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_comment as _write_comment,
-)
-from pyiwfm.io.iwfm_writer import (
-    write_value as _write_value,
 )
 
 # ---------------------------------------------------------------------------

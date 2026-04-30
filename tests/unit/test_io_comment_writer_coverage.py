@@ -11,12 +11,12 @@ import io
 
 import pytest
 
-from pyiwfm.io.comment_metadata import (
+from pyiwfm.io.ascii.comment_metadata import (
     CommentMetadata,
     PreserveMode,
     SectionComments,
 )
-from pyiwfm.io.comment_writer import (
+from pyiwfm.io.ascii.comment_writer import (
     CommentInjector,
     CommentWriter,
 )

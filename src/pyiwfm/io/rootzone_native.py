@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from pyiwfm.io._rootzone_base import _RootzoneReaderBase
-from pyiwfm.io.iwfm_reader import LineBuffer as _LineBuffer
+from pyiwfm.io.ascii.reader import LineBuffer as _LineBuffer
 
 # ── Data classes ──────────────────────────────────────────────────────
 

@@ -13,14 +13,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO
 
+from pyiwfm.io.ascii.writer import ensure_parent_dir
 from pyiwfm.io.binary import read_fortran_record as _read_fortran_record
-from pyiwfm.io.iwfm_writer import ensure_parent_dir
 
 if TYPE_CHECKING:
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.model import IWFMModel
     from pyiwfm.core.stratigraphy import Stratigraphy
-    from pyiwfm.io.comment_metadata import CommentMetadata
+    from pyiwfm.io.ascii.comment_metadata import CommentMetadata
 
 
 @dataclass
@@ -296,7 +296,7 @@ class CommentAwareReader(BaseReader):
         Returns:
             CommentMetadata containing all extracted comments.
         """
-        from pyiwfm.io.comment_extractor import CommentExtractor
+        from pyiwfm.io.ascii.comment_extractor import CommentExtractor
 
         extractor = CommentExtractor()
         self._comment_metadata = extractor.extract(self.filepath)
@@ -356,7 +356,7 @@ class CommentAwareWriter(BaseWriter):
         Returns:
             CommentWriter instance for restoring comments.
         """
-        from pyiwfm.io.comment_writer import CommentWriter
+        from pyiwfm.io.ascii.comment_writer import CommentWriter
 
         return CommentWriter(
             self.comment_metadata,
@@ -375,4 +375,4 @@ class CommentAwareWriter(BaseWriter):
 
 
 # Type alias for import convenience
-from pyiwfm.io.comment_writer import CommentWriter  # noqa: E402
+from pyiwfm.io.ascii.comment_writer import CommentWriter  # noqa: E402
