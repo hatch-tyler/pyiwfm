@@ -42,6 +42,16 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.lakes``** is now a package (was a module). The
+  plural/singular mismatch between ``lakes.py`` (reader) and
+  ``lake_writer.py`` (writer) dissolves: both are now submodules of
+  ``pyiwfm/io/lakes/`` (``reader.py`` and ``writer.py``). Reader
+  imports (``from pyiwfm.io.lakes import LakeReader``) keep working
+  unchanged because the package re-exports those names. Writer imports
+  moved from ``pyiwfm.io.lake_writer`` to ``pyiwfm.io.lakes`` (or the
+  deeper ``pyiwfm.io.lakes.writer``); the v1.x flat path is **gone**
+  in v2.0. See ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.small_watershed``** is now a package (was a module),
   collapsing ``pyiwfm/io/small_watershed.py`` and
   ``pyiwfm/io/small_watershed_writer.py`` into one subpackage:

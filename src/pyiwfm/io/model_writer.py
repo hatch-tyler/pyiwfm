@@ -564,7 +564,7 @@ class CompleteModelWriter:
             return
 
         try:
-            from pyiwfm.io.lake_writer import LakeComponentWriter, LakeWriterConfig
+            from pyiwfm.io.lakes.writer import LakeComponentWriter, LakeWriterConfig
 
             lake_main_path = self.config.get_path("lake_main")
             lake_dir = lake_main_path.parent

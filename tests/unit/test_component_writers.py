@@ -20,7 +20,7 @@ from pyiwfm.core.stratigraphy import Stratigraphy
 
 # Import writers and configs
 from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig, write_gw_component
-from pyiwfm.io.lake_writer import LakeComponentWriter, LakeWriterConfig, write_lake_component
+from pyiwfm.io.lakes.writer import LakeComponentWriter, LakeWriterConfig, write_lake_component
 from pyiwfm.io.rootzone_writer import (
     RootZoneComponentWriter,
     RootZoneWriterConfig,

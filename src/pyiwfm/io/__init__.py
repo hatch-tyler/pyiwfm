@@ -178,11 +178,6 @@ from pyiwfm.io.gw_writer import (  # noqa: F401
     write_gw_component,
 )
 from pyiwfm.io.hydrograph_reader import IWFMHydrographReader  # noqa: F401
-from pyiwfm.io.lake_writer import (  # noqa: F401
-    LakeComponentWriter,
-    LakeWriterConfig,
-    write_lake_component,
-)
 from pyiwfm.io.lakes import (  # noqa: F401
     LakeFileConfig,
     LakeMainFileConfig,
@@ -196,6 +191,11 @@ from pyiwfm.io.lakes import (  # noqa: F401
     read_lake_elements,
     read_lake_main_file,
     write_lakes,
+)
+from pyiwfm.io.lakes.writer import (  # noqa: F401
+    LakeComponentWriter,
+    LakeWriterConfig,
+    write_lake_component,
 )
 from pyiwfm.io.mesh import (  # noqa: F401
     read_elements,

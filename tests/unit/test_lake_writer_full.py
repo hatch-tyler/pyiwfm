@@ -1,5 +1,5 @@
 """
-Comprehensive tests for pyiwfm.io.lake_writer module.
+Comprehensive tests for pyiwfm.io.lakes.writer module.
 
 Tests cover:
 - LakeWriterConfig dataclass and properties
@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pyiwfm.io.lake_writer import (
+from pyiwfm.io.lakes.writer import (
     LakeComponentWriter,
     LakeWriterConfig,
     write_lake_component,

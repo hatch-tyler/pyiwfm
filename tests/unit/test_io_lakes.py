@@ -22,12 +22,16 @@ from pyiwfm.components.lake import (
     LakeRating,
 )
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.io.ascii.reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (
+    strip_inline_comment as _strip_comment,
+)
 from pyiwfm.io.lakes import (
     LakeFileConfig,
     LakeReader,
     LakeWriter,
-    _is_comment_line,
-    _strip_comment,
     read_lake_definitions,
     read_lake_elements,
     write_lakes,

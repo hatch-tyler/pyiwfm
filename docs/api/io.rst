@@ -274,7 +274,7 @@ Lake Writer
 
 Writer for IWFM lake component files using Jinja2 templates.
 
-.. automodule:: pyiwfm.io.lake_writer
+.. automodule:: pyiwfm.io.lakes.writer
    :members:
    :undoc-members:
    :show-inheritance:

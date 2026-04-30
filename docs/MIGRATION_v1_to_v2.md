@@ -809,6 +809,52 @@ strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
 
+### `pyiwfm.io.lakes` (was a module, now a package) and `pyiwfm.io.lake_writer` (gone)
+
+The plural-vs-singular mismatch (`lakes.py` reader, `lake_writer.py`
+writer) is gone — both modules are now submodules of one
+`pyiwfm/io/lakes/` package:
+
+- `pyiwfm/io/lakes/reader.py` — was `lakes.py` (`LakeReader`,
+  `LakeWriter` (the legacy free-form writer), `LakeMainFileReader`,
+  `LakeMainFileConfig`, `LakeFileConfig`, `LakeOutflowRating`,
+  `LakeParamSpec`, `OutflowRatingPoint`, and the `read_lake_*` /
+  `write_lakes` functions).
+
+- `pyiwfm/io/lakes/writer.py` — was `lake_writer.py`
+  (`LakeComponentWriter`, `LakeWriterConfig`,
+  `write_lake_component`).
+
+The package `__init__.py` re-exports both submodules' public API.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.lakes import LakeReader, read_lake_main_file
+from pyiwfm.io.lake_writer import (
+    LakeComponentWriter,
+    write_lake_component,
+)
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.lakes import (
+    LakeReader,
+    read_lake_main_file,
+    LakeComponentWriter,
+    write_lake_component,
+)
+```
+
+The `from pyiwfm.io.lake_writer import …` path is **gone**; update to
+`from pyiwfm.io.lakes import …`.
+
+`mock.patch("pyiwfm.io.lake_writer.X")` strings need updating to
+`mock.patch("pyiwfm.io.lakes.X")` (re-exported on the package), not
+`pyiwfm.io.lakes.writer.X`.
+
 ### `pyiwfm.io.small_watershed` (was a module, now a package) and `pyiwfm.io.small_watershed_writer` (gone)
 
 `pyiwfm/io/small_watershed.py` and `pyiwfm/io/small_watershed_writer.py`
