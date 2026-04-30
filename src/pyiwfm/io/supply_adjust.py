@@ -23,7 +23,7 @@ from datetime import datetime
 from pathlib import Path
 
 from pyiwfm.io.ascii.reader import COMMENT_CHARS, strip_inline_comment
-from pyiwfm.io.timeseries_ascii import (
+from pyiwfm.io.timeseries.ascii import (
     format_iwfm_timestamp,
     parse_iwfm_timestamp,
 )

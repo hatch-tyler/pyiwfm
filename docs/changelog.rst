@@ -42,6 +42,20 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.timeseries``** is now a package (was a module),
+  collapsing five flat modules (``timeseries.py``,
+  ``timeseries_ascii.py``, ``timeseries_writer.py``,
+  ``timeseries_io.py``, ``timeseries_reader.py``) into one subpackage:
+  ``pyiwfm/io/timeseries/{reader,ascii,writer,lazy,compat}.py``. The
+  package ``__init__.py`` re-exports every public symbol. The four
+  v1.x sibling paths (``pyiwfm.io.timeseries_ascii``,
+  ``pyiwfm.io.timeseries_writer``, ``pyiwfm.io.timeseries_io``,
+  ``pyiwfm.io.timeseries_reader``) are **gone** in v2.0 — update
+  imports and ``mock.patch`` strings (e.g. the ``h5py.File`` patch
+  target moved from ``pyiwfm.io.timeseries.h5py.File`` to
+  ``pyiwfm.io.timeseries.reader.h5py.File``). See
+  ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.budget``** is now a package (was a module),
   collapsing the nine flat budget / zone-budget modules (``budget.py``,
   ``zbudget.py``, ``budget_checks.py``, ``budget_control.py``,
@@ -1060,7 +1074,7 @@ Added
 
 **Time Series ASCII I/O**
 
-- ``pyiwfm.io.timeseries_ascii``: ASCII time series reader/writer module
+- ``pyiwfm.io.timeseries.ascii``: ASCII time series reader/writer module
 - ``TimeSeriesWriter``: Write IWFM ASCII time series files with 21-char timestamp format
 - ``TimeSeriesReader``: Read IWFM ASCII time series files
 - ``format_iwfm_timestamp``: Format datetime to IWFM 21-character timestamp

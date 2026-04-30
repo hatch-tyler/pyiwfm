@@ -41,7 +41,7 @@ from pyiwfm.io.ascii.reader import (
 from pyiwfm.io.ascii.reader import (
     strip_inline_comment as _strip_comment,
 )
-from pyiwfm.io.timeseries_ascii import TimeSeriesWriter
+from pyiwfm.io.timeseries.ascii import TimeSeriesWriter
 
 
 @dataclass

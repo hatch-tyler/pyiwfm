@@ -660,7 +660,7 @@ def _make_text_ts_file(filepath: Path, n_cols: int = 3, n_times: int = 3) -> Non
     """Create a valid IWFM text time series file for testing."""
     from datetime import datetime, timedelta
 
-    from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+    from pyiwfm.io.timeseries.ascii import format_iwfm_timestamp
 
     with open(filepath, "w", encoding="utf-8") as f:
         f.write("C  Test time series file\n")

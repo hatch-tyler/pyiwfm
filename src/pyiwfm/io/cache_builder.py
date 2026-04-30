@@ -27,7 +27,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.io.timeseries_io import LazyNodalLoader
+    from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 
 logger = logging.getLogger(__name__)
 

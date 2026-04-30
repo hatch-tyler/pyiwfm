@@ -610,7 +610,7 @@ class TestV412DestinationEncoding:
 
 class TestTimeSeriesReaderWrapper:
     def test_import(self):
-        from pyiwfm.io.timeseries_reader import (
+        from pyiwfm.io.timeseries.compat import (
             IWFMTimeSeriesData,
             read_iwfm_timeseries,
         )
@@ -619,7 +619,7 @@ class TestTimeSeriesReaderWrapper:
         assert callable(read_iwfm_timeseries)
 
     def test_dataclass_defaults(self):
-        from pyiwfm.io.timeseries_reader import IWFMTimeSeriesData
+        from pyiwfm.io.timeseries.compat import IWFMTimeSeriesData
 
         ts = IWFMTimeSeriesData()
         assert ts.n_columns == 0
@@ -630,7 +630,7 @@ class TestTimeSeriesReaderWrapper:
 
     def test_read_simple_file(self, tmp_path):
         """Read a simple 2-column IWFM time-series file."""
-        from pyiwfm.io.timeseries_reader import read_iwfm_timeseries
+        from pyiwfm.io.timeseries.compat import read_iwfm_timeseries
 
         lines = [
             "C  Test time series",

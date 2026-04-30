@@ -35,7 +35,7 @@ def _format_iwfm_datetime(dt: datetime) -> str:
 
     Midnight (00:00) is represented as 24:00 of the previous day.
     """
-    from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+    from pyiwfm.io.timeseries.ascii import format_iwfm_timestamp
 
     return format_iwfm_timestamp(dt)
 
@@ -513,7 +513,7 @@ class SimulationReader:
 
         Hour ``24`` is treated as midnight of the next day.
         """
-        from pyiwfm.io.timeseries_ascii import parse_iwfm_timestamp
+        from pyiwfm.io.timeseries.ascii import parse_iwfm_timestamp
 
         return parse_iwfm_timestamp(value)
 
@@ -747,7 +747,7 @@ def _parse_iwfm_datetime(value: str) -> datetime:
 
     Hour ``24`` is treated as midnight of the next day.
     """
-    from pyiwfm.io.timeseries_ascii import parse_iwfm_timestamp
+    from pyiwfm.io.timeseries.ascii import parse_iwfm_timestamp
 
     return parse_iwfm_timestamp(value)
 

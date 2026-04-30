@@ -69,8 +69,8 @@ FastAPI application creation, CRS configuration, and static file serving.
 Head Data Loader
 ~~~~~~~~~~~~~~~~
 
-Moved to :mod:`pyiwfm.io.timeseries_io` (class
-:class:`~pyiwfm.io.timeseries_io.LazyNodalLoader`). See :doc:`io` for full docs.
+Moved to :mod:`pyiwfm.io.timeseries.lazy` (class
+:class:`~pyiwfm.io.timeseries.lazy.LazyNodalLoader`). See :doc:`io` for full docs.
 
 Hydrograph Reader
 ~~~~~~~~~~~~~~~~~

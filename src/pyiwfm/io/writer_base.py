@@ -337,7 +337,7 @@ class TimeSeriesWriter:
             f.write("\n")
 
             # Write data rows
-            from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+            from pyiwfm.io.timeseries.ascii import format_iwfm_timestamp
 
             for i, dt in enumerate(dates):
                 ts_str = format_iwfm_timestamp(dt)
@@ -368,7 +368,7 @@ class TimeSeriesWriter:
             f.write(f"C  {'DATE/TIME':<21} {'VALUE':>14}\n")
 
             # Data
-            from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+            from pyiwfm.io.timeseries.ascii import format_iwfm_timestamp
 
             for dt, val in zip(ts_spec.dates, ts_spec.values, strict=False):
                 ts_str = format_iwfm_timestamp(dt)

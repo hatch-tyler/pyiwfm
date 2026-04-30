@@ -511,7 +511,7 @@ class TestStreamWriteInflowTs:
         mock_ts_writer.write.return_value = expected_path
 
         with patch(
-            "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
+            "pyiwfm.io.timeseries.writer.IWFMTimeSeriesDataWriter",
             return_value=mock_ts_writer,
         ):
             path = writer.write_stream_inflow_ts()
@@ -895,7 +895,7 @@ class TestStreamDiversionDataTs:
         mock_ts_writer.write.return_value = expected_path
 
         with patch(
-            "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
+            "pyiwfm.io.timeseries.writer.IWFMTimeSeriesDataWriter",
             return_value=mock_ts_writer,
         ):
             path = writer.write_diversion_data_ts()
@@ -915,7 +915,7 @@ class TestStreamDiversionDataTs:
         mock_ts_writer.write.return_value = expected_path
 
         with patch(
-            "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
+            "pyiwfm.io.timeseries.writer.IWFMTimeSeriesDataWriter",
             return_value=mock_ts_writer,
         ):
             writer.write_surface_area_ts()

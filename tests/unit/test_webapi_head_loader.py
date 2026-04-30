@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 import pytest
 
-from pyiwfm.io.timeseries_io import LazyNodalLoader
+from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 
 # ---------------------------------------------------------------------------
 # Helpers -- real HDF5 fixtures

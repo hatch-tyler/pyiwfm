@@ -5,7 +5,7 @@ Provides a simple ``read_iwfm_timeseries()`` function that returns
 structured data from any IWFM ASCII time-series file (precipitation,
 evapotranspiration, return flow fractions, crop coefficients, etc.).
 
-Delegates to :class:`~pyiwfm.io.timeseries_ascii.TimeSeriesReader`.
+Delegates to :class:`~pyiwfm.io.timeseries.ascii.TimeSeriesReader`.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ def read_iwfm_timeseries(filepath: Path | str) -> IWFMTimeSeriesData:
     Returns:
         Structured time-series data with dates, values, and metadata.
     """
-    from pyiwfm.io.timeseries_ascii import TimeSeriesReader
+    from pyiwfm.io.timeseries.ascii import TimeSeriesReader
 
     reader = TimeSeriesReader()
     times, values, config = reader.read(filepath)

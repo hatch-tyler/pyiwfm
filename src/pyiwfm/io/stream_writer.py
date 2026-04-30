@@ -972,7 +972,7 @@ C-------------------------------------------------------------------------------
         Path
             Path to written file
         """
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_stream_inflow_ts_config,
         )
@@ -1012,7 +1012,7 @@ C-------------------------------------------------------------------------------
         Path
             Path to written file
         """
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_diversion_ts_config,
         )
@@ -1050,7 +1050,7 @@ C-------------------------------------------------------------------------------
         Path
             Path to written file
         """
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_stream_surface_area_ts_config,
         )

@@ -636,11 +636,11 @@ class TestTimeSeriesMethods:
 
         with (
             patch(
-                f"pyiwfm.io.timeseries_writer.{config_maker_name}",
+                f"pyiwfm.io.timeseries.writer.{config_maker_name}",
                 return_value=mock_ts_config,
             ) as mock_maker,
             patch(
-                "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
+                "pyiwfm.io.timeseries.writer.IWFMTimeSeriesDataWriter",
                 return_value=mock_ts_writer_instance,
             ) as MockTSWriter,
         ):
@@ -679,11 +679,11 @@ class TestTimeSeriesMethods:
 
         with (
             patch(
-                f"pyiwfm.io.timeseries_writer.{config_maker_name}",
+                f"pyiwfm.io.timeseries.writer.{config_maker_name}",
                 return_value=mock_ts_config,
             ) as mock_maker,
             patch(
-                "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
+                "pyiwfm.io.timeseries.writer.IWFMTimeSeriesDataWriter",
                 return_value=mock_ts_writer_instance,
             ),
         ):
@@ -702,11 +702,11 @@ class TestTimeSeriesMethods:
 
         with (
             patch(
-                "pyiwfm.io.timeseries_writer.make_crop_coeff_ts_config",
+                "pyiwfm.io.timeseries.writer.make_crop_coeff_ts_config",
                 return_value=mock_ts_config,
             ) as mock_maker,
             patch(
-                "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
+                "pyiwfm.io.timeseries.writer.IWFMTimeSeriesDataWriter",
                 return_value=mock_ts_writer_instance,
             ),
         ):
@@ -739,35 +739,35 @@ class TestTimeSeriesMethods:
         # Patch all config makers to avoid import issues
         with (
             patch(
-                "pyiwfm.io.timeseries_writer.make_precip_ts_config",
+                "pyiwfm.io.timeseries.writer.make_precip_ts_config",
                 return_value=mock_ts_config,
             ),
             patch(
-                "pyiwfm.io.timeseries_writer.make_et_ts_config",
+                "pyiwfm.io.timeseries.writer.make_et_ts_config",
                 return_value=mock_ts_config,
             ),
             patch(
-                "pyiwfm.io.timeseries_writer.make_crop_coeff_ts_config",
+                "pyiwfm.io.timeseries.writer.make_crop_coeff_ts_config",
                 return_value=mock_ts_config,
             ),
             patch(
-                "pyiwfm.io.timeseries_writer.make_return_flow_ts_config",
+                "pyiwfm.io.timeseries.writer.make_return_flow_ts_config",
                 return_value=mock_ts_config,
             ),
             patch(
-                "pyiwfm.io.timeseries_writer.make_reuse_ts_config",
+                "pyiwfm.io.timeseries.writer.make_reuse_ts_config",
                 return_value=mock_ts_config,
             ),
             patch(
-                "pyiwfm.io.timeseries_writer.make_irig_period_ts_config",
+                "pyiwfm.io.timeseries.writer.make_irig_period_ts_config",
                 return_value=mock_ts_config,
             ),
             patch(
-                "pyiwfm.io.timeseries_writer.make_ag_water_demand_ts_config",
+                "pyiwfm.io.timeseries.writer.make_ag_water_demand_ts_config",
                 return_value=mock_ts_config,
             ),
             patch(
-                "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
+                "pyiwfm.io.timeseries.writer.IWFMTimeSeriesDataWriter",
                 return_value=mock_ts_writer_instance,
             ),
         ):

@@ -1,7 +1,7 @@
 """Unit tests for the IWFM GWALLOUTFL text-to-HDF5 converter.
 
 In v2.0 the converter was folded into :class:`TimeSeriesCache` (in
-``pyiwfm.io.timeseries_io``); this module's tests cover the public
+``pyiwfm.io.timeseries.lazy``); this module's tests cover the public
 ``TimeSeriesCache.from_iwfm_headall_text`` entrypoint plus the small
 internal text-parsing helpers it relies on.
 """
@@ -17,7 +17,7 @@ import pytest
 # Skip all tests if h5py is not available
 h5py = pytest.importorskip("h5py")
 
-from pyiwfm.io.timeseries_io import (  # noqa: E402
+from pyiwfm.io.timeseries.lazy import (  # noqa: E402
     _HEADALL_COL_WIDTH,
     _HEADALL_TIME_WIDTH,
     TimeSeriesCache,

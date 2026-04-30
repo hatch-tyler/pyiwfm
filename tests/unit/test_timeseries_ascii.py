@@ -21,7 +21,7 @@ import pytest
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.timeseries import TimeSeries, TimeSeriesCollection
-from pyiwfm.io.timeseries_ascii import (
+from pyiwfm.io.timeseries.ascii import (
     IWFM_TIMESTAMP_FORMAT,
     IWFM_TIMESTAMP_LENGTH,
     TimeSeriesFileConfig,

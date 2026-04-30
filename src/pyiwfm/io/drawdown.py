@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from pyiwfm.core.mesh import AppGrid
-    from pyiwfm.io.timeseries_io import LazyNodalLoader
+    from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 
 logger = logging.getLogger(__name__)
 

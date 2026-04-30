@@ -103,13 +103,13 @@ Within each section, every individual API change uses this template:
 ## 1. Head/hydrograph cluster consolidation
 
 Consolidates 1,402 lines across five near-duplicate modules into two:
-``pyiwfm.io.timeseries_io`` (the new lazy-loader + cache namespace)
+``pyiwfm.io.timeseries.lazy`` (the new lazy-loader + cache namespace)
 and ``pyiwfm.io.hydrograph_reader`` (kept as the eager text reader).
 The five v1.x modules are **deleted in v2.0** — there are no
 deprecation shims. Entries below document the canonical replacement
 for each public name; update your imports accordingly.
 
-### `pyiwfm.io.head_loader.LazyHeadDataLoader` → `pyiwfm.io.timeseries_io.LazyNodalLoader`
+### `pyiwfm.io.head_loader.LazyHeadDataLoader` → `pyiwfm.io.timeseries.lazy.LazyNodalLoader`
 
 **Status:** _hard break_ — module deleted, class renamed. No deprecation
 shim (v2.0 is the breaking-release window — see the design notes in PR 1
@@ -129,7 +129,7 @@ heads_at_t0 = loader[loader.times[0]]
 
 **v2.x:**
 ```python
-from pyiwfm.io.timeseries_io import LazyNodalLoader
+from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 loader = LazyNodalLoader("Results/HeadAll.hdf", n_layers=4)
 heads_at_t0 = loader[loader.times[0]]
 ```
@@ -139,7 +139,7 @@ The constructor signature, `__getitem__`, `times`, `n_frames`,
 `get_composite_subsidence`, `get_layer_range`, `to_dict`, and
 `clear_cache` are all preserved verbatim.
 
-### `pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader` → `pyiwfm.io.timeseries_io.LazyTabularLoader`
+### `pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader` → `pyiwfm.io.timeseries.lazy.LazyTabularLoader`
 
 **Status:** _hard break_ — module deleted, class renamed.
 
@@ -155,7 +155,7 @@ times, vals = loader.get_time_series(col_idx=0)
 
 **v2.x:**
 ```python
-from pyiwfm.io.timeseries_io import LazyTabularLoader
+from pyiwfm.io.timeseries.lazy import LazyTabularLoader
 loader = LazyTabularLoader("hydrograph_cache.hdf")
 times, vals = loader.get_time_series(col_idx=0)
 ```
@@ -164,7 +164,7 @@ All public methods (`get_row`, `get_time_series`,
 `find_column_by_node_id`, plus `n_columns`, `n_timesteps`, `times`,
 `hydrograph_ids`, `layers`, `node_ids`) are preserved verbatim.
 
-### `pyiwfm.io.head_all_converter.convert_headall_to_hdf` → `pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_headall_text`
+### `pyiwfm.io.head_all_converter.convert_headall_to_hdf` → `pyiwfm.io.timeseries.lazy.TimeSeriesCache.from_iwfm_headall_text`
 
 **Status:** _hard break_ — module deleted, function moved to a static
 method on `TimeSeriesCache`.
@@ -177,7 +177,7 @@ convert_headall_to_hdf("GWALLOUTFL.out", "HeadAll.hdf", n_layers=4)
 
 **v2.x:**
 ```python
-from pyiwfm.io.timeseries_io import TimeSeriesCache
+from pyiwfm.io.timeseries.lazy import TimeSeriesCache
 TimeSeriesCache.from_iwfm_headall_text("GWALLOUTFL.out", "HeadAll.hdf", n_layers=4)
 ```
 
@@ -185,7 +185,7 @@ The argument order and semantics are unchanged. The CLI entrypoint
 (`python -m pyiwfm.io.head_all_converter ...`) was removed; if you used
 it, write a small driver script that calls the static method directly.
 
-### `pyiwfm.io.hydrograph_converter.convert_hydrograph_to_hdf` → `pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_hydrograph_text`
+### `pyiwfm.io.hydrograph_converter.convert_hydrograph_to_hdf` → `pyiwfm.io.timeseries.lazy.TimeSeriesCache.from_iwfm_hydrograph_text`
 
 **Status:** _hard break_ — module deleted, function moved to a static
 method on `TimeSeriesCache`.
@@ -198,7 +198,7 @@ convert_hydrograph_to_hdf("GW_Hydrograph.out", "hydrograph_cache.hdf")
 
 **v2.x:**
 ```python
-from pyiwfm.io.timeseries_io import TimeSeriesCache
+from pyiwfm.io.timeseries.lazy import TimeSeriesCache
 TimeSeriesCache.from_iwfm_hydrograph_text("GW_Hydrograph.out", "hydrograph_cache.hdf")
 ```
 
@@ -809,6 +809,54 @@ strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
 
+### `pyiwfm.io.timeseries` (was a module, now a package) and the `timeseries_*` cluster (gone)
+
+The five flat time-series modules are now a single subpackage
+`pyiwfm/io/timeseries/`:
+
+| v1.x flat path                | v2.x submodule                       |
+|-------------------------------|--------------------------------------|
+| `pyiwfm.io.timeseries`        | `pyiwfm.io.timeseries.reader`        |
+| `pyiwfm.io.timeseries_ascii`  | `pyiwfm.io.timeseries.ascii`         |
+| `pyiwfm.io.timeseries_writer` | `pyiwfm.io.timeseries.writer`        |
+| `pyiwfm.io.timeseries_io`     | `pyiwfm.io.timeseries.lazy`          |
+| `pyiwfm.io.timeseries_reader` | `pyiwfm.io.timeseries.compat`        |
+
+The package `__init__.py` re-exports every public symbol — including
+the format adapters (`AsciiTimeSeriesAdapter`,
+`DssTimeSeriesAdapter`, `Hdf5TimeSeriesAdapter`,
+`BaseTimeSeriesReader`) that the v1.x flat `timeseries.py` exposed.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.timeseries import UnifiedTimeSeriesReader
+from pyiwfm.io.timeseries_ascii import TimeSeriesReader, parse_iwfm_datetime
+from pyiwfm.io.timeseries_writer import IWFMTimeSeriesDataWriter
+from pyiwfm.io.timeseries_io import LazyNodalLoader, TimeSeriesCache
+from pyiwfm.io.timeseries_reader import IWFMTimeSeriesData
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.timeseries import (
+    UnifiedTimeSeriesReader,
+    TimeSeriesReader,
+    parse_iwfm_datetime,
+    IWFMTimeSeriesDataWriter,
+    LazyNodalLoader,
+    TimeSeriesCache,
+    IWFMTimeSeriesData,
+)
+```
+
+The four v1.x sibling paths are **gone**. `mock.patch` strings need
+updating: e.g. `mock.patch("pyiwfm.io.timeseries.h5py.File")` is now
+`mock.patch("pyiwfm.io.timeseries.reader.h5py.File")` — the consumer
+of `h5py` is the `reader.py` submodule (was `timeseries.py`).
+For ASCII-adapter patches use `pyiwfm.io.timeseries.ascii.X`.
+
 ### `pyiwfm.io.budget` (was a module, now a package) and the `budget_*`/`zbudget_*` cluster (gone)
 
 The nine flat budget modules (`budget.py`, `zbudget.py`,
@@ -1293,8 +1341,8 @@ version from `<2` to `>=2,<3`:
       [§ 4](#4-move-webapislicingpy-and-webapipropertiespy-to-io)
 - [ ] For each `ImportError`, look up the new path in the corresponding
       section below. The renames are mechanical:
-      - `pyiwfm.io.head_loader.LazyHeadDataLoader` → `pyiwfm.io.timeseries_io.LazyNodalLoader`
-      - `pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader` → `pyiwfm.io.timeseries_io.LazyTabularLoader`
+      - `pyiwfm.io.head_loader.LazyHeadDataLoader` → `pyiwfm.io.timeseries.lazy.LazyNodalLoader`
+      - `pyiwfm.io.hydrograph_loader.LazyHydrographDataLoader` → `pyiwfm.io.timeseries.lazy.LazyTabularLoader`
       - `convert_headall_to_hdf(...)` → `TimeSeriesCache.from_iwfm_headall_text(...)`
       - `convert_hydrograph_to_hdf(...)` → `TimeSeriesCache.from_iwfm_hydrograph_text(...)`
       - `pyiwfm.visualization.webapi.{slicing,properties}` → `pyiwfm.io.{slicing,properties}`

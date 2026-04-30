@@ -469,7 +469,7 @@ class RootZoneComponentWriter(TemplateWriter):
         data: NDArray[np.float64] | None = None,
     ) -> Path:
         """Write precipitation time series data file."""
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_precip_ts_config,
         )
@@ -486,7 +486,7 @@ class RootZoneComponentWriter(TemplateWriter):
         data: NDArray[np.float64] | None = None,
     ) -> Path:
         """Write evapotranspiration time series data file."""
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_et_ts_config,
         )
@@ -503,7 +503,7 @@ class RootZoneComponentWriter(TemplateWriter):
         data: NDArray[np.float64] | None = None,
     ) -> Path:
         """Write crop coefficient time series data file."""
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_crop_coeff_ts_config,
         )
@@ -520,7 +520,7 @@ class RootZoneComponentWriter(TemplateWriter):
         data: NDArray[np.float64] | None = None,
     ) -> Path:
         """Write return flow fraction time series data file."""
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_return_flow_ts_config,
         )
@@ -537,7 +537,7 @@ class RootZoneComponentWriter(TemplateWriter):
         data: NDArray[np.float64] | None = None,
     ) -> Path:
         """Write reuse fraction time series data file."""
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_reuse_ts_config,
         )
@@ -554,7 +554,7 @@ class RootZoneComponentWriter(TemplateWriter):
         data: NDArray[np.float64] | None = None,
     ) -> Path:
         """Write irrigation period time series data file."""
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_irig_period_ts_config,
         )
@@ -571,7 +571,7 @@ class RootZoneComponentWriter(TemplateWriter):
         data: NDArray[np.float64] | None = None,
     ) -> Path:
         """Write agricultural water demand time series data file."""
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_ag_water_demand_ts_config,
         )

@@ -413,7 +413,7 @@ Time Series ASCII Module
 
 The time series ASCII module provides readers and writers for IWFM ASCII time series files.
 
-.. automodule:: pyiwfm.io.timeseries_ascii
+.. automodule:: pyiwfm.io.timeseries.ascii
    :members:
    :undoc-members:
    :show-inheritance:
@@ -433,7 +433,7 @@ Time Series Writer
 
 Writer for IWFM time series data files.
 
-.. automodule:: pyiwfm.io.timeseries_writer
+.. automodule:: pyiwfm.io.timeseries.writer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -674,7 +674,7 @@ the v1.x ``head_loader`` / ``head_all_converter`` / ``hydrograph_loader`` /
 ``hydrograph_converter`` modules into this single namespace; see
 ``docs/MIGRATION_v1_to_v2.md`` for the rename map.
 
-.. automodule:: pyiwfm.io.timeseries_io
+.. automodule:: pyiwfm.io.timeseries.lazy
    :members:
    :undoc-members:
    :show-inheritance:
@@ -683,9 +683,9 @@ Hydrograph Text Reader
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Parser for IWFM ``.out`` text hydrograph files. Eager-load semantics
-make this one separate from the lazy :class:`~pyiwfm.io.timeseries_io.LazyTabularLoader`
+make this one separate from the lazy :class:`~pyiwfm.io.timeseries.lazy.LazyTabularLoader`
 (which reads the HDF5 cache produced by
-:meth:`~pyiwfm.io.timeseries_io.TimeSeriesCache.from_iwfm_hydrograph_text`).
+:meth:`~pyiwfm.io.timeseries.lazy.TimeSeriesCache.from_iwfm_hydrograph_text`).
 
 .. automodule:: pyiwfm.io.hydrograph_reader
    :members:

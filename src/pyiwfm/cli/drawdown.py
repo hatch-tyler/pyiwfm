@@ -29,7 +29,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
     from pyiwfm.io.drawdown import DrawdownComputer, DrawdownSnapshot
-    from pyiwfm.io.timeseries_io import LazyNodalLoader
+    from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +227,7 @@ def _open_heads_loader(model: IWFMModel, heads_hdf_override: str | None) -> Lazy
     Raises :class:`SystemExit` with a remediation hint if neither is set
     or the file doesn't exist.
     """
-    from pyiwfm.io.timeseries_io import LazyNodalLoader
+    from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 
     if heads_hdf_override:
         path = Path(heads_hdf_override)

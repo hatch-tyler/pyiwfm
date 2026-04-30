@@ -161,7 +161,7 @@ class AsciiTimeSeriesAdapter(BaseTimeSeriesReader):
         **kwargs: Any,
     ) -> tuple[NDArray[np.datetime64], NDArray[np.float64], TimeSeriesMetadata]:
         """Read ASCII time series file."""
-        from pyiwfm.io.timeseries_ascii import TimeSeriesReader
+        from pyiwfm.io.timeseries.ascii import TimeSeriesReader
 
         reader = TimeSeriesReader()
         times, values, config = reader.read(filepath)
@@ -193,7 +193,7 @@ class AsciiTimeSeriesAdapter(BaseTimeSeriesReader):
         first_time = None
         last_time = None
 
-        from pyiwfm.io.timeseries_ascii import (
+        from pyiwfm.io.timeseries.ascii import (
             IWFM_TIMESTAMP_LENGTH,
             _is_comment_line,
             parse_iwfm_timestamp,

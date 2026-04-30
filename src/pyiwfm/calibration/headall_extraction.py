@@ -195,7 +195,7 @@ class HeadAllExtractor:
         -------
         ExtractionResult
         """
-        from pyiwfm.io.timeseries_io import LazyNodalLoader
+        from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 
         loader = LazyNodalLoader(self._headall_path)
         all_times = loader.times

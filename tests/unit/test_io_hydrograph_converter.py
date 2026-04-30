@@ -15,7 +15,7 @@ h5py = pytest.importorskip("h5py")
 
 import numpy as np  # noqa: E402
 
-from pyiwfm.io.timeseries_io import TimeSeriesCache, _parse_hydrograph_header  # noqa: E402
+from pyiwfm.io.timeseries.lazy import TimeSeriesCache, _parse_hydrograph_header  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # _parse_hydrograph_header — shared helper used by the converter

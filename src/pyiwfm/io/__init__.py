@@ -426,7 +426,7 @@ from pyiwfm.io.supply_adjust import (  # noqa: F401
     read_supply_adjustment,
     write_supply_adjustment,
 )
-from pyiwfm.io.timeseries_ascii import (  # noqa: F401
+from pyiwfm.io.timeseries.ascii import (  # noqa: F401
     TimeSeriesFileConfig,
     TimeSeriesReader,
     TimeSeriesWriter,
@@ -437,7 +437,7 @@ from pyiwfm.io.timeseries_ascii import (  # noqa: F401
     read_timeseries,
     write_timeseries,
 )
-from pyiwfm.io.timeseries_writer import (  # noqa: F401
+from pyiwfm.io.timeseries.writer import (  # noqa: F401
     DSSPathItem,
     IWFMTimeSeriesDataWriter,
     TimeSeriesDataConfig,
@@ -505,7 +505,7 @@ del _types
 # multi-second cold-loads of unrelated heavy dependencies.
 #
 # v2.0: ``head_all_converter`` and ``hydrograph_converter`` were merged into
-# :class:`TimeSeriesCache` (see :mod:`pyiwfm.io.timeseries_io`). Use
+# :class:`TimeSeriesCache` (see :mod:`pyiwfm.io.timeseries.lazy`). Use
 # ``TimeSeriesCache.from_iwfm_headall_text(...)`` and
 # ``TimeSeriesCache.from_iwfm_hydrograph_text(...)`` instead. The old loader
 # classes (``LazyHeadDataLoader`` / ``LazyHydrographDataLoader``) were renamed
@@ -551,9 +551,9 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "get_timeseries_metadata": ("pyiwfm.io.timeseries", "get_timeseries_metadata"),
     "read_timeseries_unified": ("pyiwfm.io.timeseries", "read_timeseries_unified"),
     # timeseries_io (h5py + pandas)
-    "LazyNodalLoader": ("pyiwfm.io.timeseries_io", "LazyNodalLoader"),
-    "LazyTabularLoader": ("pyiwfm.io.timeseries_io", "LazyTabularLoader"),
-    "TimeSeriesCache": ("pyiwfm.io.timeseries_io", "TimeSeriesCache"),
+    "LazyNodalLoader": ("pyiwfm.io.timeseries.lazy", "LazyNodalLoader"),
+    "LazyTabularLoader": ("pyiwfm.io.timeseries.lazy", "LazyTabularLoader"),
+    "TimeSeriesCache": ("pyiwfm.io.timeseries.lazy", "TimeSeriesCache"),
     # zbudget (h5py + pandas)
     "ZBUDGET_DATA_TYPES": ("pyiwfm.io.budget.zone_reader", "ZBUDGET_DATA_TYPES"),
     "ZBudgetHeader": ("pyiwfm.io.budget.zone_reader", "ZBudgetHeader"),

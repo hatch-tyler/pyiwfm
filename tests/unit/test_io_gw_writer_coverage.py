@@ -908,7 +908,7 @@ class TestGWComponentWriterTsPumping:
         config = GWWriterConfig(output_dir=tmp_path)
 
         with patch(
-            "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
+            "pyiwfm.io.timeseries.writer.IWFMTimeSeriesDataWriter",
             return_value=mock_ts_writer,
         ):
             writer = GWComponentWriter(model, config, template_engine=mock_engine)

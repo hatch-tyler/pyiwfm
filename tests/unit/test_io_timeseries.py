@@ -165,7 +165,7 @@ class TestAsciiTimeSeriesAdapter:
         fake_times = [datetime(1990, 2, 1), datetime(1990, 3, 1)]
         fake_values = np.array([[100.0, 200.0, 300.0], [110.0, 210.0, 310.0]])
 
-        with patch("pyiwfm.io.timeseries_ascii.TimeSeriesReader") as MockReader:
+        with patch("pyiwfm.io.timeseries.ascii.TimeSeriesReader") as MockReader:
             mock_instance = MockReader.return_value
             mock_instance.read.return_value = (fake_times, fake_values, mock_config)
 
@@ -187,7 +187,7 @@ class TestAsciiTimeSeriesAdapter:
         fake_times = [datetime(2000, 6, 15)]
         fake_values = np.array([[42.0]])
 
-        with patch("pyiwfm.io.timeseries_ascii.TimeSeriesReader") as MockReader:
+        with patch("pyiwfm.io.timeseries.ascii.TimeSeriesReader") as MockReader:
             mock_instance = MockReader.return_value
             mock_instance.read.return_value = (fake_times, fake_values, mock_config)
 
@@ -203,7 +203,7 @@ class TestAsciiTimeSeriesAdapter:
         mock_config.column_ids = [1, 2]
         mock_config.factor = 1.0
 
-        with patch("pyiwfm.io.timeseries_ascii.TimeSeriesReader") as MockReader:
+        with patch("pyiwfm.io.timeseries.ascii.TimeSeriesReader") as MockReader:
             mock_instance = MockReader.return_value
             mock_instance.read.return_value = ([], np.array([]), mock_config)
 
@@ -220,7 +220,7 @@ class TestAsciiTimeSeriesAdapter:
         mock_config.column_ids = [1]
         mock_config.factor = 2.0
 
-        with patch("pyiwfm.io.timeseries_ascii.TimeSeriesReader") as MockReader:
+        with patch("pyiwfm.io.timeseries.ascii.TimeSeriesReader") as MockReader:
             mock_instance = MockReader.return_value
             mock_instance.read.return_value = (
                 [datetime(2020, 1, 1)],
@@ -416,7 +416,7 @@ class TestHdf5TimeSeriesAdapter:
         mock_file.__getitem__ = getitem
 
         adapter = Hdf5TimeSeriesAdapter()
-        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
+        with patch("pyiwfm.io.timeseries.reader.h5py.File", return_value=mock_file):
             times, values, metadata = adapter.read("test.h5")
 
         assert metadata.file_type == TimeSeriesFileType.HDF5
@@ -444,7 +444,7 @@ class TestHdf5TimeSeriesAdapter:
         mock_file.__getitem__ = getitem
 
         adapter = Hdf5TimeSeriesAdapter()
-        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
+        with patch("pyiwfm.io.timeseries.reader.h5py.File", return_value=mock_file):
             times, values, metadata = adapter.read("test.h5")
 
         assert len(times) == 0
@@ -470,7 +470,7 @@ class TestHdf5TimeSeriesAdapter:
         mock_file.__getitem__ = getitem
 
         adapter = Hdf5TimeSeriesAdapter()
-        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
+        with patch("pyiwfm.io.timeseries.reader.h5py.File", return_value=mock_file):
             times, values, metadata = adapter.read("test.h5")
 
         assert len(values) == 0
@@ -499,7 +499,7 @@ class TestHdf5TimeSeriesAdapter:
         mock_file.__getitem__ = getitem
 
         adapter = Hdf5TimeSeriesAdapter()
-        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
+        with patch("pyiwfm.io.timeseries.reader.h5py.File", return_value=mock_file):
             meta = adapter.read_metadata("test.h5")
 
         assert meta.file_type == TimeSeriesFileType.HDF5
@@ -513,7 +513,7 @@ class TestHdf5TimeSeriesAdapter:
         mock_file.__contains__ = lambda s, key: False
 
         adapter = Hdf5TimeSeriesAdapter()
-        with patch("pyiwfm.io.timeseries.h5py.File", return_value=mock_file):
+        with patch("pyiwfm.io.timeseries.reader.h5py.File", return_value=mock_file):
             meta = adapter.read_metadata("test.h5")
 
         assert meta.n_columns == 0

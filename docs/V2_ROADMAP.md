@@ -395,7 +395,7 @@ loader = LazyHeadDataLoader("heads.hdf", n_layers=4)
 
 **v2.x (hard rename — no shim):**
 ```python
-from pyiwfm.io.timeseries_io import LazyNodalLoader
+from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 loader = LazyNodalLoader("heads.hdf", n_layers=4)
 ```
 
@@ -474,9 +474,9 @@ Removed (with deprecation shims through v2.x; hard removal in v3.0)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - ``pyiwfm.io.head_loader.LazyHeadDataLoader`` — replaced by
-  ``pyiwfm.io.timeseries_io.LazyTimeSeriesLoader``.
+  ``pyiwfm.io.timeseries.lazy.LazyTimeSeriesLoader``.
 - ``pyiwfm.io.head_all_converter`` (entire module) — replaced by
-  ``pyiwfm.io.timeseries_io.TimeSeriesCache``.
+  ``pyiwfm.io.timeseries.lazy.TimeSeriesCache``.
 - ...
 
 Changed
@@ -487,7 +487,7 @@ Changed
 Added
 ~~~~~
 
-- ``pyiwfm.io.timeseries_io`` — unified abstraction over all IWFM
+- ``pyiwfm.io.timeseries.lazy`` — unified abstraction over all IWFM
   time-series outputs.
 ```
 

@@ -45,7 +45,7 @@ from pyiwfm.io.ascii.reader import (
 from pyiwfm.io.ascii.reader import (
     version_ge as stream_version_ge,
 )
-from pyiwfm.io.timeseries_ascii import TimeSeriesWriter
+from pyiwfm.io.timeseries.ascii import TimeSeriesWriter
 
 # =============================================================================
 # New dataclasses for parsed stream sections

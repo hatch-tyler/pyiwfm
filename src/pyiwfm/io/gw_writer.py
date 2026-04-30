@@ -1080,7 +1080,7 @@ class GWComponentWriter(TemplateWriter):
         Path
             Path to written file
         """
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_pumping_ts_config,
         )

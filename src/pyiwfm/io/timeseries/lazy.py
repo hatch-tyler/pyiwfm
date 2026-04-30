@@ -695,7 +695,7 @@ class TimeSeriesCache:
         """
         text_path = Path(text_file)
         hdf_path = Path(hdf_file) if hdf_file is not None else text_path.with_suffix(".hdf")
-        from pyiwfm.io.timeseries_ascii import parse_iwfm_timestamp
+        from pyiwfm.io.timeseries.ascii import parse_iwfm_timestamp
 
         logger.info("Converting %s -> %s (n_layers=%d)", text_path, hdf_path, n_layers)
 
@@ -819,7 +819,7 @@ class TimeSeriesCache:
             if hdf_file is not None
             else text_path.with_suffix(".hydrograph_cache.hdf")
         )
-        from pyiwfm.io.timeseries_ascii import parse_iwfm_timestamp
+        from pyiwfm.io.timeseries.ascii import parse_iwfm_timestamp
 
         logger.info("Converting hydrograph %s -> %s", text_path, hdf_path)
 

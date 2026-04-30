@@ -31,7 +31,7 @@ Step 1: Load Head Data
 
 .. code-block:: python
 
-    from pyiwfm.io.timeseries_io import LazyNodalLoader
+    from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 
     loader = LazyNodalLoader("Results/GW_HeadAll.hdf")
     print(f"Timesteps: {loader.n_timesteps}")

@@ -297,7 +297,7 @@ class LakeComponentWriter(TemplateWriter):
         Path
             Path to written file
         """
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.writer import (
             IWFMTimeSeriesDataWriter,
             make_max_lake_elev_ts_config,
         )

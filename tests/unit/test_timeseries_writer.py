@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.timeseries_writer import (
+from pyiwfm.io.timeseries.writer import (
     DSSPathItem,
     IWFMTimeSeriesDataWriter,
     TimeSeriesDataConfig,

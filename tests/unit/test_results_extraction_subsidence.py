@@ -20,7 +20,7 @@ from numpy.testing import assert_allclose
 h5py = pytest.importorskip("h5py")
 
 from pyiwfm.calibration.results_extraction import ExtractionSpec  # noqa: E402, I001
-from pyiwfm.io.timeseries_io import LazyNodalLoader  # noqa: E402, I001
+from pyiwfm.io.timeseries.lazy import LazyNodalLoader  # noqa: E402, I001
 
 
 # ---------------------------------------------------------------------------
@@ -186,7 +186,7 @@ class TestLoaderNLayers:
         )
         import logging
 
-        with caplog.at_level(logging.WARNING, logger="pyiwfm.io.timeseries_io"):
+        with caplog.at_level(logging.WARNING, logger="pyiwfm.io.timeseries.lazy"):
             loader = LazyNodalLoader(fp)
         assert loader.n_layers == 1  # fallback
         assert loader.n_nodes == 18  # 6*3 columns / 1 layer

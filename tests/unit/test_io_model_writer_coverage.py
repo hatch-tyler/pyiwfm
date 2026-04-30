@@ -257,7 +257,7 @@ class TestTimeSeriesCopierConvertTextToDss:
 
         with (
             patch(
-                "pyiwfm.io.timeseries_ascii.TimeSeriesReader",
+                "pyiwfm.io.timeseries.ascii.TimeSeriesReader",
                 return_value=mock_reader_instance,
             ),
             patch(
@@ -272,7 +272,7 @@ class TestTimeSeriesCopierConvertTextToDss:
                 return_value="1MON",
             ),
             patch(
-                "pyiwfm.io.timeseries_writer.IWFMTimeSeriesDataWriter",
+                "pyiwfm.io.timeseries.writer.IWFMTimeSeriesDataWriter",
                 return_value=mock_ts_writer_instance,
             ),
         ):
@@ -317,7 +317,7 @@ class TestTimeSeriesCopierConvertTextToDss:
 
         with (
             patch(
-                "pyiwfm.io.timeseries_ascii.TimeSeriesReader",
+                "pyiwfm.io.timeseries.ascii.TimeSeriesReader",
                 return_value=mock_reader_instance,
             ),
             patch(
@@ -646,7 +646,7 @@ class TestIsoToIwfmDate:
     def test_converts_iso_date(self) -> None:
         """Converts ISO date string to IWFM MM/DD/YYYY_HH:MM format."""
         with patch(
-            "pyiwfm.io.timeseries_ascii.format_iwfm_timestamp",
+            "pyiwfm.io.timeseries.ascii.format_iwfm_timestamp",
             return_value="09/30/1990_24:00",
         ):
             result = _iso_to_iwfm_date("1990-10-01T00:00:00")
@@ -1148,7 +1148,7 @@ class TestIsoToIwfmDateAdditional:
     def test_handles_date_only_iso_string(self) -> None:
         """_iso_to_iwfm_date handles ISO date-only string (no time part)."""
         with patch(
-            "pyiwfm.io.timeseries_ascii.format_iwfm_timestamp",
+            "pyiwfm.io.timeseries.ascii.format_iwfm_timestamp",
             return_value="01/15/2020_24:00",
         ):
             result = _iso_to_iwfm_date("2020-01-15")
@@ -1157,7 +1157,7 @@ class TestIsoToIwfmDateAdditional:
     def test_handles_datetime_with_time(self) -> None:
         """_iso_to_iwfm_date handles ISO datetime with nonzero time."""
         with patch(
-            "pyiwfm.io.timeseries_ascii.format_iwfm_timestamp",
+            "pyiwfm.io.timeseries.ascii.format_iwfm_timestamp",
             return_value="03/15/2020_12:30",
         ):
             result = _iso_to_iwfm_date("2020-03-15T12:30:00")

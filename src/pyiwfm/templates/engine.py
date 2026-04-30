@@ -493,7 +493,7 @@ def _iwfm_timestamp(dt: datetime | np.datetime64 | str) -> str:
     if isinstance(dt, str):
         return dt
 
-    from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+    from pyiwfm.io.timeseries.ascii import format_iwfm_timestamp
 
     return format_iwfm_timestamp(dt)
 

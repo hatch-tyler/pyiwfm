@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from pyiwfm.io.cache_loader import SqliteCacheLoader
     from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
     from pyiwfm.io.simulation.messages import SimulationMessagesResult
-    from pyiwfm.io.timeseries_io import LazyNodalLoader
+    from pyiwfm.io.timeseries.lazy import LazyNodalLoader
 
 logger = logging.getLogger(__name__)
 

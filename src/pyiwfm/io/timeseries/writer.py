@@ -97,7 +97,7 @@ class IWFMTimeSeriesDataWriter:
 
     Example
     -------
-    >>> from pyiwfm.io.timeseries_writer import (
+    >>> from pyiwfm.io.timeseries.writer import (
     ...     IWFMTimeSeriesDataWriter, TimeSeriesDataConfig,
     ... )
     >>> config = TimeSeriesDataConfig(

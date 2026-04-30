@@ -1,4 +1,4 @@
-"""Unit tests for pyiwfm.io.timeseries_io.LazyTabularLoader (formerly LazyTabularLoader)."""
+"""Unit tests for pyiwfm.io.timeseries.lazy.LazyTabularLoader (formerly LazyTabularLoader)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ h5py = pytest.importorskip("h5py")
 
 import numpy as np  # noqa: E402
 
-from pyiwfm.io.timeseries_io import LazyTabularLoader  # noqa: E402
+from pyiwfm.io.timeseries.lazy import LazyTabularLoader  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Fixtures

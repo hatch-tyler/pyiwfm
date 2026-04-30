@@ -184,8 +184,8 @@ class TimeSeriesCopier:
 
         Falls back to a plain copy if the DSS library is not available.
         """
-        from pyiwfm.io.timeseries_ascii import TimeSeriesReader
-        from pyiwfm.io.timeseries_writer import (
+        from pyiwfm.io.timeseries.ascii import TimeSeriesReader
+        from pyiwfm.io.timeseries.writer import (
             DSSPathItem,
             IWFMTimeSeriesDataWriter,
             TimeSeriesDataConfig,
@@ -925,7 +925,7 @@ def _iso_to_iwfm_date(iso_str: str) -> str:
 
     try:
         dt = datetime.fromisoformat(iso_str)
-        from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
+        from pyiwfm.io.timeseries.ascii import format_iwfm_timestamp
 
         return format_iwfm_timestamp(dt)
     except (ValueError, TypeError):

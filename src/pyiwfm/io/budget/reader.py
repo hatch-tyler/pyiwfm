@@ -37,8 +37,8 @@ import pandas as pd
 from numpy.typing import NDArray
 
 from pyiwfm.core.exceptions import IWFMIOError
-from pyiwfm.io.timeseries_ascii import iwfm_date_to_iso as iwfm_date_to_iso
-from pyiwfm.io.timeseries_ascii import parse_iwfm_datetime as parse_iwfm_datetime
+from pyiwfm.io.timeseries.ascii import iwfm_date_to_iso as iwfm_date_to_iso
+from pyiwfm.io.timeseries.ascii import parse_iwfm_datetime as parse_iwfm_datetime
 
 # Budget data type codes (from Budget_Parameters.f90)
 BUDGET_DATA_TYPES = {
