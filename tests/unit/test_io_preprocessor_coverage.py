@@ -540,7 +540,7 @@ class TestReadSubregionsFile:
         """Non-integer NSUBREGION raises FileFormatError."""
         sr_file = tmp_path / "subregions.dat"
         sr_file.write_text("abc                             / NSUBREGION\n")
-        with pytest.raises(FileFormatError, match="Invalid NSUBREGION"):
+        with pytest.raises(FileFormatError, match="NSUBREGION"):
             read_subregions_file(sr_file)
 
     def test_read_missing_nsubregion(self, tmp_path: Path) -> None:
@@ -554,7 +554,7 @@ class TestReadSubregionsFile:
         """Non-integer subregion ID raises FileFormatError."""
         sr_file = tmp_path / "subregions.dat"
         sr_file.write_text("1                               / NSUBREGION\nabc  Bad_ID_Region\n")
-        with pytest.raises(FileFormatError, match="Invalid subregion data"):
+        with pytest.raises(FileFormatError, match="subregion"):
             read_subregions_file(sr_file)
 
     def test_read_subregion_no_name(self, tmp_path: Path) -> None:

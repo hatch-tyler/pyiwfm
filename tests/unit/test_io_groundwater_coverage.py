@@ -179,7 +179,7 @@ class TestReadWells:
     def test_wells_invalid_nwells_raises(self, tmp_path: Path) -> None:
         filepath = tmp_path / "wells.dat"
         filepath.write_text("abc  / NWELLS\n")
-        with pytest.raises(FileFormatError, match="Invalid NWELLS"):
+        with pytest.raises(FileFormatError, match="NWELLS"):
             GroundwaterReader().read_wells(filepath)
 
 

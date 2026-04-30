@@ -27,6 +27,7 @@ from pyiwfm.components.groundwater import (
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
+    parse_int,
 )
 from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
@@ -584,12 +585,7 @@ class GroundwaterReader:
                     continue
 
                 value, _ = _strip_comment(line)
-                try:
-                    n_wells = int(value)
-                except ValueError as e:
-                    raise FileFormatError(
-                        f"Invalid NWELLS value: '{value}'", line_number=line_num
-                    ) from e
+                n_wells = parse_int(value, context="NWELLS", line_number=line_num)
                 break
 
             if n_wells is None:
@@ -657,12 +653,7 @@ class GroundwaterReader:
                     continue
 
                 value, _ = _strip_comment(line)
-                try:
-                    n_nodes = int(value)
-                except ValueError as e:
-                    raise FileFormatError(
-                        f"Invalid NNODES value: '{value}'", line_number=line_num
-                    ) from e
+                n_nodes = parse_int(value, context="NNODES", line_number=line_num)
                 break
 
             # Find NLAYERS
@@ -672,12 +663,7 @@ class GroundwaterReader:
                     continue
 
                 value, _ = _strip_comment(line)
-                try:
-                    n_layers = int(value)
-                except ValueError as e:
-                    raise FileFormatError(
-                        f"Invalid NLAYERS value: '{value}'", line_number=line_num
-                    ) from e
+                n_layers = parse_int(value, context="NLAYERS", line_number=line_num)
                 break
 
             if n_nodes is None or n_layers is None:

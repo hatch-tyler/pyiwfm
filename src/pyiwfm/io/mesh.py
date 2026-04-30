@@ -28,6 +28,10 @@ from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
 )
 from pyiwfm.io.iwfm_reader import (
+    parse_float,
+    parse_int,
+)
+from pyiwfm.io.iwfm_reader import (
     strip_inline_comment as _strip_comment,
 )
 
@@ -91,12 +95,7 @@ def read_nodes(filepath: Path | str) -> dict[int, Node]:
 
             # First non-comment line should be NNODES
             value_str, desc = _strip_comment(line)
-            try:
-                n_nodes = int(value_str)
-            except ValueError as e:
-                raise FileFormatError(
-                    f"Invalid NNODES value: '{value_str}'", line_number=line_num
-                ) from e
+            n_nodes = parse_int(value_str, context="NNODES", line_number=line_num)
             break
 
         if n_nodes is None:
@@ -206,12 +205,7 @@ def read_elements(
                 continue
 
             value_str, _ = _strip_comment(line)
-            try:
-                n_elem = int(value_str)
-            except ValueError as e:
-                raise FileFormatError(
-                    f"Invalid NELEM value: '{value_str}'", line_number=line_num
-                ) from e
+            n_elem = parse_int(value_str, context="NELEM", line_number=line_num)
             break
 
         # Read NSUBREGION
@@ -221,12 +215,7 @@ def read_elements(
                 continue
 
             value_str, _ = _strip_comment(line)
-            try:
-                n_subregion = int(value_str)
-            except ValueError as e:
-                raise FileFormatError(
-                    f"Invalid NSUBREGION value: '{value_str}'", line_number=line_num
-                ) from e
+            n_subregion = parse_int(value_str, context="NSUBREGION", line_number=line_num)
             break
 
         if n_elem is None:
@@ -402,12 +391,7 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
                 continue
 
             value_str, _ = _strip_comment(line)
-            try:
-                n_layers = int(value_str)
-            except ValueError as e:
-                raise FileFormatError(
-                    f"Invalid NLAYERS value: '{value_str}'", line_number=line_num
-                ) from e
+            n_layers = parse_int(value_str, context="NLAYERS", line_number=line_num)
             break
 
         # Read FACT (conversion factor)
@@ -417,12 +401,7 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
                 continue
 
             value_str, _ = _strip_comment(line)
-            try:
-                fact = float(value_str)
-            except ValueError as e:
-                raise FileFormatError(
-                    f"Invalid FACT value: '{value_str}'", line_number=line_num
-                ) from e
+            fact = parse_float(value_str, context="FACT", line_number=line_num)
             break
 
         if n_layers is None:

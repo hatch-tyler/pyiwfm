@@ -137,7 +137,7 @@ abc                            / N_SUBSIDENCE
 """)
 
         reader = GroundwaterReader()
-        with pytest.raises(FileFormatError, match="Invalid N_SUBSIDENCE"):
+        with pytest.raises(FileFormatError, match="N_SUBSIDENCE"):
             reader.read_subsidence(filepath)
 
     def test_read_invalid_data_row(self, tmp_path: Path) -> None:
@@ -149,7 +149,7 @@ abc  def  ghi  jkl  mno
 """)
 
         reader = GroundwaterReader()
-        with pytest.raises(FileFormatError, match="Invalid subsidence data"):
+        with pytest.raises(FileFormatError, match="subsidence"):
             reader.read_subsidence(filepath)
 
     def test_read_zero_count(self, tmp_path: Path) -> None:

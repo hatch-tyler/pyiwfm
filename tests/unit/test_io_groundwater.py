@@ -216,7 +216,7 @@ invalid                         / NWELLS
 
         reader = GroundwaterReader()
 
-        with pytest.raises(FileFormatError, match="Invalid NWELLS"):
+        with pytest.raises(FileFormatError, match="NWELLS"):
             reader.read_wells(wells_file)
 
     def test_read_wells_no_name(self, tmp_path: Path) -> None:

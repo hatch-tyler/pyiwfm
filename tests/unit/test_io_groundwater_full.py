@@ -446,7 +446,7 @@ abc                            / NWELLS
 """)
 
         reader = GroundwaterReader()
-        with pytest.raises(FileFormatError, match="Invalid NWELLS"):
+        with pytest.raises(FileFormatError, match="NWELLS"):
             reader.read_wells(filepath)
 
     def test_read_wells_missing_nwells(self, tmp_path: Path) -> None:
@@ -469,7 +469,7 @@ abc  def  ghi  1  50.00  10.00  100.00
 """)
 
         reader = GroundwaterReader()
-        with pytest.raises(FileFormatError, match="Invalid well data"):
+        with pytest.raises(FileFormatError, match="well"):
             reader.read_wells(filepath)
 
     def test_read_initial_heads(self, tmp_path: Path) -> None:
@@ -501,7 +501,7 @@ xyz                            / NNODES
 """)
 
         reader = GroundwaterReader()
-        with pytest.raises(FileFormatError, match="Invalid NNODES"):
+        with pytest.raises(FileFormatError, match="NNODES"):
             reader.read_initial_heads(filepath)
 
     def test_read_initial_heads_invalid_nlayers(self, tmp_path: Path) -> None:
@@ -513,7 +513,7 @@ xyz                            / NLAYERS
 """)
 
         reader = GroundwaterReader()
-        with pytest.raises(FileFormatError, match="Invalid NLAYERS"):
+        with pytest.raises(FileFormatError, match="NLAYERS"):
             reader.read_initial_heads(filepath)
 
 

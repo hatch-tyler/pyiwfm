@@ -480,7 +480,7 @@ C  No data here
         """Non-integer NNODES value raises FileFormatError."""
         node_file = tmp_path / "nodes_bad.dat"
         node_file.write_text("abc / NNODES\n")
-        with pytest.raises(FileFormatError, match="Invalid NNODES"):
+        with pytest.raises(FileFormatError, match="NNODES"):
             read_nodes(node_file)
 
     def test_read_nodes_invalid_node_data_values(self, tmp_path: Path) -> None:
@@ -491,7 +491,7 @@ C  No data here
 1       abc       200.0
 """
         )
-        with pytest.raises(FileFormatError, match="Invalid node data"):
+        with pytest.raises(FileFormatError, match="node"):
             read_nodes(node_file)
 
     def test_read_nodes_too_few_columns(self, tmp_path: Path) -> None:
@@ -504,7 +504,7 @@ C  No data here
 2       300.0
 """
         )
-        with pytest.raises(FileFormatError, match="Invalid node line format"):
+        with pytest.raises(FileFormatError, match="node"):
             read_nodes(node_file)
 
     def test_read_nodes_invalid_remaining_data(self, tmp_path: Path) -> None:
@@ -517,7 +517,7 @@ C  No data here
 2       bad       400.0
 """
         )
-        with pytest.raises(FileFormatError, match="Invalid node data"):
+        with pytest.raises(FileFormatError, match="node"):
             read_nodes(node_file)
 
     def test_read_nodes_with_slash_inline_comments(self, tmp_path: Path) -> None:
@@ -589,7 +589,7 @@ C  second node follows
 bad  100.0  200.0
 """
         )
-        with pytest.raises(FileFormatError, match="Invalid node data"):
+        with pytest.raises(FileFormatError, match="node"):
             read_nodes(node_file)
 
 
@@ -607,7 +607,7 @@ class TestReadElementsAdditional:
         """Non-integer NELEM raises error."""
         elem_file = tmp_path / "elems_badnelem.dat"
         elem_file.write_text("abc / NELEM\n1 / NSUBREGION\n")
-        with pytest.raises(FileFormatError, match="Invalid NELEM"):
+        with pytest.raises(FileFormatError, match="NELEM"):
             read_elements(elem_file)
 
     def test_read_elements_no_nsubregion(self, tmp_path: Path) -> None:
@@ -621,7 +621,7 @@ class TestReadElementsAdditional:
         """Non-integer NSUBREGION raises error."""
         elem_file = tmp_path / "elems_badsub.dat"
         elem_file.write_text("2 / NELEM\nabc / NSUBREGION\n")
-        with pytest.raises(FileFormatError, match="Invalid NSUBREGION"):
+        with pytest.raises(FileFormatError, match="NSUBREGION"):
             read_elements(elem_file)
 
     def test_read_elements_with_subregion_names(self, tmp_path: Path) -> None:
@@ -650,7 +650,7 @@ Region South
 2  bad  3  6  5  1
 """
         )
-        with pytest.raises(FileFormatError, match="Invalid element data"):
+        with pytest.raises(FileFormatError, match="element"):
             read_elements(elem_file)
 
     def test_read_elements_too_few_columns(self, tmp_path: Path) -> None:
@@ -663,7 +663,7 @@ Region South
 2  3  6
 """
         )
-        with pytest.raises(FileFormatError, match="Invalid element line format"):
+        with pytest.raises(FileFormatError, match="element"):
             read_elements(elem_file)
 
     def test_read_elements_subregion_names_short_line(self, tmp_path: Path) -> None:
@@ -704,14 +704,14 @@ class TestReadStratigraphyAdditional:
         """Non-integer NLAYERS raises error."""
         strat_file = tmp_path / "strat_bad.dat"
         strat_file.write_text("abc / NLAYERS\n1.0 / FACT\n")
-        with pytest.raises(FileFormatError, match="Invalid NLAYERS"):
+        with pytest.raises(FileFormatError, match="NLAYERS"):
             read_stratigraphy(strat_file)
 
     def test_read_strat_invalid_fact(self, tmp_path: Path) -> None:
         """Non-numeric FACT raises error."""
         strat_file = tmp_path / "strat_badfact.dat"
         strat_file.write_text("1 / NLAYERS\nabc / FACT\n")
-        with pytest.raises(FileFormatError, match="Invalid FACT"):
+        with pytest.raises(FileFormatError, match="FACT"):
             read_stratigraphy(strat_file)
 
     def test_read_strat_no_nlayers(self, tmp_path: Path) -> None:
@@ -738,7 +738,7 @@ class TestReadStratigraphyAdditional:
 """
         )
         # For 1 layer, expected_cols = 2 + 1*2 = 4, but line has 3 parts
-        with pytest.raises(FileFormatError, match="Invalid stratigraphy line"):
+        with pytest.raises(FileFormatError, match="stratigraphy"):
             read_stratigraphy(strat_file)
 
     def test_read_strat_invalid_data(self, tmp_path: Path) -> None:
@@ -750,7 +750,7 @@ class TestReadStratigraphyAdditional:
 1  100.0  bad  50.0
 """
         )
-        with pytest.raises(FileFormatError, match="Invalid stratigraphy data"):
+        with pytest.raises(FileFormatError, match="stratigraphy"):
             read_stratigraphy(strat_file)
 
     def test_read_strat_with_conversion_factor(self, tmp_path: Path) -> None:

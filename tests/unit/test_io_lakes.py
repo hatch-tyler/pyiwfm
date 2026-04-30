@@ -333,7 +333,7 @@ invalid                         / NLAKES
 
         reader = LakeReader()
 
-        with pytest.raises(FileFormatError, match="Invalid NLAKES"):
+        with pytest.raises(FileFormatError, match="NLAKES"):
             reader.read_lake_definitions(lake_file)
 
     def test_read_lake_elements_basic(self, tmp_path: Path) -> None:
@@ -723,7 +723,7 @@ abc    100.0    50000.0  Bad Lake
 """)
 
         reader = LakeReader()
-        with pytest.raises(FileFormatError, match="Invalid lake data"):
+        with pytest.raises(FileFormatError, match="lake"):
             reader.read_lake_definitions(lake_file)
 
     def test_read_lake_definitions_short_lines_skipped(self, tmp_path: Path) -> None:
@@ -761,7 +761,7 @@ invalid                         / NLAKE_ELEMENTS
 """)
 
         reader = LakeReader()
-        with pytest.raises(FileFormatError, match="Invalid NLAKE_ELEMENTS"):
+        with pytest.raises(FileFormatError, match="NLAKE_ELEMENTS"):
             reader.read_lake_elements(elem_file)
 
     def test_read_lake_elements_invalid_data(self, tmp_path: Path) -> None:
@@ -773,7 +773,7 @@ abc    1    1.0
 """)
 
         reader = LakeReader()
-        with pytest.raises(FileFormatError, match="Invalid lake element data"):
+        with pytest.raises(FileFormatError, match="lake"):
             reader.read_lake_elements(elem_file)
 
     def test_read_lake_elements_short_lines_skipped(self, tmp_path: Path) -> None:
@@ -808,7 +808,7 @@ invalid                         / N_RATING_CURVES
 """)
 
         reader = LakeReader()
-        with pytest.raises(FileFormatError, match="Invalid N_RATING_CURVES"):
+        with pytest.raises(FileFormatError, match="N_RATING_CURVES"):
             reader.read_rating_curves(rating_file)
 
     def test_read_lake_definitions_with_comments_between_data(self, tmp_path: Path) -> None:

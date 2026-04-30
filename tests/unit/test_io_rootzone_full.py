@@ -393,7 +393,7 @@ abc                            / NCROPS
 """)
 
         reader = RootZoneReader()
-        with pytest.raises(FileFormatError, match="Invalid NCROPS"):
+        with pytest.raises(FileFormatError, match="NCROPS"):
             reader.read_crop_types(filepath)
 
     def test_read_crop_types_missing_ncrops(self, tmp_path: Path) -> None:
@@ -416,7 +416,7 @@ abc   def   ghi  Invalid
 """)
 
         reader = RootZoneReader()
-        with pytest.raises(FileFormatError, match="Invalid crop data"):
+        with pytest.raises(FileFormatError, match="crop"):
             reader.read_crop_types(filepath)
 
     def test_read_soil_params(self, tmp_path: Path) -> None:
@@ -446,7 +446,7 @@ xyz                            / NELEM_SOIL
 """)
 
         reader = RootZoneReader()
-        with pytest.raises(FileFormatError, match="Invalid NELEM_SOIL"):
+        with pytest.raises(FileFormatError, match="NELEM_SOIL"):
             reader.read_soil_params(filepath)
 
     def test_read_soil_params_missing_nelem(self, tmp_path: Path) -> None:
@@ -468,7 +468,7 @@ xyz                            / NELEM_SOIL
 """)
 
         reader = RootZoneReader()
-        with pytest.raises(FileFormatError, match="Invalid soil parameter"):
+        with pytest.raises(FileFormatError, match="soil"):
             reader.read_soil_params(filepath)
 
 

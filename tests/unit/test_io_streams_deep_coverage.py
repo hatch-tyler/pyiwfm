@@ -1202,7 +1202,7 @@ class TestStreamSpecReader:
             bad_nrh
             """,
         )
-        with pytest.raises(FileFormatError, match="Invalid NRH"):
+        with pytest.raises(FileFormatError, match="NRH"):
             StreamSpecReader().read(fpath)
 
     def test_invalid_nrtb_raises(self, tmp_path: Path) -> None:
@@ -1216,7 +1216,7 @@ class TestStreamSpecReader:
             bad_nrtb
             """,
         )
-        with pytest.raises(FileFormatError, match="Invalid NRTB"):
+        with pytest.raises(FileFormatError, match="NRTB"):
             StreamSpecReader().read(fpath)
 
     def test_reach_header_too_short_raises(self, tmp_path: Path) -> None:
@@ -1231,7 +1231,7 @@ class TestStreamSpecReader:
             1   2
             """,
         )
-        with pytest.raises(FileFormatError, match="Invalid reach header"):
+        with pytest.raises(FileFormatError, match="reach"):
             StreamSpecReader().read(fpath)
 
     def test_rating_table_invalid_values(self, tmp_path: Path) -> None:

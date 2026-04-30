@@ -376,7 +376,7 @@ INVALID                        / NSUBREGION
 
         with pytest.raises(FileFormatError) as exc_info:
             read_subregions_file(sr_file)
-        assert "Invalid NSUBREGION value" in str(exc_info.value)
+        assert "NSUBREGION" in str(exc_info.value)
 
     def test_read_subregions_missing_count(self, tmp_path):
         """Test error when NSUBREGION is missing."""

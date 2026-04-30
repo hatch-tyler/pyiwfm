@@ -24,6 +24,7 @@ from pyiwfm.components.lake import (
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
+    parse_int,
 )
 from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
@@ -318,12 +319,7 @@ class LakeReader:
                     continue
 
                 value, _ = _strip_comment(line)
-                try:
-                    n_lakes = int(value)
-                except ValueError as e:
-                    raise FileFormatError(
-                        f"Invalid NLAKES value: '{value}'", line_number=line_num
-                    ) from e
+                n_lakes = parse_int(value, context="NLAKES", line_number=line_num)
                 break
 
             if n_lakes is None:

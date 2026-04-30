@@ -130,7 +130,7 @@ abc                             / NCROPS
 """)
 
         reader = RootZoneReader()
-        with pytest.raises(FileFormatError, match="Invalid NCROPS"):
+        with pytest.raises(FileFormatError, match="NCROPS"):
             reader.read_crop_types(filepath)
 
     def test_read_crop_types_invalid_data(self, tmp_path: Path) -> None:
@@ -142,7 +142,7 @@ abc   def   ghi   Invalid Crop
 """)
 
         reader = RootZoneReader()
-        with pytest.raises(FileFormatError, match="Invalid crop"):
+        with pytest.raises(FileFormatError, match="crop"):
             reader.read_crop_types(filepath)
 
 

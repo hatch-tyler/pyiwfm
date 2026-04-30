@@ -18,6 +18,9 @@ from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
 )
 from pyiwfm.io.iwfm_reader import (
+    parse_int,
+)
+from pyiwfm.io.iwfm_reader import (
     resolve_path as _resolve_path,
 )
 from pyiwfm.io.iwfm_reader import (
@@ -185,12 +188,7 @@ def read_subregions_file(filepath: Path | str) -> dict[int, Subregion]:
                 continue
 
             value, _ = _strip_comment(line)
-            try:
-                n_subregions = int(value)
-            except ValueError as e:
-                raise FileFormatError(
-                    f"Invalid NSUBREGION value: '{value}'", line_number=line_num
-                ) from e
+            n_subregions = parse_int(value, context="NSUBREGION", line_number=line_num)
             break
 
         if n_subregions is None:

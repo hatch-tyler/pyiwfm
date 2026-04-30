@@ -517,7 +517,7 @@ class TestReadSubregionsFileExtended:
 abc                                      / NSUBREGION
 """
         )
-        with pytest.raises(FileFormatError, match="Invalid NSUBREGION"):
+        with pytest.raises(FileFormatError, match="NSUBREGION"):
             read_subregions_file(sr_file)
 
     def test_missing_nsubregion(self, tmp_path: Path) -> None:
@@ -541,7 +541,7 @@ abc  Bad Region
 2    Good Region
 """
         )
-        with pytest.raises(FileFormatError, match="Invalid subregion data"):
+        with pytest.raises(FileFormatError, match="subregion"):
             read_subregions_file(sr_file)
 
     def test_subregion_without_name(self, tmp_path: Path) -> None:

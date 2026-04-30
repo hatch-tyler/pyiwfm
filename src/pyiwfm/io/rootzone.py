@@ -23,6 +23,7 @@ from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
     next_data_line,
+    parse_int,
     parse_version,
     version_ge,
 )
@@ -413,12 +414,7 @@ class RootZoneReader:
                     continue
 
                 value, _ = _strip_comment(line)
-                try:
-                    n_crops = int(value)
-                except ValueError as e:
-                    raise FileFormatError(
-                        f"Invalid NCROPS value: '{value}'", line_number=line_num
-                    ) from e
+                n_crops = parse_int(value, context="NCROPS", line_number=line_num)
                 break
 
             if n_crops is None:
@@ -478,12 +474,7 @@ class RootZoneReader:
                     continue
 
                 value, _ = _strip_comment(line)
-                try:
-                    n_elem = int(value)
-                except ValueError as e:
-                    raise FileFormatError(
-                        f"Invalid NELEM_SOIL value: '{value}'", line_number=line_num
-                    ) from e
+                n_elem = parse_int(value, context="NELEM_SOIL", line_number=line_num)
                 break
 
             if n_elem is None:

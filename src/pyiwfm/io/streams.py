@@ -25,6 +25,7 @@ from pyiwfm.components.stream import (
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.io.iwfm_reader import (
     COMMENT_CHARS,
+    parse_int,
 )
 from pyiwfm.io.iwfm_reader import (
     is_comment_line as _is_comment_line,
@@ -489,12 +490,7 @@ class StreamReader:
                     continue
 
                 value, _ = _strip_comment(line)
-                try:
-                    n_nodes = int(value)
-                except ValueError as e:
-                    raise FileFormatError(
-                        f"Invalid NSTRNODES value: '{value}'", line_number=line_num
-                    ) from e
+                n_nodes = parse_int(value, context="NSTRNODES", line_number=line_num)
                 break
 
             if n_nodes is None:
@@ -565,12 +561,7 @@ class StreamReader:
                     continue
 
                 value, _ = _strip_comment(line)
-                try:
-                    n_diversions = int(value)
-                except ValueError as e:
-                    raise FileFormatError(
-                        f"Invalid NDIVERSIONS value: '{value}'", line_number=line_num
-                    ) from e
+                n_diversions = parse_int(value, context="NDIVERSIONS", line_number=line_num)
                 break
 
             if n_diversions is None:

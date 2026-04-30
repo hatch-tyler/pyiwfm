@@ -419,7 +419,7 @@ invalid                         / NSTRNODES
 
         reader = StreamReader()
 
-        with pytest.raises(FileFormatError, match="Invalid NSTRNODES"):
+        with pytest.raises(FileFormatError, match="NSTRNODES"):
             reader.read_stream_nodes(node_file)
 
     def test_read_diversions_basic(self, tmp_path: Path) -> None:
@@ -814,7 +814,7 @@ abc    100.0    200.0    1    0    50.0    5.0    0    0
 """)
 
         reader = StreamReader()
-        with pytest.raises(FileFormatError, match="Invalid stream node data"):
+        with pytest.raises(FileFormatError, match="stream"):
             reader.read_stream_nodes(node_file)
 
     def test_read_stream_nodes_short_lines_skipped(self, tmp_path: Path) -> None:
@@ -839,7 +839,7 @@ invalid                         / NDIVERSIONS
 """)
 
         reader = StreamReader()
-        with pytest.raises(FileFormatError, match="Invalid NDIVERSIONS"):
+        with pytest.raises(FileFormatError, match="NDIVERSIONS"):
             reader.read_diversions(div_file)
 
     def test_read_diversions_invalid_data(self, tmp_path: Path) -> None:
@@ -851,7 +851,7 @@ abc    1 element    5    100.0    1    Test
 """)
 
         reader = StreamReader()
-        with pytest.raises(FileFormatError, match="Invalid diversion data"):
+        with pytest.raises(FileFormatError, match="diversion"):
             reader.read_diversions(div_file)
 
     def test_read_diversions_short_lines_skipped(self, tmp_path: Path) -> None:

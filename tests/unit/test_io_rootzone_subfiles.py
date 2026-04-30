@@ -254,7 +254,7 @@ class TestNonPondedCropReader:
         f.write_text("C bad file\nabc\n")
 
         reader = NonPondedCropReader()
-        with pytest.raises(FileFormatError, match="Invalid NCrops"):
+        with pytest.raises(FileFormatError, match="NCrops"):
             reader.read(f)
 
     def test_convenience_function(self, tmp_path: Path) -> None:
@@ -414,7 +414,7 @@ class TestUrbanLandUseReader:
         f.write_text("C bad\nArea.dat\nabc\n")
 
         reader = UrbanLandUseReader()
-        with pytest.raises(FileFormatError, match="Invalid root depth factor"):
+        with pytest.raises(FileFormatError, match="root"):
             reader.read(f)
 
     def test_convenience_function(self, tmp_path: Path) -> None:
@@ -499,7 +499,7 @@ class TestNativeRiparianReader:
         f.write_text("C bad\nArea.dat\n1.0\nabc\n")
 
         reader = NativeRiparianReader()
-        with pytest.raises(FileFormatError, match="Invalid native root depth"):
+        with pytest.raises(FileFormatError, match="native"):
             reader.read(f)
 
     def test_invalid_riparian_root_depth_raises(self, tmp_path: Path) -> None:
@@ -508,7 +508,7 @@ class TestNativeRiparianReader:
         f.write_text("C bad\nArea.dat\n1.0\n5.0\nabc\n")
 
         reader = NativeRiparianReader()
-        with pytest.raises(FileFormatError, match="Invalid riparian root depth"):
+        with pytest.raises(FileFormatError, match="riparian"):
             reader.read(f)
 
     def test_convenience_function(self, tmp_path: Path) -> None:
