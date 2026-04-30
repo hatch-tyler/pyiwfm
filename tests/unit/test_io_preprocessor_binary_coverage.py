@@ -1,4 +1,4 @@
-"""Tests for pyiwfm.io.preprocessor_binary module.
+"""Tests for pyiwfm.io.binary.preprocessor module.
 
 Covers the 11 dataclasses, PreprocessorBinaryReader with mocked
 StreamAccessBinaryReader, and the convenience function read_preprocessor_binary.
@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from pyiwfm.io.preprocessor_binary import (
+from pyiwfm.io.binary import (
     AppElementData,
     AppNodeData,
     PreprocessorBinaryData,

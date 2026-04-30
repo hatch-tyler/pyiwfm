@@ -742,7 +742,7 @@ class ResultsStateMixin:
         binary_path = source_files.get("binary_preprocessor")
         if binary_path is not None and Path(binary_path).exists():
             try:
-                from pyiwfm.io.preprocessor_binary import PreprocessorBinaryReader
+                from pyiwfm.io.binary import PreprocessorBinaryReader
 
                 reader = PreprocessorBinaryReader()
                 data = reader.read(binary_path)

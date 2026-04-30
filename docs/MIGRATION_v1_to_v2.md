@@ -696,6 +696,58 @@ from pyiwfm.io.hdf5.model import HDF5ModelReader  # v2.x only
 `mock.patch("pyiwfm.io.hdf5.write_model_hdf5")` continues to work —
 the patch target resolves through the package's re-export.
 
+### `pyiwfm.io.binary` (was a module, now a package) and `pyiwfm.io.preprocessor_binary` (gone)
+
+`pyiwfm/io/binary.py` and `pyiwfm/io/preprocessor_binary.py` were both
+binary-format modules but lived as siblings in the flat `io/` directory.
+They're now the single package `pyiwfm/io/binary/`:
+
+- `pyiwfm/io/binary/fortran.py` — was `binary.py` (Fortran
+  unformatted-sequential primitives: `FortranBinaryReader`,
+  `FortranBinaryWriter`, `StreamAccessBinaryReader`,
+  `write_binary_mesh`, `write_binary_stratigraphy`,
+  `read_fortran_record`).
+- `pyiwfm/io/binary/preprocessor.py` — was `preprocessor_binary.py`
+  (IWFM preprocessor's `ACCESS='STREAM'` binary output and the
+  `*Data` record dataclasses: `PreprocessorBinaryReader`,
+  `read_preprocessor_binary`, `AppNodeData`, `AppElementData`,
+  `LakeData`, `StreamData`, etc.).
+
+The package `__init__.py` re-exports both submodules' public symbols,
+so `from pyiwfm.io.binary import X` works for any of them.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.binary import FortranBinaryReader
+from pyiwfm.io.preprocessor_binary import PreprocessorBinaryReader, AppNodeData
+```
+
+**v2.x — preferred:**
+
+```python
+from pyiwfm.io.binary import (
+    FortranBinaryReader,
+    PreprocessorBinaryReader,
+    AppNodeData,
+)
+```
+
+**v2.x — explicit submodule paths:**
+
+```python
+from pyiwfm.io.binary.fortran import FortranBinaryReader
+from pyiwfm.io.binary.preprocessor import PreprocessorBinaryReader
+```
+
+The `from pyiwfm.io.preprocessor_binary import …` path is **gone**;
+update to `from pyiwfm.io.binary import …`.
+
+`mock.patch("pyiwfm.io.preprocessor_binary.X")` strings need updating
+to `mock.patch("pyiwfm.io.binary.X")` (re-exported on the package) —
+not `pyiwfm.io.binary.preprocessor.X`, because the consumers import
+through the package re-export, not the deep submodule.
+
 ---
 
 ## 9. Strict-by-default loading at user-facing surfaces

@@ -153,7 +153,7 @@ class TestFromPreprocessorBinary:
 
         with (
             patch(
-                "pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader.read",
+                "pyiwfm.io.binary.preprocessor.PreprocessorBinaryReader.read",
                 return_value=mock_data,
             ),
             patch(

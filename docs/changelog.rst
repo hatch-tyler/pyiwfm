@@ -42,6 +42,17 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.binary``** is now a package (was a module). The file
+  ``pyiwfm/io/binary.py`` moved to ``pyiwfm/io/binary/fortran.py``
+  (Fortran unformatted-sequential primitives), and
+  ``pyiwfm/io/preprocessor_binary.py`` moved to
+  ``pyiwfm/io/binary/preprocessor.py`` (IWFM preprocessor binary
+  format). The package ``__init__.py`` re-exports both submodules'
+  public API so ``from pyiwfm.io.binary import X`` works for either.
+  The ``from pyiwfm.io.preprocessor_binary import …`` path is **gone**
+  in v2.0 — update imports and ``mock.patch`` strings. See
+  ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.hdf5``** is now a package (was a module): the file moved
   to ``pyiwfm/io/hdf5/model.py`` with the package ``__init__.py``
   re-exporting the public API. Top-level callers

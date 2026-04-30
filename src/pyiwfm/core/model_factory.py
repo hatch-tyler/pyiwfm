@@ -15,8 +15,8 @@ if TYPE_CHECKING:
     from pyiwfm.components.stream import AppStream
     from pyiwfm.core.mesh import AppGrid
     from pyiwfm.core.model import IWFMModel
+    from pyiwfm.io.binary import PreprocessorBinaryData
     from pyiwfm.io.groundwater import KhAnomalyEntry
-    from pyiwfm.io.preprocessor_binary import PreprocessorBinaryData
 
 
 def build_reaches_from_node_reach_ids(stream: AppStream) -> None:

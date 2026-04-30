@@ -304,7 +304,7 @@ class TestStreamReachBoundaries:
         mock_reader_cls.return_value.read.return_value = mock_data
 
         with patch(
-            "pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader",
+            "pyiwfm.io.binary.PreprocessorBinaryReader",
             mock_reader_cls,
         ):
             result = state.get_stream_reach_boundaries()
@@ -322,7 +322,7 @@ class TestStreamReachBoundaries:
         mock_reader_cls.return_value.read.side_effect = RuntimeError("corrupt")
 
         with patch(
-            "pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader",
+            "pyiwfm.io.binary.PreprocessorBinaryReader",
             mock_reader_cls,
         ):
             result = state.get_stream_reach_boundaries()
@@ -343,7 +343,7 @@ class TestStreamReachBoundaries:
         mock_reader_cls.return_value.read.return_value = mock_data
 
         with patch(
-            "pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader",
+            "pyiwfm.io.binary.PreprocessorBinaryReader",
             mock_reader_cls,
         ):
             result = state.get_stream_reach_boundaries()
@@ -364,7 +364,7 @@ class TestStreamReachBoundaries:
         mock_reader_cls.return_value.read.return_value = mock_data
 
         with patch(
-            "pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader",
+            "pyiwfm.io.binary.PreprocessorBinaryReader",
             mock_reader_cls,
         ):
             result = state.get_stream_reach_boundaries()

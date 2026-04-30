@@ -32,12 +32,29 @@ from pyiwfm.io.base import (  # noqa: F401
     ModelReader,
     ModelWriter,
 )
-from pyiwfm.io.binary import (  # noqa: F401
+from pyiwfm.io.binary import (  # noqa: F401  # noqa: F401
+    AppElementData,
+    AppFaceData,
+    AppNodeData,
     FortranBinaryReader,
     FortranBinaryWriter,
+    LakeGWConnectorData,
+    PreprocessorBinaryData,
+    PreprocessorBinaryReader,
+    StratigraphyData,
     StreamAccessBinaryReader,
+    StreamGWConnectorData,
+    StreamLakeConnectorData,
+    SubregionData,
+    read_preprocessor_binary,
     write_binary_mesh,
     write_binary_stratigraphy,
+)
+from pyiwfm.io.binary import (  # noqa: F401
+    LakeData as PreprocessorLakeData,
+)
+from pyiwfm.io.binary import (  # noqa: F401
+    StreamData as PreprocessorStreamData,
 )
 from pyiwfm.io.budget_checks import (  # noqa: F401
     BalanceCheckResult,
@@ -219,25 +236,6 @@ from pyiwfm.io.preprocessor import (  # noqa: F401
     save_complete_model,
     save_model_to_preprocessor,
     write_preprocessor_main,
-)
-from pyiwfm.io.preprocessor_binary import (  # noqa: F401
-    AppElementData,
-    AppFaceData,
-    AppNodeData,
-    LakeGWConnectorData,
-    PreprocessorBinaryData,
-    PreprocessorBinaryReader,
-    StratigraphyData,
-    StreamGWConnectorData,
-    StreamLakeConnectorData,
-    SubregionData,
-    read_preprocessor_binary,
-)
-from pyiwfm.io.preprocessor_binary import (  # noqa: F401
-    LakeData as PreprocessorLakeData,
-)
-from pyiwfm.io.preprocessor_binary import (  # noqa: F401
-    StreamData as PreprocessorStreamData,
 )
 from pyiwfm.io.preprocessor_writer import (  # noqa: F401
     PreProcessorWriter,

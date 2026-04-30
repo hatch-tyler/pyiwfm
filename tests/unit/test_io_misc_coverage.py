@@ -15,12 +15,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from pyiwfm.io.parametric_grid import (
-    ParamElement,
-    ParametricGrid,
-    ParamNode,
-)
-from pyiwfm.io.preprocessor_binary import (
+from pyiwfm.io.binary import (
     AppElementData,
     AppFaceData,
     AppNodeData,
@@ -34,6 +29,11 @@ from pyiwfm.io.preprocessor_binary import (
     StreamLakeConnectorData,
     SubregionData,
     read_preprocessor_binary,
+)
+from pyiwfm.io.parametric_grid import (
+    ParamElement,
+    ParametricGrid,
+    ParamNode,
 )
 from pyiwfm.io.supply_adjust import (
     SupplyAdjustment,

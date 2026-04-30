@@ -582,7 +582,7 @@ class TestIWFMModelFromPreprocessorBinary:
     """Test from_preprocessor_binary class method."""
 
     @patch("pyiwfm.core.model._binary_data_to_model")
-    @patch("pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader.read")
+    @patch("pyiwfm.io.binary.preprocessor.PreprocessorBinaryReader.read")
     def test_from_preprocessor_binary_basic(self, mock_read, mock_to_model):
         """Test basic binary loading."""
         mock_data = MagicMock()
@@ -599,7 +599,7 @@ class TestIWFMModelFromPreprocessorBinary:
         mock_to_model.assert_called_once_with(mock_data, name="TestModel")
 
     @patch("pyiwfm.core.model._binary_data_to_model")
-    @patch("pyiwfm.io.preprocessor_binary.PreprocessorBinaryReader.read")
+    @patch("pyiwfm.io.binary.preprocessor.PreprocessorBinaryReader.read")
     def test_from_preprocessor_binary_default_name(self, mock_read, mock_to_model):
         """Test binary loading uses file stem as default name."""
         mock_data = MagicMock()

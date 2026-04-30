@@ -41,7 +41,7 @@ def load_from_preprocessor_binary(
         _binary_data_to_model,
         _resolve_stream_node_coordinates,
     )
-    from pyiwfm.io.preprocessor_binary import PreprocessorBinaryReader
+    from pyiwfm.io.binary import PreprocessorBinaryReader
 
     binary_file = Path(binary_file)
     reader = PreprocessorBinaryReader()
