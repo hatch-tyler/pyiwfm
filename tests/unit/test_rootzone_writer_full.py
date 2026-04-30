@@ -1,5 +1,5 @@
 """
-Comprehensive tests for pyiwfm.io.rootzone_writer module.
+Comprehensive tests for pyiwfm.io.rootzone.writer module.
 
 Tests cover:
 - RootZoneWriterConfig dataclass and properties
@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pyiwfm.io.rootzone_writer import (
+from pyiwfm.io.rootzone.writer import (
     RootZoneComponentWriter,
     RootZoneWriterConfig,
     write_rootzone_component,

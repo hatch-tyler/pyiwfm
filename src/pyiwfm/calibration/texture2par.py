@@ -1157,7 +1157,7 @@ class Texture2Par:
                     sp.field_capacity = params["FC"][i]
                     sp.wilting_point = params["WP"][i]
 
-        from pyiwfm.io.rootzone_writer import RootZoneComponentWriter
+        from pyiwfm.io.rootzone.writer import RootZoneComponentWriter
 
         writer = RootZoneComponentWriter(config)  # type: ignore[call-arg, arg-type]
         writer.write_main(str(output_path))  # type: ignore[call-arg]

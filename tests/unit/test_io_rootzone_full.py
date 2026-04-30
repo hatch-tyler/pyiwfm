@@ -25,12 +25,16 @@ from pyiwfm.components.rootzone import (
     SoilParameters,
 )
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.io.ascii.reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (
+    strip_inline_comment as _strip_comment,
+)
 from pyiwfm.io.rootzone import (
     RootZoneFileConfig,
     RootZoneReader,
     RootZoneWriter,
-    _is_comment_line,
-    _strip_comment,
     read_crop_types,
     read_soil_params,
     write_rootzone,

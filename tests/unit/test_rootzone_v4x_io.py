@@ -20,7 +20,7 @@ from pyiwfm.io.rootzone import (
 from pyiwfm.io.rootzone import (
     version_ge as _version_ge,
 )
-from pyiwfm.io.rootzone_v4x import (
+from pyiwfm.io.rootzone.v4x import (
     AgInitialConditionRow,
     ElementCropRow,
     NativeRiparianConfigV4x,

@@ -978,7 +978,7 @@ class TestWriteRootZoneComponent:
         }
 
         with patch(
-            "pyiwfm.io.rootzone_writer.RootZoneComponentWriter",
+            "pyiwfm.io.rootzone.writer.RootZoneComponentWriter",
             return_value=mock_rz_writer,
         ):
             writer._write_rootzone(result)
@@ -997,7 +997,7 @@ class TestWriteRootZoneComponent:
         result = ModelWriteResult()
 
         with patch(
-            "pyiwfm.io.rootzone_writer.RootZoneComponentWriter",
+            "pyiwfm.io.rootzone.writer.RootZoneComponentWriter",
             side_effect=RuntimeError("rz writer failed"),
         ):
             writer._write_rootzone(result)

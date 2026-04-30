@@ -23,7 +23,7 @@ from pyiwfm.components.rootzone import (
     RootZone,
     SoilParameters,
 )
-from pyiwfm.io.rootzone_v4x import (
+from pyiwfm.io.rootzone.v4x import (
     NativeRiparianConfigV4x,
     NativeRiparianElementRowV4x,
     NativeRiparianInitialRowV4x,
@@ -277,7 +277,7 @@ def _write_area_file(path: Path, n_elements: int = 3, n_crops: int = 2) -> None:
 
 class TestAreaReader:
     def test_read_metadata(self, tmp_path):
-        from pyiwfm.io.rootzone_area import read_area_metadata
+        from pyiwfm.io.rootzone.area import read_area_metadata
 
         path = tmp_path / "area.dat"
         _write_area_file(path, n_elements=3, n_crops=2)
@@ -286,7 +286,7 @@ class TestAreaReader:
         assert meta.factor == pytest.approx(1.0)
 
     def test_read_first_timestep(self, tmp_path):
-        from pyiwfm.io.rootzone_area import read_area_timestep
+        from pyiwfm.io.rootzone.area import read_area_timestep
 
         path = tmp_path / "area.dat"
         _write_area_file(path, n_elements=3, n_crops=2)
@@ -298,7 +298,7 @@ class TestAreaReader:
         assert data[1][0] == pytest.approx(101.0)
 
     def test_read_second_timestep(self, tmp_path):
-        from pyiwfm.io.rootzone_area import read_area_timestep
+        from pyiwfm.io.rootzone.area import read_area_timestep
 
         path = tmp_path / "area.dat"
         _write_area_file(path, n_elements=3, n_crops=2)
@@ -308,7 +308,7 @@ class TestAreaReader:
         assert data[1][0] == pytest.approx(111.0)
 
     def test_read_all_timesteps(self, tmp_path):
-        from pyiwfm.io.rootzone_area import read_all_timesteps
+        from pyiwfm.io.rootzone.area import read_all_timesteps
 
         path = tmp_path / "area.dat"
         _write_area_file(path, n_elements=3, n_crops=2)
@@ -320,7 +320,7 @@ class TestAreaReader:
 
     def test_factor_applied(self, tmp_path):
         """Unit conversion factor is applied to values."""
-        from pyiwfm.io.rootzone_area import read_area_timestep
+        from pyiwfm.io.rootzone.area import read_area_timestep
 
         lines = [
             "C  Area file",
@@ -337,7 +337,7 @@ class TestAreaReader:
 
     def test_empty_file_returns_empty(self, tmp_path):
         """File with only header returns empty dict."""
-        from pyiwfm.io.rootzone_area import read_area_timestep
+        from pyiwfm.io.rootzone.area import read_area_timestep
 
         lines = [
             "C  Area file",

@@ -14,22 +14,22 @@ from pathlib import Path
 import pytest
 
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io.rootzone_native import (
+from pyiwfm.io.rootzone.native import (
     NativeRiparianConfig,
     NativeRiparianReader,
     read_native_riparian,
 )
-from pyiwfm.io.rootzone_nonponded import (
+from pyiwfm.io.rootzone.nonponded import (
     NonPondedCropConfig,
     NonPondedCropReader,
     read_nonponded_crop,
 )
-from pyiwfm.io.rootzone_ponded import (
+from pyiwfm.io.rootzone.ponded import (
     PondedCropConfig,
     PondedCropReader,
     read_ponded_crop,
 )
-from pyiwfm.io.rootzone_urban import (
+from pyiwfm.io.rootzone.urban import (
     UrbanLandUseConfig,
     UrbanLandUseReader,
     read_urban_landuse,

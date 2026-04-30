@@ -3349,19 +3349,19 @@ class TestRootZoneDeepLoading:
                 return_value=rz_config,
             ),
             patch(
-                "pyiwfm.io.rootzone_v4x.NonPondedCropReaderV4x.read",
+                "pyiwfm.io.rootzone.v4x.NonPondedCropReaderV4x.read",
                 return_value=mock_np_config,
             ),
             patch(
-                "pyiwfm.io.rootzone_v4x.PondedCropReaderV4x.read",
+                "pyiwfm.io.rootzone.v4x.PondedCropReaderV4x.read",
                 return_value=mock_pd_config,
             ),
             patch(
-                "pyiwfm.io.rootzone_v4x.UrbanReaderV4x.read",
+                "pyiwfm.io.rootzone.v4x.UrbanReaderV4x.read",
                 return_value=mock_ur_config,
             ),
             patch(
-                "pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x.read",
+                "pyiwfm.io.rootzone.v4x.NativeRiparianReaderV4x.read",
                 return_value=mock_nv_config,
             ),
         ):
@@ -3400,7 +3400,7 @@ class TestRootZoneDeepLoading:
                 return_value=rz_config,
             ),
             patch(
-                "pyiwfm.io.rootzone_v4x.NonPondedCropReaderV4x",
+                "pyiwfm.io.rootzone.v4x.NonPondedCropReaderV4x",
                 side_effect=ImportError("rootzone_v4x not available"),
             ),
         ):

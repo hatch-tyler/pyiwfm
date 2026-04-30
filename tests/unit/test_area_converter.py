@@ -17,7 +17,7 @@ import h5py
 import numpy as np
 import pytest
 
-from pyiwfm.io.rootzone_area import (
+from pyiwfm.io.rootzone.area import (
     _is_comment,
     _iter_data_lines,
     read_area_metadata,
@@ -519,7 +519,7 @@ class TestContinuationRowFormat:
 
     def test_read_all_timesteps_continuation(self, tmp_path):
         """read_all_timesteps handles continuation rows."""
-        from pyiwfm.io.rootzone_area import read_all_timesteps
+        from pyiwfm.io.rootzone.area import read_all_timesteps
 
         src = tmp_path / "area.dat"
         _write_area_file(

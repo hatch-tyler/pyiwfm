@@ -1,4 +1,4 @@
-"""Coverage tests for pyiwfm.io.rootzone_writer module.
+"""Coverage tests for pyiwfm.io.rootzone.writer module.
 
 Targets uncovered branches and edge cases including:
 - RootZoneWriterConfig defaults and properties
@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pyiwfm.io.rootzone_writer import (
+from pyiwfm.io.rootzone.writer import (
     RootZoneComponentWriter,
     RootZoneWriterConfig,
     _sp_val,
@@ -319,7 +319,7 @@ class TestRootZoneWriterMisc:
         self, tmp_path: Path, bare_model: MagicMock, mock_engine: MagicMock
     ) -> None:
         """write_rootzone_component() convenience function works."""
-        with patch("pyiwfm.io.rootzone_writer.TemplateEngine", return_value=mock_engine):
+        with patch("pyiwfm.io.rootzone.writer.TemplateEngine", return_value=mock_engine):
             results = write_rootzone_component(bare_model, tmp_path)
         assert "main" in results
 
@@ -330,7 +330,7 @@ class TestRootZoneWriterMisc:
         config = RootZoneWriterConfig(output_dir=tmp_path, version="4.0")
         new_dir = tmp_path / "out2"
         new_dir.mkdir()
-        with patch("pyiwfm.io.rootzone_writer.TemplateEngine", return_value=mock_engine):
+        with patch("pyiwfm.io.rootzone.writer.TemplateEngine", return_value=mock_engine):
             results = write_rootzone_component(bare_model, new_dir, config=config)
         assert config.output_dir == new_dir
         assert "main" in results
@@ -369,10 +369,10 @@ class TestWriteAllSubComponents:
         model.rootzone = rootzone
         return model
 
-    @patch("pyiwfm.io.rootzone_v4x.NativeRiparianWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.UrbanWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.PondedCropWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.NonPondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NativeRiparianWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.UrbanWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.PondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NonPondedCropWriterV4x")
     def test_nonponded_branch(
         self,
         MockNonPonded,
@@ -392,10 +392,10 @@ class TestWriteAllSubComponents:
         assert "nonponded" in results
         assert results["nonponded"] == config.rootzone_dir / "NonPondedAg.dat"
 
-    @patch("pyiwfm.io.rootzone_v4x.NativeRiparianWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.UrbanWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.PondedCropWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.NonPondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NativeRiparianWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.UrbanWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.PondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NonPondedCropWriterV4x")
     def test_ponded_branch(
         self,
         MockNonPonded,
@@ -415,10 +415,10 @@ class TestWriteAllSubComponents:
         assert "ponded" in results
         assert results["ponded"] == config.rootzone_dir / "PondedAg.dat"
 
-    @patch("pyiwfm.io.rootzone_v4x.NativeRiparianWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.UrbanWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.PondedCropWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.NonPondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NativeRiparianWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.UrbanWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.PondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NonPondedCropWriterV4x")
     def test_urban_branch(
         self,
         MockNonPonded,
@@ -438,10 +438,10 @@ class TestWriteAllSubComponents:
         assert "urban" in results
         assert results["urban"] == config.rootzone_dir / "UrbanLandUse.dat"
 
-    @patch("pyiwfm.io.rootzone_v4x.NativeRiparianWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.UrbanWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.PondedCropWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.NonPondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NativeRiparianWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.UrbanWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.PondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NonPondedCropWriterV4x")
     def test_native_riparian_branch(
         self,
         MockNonPonded,
@@ -461,10 +461,10 @@ class TestWriteAllSubComponents:
         assert "native_riparian" in results
         assert results["native_riparian"] == config.rootzone_dir / "NativeRiparian.dat"
 
-    @patch("pyiwfm.io.rootzone_v4x.NativeRiparianWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.UrbanWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.PondedCropWriterV4x")
-    @patch("pyiwfm.io.rootzone_v4x.NonPondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NativeRiparianWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.UrbanWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.PondedCropWriterV4x")
+    @patch("pyiwfm.io.rootzone.v4x.NonPondedCropWriterV4x")
     def test_all_four_sub_writers_called(
         self,
         MockNonPonded,

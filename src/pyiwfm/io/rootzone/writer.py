@@ -122,7 +122,7 @@ class RootZoneComponentWriter(TemplateWriter):
 
     Example
     -------
-    >>> from pyiwfm.io.rootzone_writer import RootZoneComponentWriter, RootZoneWriterConfig
+    >>> from pyiwfm.io.rootzone.writer import RootZoneComponentWriter, RootZoneWriterConfig
     >>> config = RootZoneWriterConfig(output_dir=Path("model/Simulation"))
     >>> writer = RootZoneComponentWriter(model, config)
     >>> files = writer.write_all()
@@ -193,7 +193,7 @@ class RootZoneComponentWriter(TemplateWriter):
         # Write v4x sub-files when data is available
         if rootzone is not None:
             try:
-                from pyiwfm.io.rootzone_v4x import (
+                from pyiwfm.io.rootzone.v4x import (
                     NativeRiparianWriterV4x,
                     NonPondedCropWriterV4x,
                     PondedCropWriterV4x,

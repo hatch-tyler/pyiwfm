@@ -113,7 +113,7 @@ class TestSoilParamsRead:
         reader = RootZoneMainFileReader.__new__(RootZoneMainFileReader)
         reader._line_num = 0
         config = _make_config("4.12")
-        with patch("pyiwfm.io.rootzone.logger") as mock_logger:
+        with patch("pyiwfm.io.rootzone.reader.logger") as mock_logger:
             rows = reader._read_element_soil_params(f, config, n_elements=5)
         assert len(rows) == 2
         mock_logger.warning.assert_called_once()

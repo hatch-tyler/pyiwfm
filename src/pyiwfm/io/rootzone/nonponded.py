@@ -17,8 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from pyiwfm.core.exceptions import FileFormatError
-from pyiwfm.io._rootzone_base import _RootzoneReaderBase
 from pyiwfm.io.ascii.reader import LineBuffer as _LineBuffer
+from pyiwfm.io.rootzone._base import _RootzoneReaderBase
 
 # ── Data classes ──────────────────────────────────────────────────────
 

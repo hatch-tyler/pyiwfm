@@ -297,7 +297,7 @@ class RootZone(BaseComponent):
         Args:
             timestep: Zero-based timestep index to read.
         """
-        from pyiwfm.io.rootzone_area import read_area_timestep
+        from pyiwfm.io.rootzone.area import read_area_timestep
 
         self.element_landuse.clear()
 

@@ -1,9 +1,9 @@
 """Shared base class for IWFM v5+ rootzone sub-file readers.
 
 The three v5+ rootzone variant readers
-(:class:`~pyiwfm.io.rootzone_native.NativeRiparianReader`,
-:class:`~pyiwfm.io.rootzone_nonponded.NonPondedCropReader`,
-:class:`~pyiwfm.io.rootzone_urban.UrbanLandUseReader`) all parse a
+(:class:`~pyiwfm.io.rootzone.native.NativeRiparianReader`,
+:class:`~pyiwfm.io.rootzone.nonponded.NonPondedCropReader`,
+:class:`~pyiwfm.io.rootzone.urban.UrbanLandUseReader`) all parse a
 positional-sequential text file with the same scaffolding shape:
 
 1. Open the file, build a :class:`~pyiwfm.io.ascii.reader.LineBuffer`.

@@ -259,7 +259,7 @@ from pyiwfm.io.rootzone import (  # noqa: F401
 from pyiwfm.io.rootzone import (  # noqa: F401
     version_ge as rootzone_version_ge,
 )
-from pyiwfm.io.rootzone_native import (  # noqa: F401
+from pyiwfm.io.rootzone.native import (  # noqa: F401
     NativeRiparianCNRow,
     NativeRiparianConfig,
     NativeRiparianEtcRow,
@@ -267,7 +267,7 @@ from pyiwfm.io.rootzone_native import (  # noqa: F401
     NativeRiparianReader,
     read_native_riparian,
 )
-from pyiwfm.io.rootzone_nonponded import (  # noqa: F401
+from pyiwfm.io.rootzone.nonponded import (  # noqa: F401
     CurveNumberRow,
     EtcPointerRow,
     InitialConditionRow,
@@ -278,12 +278,12 @@ from pyiwfm.io.rootzone_nonponded import (  # noqa: F401
     SupplyReturnReuseRow,
     read_nonponded_crop,
 )
-from pyiwfm.io.rootzone_ponded import (  # noqa: F401
+from pyiwfm.io.rootzone.ponded import (  # noqa: F401
     PondedCropConfig,
     PondedCropReader,
     read_ponded_crop,
 )
-from pyiwfm.io.rootzone_urban import (  # noqa: F401
+from pyiwfm.io.rootzone.urban import (  # noqa: F401
     SurfaceFlowDestRow,
     UrbanCurveNumberRow,
     UrbanInitialConditionRow,
@@ -292,7 +292,7 @@ from pyiwfm.io.rootzone_urban import (  # noqa: F401
     UrbanManagementRow,
     read_urban_landuse,
 )
-from pyiwfm.io.rootzone_v4x import (  # noqa: F401
+from pyiwfm.io.rootzone.v4x import (  # noqa: F401
     AgInitialConditionRow,
     ElementCropRow,
     NativeRiparianConfigV4x,
@@ -317,7 +317,7 @@ from pyiwfm.io.rootzone_v4x import (  # noqa: F401
     read_ponded_v4x,
     read_urban_v4x,
 )
-from pyiwfm.io.rootzone_writer import (  # noqa: F401
+from pyiwfm.io.rootzone.writer import (  # noqa: F401
     RootZoneComponentWriter,
     RootZoneWriterConfig,
     write_rootzone_component,

@@ -1150,13 +1150,13 @@ def load_from_simulation_with_preprocessor(
                     _use_v5 = version_ge(rz_config.version, (5, 0))
 
                     if _use_v5:
-                        from pyiwfm.io.rootzone_native import (
+                        from pyiwfm.io.rootzone.native import (
                             NativeRiparianReader,
                         )
-                        from pyiwfm.io.rootzone_nonponded import (
+                        from pyiwfm.io.rootzone.nonponded import (
                             NonPondedCropReader,
                         )
-                        from pyiwfm.io.rootzone_ponded import (
+                        from pyiwfm.io.rootzone.ponded import (
                             PondedCropReader,
                         )
 
@@ -1186,7 +1186,7 @@ def load_from_simulation_with_preprocessor(
 
                         if rz_config.urban_file and rz_config.urban_file.exists():
                             try:
-                                from pyiwfm.io.rootzone_urban import (
+                                from pyiwfm.io.rootzone.urban import (
                                     UrbanLandUseReader,
                                 )
 
@@ -1213,7 +1213,7 @@ def load_from_simulation_with_preprocessor(
                                 )
 
                     else:
-                        from pyiwfm.io.rootzone_v4x import (
+                        from pyiwfm.io.rootzone.v4x import (
                             NativeRiparianReaderV4x,
                             NonPondedCropReaderV4x,
                             PondedCropReaderV4x,

@@ -1290,10 +1290,10 @@ class TestFromSimWithPPRootZone:
 
         with (
             patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as mock_rz_cls,
-            patch("pyiwfm.io.rootzone_v4x.NonPondedCropReaderV4x") as mock_np_cls,
-            patch("pyiwfm.io.rootzone_v4x.PondedCropReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.UrbanReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NonPondedCropReaderV4x") as mock_np_cls,
+            patch("pyiwfm.io.rootzone.v4x.PondedCropReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.UrbanReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NativeRiparianReaderV4x"),
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
             mock_np_cls.return_value.read.return_value = np_cfg
@@ -1322,10 +1322,10 @@ class TestFromSimWithPPRootZone:
 
         with (
             patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as mock_rz_cls,
-            patch("pyiwfm.io.rootzone_v4x.NonPondedCropReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.PondedCropReaderV4x") as mock_p_cls,
-            patch("pyiwfm.io.rootzone_v4x.UrbanReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NonPondedCropReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.PondedCropReaderV4x") as mock_p_cls,
+            patch("pyiwfm.io.rootzone.v4x.UrbanReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NativeRiparianReaderV4x"),
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
             mock_p_cls.return_value.read.return_value = p_cfg
@@ -1348,10 +1348,10 @@ class TestFromSimWithPPRootZone:
 
         with (
             patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as mock_rz_cls,
-            patch("pyiwfm.io.rootzone_v4x.NonPondedCropReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.PondedCropReaderV4x") as mock_p_cls,
-            patch("pyiwfm.io.rootzone_v4x.UrbanReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NonPondedCropReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.PondedCropReaderV4x") as mock_p_cls,
+            patch("pyiwfm.io.rootzone.v4x.UrbanReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NativeRiparianReaderV4x"),
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
             mock_p_cls.return_value.read.side_effect = ValueError("ponded fail")
@@ -1373,10 +1373,10 @@ class TestFromSimWithPPRootZone:
 
         with (
             patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as mock_rz_cls,
-            patch("pyiwfm.io.rootzone_v4x.NonPondedCropReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.PondedCropReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.UrbanReaderV4x") as mock_u_cls,
-            patch("pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NonPondedCropReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.PondedCropReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.UrbanReaderV4x") as mock_u_cls,
+            patch("pyiwfm.io.rootzone.v4x.NativeRiparianReaderV4x"),
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
             mock_u_cls.return_value.read.side_effect = ValueError("urban fail")
@@ -1398,10 +1398,10 @@ class TestFromSimWithPPRootZone:
 
         with (
             patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as mock_rz_cls,
-            patch("pyiwfm.io.rootzone_v4x.NonPondedCropReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.PondedCropReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.UrbanReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x") as mock_n_cls,
+            patch("pyiwfm.io.rootzone.v4x.NonPondedCropReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.PondedCropReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.UrbanReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NativeRiparianReaderV4x") as mock_n_cls,
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
             mock_n_cls.return_value.read.side_effect = ValueError("native fail")
@@ -1453,10 +1453,10 @@ class TestFromSimWithPPRootZone:
 
         with (
             patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as mock_rz_cls,
-            patch("pyiwfm.io.rootzone_nonponded.NonPondedCropReader") as mock_np_cls,
-            patch("pyiwfm.io.rootzone_ponded.PondedCropReader") as mock_p_cls,
-            patch("pyiwfm.io.rootzone_urban.UrbanLandUseReader") as mock_u_cls,
-            patch("pyiwfm.io.rootzone_native.NativeRiparianReader") as mock_nr_cls,
+            patch("pyiwfm.io.rootzone.nonponded.NonPondedCropReader") as mock_np_cls,
+            patch("pyiwfm.io.rootzone.ponded.PondedCropReader") as mock_p_cls,
+            patch("pyiwfm.io.rootzone.urban.UrbanLandUseReader") as mock_u_cls,
+            patch("pyiwfm.io.rootzone.native.NativeRiparianReader") as mock_nr_cls,
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
             mock_np_cls.return_value.read.return_value = np_cfg
@@ -1493,10 +1493,10 @@ class TestFromSimWithPPRootZone:
 
         with (
             patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as mock_rz_cls,
-            patch("pyiwfm.io.rootzone_nonponded.NonPondedCropReader") as mock_np_cls,
-            patch("pyiwfm.io.rootzone_ponded.PondedCropReader") as mock_p_cls,
-            patch("pyiwfm.io.rootzone_urban.UrbanLandUseReader") as mock_u_cls,
-            patch("pyiwfm.io.rootzone_native.NativeRiparianReader") as mock_nr_cls,
+            patch("pyiwfm.io.rootzone.nonponded.NonPondedCropReader") as mock_np_cls,
+            patch("pyiwfm.io.rootzone.ponded.PondedCropReader") as mock_p_cls,
+            patch("pyiwfm.io.rootzone.urban.UrbanLandUseReader") as mock_u_cls,
+            patch("pyiwfm.io.rootzone.native.NativeRiparianReader") as mock_nr_cls,
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
             mock_np_cls.return_value.read.side_effect = ValueError("np fail")
@@ -1532,10 +1532,10 @@ class TestFromSimWithPPRootZone:
 
         with (
             patch("pyiwfm.io.rootzone.RootZoneMainFileReader") as mock_rz_cls,
-            patch("pyiwfm.io.rootzone_v4x.NonPondedCropReaderV4x") as mock_np_cls,
-            patch("pyiwfm.io.rootzone_v4x.PondedCropReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.UrbanReaderV4x"),
-            patch("pyiwfm.io.rootzone_v4x.NativeRiparianReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NonPondedCropReaderV4x") as mock_np_cls,
+            patch("pyiwfm.io.rootzone.v4x.PondedCropReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.UrbanReaderV4x"),
+            patch("pyiwfm.io.rootzone.v4x.NativeRiparianReaderV4x"),
         ):
             mock_rz_cls.return_value.read.return_value = rz_config
             mock_np_cls.return_value.read.return_value = np_cfg

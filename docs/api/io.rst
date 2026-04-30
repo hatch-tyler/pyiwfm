@@ -297,7 +297,7 @@ Root Zone Writer
 
 Writer for IWFM root zone component files using Jinja2 templates.
 
-.. automodule:: pyiwfm.io.rootzone_writer
+.. automodule:: pyiwfm.io.rootzone.writer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -307,7 +307,7 @@ Root Zone v4.x
 
 Readers and writers specific to IWFM v4.x root zone format.
 
-.. automodule:: pyiwfm.io.rootzone_v4x
+.. automodule:: pyiwfm.io.rootzone.v4x
    :members:
    :undoc-members:
    :show-inheritance:
@@ -317,7 +317,7 @@ Root Zone Non-Ponded Crops
 
 Reader for non-ponded (dry) crop land use parameters.
 
-.. automodule:: pyiwfm.io.rootzone_nonponded
+.. automodule:: pyiwfm.io.rootzone.nonponded
    :members:
    :undoc-members:
    :show-inheritance:
@@ -327,7 +327,7 @@ Root Zone Ponded Crops
 
 Reader for ponded (rice/wetland) crop land use parameters.
 
-.. automodule:: pyiwfm.io.rootzone_ponded
+.. automodule:: pyiwfm.io.rootzone.ponded
    :members:
    :undoc-members:
    :show-inheritance:
@@ -337,7 +337,7 @@ Root Zone Urban
 
 Reader for urban land use parameters.
 
-.. automodule:: pyiwfm.io.rootzone_urban
+.. automodule:: pyiwfm.io.rootzone.urban
    :members:
    :undoc-members:
    :show-inheritance:
@@ -347,7 +347,7 @@ Root Zone Native/Riparian
 
 Reader for native and riparian vegetation parameters.
 
-.. automodule:: pyiwfm.io.rootzone_native
+.. automodule:: pyiwfm.io.rootzone.native
    :members:
    :undoc-members:
    :show-inheritance:

@@ -417,14 +417,14 @@ without `cd`-ing into a subdirectory.
 
 ## 6. Rootzone v5+ reader consolidation
 
-### `pyiwfm.io._rootzone_base._RootzoneReaderBase` (new internal base)
+### `pyiwfm.io.rootzone._base._RootzoneReaderBase` (new internal base)
 
 **Status:** _internal restructuring_; **public API unchanged**.
 
 In v1.x the three v5+ rootzone variant readers
-(:class:`~pyiwfm.io.rootzone_native.NativeRiparianReader`,
-:class:`~pyiwfm.io.rootzone_nonponded.NonPondedCropReader`,
-:class:`~pyiwfm.io.rootzone_urban.UrbanLandUseReader`) each carried
+(:class:`~pyiwfm.io.rootzone.native.NativeRiparianReader`,
+:class:`~pyiwfm.io.rootzone.nonponded.NonPondedCropReader`,
+:class:`~pyiwfm.io.rootzone.urban.UrbanLandUseReader`) each carried
 their own copies of:
 
 - `_resolve(base_dir, filepath)` — byte-identical 4-line method, 3
@@ -435,7 +435,7 @@ their own copies of:
 - Inline `try: float(val); except ValueError: raise FileFormatError(...)`
   blocks at every scalar-read site (~6 places per reader × 3 readers).
 
-PR 6 extracts this scaffolding into ``pyiwfm.io._rootzone_base._RootzoneReaderBase``
+PR 6 extracts this scaffolding into ``pyiwfm.io.rootzone._base._RootzoneReaderBase``
 (168 lines) with shared `_resolve`, `_read_rows`, `_parse_float`, and
 `_parse_int` helpers. The three concrete readers now inherit from it.
 
@@ -467,13 +467,13 @@ types. External callers don't see the inheritance change.
 
 If you imported one of the now-removed private helpers
 (`_is_comment_line`, `_LineBuffer`, `_strip_comment` re-exports) from
-``pyiwfm.io.rootzone_nonponded`` directly (rare; the test suite did
+``pyiwfm.io.rootzone.nonponded`` directly (rare; the test suite did
 this in two places before PR 6), update to import from the canonical
 :mod:`pyiwfm.io.ascii.reader`:
 
 ```python
 # v1.x:
-from pyiwfm.io.rootzone_nonponded import _is_comment_line
+from pyiwfm.io.rootzone.nonponded import _is_comment_line
 
 # v2.x:
 from pyiwfm.io.ascii.reader import is_comment_line as _is_comment_line
@@ -808,6 +808,84 @@ The five v1.x paths (`pyiwfm.io.iwfm_reader`, `pyiwfm.io.iwfm_writer`,
 strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
+
+### `pyiwfm.io.rootzone` (was a module, now a package) and the `rootzone_*` cluster (gone)
+
+The nine flat root-zone modules (`rootzone.py`, `rootzone_writer.py`,
+`_rootzone_base.py`, `rootzone_area.py`, `rootzone_native.py`,
+`rootzone_nonponded.py`, `rootzone_ponded.py`, `rootzone_urban.py`,
+and `rootzone_v4x.py`) are now a single subpackage
+`pyiwfm/io/rootzone/`:
+
+- `pyiwfm/io/rootzone/reader.py` — was `rootzone.py` (`RootZoneReader`,
+  `RootZoneMainFileReader`, `RootZoneFileConfig`,
+  `RootZoneMainFileConfig`, `RootZoneWriter` (legacy free-form),
+  `read_rootzone_main_file`, `read_crop_types`, `read_soil_params`,
+  `write_rootzone`).
+
+- `pyiwfm/io/rootzone/writer.py` — was `rootzone_writer.py`
+  (`RootZoneComponentWriter`, `RootZoneWriterConfig`,
+  `write_rootzone_component`).
+
+- `pyiwfm/io/rootzone/_base.py` — was `_rootzone_base.py`
+  (`_RootzoneReaderBase`, the v5+ shared base class).
+
+- `pyiwfm/io/rootzone/area.py` — was `rootzone_area.py`
+  (`AreaFileMetadata`, `read_area_metadata`, `read_area_timestep`,
+  `read_all_timesteps`).
+
+- `pyiwfm/io/rootzone/native.py`, `pyiwfm/io/rootzone/nonponded.py`,
+  `pyiwfm/io/rootzone/ponded.py`, `pyiwfm/io/rootzone/urban.py` —
+  per-land-use sub-files for v5+ root-zone format.
+
+- `pyiwfm/io/rootzone/v4x.py` — was `rootzone_v4x.py`
+  (v4.x readers and writers for all four land-use sub-files).
+
+The package `__init__.py` re-exports every public symbol so the
+deeper paths are optional.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.rootzone import RootZoneReader
+from pyiwfm.io.rootzone_writer import (
+    RootZoneComponentWriter, write_rootzone_component,
+)
+from pyiwfm.io.rootzone_native import NativeRiparianReader
+from pyiwfm.io.rootzone_nonponded import NonPondedCropReader
+from pyiwfm.io.rootzone_ponded import PondedCropReader
+from pyiwfm.io.rootzone_urban import UrbanLandUseReader
+from pyiwfm.io.rootzone_v4x import (
+    NonPondedCropReaderV4x, PondedCropReaderV4x,
+    UrbanReaderV4x, NativeRiparianReaderV4x,
+)
+from pyiwfm.io.rootzone_area import read_area_metadata
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.rootzone import (
+    RootZoneReader,
+    RootZoneComponentWriter,
+    write_rootzone_component,
+    NativeRiparianReader,
+    NonPondedCropReader,
+    PondedCropReader,
+    UrbanLandUseReader,
+    NonPondedCropReaderV4x,
+    PondedCropReaderV4x,
+    UrbanReaderV4x,
+    NativeRiparianReaderV4x,
+    read_area_metadata,
+)
+```
+
+The eight v1.x flat paths are **gone**. `mock.patch` strings need
+updating to `pyiwfm.io.rootzone.X` (the package re-export). Note that
+for symbols the *reader* itself looks up internally — e.g.
+`pyiwfm.io.rootzone.logger` was a module-level binding in
+`rootzone.py`; now it lives in `pyiwfm.io.rootzone.reader`.
 
 ### `pyiwfm.io.preprocessor` (was a module, now a package) and `pyiwfm.io.preprocessor_writer`/`pyiwfm.io.mesh` (gone)
 

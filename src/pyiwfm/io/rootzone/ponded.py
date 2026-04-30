@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pyiwfm.io.rootzone_nonponded import (
+from pyiwfm.io.rootzone.nonponded import (
     NonPondedCropConfig,
     NonPondedCropReader,
 )

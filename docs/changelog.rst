@@ -42,6 +42,21 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.rootzone``** is now a package (was a module),
+  collapsing the nine flat root-zone modules (``rootzone.py``,
+  ``rootzone_writer.py``, ``_rootzone_base.py``, ``rootzone_area.py``,
+  ``rootzone_native.py``, ``rootzone_nonponded.py``,
+  ``rootzone_ponded.py``, ``rootzone_urban.py``, ``rootzone_v4x.py``)
+  into one subpackage:
+  ``pyiwfm/io/rootzone/{reader,writer,_base,area,native,nonponded,
+  ponded,urban,v4x}.py``. The package ``__init__.py`` re-exports
+  every public symbol; reader imports
+  (``from pyiwfm.io.rootzone import RootZoneReader``) keep working
+  unchanged. The eight v1.x flat sibling paths
+  (``pyiwfm.io.rootzone_writer``, ``pyiwfm.io.rootzone_native``, …)
+  are **gone** in v2.0 — update imports and ``mock.patch`` strings.
+  See ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.preprocessor``** is now a package (was a module),
   collapsing ``preprocessor.py`` (main-file reader),
   ``preprocessor_writer.py`` (Jinja2 writer), and ``mesh.py`` (the

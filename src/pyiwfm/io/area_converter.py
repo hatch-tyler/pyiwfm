@@ -34,7 +34,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from pyiwfm.io.rootzone_area import _has_date, _is_comment, _strip_description
+from pyiwfm.io.rootzone.area import _has_date, _is_comment, _strip_description
 
 logger = logging.getLogger(__name__)
 

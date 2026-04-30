@@ -604,7 +604,7 @@ class CompleteModelWriter:
             return
 
         try:
-            from pyiwfm.io.rootzone_writer import (
+            from pyiwfm.io.rootzone.writer import (
                 RootZoneComponentWriter,
                 RootZoneWriterConfig,
             )
