@@ -152,7 +152,7 @@ class DiversionSpecReader(ReaderMixin):
         config = DiversionSpecConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # NDiver (number of diversions)
             ndiver_str = _next_data_or_empty(f)
             if not ndiver_str:

@@ -127,7 +127,7 @@ class NativeRiparianReader(_RootzoneReaderBase):
         if base_dir is None:
             base_dir = filepath.parent
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             lines = f.readlines()
         buf = _LineBuffer(lines)
         config = NativeRiparianConfig()

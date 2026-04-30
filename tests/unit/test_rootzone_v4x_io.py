@@ -169,7 +169,7 @@ def _write_main_file_v40(path: Path, n_elements: int = 3) -> None:
     ]
     for i in range(1, n_elements + 1):
         lines.append(f"   {i}   0.10  0.20  0.45  0.62  2.60  2  {i}  1.0  0  0  0")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_main_file_v411(path: Path, n_elements: int = 3) -> None:
@@ -207,7 +207,7 @@ def _write_main_file_v411(path: Path, n_elements: int = 3) -> None:
     ]
     for i in range(1, n_elements + 1):
         lines.append(f"   {i}   0.10  0.20  0.45  0.62  2.60  2  0.0  {i}  1.0  0  0  0")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_main_file_v412(path: Path, n_elements: int = 3) -> None:
@@ -249,7 +249,7 @@ def _write_main_file_v412(path: Path, n_elements: int = 3) -> None:
         lines.append(
             f"   {i}   0.10  0.20  0.45  0.62  2.60  -1.0  2  0.0  {i}  1.0  0  1  1  1  1"
         )
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class TestMainFileReaderV40:
@@ -363,7 +363,7 @@ def _write_native_riparian_file(path: Path, n_elements: int = 3) -> None:
     lines.append("C  Initial conditions: IE NativeMC RiparianMC")
     for i in range(1, n_elements + 1):
         lines.append(f"   {i}   0.15   0.18")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class TestNativeRiparianReaderV4x:
@@ -448,7 +448,7 @@ def _write_urban_file(path: Path, n_elements: int = 3) -> None:
     lines.append("C  Initial conditions")
     for i in range(1, n_elements + 1):
         lines.append(f"   {i}   0.5   0.12")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class TestUrbanReaderV4x:
@@ -569,7 +569,7 @@ def _write_nonponded_file(path: Path, n_elements: int = 2, n_crops: int = 2) -> 
     for i in range(1, n_elements + 1):
         mcs = " ".join(f"  {0.15:.6f}" for _ in range(n_crops))
         lines.append(f"   {i}     0.5000 {mcs}")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class TestNonPondedCropReaderV4x:
@@ -748,7 +748,7 @@ def _write_ponded_file(path: Path, n_elements: int = 2) -> None:
     for i in range(1, n_elements + 1):
         mcs = " ".join(f"  {0.15:.6f}" for _ in range(nc))
         lines.append(f"   {i}     0.5000 {mcs}")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class TestPondedCropReaderV4x:

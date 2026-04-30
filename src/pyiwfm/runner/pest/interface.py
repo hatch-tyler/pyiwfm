@@ -325,7 +325,7 @@ class PESTInterface:
 
     def _write_v1(self, filepath: Path) -> Path:
         """Write a traditional (v1) PEST++ control file."""
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             self._write_v1_control_data(f)
             self._write_v1_svd(f)
             self._write_v1_parameter_groups(f)
@@ -533,7 +533,7 @@ class PESTInterface:
             return str(csv_path.relative_to(pst_dir)).replace("\\", "/")
 
         # Write the PST
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write("pcf\n")
             f.write("* control data keyword\n")
 
@@ -598,7 +598,7 @@ class PESTInterface:
     @staticmethod
     def _write_csv(filepath: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> Path:
         """Write a list of dicts to a CSV file and return the path."""
-        with open(filepath, "w", newline="") as f:
+        with open(filepath, "w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(rows)
@@ -632,7 +632,7 @@ class PESTInterface:
             model_dir = filepath.parent
         pest_dir = filepath.parent / "pest"
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             lines = [line.rstrip("\n").rstrip("\r") for line in f]
 
         # Find section indices

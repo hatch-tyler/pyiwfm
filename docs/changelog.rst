@@ -42,6 +42,17 @@ Added
 Changed
 ~~~~~~~
 
+- **All text-mode file I/O across the codebase now uses explicit
+  ``encoding="utf-8"``** (183 sites). Previously, ``open(path)``,
+  ``Path.read_text()``, and ``Path.write_text()`` calls inherited the
+  platform-default encoding (``cp1252`` on Windows, ``utf-8`` elsewhere),
+  so an IWFM file with non-ASCII characters (e.g. Spanish-language
+  subregion names, °, smart quotes) would hit silent decoder errors on
+  Windows that surfaced as confusing format-error tracebacks. UTF-8 is
+  a strict superset of ASCII, so existing fixtures are unaffected.
+  The Pylint ``PLW1514`` rule (preview) is now enabled in ruff to
+  prevent regression.
+
 - **CLI** subcommands ``viewer`` and ``export`` now load IWFM models
   with ``strict="collect"`` by default. A model with broken or missing
   component files now produces a single ``ValidationError`` listing
@@ -73,6 +84,10 @@ Changed
 
 Removed
 ~~~~~~~
+
+- ``pyiwfm.utils`` package — was empty (`__all__ = []`) and had no
+  candidate helpers to populate it after a codebase audit. The
+  empty package was creating discoverability confusion.
 
 - ``pyiwfm.io.preprocessor_writer.write_nodes_file`` /
   ``write_elements_file`` / ``write_stratigraphy_file`` (and their

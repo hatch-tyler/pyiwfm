@@ -234,7 +234,7 @@ class PumpingReader(ReaderMixin):
         config = PumpingConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Version
             config.version = self._read_version(f)
 
@@ -271,7 +271,7 @@ class PumpingReader(ReaderMixin):
     def _read_well_file(self, filepath: Path, config: PumpingConfig) -> None:
         """Read well specification file."""
         self._line_num = 0
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # NWell
             n_wells = int(_next_data_or_empty(f))
             if n_wells <= 0:
@@ -337,7 +337,7 @@ class PumpingReader(ReaderMixin):
     def _read_elem_pump_file(self, filepath: Path, config: PumpingConfig, n_layers: int) -> None:
         """Read element pumping specification file."""
         self._line_num = 0
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # NSink
             n_sinks = int(_next_data_or_empty(f))
             if n_sinks <= 0:

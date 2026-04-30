@@ -322,7 +322,7 @@ class TimeSeriesWriter:
         output_path = self.output_dir / text_file
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             # Write header
             if header_lines:
                 for line in header_lines:
@@ -357,7 +357,7 @@ class TimeSeriesWriter:
         output_path = self.output_dir / text_file
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             # Header
             f.write(f"C  Time series: {ts_spec.name}\n")
             if ts_spec.units:

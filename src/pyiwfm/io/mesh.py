@@ -78,7 +78,7 @@ def read_nodes(filepath: Path | str) -> dict[int, Node]:
     filepath = Path(filepath)
     nodes: dict[int, Node] = {}
 
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         # Skip comment lines and find NNODES
         n_nodes = None
         fact = 1.0  # Conversion factor, default 1.0
@@ -194,7 +194,7 @@ def read_elements(
     filepath = Path(filepath)
     elements: dict[int, Element] = {}
 
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         line_num = 0
         n_elem = None
         n_subregion = None
@@ -390,7 +390,7 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
     """
     filepath = Path(filepath)
 
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         line_num = 0
         n_layers = None
         fact = 1.0
@@ -533,7 +533,7 @@ def write_nodes(
         data[i, 1] = node.x
         data[i, 2] = node.y
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         if header is None:
             _write_title_block(f, "IWFM NODAL COORDINATES FILE")
         else:
@@ -606,7 +606,7 @@ def write_elements(
         data[i, 1:5] = verts[:4]
         data[i, 5] = getattr(elem, "subregion", 1) or 1
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         if header is None:
             _write_title_block(f, "IWFM ELEMENT CONFIGURATION FILE")
         else:
@@ -675,7 +675,7 @@ def write_stratigraphy(
         data[:, 2 + 2 * layer] = aquitard_thicks[:, layer]
         data[:, 3 + 2 * layer] = aquifer_thicks[:, layer]
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         if header is None:
             _write_title_block(f, "IWFM STRATIGRAPHY DATA FILE")
         else:

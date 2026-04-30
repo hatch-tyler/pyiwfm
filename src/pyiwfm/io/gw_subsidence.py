@@ -210,7 +210,7 @@ class SubsidenceReader(ReaderMixin):
         config.n_layers = n_layers
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Version header
             config.version = self._read_version(f)
 
@@ -561,7 +561,7 @@ class SubsidenceReader(ReaderMixin):
         config.ic_interbed_thick = np.zeros((n_nodes, n_layers))
         config.ic_precompact_head = np.zeros((n_nodes, n_layers))
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Conversion factor
             factor_str = _next_data_or_empty(f)
             config.ic_factor = float(factor_str) if factor_str else 1.0

@@ -351,7 +351,7 @@ class TestWriteGeojsonZones:
 
         assert output_file.exists()
 
-        with open(output_file) as f:
+        with open(output_file, encoding="utf-8") as f:
             geojson = json.load(f)
 
         assert geojson["type"] == "FeatureCollection"
@@ -499,7 +499,7 @@ class TestWriteZoneFile:
         write_zone_file(sample_zone_def, output_file)
 
         assert output_file.exists()
-        with open(output_file) as f:
+        with open(output_file, encoding="utf-8") as f:
             geojson = json.load(f)
         assert geojson["type"] == "FeatureCollection"
 
@@ -681,7 +681,7 @@ class TestWriteGeojsonZonesWithGrid:
         write_geojson_zones(zone_def, output_file, grid=grid, include_geometry=True)
 
         assert output_file.exists()
-        with open(output_file) as f:
+        with open(output_file, encoding="utf-8") as f:
             geojson = json.load(f)
 
         feature = geojson["features"][0]
@@ -707,7 +707,7 @@ class TestWriteGeojsonZonesWithGrid:
         output_file = tmp_path / "single_elem.geojson"
         write_geojson_zones(zone_def, output_file, grid=grid, include_geometry=True)
 
-        with open(output_file) as f:
+        with open(output_file, encoding="utf-8") as f:
             geojson = json.load(f)
 
         feature = geojson["features"][0]
@@ -722,7 +722,7 @@ class TestWriteGeojsonZonesWithGrid:
         output_file = tmp_path / "no_geom.geojson"
         write_geojson_zones(zone_def, output_file, include_geometry=False)
 
-        with open(output_file) as f:
+        with open(output_file, encoding="utf-8") as f:
             geojson = json.load(f)
 
         assert geojson["features"][0]["geometry"] is None

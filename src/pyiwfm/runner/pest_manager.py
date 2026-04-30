@@ -762,7 +762,7 @@ class IWFMParameterManager:
         """
         filepath = Path(filepath)
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write("# IWFM PEST++ Parameter File\n")
             f.write("# name, initial_value, lower_bound, upper_bound, group, transform\n")
             for param in self._parameters.values():
@@ -784,7 +784,7 @@ class IWFMParameterManager:
         """
         filepath = Path(filepath)
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"):

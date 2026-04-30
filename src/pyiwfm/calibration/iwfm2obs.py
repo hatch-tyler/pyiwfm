@@ -418,7 +418,7 @@ def read_head_difference_pairs(path: str | Path) -> list[HeadDifferencePair]:
         If a pair has identical IDs or a line has fewer than 2 tokens.
     """
     pairs: list[HeadDifferencePair] = []
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         for lineno, line in enumerate(f, 1):
             stripped = line.strip()
             if not stripped or stripped.startswith(("C", "c", "*", "#")):
@@ -900,7 +900,7 @@ def read_iwfm2obs_config(path: str | Path) -> IWFM2OBSInputFile:
     """
     result = IWFM2OBSInputFile()
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         # Line 1: Simulation main file (or date format for old format)
         first = _next_data_value_i2o(f)
 
@@ -1233,7 +1233,7 @@ def write_multilayer_output(
     n_layers : int
         Number of model layers.
     """
-    with open(output_path, "w") as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         # Header
         f.write(f"{'Name':<25s} {'Date':>10s}  {'Time':>8s}  {'Simulated':>10s}")
         for k in range(min(n_layers, 4)):

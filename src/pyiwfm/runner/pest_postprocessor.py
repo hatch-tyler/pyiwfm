@@ -373,7 +373,7 @@ class PestPostProcessor:
         ResidualData
             Parsed residual data.
         """
-        lines = filepath.read_text().strip().split("\n")
+        lines = filepath.read_text(encoding="utf-8").strip().split("\n")
 
         names = []
         groups = []

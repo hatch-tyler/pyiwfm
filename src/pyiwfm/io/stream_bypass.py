@@ -137,7 +137,7 @@ class BypassSpecReader(ReaderMixin):
         config = BypassSpecConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # NBypass
             nbypass_str = _next_data_or_empty(f)
             if not nbypass_str:

@@ -102,7 +102,7 @@ def _gw_main_tail_minimal() -> list[str]:
 
 
 def _write_file(path: Path, lines: list[str]) -> None:
-    path.write_text("".join(lines))
+    path.write_text("".join(lines), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------

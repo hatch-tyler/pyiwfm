@@ -85,7 +85,7 @@ class InflowReader(ReaderMixin):
         config = InflowConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Conversion factor
             factor_str = _next_data_or_empty(f)
             if factor_str:

@@ -340,7 +340,7 @@ class ScenarioManager:
             return
 
         try:
-            content = filepath.read_text()
+            content = filepath.read_text(encoding="utf-8")
             lines = content.splitlines()
             modified_lines = []
 
@@ -373,7 +373,7 @@ class ScenarioManager:
                 else:
                     modified_lines.append(line)
 
-            filepath.write_text("\n".join(modified_lines))
+            filepath.write_text("\n".join(modified_lines), encoding="utf-8")
 
         except OSError as exc:
             # File-level read/write failure (permissions, missing file).

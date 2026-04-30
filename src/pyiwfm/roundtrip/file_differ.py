@@ -104,7 +104,7 @@ def _extract_data_lines(filepath: Path) -> list[str]:
         List of normalized data lines.
     """
     lines: list[str] = []
-    text = filepath.read_text(errors="replace")
+    text = filepath.read_text(encoding="utf-8", errors="replace")
 
     for raw_line in text.splitlines():
         if is_comment_line(raw_line):

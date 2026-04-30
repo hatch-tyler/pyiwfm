@@ -58,7 +58,7 @@ class IWFMHydrographReader:
             return
 
         try:
-            with open(self._filepath) as f:
+            with open(self._filepath, encoding="utf-8") as f:
                 lines = f.readlines()
         except Exception as e:
             logger.error("Failed to read hydrograph file %s: %s", self._filepath, e)

@@ -1,28 +1,23 @@
 """Tests for package __init__ modules to ensure imports work correctly.
 
 Tests:
-- utils/__init__.py
 - visualization/__init__.py
 - mesh_generation/__init__.py
+
+(``pyiwfm.utils`` was an empty package; deleted in the io-audit cleanup.)
 """
 
 from __future__ import annotations
 
+import pytest
 
-class TestUtilsInit:
-    """Tests for utils package init."""
 
-    def test_import_utils(self) -> None:
-        """Test utils package can be imported."""
-        import pyiwfm.utils
+class TestUtilsRemoved:
+    """The empty ``pyiwfm.utils`` package was deleted in the io audit."""
 
-        assert hasattr(pyiwfm.utils, "__all__")
-
-    def test_all_is_empty_list(self) -> None:
-        """Test __all__ is an empty list."""
-        from pyiwfm.utils import __all__
-
-        assert __all__ == []
+    def test_pyiwfm_utils_no_longer_importable(self) -> None:
+        with pytest.raises(ModuleNotFoundError):
+            __import__("pyiwfm.utils")
 
 
 class TestVisualizationInit:

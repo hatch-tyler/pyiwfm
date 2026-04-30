@@ -95,7 +95,7 @@ class InstructionFile:
             lines.append(instruction)
             obs_names.append(obs_name)
 
-        with open(instruction_file, "w") as f:
+        with open(instruction_file, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
         return cls(
@@ -170,7 +170,7 @@ class InstructionFile:
             lines.append(instruction)
             obs_names.append(obs_name)
 
-        with open(instruction_file, "w") as f:
+        with open(instruction_file, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
         return cls(

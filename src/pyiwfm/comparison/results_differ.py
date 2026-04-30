@@ -622,7 +622,7 @@ def _parse_head_text_file(filepath: Path) -> list[list[float]]:
     current_block: list[float] = []
     in_data = False
 
-    with open(filepath, errors="replace") as f:
+    with open(filepath, encoding="utf-8", errors="replace") as f:
         for line in f:
             stripped = line.strip()
             if not stripped:
@@ -669,7 +669,7 @@ def _parse_hydrograph_text(
     """
     locations: dict[str, list[float]] = {}
 
-    with open(filepath, errors="replace") as f:
+    with open(filepath, encoding="utf-8", errors="replace") as f:
         lines = f.readlines()
 
     # Skip header lines (lines starting with * or C or blank)

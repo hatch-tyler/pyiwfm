@@ -225,7 +225,7 @@ class TemplateEngine:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             # Render header with Jinja2
             if header_template.endswith(".j2"):
                 header = self.render_template(header_template, **context)
@@ -284,7 +284,7 @@ class TemplateEngine:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             # Check for preserved header
             has_preserved = comment_metadata is not None and comment_metadata.header_block
 
@@ -353,7 +353,7 @@ C  ID             X              Y
         data = np.column_stack([node_ids, x, y])
 
         output_path = Path(output_path)
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(self.engine.render_string(header, n_nodes=n_nodes))
             np.savetxt(f, data, fmt="%5d %14.6f %14.6f")
 
@@ -392,7 +392,7 @@ C  ID   V1    V2    V3    V4   SR
         data = np.column_stack([element_ids, vertices, subregions])
 
         output_path = Path(output_path)
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(
                 self.engine.render_string(header, n_elements=n_elements, n_subregions=n_subregions)
             )
@@ -444,7 +444,7 @@ C  ID        GS  {layer_cols}
         fmt = "%5d %10.4f" + " %10.4f %10.4f" * n_layers
 
         output_path = Path(output_path)
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(self.engine.render_string(header, n_nodes=n_nodes, n_layers=n_layers))
             np.savetxt(f, data, fmt=fmt)
 

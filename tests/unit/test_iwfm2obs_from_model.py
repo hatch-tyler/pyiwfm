@@ -107,7 +107,7 @@ class TestGenerateMultilayerIns:
 
     def _write_ml_smp(self, path: Path, lines: list[str]) -> None:
         """Helper to write a multi-layer SMP file."""
-        path.write_text("\n".join(lines) + "\n")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     def test_basic_ins(self, tmp_path: Path) -> None:
         """Test writing a basic PEST .ins file from SMP output."""

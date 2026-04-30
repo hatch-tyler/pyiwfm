@@ -176,7 +176,7 @@ class IWFMTimeSeriesDataWriter:
         # Render header via template
         header = self._engine.render_template("timeseries/timeseries_data.j2", **context)
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(header)
 
             # Write data rows (date + values)

@@ -335,14 +335,14 @@ def _run_pest_analyze(args: argparse.Namespace) -> int:
                 summary["fit_statistics"] = stats
             if results.calibrated_values:
                 summary["calibrated_values"] = results.calibrated_values
-            with open(out_path, "w") as f:
+            with open(out_path, "w", encoding="utf-8") as f:
                 json.dump(summary, f, indent=2, default=str)
             print(f"JSON report written to: {out_path}")
 
         else:  # text
             report = processor.summary_report()
             out_path = output_dir / f"{case_name}_analysis.txt"
-            with open(out_path, "w") as f:
+            with open(out_path, "w", encoding="utf-8") as f:
                 f.write(report)
             print(f"Text report written to: {out_path}")
 

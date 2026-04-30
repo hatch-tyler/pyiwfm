@@ -471,7 +471,7 @@ class TestStreamMainFileReaderEdgeCases:
         )
         reader = StreamMainFileReader()
         # Directly test _read_version
-        with open(fpath) as f:
+        with open(fpath, encoding="utf-8") as f:
             version = reader._read_version(f)
         # The blank lines are skipped, comment is skipped, then #4.2 found
         assert version == "4.2"
@@ -488,7 +488,7 @@ class TestStreamMainFileReaderEdgeCases:
             """,
         )
         reader = StreamMainFileReader()
-        with open(fpath) as f:
+        with open(fpath, encoding="utf-8") as f:
             version = reader._read_version(f)
         # "4.2" doesn't start with # and is not a comment -> break -> return ""
         assert version == ""

@@ -61,7 +61,7 @@ def _write_area_file(
             else:
                 # Continuation row: no date, just elem_id + values
                 lines.append(f"                     {eid}   {vals}")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 # =====================================================================

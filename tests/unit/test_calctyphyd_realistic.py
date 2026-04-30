@@ -473,7 +473,7 @@ class TestFixtureDataMatch:
 def _load_expected_typhyd(filepath: Path) -> np.ndarray:
     """Load expected CalcTypHyd values from text file."""
     values: list[float] = []
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         for line in f:
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):

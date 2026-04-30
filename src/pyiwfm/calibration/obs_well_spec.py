@@ -76,7 +76,7 @@ def read_obs_well_spec(filepath: Path | str) -> list[ObsWellSpec]:
 
     wells: list[ObsWellSpec] = []
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         # Skip header line
         header = f.readline()
         if not header:

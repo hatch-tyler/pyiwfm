@@ -284,7 +284,7 @@ def _write_gw_main(path: Path, version: str = "4.0") -> None:
         "1  50.0\n",
         "2  55.0\n",
     ]
-    path.write_text("".join(lines))
+    path.write_text("".join(lines), encoding="utf-8")
 
 
 class TestGWMainFileReaderVersion:

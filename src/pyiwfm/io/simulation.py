@@ -208,7 +208,7 @@ class SimulationWriter:
         """
         filepath = self.file_config.get_main_file_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             self._write_header(f, header, config)
             self._write_time_settings(f, config)
             self._write_component_files(f, config)
@@ -384,7 +384,7 @@ class SimulationReader:
 
         config = SimulationConfig()
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
 
             for line in f:
@@ -566,7 +566,7 @@ class IWFMSimulationReader:
         config = SimulationConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             self._read_titles(f, config)
             bdt_already_read = self._read_input_files(f, config, base_dir)
             self._read_time_settings(f, config, bdt_already_read)

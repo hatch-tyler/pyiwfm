@@ -156,7 +156,7 @@ def _write_subsidence_v40(
             else:
                 lines.append("  0.002  0.02  20.0  2.0  60.0\n")
 
-    path.write_text("".join(lines))
+    path.write_text("".join(lines), encoding="utf-8")
 
 
 def _write_subsidence_v50(
@@ -189,7 +189,7 @@ def _write_subsidence_v50(
             else:
                 lines.append("  0.002  0.02  20.0  2.0  60.0  0.006  3.0\n")
 
-    path.write_text("".join(lines))
+    path.write_text("".join(lines), encoding="utf-8")
 
 
 def _write_ic_file(path: Path, n_nodes: int = 2, n_layers: int = 1) -> None:
@@ -204,7 +204,7 @@ def _write_ic_file(path: Path, n_nodes: int = 2, n_layers: int = 1) -> None:
         thick_vals = "  ".join(f"{5.0 + i}" for _ in range(n_layers))
         head_vals = "  ".join(f"{45.0 + i}" for _ in range(n_layers))
         lines.append(f"  {node_id}  {thick_vals}  {head_vals}\n")
-    path.write_text("".join(lines))
+    path.write_text("".join(lines), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------

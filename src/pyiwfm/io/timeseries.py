@@ -199,7 +199,7 @@ class AsciiTimeSeriesAdapter(BaseTimeSeriesReader):
             parse_iwfm_timestamp,
         )
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Read NDATA
             for line in f:
                 if _is_comment_line(line):

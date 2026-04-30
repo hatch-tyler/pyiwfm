@@ -373,7 +373,7 @@ class ResultsExtractor:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             for name in result.names:
                 if name not in result.values:
                     continue
@@ -657,7 +657,7 @@ class FortranBackend:
         data_rows: list[list[float]] = []
         n_names = len(names)
 
-        with open(out_path) as f:
+        with open(out_path, encoding="utf-8") as f:
             for line in f:
                 stripped = line.strip()
                 if not stripped or stripped.startswith("*"):

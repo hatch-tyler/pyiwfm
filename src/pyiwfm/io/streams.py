@@ -200,7 +200,7 @@ class StreamWriter:
         """
         filepath = self.config.get_stream_nodes_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -244,7 +244,7 @@ class StreamWriter:
         """
         filepath = self.config.get_reaches_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -302,7 +302,7 @@ class StreamWriter:
         """
         filepath = self.config.get_diversions_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -339,7 +339,7 @@ class StreamWriter:
         """
         filepath = self.config.get_bypasses_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -376,7 +376,7 @@ class StreamWriter:
         """
         filepath = self.config.get_rating_curves_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -478,7 +478,7 @@ class StreamReader:
         filepath = Path(filepath)
         nodes: dict[int, StrmNode] = {}
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_nodes = None
 
@@ -554,7 +554,7 @@ class StreamReader:
         filepath = Path(filepath)
         diversions: dict[int, Diversion] = {}
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_diversions = None
 
@@ -720,7 +720,7 @@ class StreamMainFileReader:
         self._line_num = 0
         self._pushback_line = None
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Read version header
             config.version = self._read_version(f)
 
@@ -1194,7 +1194,7 @@ class StreamSpecReader:
         n_reaches = 0
         n_rating_points = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Read version header (optional)
             version = self._read_version(f)
 

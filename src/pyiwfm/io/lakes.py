@@ -139,7 +139,7 @@ class LakeWriter:
         """
         filepath = self.config.get_lakes_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -176,7 +176,7 @@ class LakeWriter:
         """
         filepath = self.config.get_lake_elements_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -211,7 +211,7 @@ class LakeWriter:
         """
         filepath = self.config.get_rating_curves_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -257,7 +257,7 @@ class LakeWriter:
         """
         filepath = self.config.get_outflows_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -303,7 +303,7 @@ class LakeReader:
         filepath = Path(filepath)
         lakes: dict[int, Lake] = {}
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_lakes = None
 
@@ -456,7 +456,7 @@ class LakeReader:
         filepath = Path(filepath)
         elements: list[LakeElement] = []
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_elements = None
 
@@ -525,7 +525,7 @@ class LakeReader:
         filepath = Path(filepath)
         ratings: dict[int, LakeRating] = {}
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_curves = None
 
@@ -727,7 +727,7 @@ class LakeMainFileReader:
         config = LakeMainFileConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Read version header
             config.version = self._read_version(f)
             is_v50 = config.version.startswith("5")

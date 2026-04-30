@@ -155,7 +155,7 @@ class TileDrainReader(ReaderMixin):
         self._line_num = 0
         self._pushed_back = None
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Version header (e.g., #4.0)
             config.version = self._read_version(f)
 

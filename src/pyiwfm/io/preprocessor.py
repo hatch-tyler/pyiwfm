@@ -94,7 +94,7 @@ def read_preprocessor_main(filepath: Path | str) -> PreProcessorConfig:
 
     config = PreProcessorConfig(base_dir=base_dir)
 
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         line_num = 0
         data_lines: list[tuple[str, str]] = []  # (value, description)
 
@@ -174,7 +174,7 @@ def read_subregions_file(filepath: Path | str) -> dict[int, Subregion]:
     filepath = Path(filepath)
     subregions: dict[int, Subregion] = {}
 
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         line_num = 0
         n_subregions = None
 
@@ -234,7 +234,7 @@ def write_preprocessor_main(
     """
     filepath = Path(filepath)
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         # Write header
         if header:
             for line in header.strip().split("\n"):
@@ -343,7 +343,7 @@ def _write_subregions_file(
     """Write subregion definitions to a file."""
     filepath = Path(filepath)
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         f.write("C  Subregion definitions\n")
         f.write("C  ID  NAME\n")
         f.write(f"{len(subregions):<10}                    / NSUBREGION\n")

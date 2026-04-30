@@ -90,7 +90,7 @@ def _write_stream_main_v40(path: Path, n_nodes: int = 3) -> None:
             1    3    4
             2    5    6
     """)
-    path.write_text(lines)
+    path.write_text(lines, encoding="utf-8")
 
 
 def _write_stream_main_v41(path: Path, n_nodes: int = 3) -> None:
@@ -135,7 +135,7 @@ def _write_stream_main_v41(path: Path, n_nodes: int = 3) -> None:
                                            / STARFL
         C
     """)
-    path.write_text(lines)
+    path.write_text(lines, encoding="utf-8")
 
 
 def _write_stream_main_v50(path: Path, n_nodes: int = 3) -> None:
@@ -206,7 +206,7 @@ def _write_stream_main_v50(path: Path, n_nodes: int = 3) -> None:
                                            / STARFL
         C
     """)
-    path.write_text(lines)
+    path.write_text(lines, encoding="utf-8")
 
 
 def _write_stream_spec_v50(path: Path) -> None:
@@ -225,7 +225,7 @@ def _write_stream_spec_v50(path: Path) -> None:
             2    1    1    Reach_2
             3    30
     """)
-    path.write_text(lines)
+    path.write_text(lines, encoding="utf-8")
 
 
 def _write_stream_spec_v40(path: Path) -> None:
@@ -261,7 +261,7 @@ def _write_stream_spec_v40(path: Path) -> None:
             3    80.0     0.0    0.0
                           1.0    10.0
     """)
-    path.write_text(lines)
+    path.write_text(lines, encoding="utf-8")
 
 
 # =============================================================================

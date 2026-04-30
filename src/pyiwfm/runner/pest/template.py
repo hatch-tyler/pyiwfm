@@ -100,7 +100,7 @@ class TemplateFile:
                 param_names.append(param_name)
 
         # Write template file with header
-        with open(template_file, "w") as f:
+        with open(template_file, "w", encoding="utf-8") as f:
             f.write(f"ptf {delimiter}\n")
             f.write(content)
 

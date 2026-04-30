@@ -74,7 +74,7 @@ def _make_config(**overrides) -> GWBoundaryConfig:
 class TestWriteComment:
     def test_basic(self, tmp_path: Path) -> None:
         out = tmp_path / "comment.txt"
-        with open(out, "w") as f:
+        with open(out, "w", encoding="utf-8") as f:
             _write_comment(f, "hello world")
         text = out.read_text()
         assert text == "C  hello world\n"
@@ -83,7 +83,7 @@ class TestWriteComment:
 class TestWriteValue:
     def test_with_description(self, tmp_path: Path) -> None:
         out = tmp_path / "val.txt"
-        with open(out, "w") as f:
+        with open(out, "w", encoding="utf-8") as f:
             _write_value(f, 42, "answer")
         text = out.read_text()
         assert "42" in text
@@ -91,7 +91,7 @@ class TestWriteValue:
 
     def test_without_description(self, tmp_path: Path) -> None:
         out = tmp_path / "val.txt"
-        with open(out, "w") as f:
+        with open(out, "w", encoding="utf-8") as f:
             _write_value(f, "something")
         text = out.read_text()
         assert "something" in text

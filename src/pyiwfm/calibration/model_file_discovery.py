@@ -140,7 +140,7 @@ def discover_hydrograph_files(
     # ------------------------------------------------------------------
     # 1. Parse simulation main file
     # ------------------------------------------------------------------
-    with open(sim_path) as f:
+    with open(sim_path, encoding="utf-8") as f:
         lc: list[int] = [0]
 
         # Skip 4 lines to reach component file paths
@@ -203,7 +203,7 @@ def _parse_gw_main_file(info: HydrographFileInfo, sim_dir: Path) -> None:
     _sub_main_path: Path | None = None
 
     try:
-        with open(gw_path) as f:
+        with open(gw_path, encoding="utf-8") as f:
             lc: list[int] = [0]
 
             # Line 1: version/debug (skip)
@@ -313,7 +313,7 @@ def _parse_subsidence_main_file(info: HydrographFileInfo, sub_path: Path, sim_di
     (NOUTH, FACTXY, output path, NOUTH entries).
     """
     try:
-        with open(sub_path) as f:
+        with open(sub_path, encoding="utf-8") as f:
             lc: list[int] = [0]
 
             # Line 1: version string
@@ -409,7 +409,7 @@ def _parse_tiledrain_main_file(info: HydrographFileInfo, td_path: Path, sim_dir:
     hydrograph output file path and hydrograph ID entries.
     """
     try:
-        with open(td_path) as f:
+        with open(td_path, encoding="utf-8") as f:
             lc: list[int] = [0]
 
             # Line 1: NTD
@@ -473,7 +473,7 @@ def _parse_stream_main_file(info: HydrographFileInfo, sim_dir: Path) -> None:
         return
 
     try:
-        with open(str_path) as f:
+        with open(str_path, encoding="utf-8") as f:
             lc: list[int] = [0]
 
             # Skip 8 lines to reach NOUTR

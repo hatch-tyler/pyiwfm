@@ -44,7 +44,7 @@ def write_subsidence_main(config: SubsidenceConfig, filepath: Path | str) -> Pat
 
     is_v50 = config.version.startswith("5")
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         _write_comment(f, "IWFM Subsidence Parameter File")
 
         # Version header
@@ -237,7 +237,7 @@ def write_subsidence_ic(config: SubsidenceConfig, filepath: Path | str) -> Path:
     filepath = Path(filepath)
     _ensure_parent_dir(filepath)
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         _write_comment(f, "IWFM Subsidence Initial Conditions")
 
         # Conversion factor

@@ -280,7 +280,7 @@ class TimeSeriesWriter:
         if column_ids is None:
             column_ids = list(range(1, n_columns + 1))
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             self._write_header(f, header, n_columns, column_ids, units, factor)
             self._write_data(f, times, values)
 
@@ -451,7 +451,7 @@ class TimeSeriesReader:
         n_columns = 0
         factor = 1.0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
 
             # Read NDATA

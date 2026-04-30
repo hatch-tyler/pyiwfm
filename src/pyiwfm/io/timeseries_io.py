@@ -699,7 +699,7 @@ class TimeSeriesCache:
 
         logger.info("Converting %s -> %s (n_layers=%d)", text_path, hdf_path, n_layers)
 
-        with open(text_path) as fh:
+        with open(text_path, encoding="utf-8") as fh:
             header_lines_read = _skip_headall_titles(fh)
             header2 = _read_headall_node_header(fh)
             header_lines_read += 2
@@ -823,7 +823,7 @@ class TimeSeriesCache:
 
         logger.info("Converting hydrograph %s -> %s", text_path, hdf_path)
 
-        with open(text_path) as fh:
+        with open(text_path, encoding="utf-8") as fh:
             all_lines = fh.readlines()
 
         header_lines: list[str] = []

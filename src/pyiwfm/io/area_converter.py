@@ -81,7 +81,7 @@ def convert_area_to_hdf(
 
     logger.info("Converting %s -> %s (label=%s)", text_path, hdf_path, label)
 
-    with open(text_path) as fh:
+    with open(text_path, encoding="utf-8") as fh:
         # --- Read header (3 non-comment, non-blank lines) ---
         header_vals: list[str] = []
         while len(header_vals) < 3:

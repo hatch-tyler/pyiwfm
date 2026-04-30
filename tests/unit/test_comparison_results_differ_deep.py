@@ -79,7 +79,7 @@ class TestCompareHeadsTextEdges:
             lines.append(f"01/{i + 1:02d}/2020_24:00  TIME STEP {i + 1}")
             for val in block:
                 lines.append(f"  {val}")
-        path.write_text("\n".join(lines))
+        path.write_text("\n".join(lines), encoding="utf-8")
 
     def test_shape_mismatch(self, tmp_path: Path) -> None:
         """When timestep blocks differ in length, counted as mismatch."""

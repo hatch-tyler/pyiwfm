@@ -94,7 +94,7 @@ def write_gw_main_file(config: GWMainFileConfig, filepath: Path | str) -> Path:
     filepath = Path(filepath)
     _ensure_parent_dir(filepath)
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         _write_comment(f, "IWFM Groundwater Component Main File")
         _write_comment(f, "Written by pyiwfm GWMainFileWriter")
         _write_comment(f, "")

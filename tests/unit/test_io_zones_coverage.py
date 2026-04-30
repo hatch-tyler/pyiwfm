@@ -176,7 +176,7 @@ class TestZoneFileDispatch:
         write_zone_file(zone_def, filepath)
 
         assert filepath.exists()
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             data = json.load(f)
         assert data["type"] == "FeatureCollection"
 
@@ -281,7 +281,7 @@ class TestGeoJSONEdgeCases:
         filepath = tmp_path / "zones.geojson"
         write_geojson_zones(zone_def, filepath, grid=None, include_geometry=False)
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             data = json.load(f)
 
         feature = data["features"][0]

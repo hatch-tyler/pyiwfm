@@ -662,7 +662,7 @@ def _make_text_ts_file(filepath: Path, n_cols: int = 3, n_times: int = 3) -> Non
 
     from pyiwfm.io.timeseries_ascii import format_iwfm_timestamp
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         f.write("C  Test time series file\n")
         f.write("C\n")
         f.write(f"{n_cols:<10}                              / NRAIN\n")

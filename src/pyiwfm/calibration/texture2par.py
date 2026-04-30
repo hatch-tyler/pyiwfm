@@ -181,7 +181,7 @@ class Texture2Par:
 
         wells: dict[int, WellLog] = {}
 
-        with open(wellfile) as f:
+        with open(wellfile, encoding="utf-8") as f:
             f.readline()  # skip header
             for line in f:
                 parts = line.strip().split("\t")
@@ -471,7 +471,7 @@ class Texture2Par:
         pp_file = Path(pp_file)
         logger.info("Reading pilot points from %s (domain=%s)", pp_file, domain)
 
-        with open(pp_file) as f:
+        with open(pp_file, encoding="utf-8") as f:
             f.readline()  # skip header
             data = []
             for line in f:
@@ -585,7 +585,7 @@ class Texture2Par:
         t2p_file = Path(t2p_file)
         logger.info("Reading pilot points from T2P file: %s", t2p_file)
 
-        with open(t2p_file) as f:
+        with open(t2p_file, encoding="utf-8") as f:
             lines = f.readlines()
 
         # Parse variogram settings and global params

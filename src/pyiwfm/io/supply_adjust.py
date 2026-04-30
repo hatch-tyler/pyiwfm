@@ -95,7 +95,7 @@ def read_supply_adjustment(filepath: Path | str) -> SupplyAdjustment:
 
     result = SupplyAdjustment()
 
-    with open(filepath, errors="replace") as f:
+    with open(filepath, encoding="utf-8", errors="replace") as f:
         # Phase 1: Read NCOLADJ (first non-comment value)
         for line in f:
             if _is_fortran_comment(line):
@@ -194,7 +194,7 @@ def write_supply_adjustment(
     filepath = Path(filepath)
     filepath.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(filepath, "w") as f:
+    with open(filepath, "w", encoding="utf-8") as f:
         # Header
         f.write(
             "C*******************************************************************************\n"

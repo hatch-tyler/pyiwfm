@@ -85,7 +85,7 @@ def _minimal_area_file(
             # A line with only 1 token (should be skipped)
             lines.append("   ORPHAN")
 
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 # =====================================================================

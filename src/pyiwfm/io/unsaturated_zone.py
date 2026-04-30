@@ -134,7 +134,7 @@ class UnsatZoneMainReader:
         config = UnsatZoneMainConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Version header
             config.version = self._read_version(f)
 

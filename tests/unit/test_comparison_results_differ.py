@@ -319,7 +319,7 @@ class TestCompareHeadsText:
             lines.append(f"01/{i + 1:02d}/2020_24:00  TIME STEP {i + 1}")
             for val in block:
                 lines.append(f"  {val:.6f}")
-        path.write_text("\n".join(lines))
+        path.write_text("\n".join(lines), encoding="utf-8")
 
     def test_matching(self, tmp_path: Path) -> None:
         bd = tmp_path / "baseline"
@@ -488,7 +488,7 @@ class TestCompareHydrographs:
             date = f"01/{t + 1:02d}/2020_24:00"
             vals = " ".join(f"{float(t + c + 1) + offset:.3f}" for c in range(n_cols))
             lines.append(f"{date}  {vals}")
-        path.write_text("\n".join(lines))
+        path.write_text("\n".join(lines), encoding="utf-8")
 
     def test_matching_hydrographs(self, tmp_path: Path) -> None:
         bd = tmp_path / "baseline"

@@ -646,7 +646,7 @@ class TestJSONSerialization:
             sample_metadata.save(path)
 
             # Verify JSON content
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["version"] == "1.0"
             assert data["source_file"] == "Preprocessor.in"

@@ -47,7 +47,7 @@ def _write_v40_file(path: Path, n_nodes: int, n_layers: int) -> None:
                 line = "  0.002  0.02  20.0  2.0  60.0"
             lines.append(line)
 
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_v50_file(path: Path, n_nodes: int, n_layers: int) -> None:
@@ -73,7 +73,7 @@ def _write_v50_file(path: Path, n_nodes: int, n_layers: int) -> None:
                 line = "  0.002  0.02  20.0  2.0  60.0  0.8  5"
             lines.append(line)
 
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_ic_file(path: Path, n_nodes: int, n_layers: int) -> None:
@@ -87,7 +87,7 @@ def _write_ic_file(path: Path, n_nodes: int, n_layers: int) -> None:
         for _l in range(n_layers):
             vals.append("40.0")  # precompact head
         lines.append("  " + "  ".join(vals))
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_parametric_file(path: Path) -> None:
@@ -111,7 +111,7 @@ def _write_parametric_file(path: Path) -> None:
         "  3  50.0  86.6  0.003  0.03  30.0  3.0  70.0",
         "C end of parametric data",
     ]
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_hydrograph_file(path: Path) -> None:
@@ -131,7 +131,7 @@ def _write_hydrograph_file(path: Path) -> None:
         "  0                                     / NGROUP",
         "  1.0  1.0  1.0  1.0  1.0  1.0         / Factors",
     ]
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -322,7 +322,7 @@ def _write_v41_file(path: Path, n_nodes: int, n_layers: int) -> None:
             else:
                 line = "  0.002  0.02  20.0  2.0  60.0"
             lines.append(line)
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_v51_file(path: Path, n_nodes: int, n_layers: int) -> None:
@@ -351,7 +351,7 @@ def _write_v51_file(path: Path, n_nodes: int, n_layers: int) -> None:
             else:
                 line = "  0.002  0.02  20.0  2.0  60.0  0.8  5"
             lines.append(line)
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class TestV41Format:

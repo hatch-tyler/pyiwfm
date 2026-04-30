@@ -242,7 +242,7 @@ class GWBoundaryReader(ReaderMixin):
         config = GWBoundaryConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Read 5 file paths
             sp_flow_path = _next_data_or_empty(f)
             if sp_flow_path:
@@ -313,7 +313,7 @@ class GWBoundaryReader(ReaderMixin):
     def _read_specified_flow(self, filepath: Path, config: GWBoundaryConfig) -> None:
         """Read specified flow BC sub-file."""
         self._line_num = 0
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # NQB
             nqb_str = _next_data_or_empty(f)
             nqb = int(nqb_str) if nqb_str else 0
@@ -346,7 +346,7 @@ class GWBoundaryReader(ReaderMixin):
     def _read_specified_head(self, filepath: Path, config: GWBoundaryConfig) -> None:
         """Read specified head BC sub-file."""
         self._line_num = 0
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # NHB
             nhb_str = _next_data_or_empty(f)
             nhb = int(nhb_str) if nhb_str else 0
@@ -376,7 +376,7 @@ class GWBoundaryReader(ReaderMixin):
     def _read_general_head(self, filepath: Path, config: GWBoundaryConfig) -> None:
         """Read general head BC sub-file."""
         self._line_num = 0
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # NGB
             ngb_str = _next_data_or_empty(f)
             ngb = int(ngb_str) if ngb_str else 0
@@ -414,7 +414,7 @@ class GWBoundaryReader(ReaderMixin):
     def _read_constrained_gh(self, filepath: Path, config: GWBoundaryConfig) -> None:
         """Read constrained general head BC sub-file."""
         self._line_num = 0
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # NCGB
             ncgb_str = _next_data_or_empty(f)
             ncgb = int(ncgb_str) if ncgb_str else 0

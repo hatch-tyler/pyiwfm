@@ -194,6 +194,8 @@ line-length = 100
 exclude = ["src/pyiwfm/_version.py"]
 
 [tool.ruff.lint]
+preview = true
+explicit-preview-rules = true
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -203,6 +205,9 @@ select = [
     "C4",  # flake8-comprehensions
     "UP",  # pyupgrade
     "NPY", # numpy-specific rules
+]
+extend-select = [
+    "PLW1514",  # unspecified-encoding (force encoding= on text-mode open()) — preview rule
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)

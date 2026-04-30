@@ -19,7 +19,7 @@ from pyiwfm.io.gw_subsidence import SubsidenceReader
 
 
 def _write_file(path: Path, lines: list[str]) -> None:
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _make_base_header(

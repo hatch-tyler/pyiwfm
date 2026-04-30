@@ -218,7 +218,7 @@ class SmallWatershedMainReader(ReaderMixin):
         config = SmallWatershedMainConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Version header
             config.version = self._read_version(f)
 

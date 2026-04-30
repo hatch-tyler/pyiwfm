@@ -69,7 +69,7 @@ def generate_smp_ins(
     prev_station = None
     seq = 0
 
-    with open(smp_path) as fin, open(ins_path, "w") as fout:
+    with open(smp_path, encoding="utf-8") as fin, open(ins_path, "w", encoding="utf-8") as fout:
         fout.write("pif #\n")
 
         for line in fin:
@@ -126,7 +126,7 @@ def generate_thyd_ins(
     ins_path.parent.mkdir(parents=True, exist_ok=True)
 
     n_obs = 0
-    with open(out_path) as fin, open(ins_path, "w") as fout:
+    with open(out_path, encoding="utf-8") as fin, open(ins_path, "w", encoding="utf-8") as fout:
         fout.write("pif #\n")
         fout.write("l1\n")  # skip header
 
@@ -179,7 +179,7 @@ def generate_multilayer_ins(
     prev_well = None
     seq = 0
 
-    with open(out_path) as fin, open(ins_path, "w") as fout:
+    with open(out_path, encoding="utf-8") as fin, open(ins_path, "w", encoding="utf-8") as fout:
         fout.write("pif #\n")
 
         # Peek at first line to detect header

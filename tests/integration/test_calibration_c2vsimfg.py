@@ -268,7 +268,7 @@ class TestRuntimeComparison:
 def _load_fortran_calctyphyd_output(filepath: Path) -> np.ndarray:
     """Load Fortran CalcTypHyd output file (PEST-format or date+value)."""
     values: list[float] = []
-    with open(filepath) as f:
+    with open(filepath, encoding="utf-8") as f:
         for line in f:
             stripped = line.strip()
             if not stripped or stripped.startswith("#") or stripped.startswith("!"):

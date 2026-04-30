@@ -282,7 +282,7 @@ class TestWriteGeoJSONZones:
             write_geojson_zones(zone_def, filepath, include_geometry=False)
 
             assert filepath.exists()
-            with open(filepath) as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["type"] == "FeatureCollection"
             assert len(data["features"]) == 1
@@ -407,6 +407,6 @@ class TestUniversalIO:
             filepath = Path(tmpdir) / "zones.geojson"
             write_zone_file(zone_def, filepath)
             assert filepath.exists()
-            with open(filepath) as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["type"] == "FeatureCollection"

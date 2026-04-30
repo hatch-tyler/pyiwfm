@@ -272,7 +272,7 @@ def _write_area_file(path: Path, n_elements: int = 3, n_crops: int = 2) -> None:
         for eid in range(1, n_elements + 1):
             vals = "  ".join(f"{100.0 + eid + ts_idx * 10 + c:.1f}" for c in range(n_crops))
             lines.append(f"   {date}   {eid}   {vals}")
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class TestAreaReader:

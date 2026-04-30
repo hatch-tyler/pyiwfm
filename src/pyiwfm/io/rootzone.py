@@ -190,7 +190,7 @@ class RootZoneWriter:
         """
         filepath = self.config.get_crop_types_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -233,7 +233,7 @@ class RootZoneWriter:
         """
         filepath = self.config.get_soil_params_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -286,7 +286,7 @@ class RootZoneWriter:
             elu for elu in rootzone.element_landuse if elu.land_use_type == LandUseType.WATER
         ]
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -352,7 +352,7 @@ class RootZoneWriter:
         if rootzone.soil_moisture is None:
             raise ValueError("No soil moisture data to write")
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -402,7 +402,7 @@ class RootZoneReader:
         filepath = Path(filepath)
         crops: dict[int, CropType] = {}
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_crops = None
 
@@ -467,7 +467,7 @@ class RootZoneReader:
         filepath = Path(filepath)
         params: dict[int, SoilParameters] = {}
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_elem = None
 
@@ -635,7 +635,7 @@ class RootZoneMainFileReader:
         config = RootZoneMainFileConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Read version header
             config.version = self._read_version(f)
             is_v411_plus = self._version_ge_411(config.version)

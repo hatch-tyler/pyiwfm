@@ -223,7 +223,7 @@ class GroundwaterWriter:
         """
         filepath = self.config.get_wells_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -319,7 +319,7 @@ class GroundwaterWriter:
         if params is None:
             raise ValueError("No aquifer parameters to write")
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -380,7 +380,7 @@ class GroundwaterWriter:
         """
         filepath = self.config.get_boundary_conditions_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -446,7 +446,7 @@ class GroundwaterWriter:
         """
         filepath = self.config.get_tile_drains_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -484,7 +484,7 @@ class GroundwaterWriter:
         """
         filepath = self.config.get_subsidence_path()
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -523,7 +523,7 @@ class GroundwaterWriter:
         if gw.heads is None:
             raise ValueError("No initial heads to write")
 
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             # Write header
             if header:
                 for line in header.strip().split("\n"):
@@ -573,7 +573,7 @@ class GroundwaterReader:
         filepath = Path(filepath)
         wells: dict[int, Well] = {}
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_wells = None
 
@@ -645,7 +645,7 @@ class GroundwaterReader:
         """
         filepath = Path(filepath)
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_nodes = None
             n_layers = None
@@ -725,7 +725,7 @@ class GroundwaterReader:
         filepath = Path(filepath)
         subsidence_list: list[Subsidence] = []
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             line_num = 0
             n_subsidence = None
 
@@ -919,7 +919,7 @@ class GWMainFileReader:
         config = GWMainFileConfig()
         self._line_num = 0
 
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             # Read version header (first non-comment line starting with #)
             config.version = self._read_version(f)
 

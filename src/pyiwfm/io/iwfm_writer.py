@@ -111,7 +111,7 @@ def open_iwfm_file(filepath: Path | str, header: str) -> Iterator[TextIO]:
     """
     p = Path(filepath)
     ensure_parent_dir(p)
-    with open(p, "w") as f:
+    with open(p, "w", encoding="utf-8") as f:
         write_comment(f, header)
         yield f
 

@@ -54,7 +54,7 @@ def _has_date(token: str) -> bool:
 
 
 def _read_lines(filepath: Path) -> list[str]:
-    with open(filepath) as fh:
+    with open(filepath, encoding="utf-8") as fh:
         return fh.readlines()
 
 

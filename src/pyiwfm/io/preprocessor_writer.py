@@ -297,7 +297,7 @@ C*****************************************************************************
         streams = self.model.streams
         version = self.config.stream_version
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             # Header
             f.write(
                 "C*******************************************************************************\n"
@@ -372,7 +372,7 @@ C*****************************************************************************
         lakes = self.model.lakes
         version = self.config.lake_version
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             # Header
             f.write(
                 "C*******************************************************************************\n"
