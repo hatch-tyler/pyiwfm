@@ -94,6 +94,14 @@ def add_viewer_parser(subparsers: argparse._SubParsersAction) -> None:  # type: 
         metavar="PATH",
         help="Observation files (.smp, .csv) or directories to scan and load at startup",
     )
+    p.add_argument(
+        "--allow-partial-load",
+        action="store_true",
+        help=(
+            "Continue starting the viewer even if some IWFM components fail to "
+            "parse. Default is to fail fast with a single error report."
+        ),
+    )
 
     p.set_defaults(func=run_viewer)
 
@@ -124,14 +132,16 @@ def run_viewer(args: argparse.Namespace) -> int:
     logger.info("Model directory: %s", model_dir)
 
     try:
-        from pyiwfm.cli._model_loader import load_model
+        from pyiwfm.cli._model_loader import load_model, warn_if_partial_load
 
         logger.info("Loading IWFM model...")
         model = load_model(
             model_dir,
             preprocessor_file=args.preprocessor,
             simulation_file=args.simulation,
+            allow_partial_load=getattr(args, "allow_partial_load", False),
         )
+        warn_if_partial_load(model)
         logger.info("Model loaded: %s", model.name)
         logger.info("  Nodes: %d", model.n_nodes)
         logger.info("  Elements: %d", model.n_elements)

@@ -52,6 +52,14 @@ def add_export_parser(subparsers: argparse._SubParsersAction) -> None:  # type: 
         action="store_true",
         help="Enable debug logging",
     )
+    p.add_argument(
+        "--allow-partial-load",
+        action="store_true",
+        help=(
+            "Continue exporting even if some IWFM components fail to parse. "
+            "Default is to fail fast with a single error report."
+        ),
+    )
 
     p.set_defaults(func=run_export)
 
@@ -78,17 +86,19 @@ def run_export(args: argparse.Namespace) -> int:
         return 1
 
     # Load model (reuse viewer's loader)
-    from pyiwfm.cli._model_loader import load_model
+    from pyiwfm.cli._model_loader import load_model, warn_if_partial_load
 
     try:
         model = load_model(
             model_dir,
             preprocessor_file=args.preprocessor,
+            allow_partial_load=getattr(args, "allow_partial_load", False),
         )
     except Exception as exc:
         logger.exception("Failed to load model")
         print(f"ERROR: Failed to load model: {exc}")
         return 1
+    warn_if_partial_load(model)
 
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)

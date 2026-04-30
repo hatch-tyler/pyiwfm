@@ -61,7 +61,9 @@ class TestLoadModel:
 
         result = load_model(tmp_path, preprocessor_file=pp_file)
 
-        mock_model_cls.from_preprocessor.assert_called_once_with(tmp_path / pp_file)
+        mock_model_cls.from_preprocessor.assert_called_once_with(
+            tmp_path / pp_file, strict="collect"
+        )
         assert result is mock_model
 
     @patch("pyiwfm.core.model.IWFMModel")
@@ -75,7 +77,7 @@ class TestLoadModel:
         result = load_model(tmp_path, simulation_file=sim_file, preprocessor_file=pp_file)
 
         mock_model_cls.from_simulation_with_preprocessor.assert_called_once_with(
-            tmp_path / sim_file, tmp_path / pp_file
+            tmp_path / sim_file, tmp_path / pp_file, strict="collect"
         )
         assert result is mock_model
 

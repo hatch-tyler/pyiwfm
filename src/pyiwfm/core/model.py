@@ -23,12 +23,14 @@ import numpy as np
 
 from pyiwfm.core.exceptions import (
     ComponentError,
+    ComponentLoadError,
     MeshError,
     StratigraphyError,
     ValidationError,
 )
 from pyiwfm.core.loaders._common import (
     _COMPONENT_LOAD_EXCEPTIONS,
+    StrictMode,
     _record_component_failure,
 )
 from pyiwfm.core.model_factory import (
@@ -137,7 +139,7 @@ class IWFMModel:
         load_streams: bool = True,
         load_lakes: bool = True,
         *,
-        strict: bool = False,
+        strict: StrictMode = False,
     ) -> IWFMModel:
         """
         Load a model from PreProcessor input files.
@@ -155,12 +157,11 @@ class IWFMModel:
             pp_file: Path to the main PreProcessor input file
             load_streams: If True, load stream network geometry
             load_lakes: If True, load lake geometry
-            strict: If True, raise :class:`~pyiwfm.core.exceptions.ComponentLoadError`
-                when an optional component file cannot be parsed. The default
-                (``False``) preserves the historical lenient behavior: log a
-                warning, record the error in ``model.metadata``, and continue
-                with whatever components loaded. Use ``strict=True`` from
-                calibration / analysis pipelines that require a complete model.
+            strict: ``False`` (default) records errors and continues;
+                ``True`` raises :class:`ComponentLoadError` on first
+                failure; ``"collect"`` raises a single
+                :class:`ValidationError` at the end if any failed.
+                See :func:`~pyiwfm.core.loaders.load_from_preprocessor`.
 
         Returns:
             IWFMModel instance with mesh, stratigraphy, and optionally
@@ -239,7 +240,7 @@ class IWFMModel:
         preprocessor_file: Path | str,
         load_timeseries: bool = False,
         *,
-        strict: bool = False,
+        strict: StrictMode = False,
     ) -> IWFMModel:
         """
         Load a complete IWFM model using both simulation and preprocessor files.
@@ -257,13 +258,11 @@ class IWFMModel:
             simulation_file: Path to the simulation main input file
             preprocessor_file: Path to the preprocessor main input file
             load_timeseries: If True, also load time series data (slower)
-            strict: If True, raise :class:`~pyiwfm.core.exceptions.ComponentLoadError`
-                when an optional component (groundwater, streams, lakes, rootzone,
-                small watersheds, unsaturated zone) cannot be parsed. The default
-                (``False``) preserves the historical lenient behavior: log a
-                structured warning, record the error in ``model.metadata``, and
-                continue with whatever components loaded. Use ``strict=True`` from
-                calibration / analysis pipelines that require a complete model.
+            strict: ``False`` (default) records errors and continues;
+                ``True`` raises :class:`ComponentLoadError` on first
+                failure; ``"collect"`` raises a single
+                :class:`ValidationError` at the end if any failed.
+                See :func:`~pyiwfm.core.loaders.load_from_simulation_with_preprocessor`.
 
         Returns:
             IWFMModel instance with all components loaded
@@ -569,6 +568,29 @@ class IWFMModel:
     def has_unsaturated_zone(self) -> bool:
         """Return True if unsaturated zone component is loaded."""
         return self.unsaturated_zone is not None
+
+    @property
+    def load_errors(self) -> list[ComponentLoadError]:
+        """List of component load failures recorded during construction.
+
+        Populated when a loader (``IWFMModel.from_preprocessor``,
+        ``from_simulation_with_preprocessor``, …) was invoked with
+        ``strict=False`` (or ``"collect"`` and no failures occurred to
+        trigger an immediate raise). Empty for clean loads or for
+        ``strict=True`` (which fails fast and never returns the model).
+
+        Returns a copy so external mutation doesn't corrupt the metadata.
+        """
+        from pyiwfm.core.loaders._common import _LOAD_ERRORS_KEY
+
+        return list(self.metadata.get(_LOAD_ERRORS_KEY, []))
+
+    @property
+    def has_load_errors(self) -> bool:
+        """True if any component failed to load during model construction."""
+        from pyiwfm.core.loaders._common import _LOAD_ERRORS_KEY
+
+        return bool(self.metadata.get(_LOAD_ERRORS_KEY))
 
     # ========================================================================
     # Utility Methods

@@ -659,6 +659,85 @@ work as before.
 
 ---
 
+## 9. Strict-by-default loading at user-facing surfaces
+
+**Status:** _behaviour change_ at the CLI; opt-out flag provided.
+
+In v1.x and the early v2.0 alphas, CLI invocations like
+`pyiwfm viewer --model-dir ./model` would silently succeed even when
+some component files (streams, lakes, root zone) failed to parse. The
+broken components were dropped, the partially-loaded model was
+returned, and the only signal was a `WARNING` log line that most users
+never noticed. A user could spend an hour wondering why streams
+weren't visible in the viewer.
+
+v2.0 makes the user-facing CLI surfaces strict by default:
+
+- `pyiwfm viewer` and `pyiwfm export` now pass `strict="collect"` to
+  the loader. If any component fails, the loader runs through every
+  remaining component, then raises a single `ValidationError` listing
+  all failures. The CLI top-level handler (see [§ 8 Tighten exception
+  handling](#8-mesh--stratigraphy-writer-unification)) prints a clean
+  one-line error per failure and exits with code 1.
+- A new `--allow-partial-load` flag opts back into the historical
+  permissive behaviour: components that fail to parse are recorded on
+  `model.load_errors` and the CLI prints a stderr banner reminding the
+  user they're running degraded.
+
+**v1.x:**
+
+```console
+$ pyiwfm viewer --model-dir broken-model/
+INFO: Loading IWFM model...
+INFO: Server started on http://127.0.0.1:8080
+# Streams component silently dropped — only the WARNING log line
+# (often suppressed by default logging config) records it.
+```
+
+**v2.x:**
+
+```console
+$ pyiwfm viewer --model-dir broken-model/
+error: ValidationError: 2 component(s) failed to load
+$ echo $?
+1
+
+# Opt out if you really want a degraded server:
+$ pyiwfm viewer --model-dir broken-model/ --allow-partial-load
+warning: model loaded with 2 component error(s); drop --allow-partial-load to see the full report.
+INFO: Server started on http://127.0.0.1:8080
+```
+
+The library API is **unchanged**: `IWFMModel.from_preprocessor(...)`
+and `IWFMModel.from_simulation_with_preprocessor(...)` still default
+to `strict=False`. Only the CLI's `cli/_model_loader.load_model()`
+helper changed. Scripts that wrap pyiwfm continue to work.
+
+If you want the CLI's strict-by-default behaviour from a Python script,
+pass `strict="collect"` explicitly:
+
+```python
+from pyiwfm.core.model import IWFMModel
+
+model = IWFMModel.from_simulation_with_preprocessor(
+    "Simulation/Simulation.in",
+    "Preprocessor/Preprocessor.in",
+    strict="collect",  # raise one ValidationError listing every failure
+)
+```
+
+To inspect partial loads programmatically (when you stay with
+`strict=False`):
+
+```python
+model = IWFMModel.from_preprocessor("model/Preprocessor.in")
+if model.has_load_errors:
+    for err in model.load_errors:
+        print(f"  {err.component_name}: {err}")
+```
+
+---
+
 ## Migration checklist
 
 Run through this list when bumping your project's pinned `pyiwfm`
@@ -681,6 +760,10 @@ version from `<2` to `>=2,<3`:
       - `pyiwfm.io.preprocessor_writer.write_{nodes,elements,stratigraphy}_file`
         — removed; build domain objects and call
         `pyiwfm.io.mesh.write_{nodes,elements,stratigraphy}` instead
+- [ ] **CLI behaviour:** `pyiwfm viewer` / `pyiwfm export` now exit
+      with code 1 when any component fails to load (see [§ 9](#9-strict-by-default-loading-at-user-facing-surfaces)).
+      If your CI / scripts depended on the silent partial-load
+      behaviour, add `--allow-partial-load` to the invocation.
 - [ ] Re-run your test suite; should be green
 - [ ] Bump your project's pinned dependency to a real `>=2.0.0,<3`
       version once v2.0.0 final ships

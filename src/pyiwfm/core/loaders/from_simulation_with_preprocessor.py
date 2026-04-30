@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING
 
 from pyiwfm.core.loaders._common import (
     _COMPONENT_LOAD_EXCEPTIONS,
+    StrictMode,
+    _finalize_collected_errors,
     _record_component_failure,
 )
 
@@ -38,7 +40,7 @@ def load_from_simulation_with_preprocessor(
     preprocessor_file: Path | str,
     load_timeseries: bool = False,
     *,
-    strict: bool = False,
+    strict: StrictMode = False,
 ) -> IWFMModel:
     """Load a complete IWFM model using both simulation and preprocessor files.
 
@@ -56,11 +58,17 @@ def load_from_simulation_with_preprocessor(
         simulation_file: Path to the simulation main input file
         preprocessor_file: Path to the preprocessor main input file
         load_timeseries: If True, also load time series data (slower)
-        strict: If True, raise :class:`~pyiwfm.core.exceptions.ComponentLoadError`
-            when an optional component fails to parse. Default ``False``
-            keeps the historical lenient behavior: log a structured
-            warning, record the error in ``model.metadata``, and
-            continue with whatever components loaded.
+        strict: Behaviour on component-load failure. Three values:
+
+            - ``False`` (default): log + record + continue. Returns a
+              partially-loaded model; introspect via
+              :attr:`IWFMModel.load_errors`.
+            - ``True``: raise
+              :class:`~pyiwfm.core.exceptions.ComponentLoadError` on
+              the first component that fails (fail-fast).
+            - ``"collect"``: load every component, then raise a single
+              :class:`~pyiwfm.core.exceptions.ValidationError` at the
+              end if any failed. Best for user-facing surfaces.
 
     Returns:
         IWFMModel instance with all components loaded
@@ -1391,4 +1399,5 @@ def load_from_simulation_with_preprocessor(
                 _record_component_failure(model, "unsat_zone", uz_file, e, strict=strict)
 
     _resolve_stream_node_coordinates(model)
+    _finalize_collected_errors(model, strict)
     return model

@@ -28,6 +28,8 @@ def load_model(
     model_dir: Path,
     preprocessor_file: Path | None = None,
     simulation_file: Path | None = None,
+    *,
+    allow_partial_load: bool = False,
 ) -> IWFMModel:
     """
     Load an IWFM model with automatic fallback.
@@ -43,9 +45,21 @@ def load_model(
     The simulation path is preferred because it loads all components including
     groundwater (wells, aquifer parameters, initial heads), stream reaches,
     lakes, and root zone -- not just the mesh and stratigraphy.
+
+    By default the loaders use ``strict="collect"`` so a single
+    :class:`ValidationError` listing every failed component bubbles to the
+    CLI top-level handler. Pass ``allow_partial_load=True`` (typically wired
+    to a ``--allow-partial-load`` CLI flag) to fall back to the historical
+    permissive behaviour: components that fail to parse are logged and the
+    surviving components are returned. Callers can introspect via
+    :attr:`IWFMModel.load_errors`.
     """
     from pyiwfm.cli._model_finder import find_model_files
     from pyiwfm.core.model import IWFMModel
+
+    # ``False`` = lenient (record errors, return partial); ``"collect"`` =
+    # raise once at end with the full list (default).
+    strict_mode: bool | str = False if allow_partial_load else "collect"
 
     # --- Explicit file provided -------------------------------------------
     if simulation_file is not None:
@@ -57,14 +71,18 @@ def load_model(
                 sim_path,
                 pp_path,
             )
-            return IWFMModel.from_simulation_with_preprocessor(sim_path, pp_path)
+            return IWFMModel.from_simulation_with_preprocessor(
+                sim_path,
+                pp_path,
+                strict=strict_mode,  # type: ignore[arg-type]
+            )
         logger.info("Loading full model from simulation file: %s", sim_path)
         return IWFMModel.from_simulation(sim_path)
 
     if preprocessor_file is not None:
         pp_path = _resolve_path(model_dir, preprocessor_file)
         logger.info("Loading model from preprocessor file: %s", pp_path)
-        return IWFMModel.from_preprocessor(pp_path)
+        return IWFMModel.from_preprocessor(pp_path, strict=strict_mode)  # type: ignore[arg-type]
 
     # --- Auto-detect ------------------------------------------------------
     files = find_model_files(model_dir)
@@ -80,7 +98,11 @@ def load_model(
             pp_file,
         )
         try:
-            return IWFMModel.from_simulation_with_preprocessor(sim_file, pp_file)
+            return IWFMModel.from_simulation_with_preprocessor(
+                sim_file,
+                pp_file,
+                strict=strict_mode,  # type: ignore[arg-type]
+            )
         except Exception as exc:
             logger.warning("Failed to load with both files: %s", exc)
             logger.info("Falling back to simulation-only loading...")
@@ -95,7 +117,7 @@ def load_model(
 
     if pp_file:
         logger.info("Auto-detected preprocessor file: %s", pp_file)
-        return IWFMModel.from_preprocessor(pp_file)
+        return IWFMModel.from_preprocessor(pp_file, strict=strict_mode)  # type: ignore[arg-type]
 
     if files["preprocessor_binary"]:
         logger.info("Auto-detected binary file: %s", files["preprocessor_binary"])
@@ -104,4 +126,23 @@ def load_model(
     raise FileNotFoundError(
         f"No IWFM model files found in {model_dir}. "
         "Expected to find a Simulation_MAIN.IN or PreProcessor_MAIN.IN file."
+    )
+
+
+def warn_if_partial_load(model: IWFMModel) -> None:
+    """If the model was loaded with ``allow_partial_load=True`` and some
+    components still failed to parse, print a one-line stderr banner so
+    the user is at least aware they're running degraded.
+
+    No-op for clean loads or strict-mode loads (which would have raised).
+    """
+    if not model.has_load_errors:
+        return
+    import sys
+
+    n = len(model.load_errors)
+    print(
+        f"warning: model loaded with {n} component error(s); "
+        "drop --allow-partial-load to see the full report.",
+        file=sys.stderr,
     )

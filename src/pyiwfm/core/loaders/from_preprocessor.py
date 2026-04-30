@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 
 from pyiwfm.core.loaders._common import (
     _COMPONENT_LOAD_EXCEPTIONS,
+    StrictMode,
+    _finalize_collected_errors,
     _record_component_failure,
 )
 
@@ -22,7 +24,7 @@ def load_from_preprocessor(
     load_streams: bool = True,
     load_lakes: bool = True,
     *,
-    strict: bool = False,
+    strict: StrictMode = False,
 ) -> IWFMModel:
     """
     Load a model from PreProcessor input files.
@@ -40,12 +42,21 @@ def load_from_preprocessor(
         pp_file: Path to the main PreProcessor input file
         load_streams: If True, load stream network geometry
         load_lakes: If True, load lake geometry
-        strict: If True, raise :class:`~pyiwfm.core.exceptions.ComponentLoadError`
-            when an optional component file cannot be parsed. The default
-            (``False``) preserves the historical lenient behavior: log a
-            warning, record the error in ``model.metadata``, and continue
-            with whatever components loaded. Use ``strict=True`` from
-            calibration / analysis pipelines that require a complete model.
+        strict: Behaviour on component-load failure. Three values:
+
+            - ``False`` (default): log a warning, record the error in
+              ``model.metadata`` (introspect via
+              :attr:`IWFMModel.load_errors`), and continue. Returns a
+              partially-loaded model.
+            - ``True``: raise
+              :class:`~pyiwfm.core.exceptions.ComponentLoadError` on
+              the first component that fails. Best for calibration /
+              analysis pipelines that need a complete model and want
+              fail-fast.
+            - ``"collect"``: load every component, then raise a single
+              :class:`~pyiwfm.core.exceptions.ValidationError` at the
+              end if any failed. Best for user-facing surfaces (CLI,
+              web API) — users see all problems in one report.
 
     Returns:
         IWFMModel instance with mesh, stratigraphy, and optionally
@@ -210,4 +221,5 @@ def load_from_preprocessor(
 
     model.metadata["source"] = "preprocessor"
     _resolve_stream_node_coordinates(model)
+    _finalize_collected_errors(model, strict)
     return model

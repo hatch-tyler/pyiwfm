@@ -12,6 +12,25 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 Added
 ~~~~~
 
+- ``IWFMModel.load_errors`` (returns ``list[ComponentLoadError]``) and
+  ``IWFMModel.has_load_errors`` properties for introspecting partial
+  loads. Populated by the ``from_*`` loaders when ``strict=False`` (the
+  default) or when ``strict="collect"`` recorded errors before its
+  finalize raise. Backward-compatible: the existing scalar
+  ``metadata['{component}_load_error']`` keys still get set.
+
+- ``strict="collect"`` mode for ``IWFMModel.from_preprocessor`` and
+  ``from_simulation_with_preprocessor`` (and their underlying
+  ``load_from_*`` functions). Loads every component, then raises a
+  single ``ValidationError`` at the end enumerating every component
+  that failed — best UX for one-shot CLI / Web API surfaces. Existing
+  ``strict=False`` (lenient) and ``strict=True`` (fail-fast) modes are
+  unchanged.
+
+- ``pyiwfm.cli._model_loader.warn_if_partial_load(model)`` helper:
+  prints a one-line stderr banner when a CLI load succeeded with
+  ``--allow-partial-load`` but some components still failed.
+
 - ``pyiwfm.io.mesh.write_nodes`` / ``write_elements`` / ``write_stratigraphy``
   gained keyword-only parameters for the canonical preprocessor format:
   ``factor=`` (FACTXY for nodes, FACTEL for stratigraphy) and, for
@@ -22,6 +41,14 @@ Added
 
 Changed
 ~~~~~~~
+
+- **CLI** subcommands ``viewer`` and ``export`` now load IWFM models
+  with ``strict="collect"`` by default. A model with broken or missing
+  component files now produces a single ``ValidationError`` listing
+  every failed component and exits with code 1, instead of silently
+  starting up with a partially-loaded model. Pass ``--allow-partial-load``
+  to opt back into the historical permissive behaviour; a stderr banner
+  is printed on startup so you're aware you're running degraded.
 
 - **Renamed** ``pyiwfm.io.ascii`` → ``pyiwfm.io.mesh``. The module
   contained only the six mesh + stratigraphy preprocessor-subfile
