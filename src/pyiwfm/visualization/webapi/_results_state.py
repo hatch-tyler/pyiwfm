@@ -571,7 +571,12 @@ class ResultsStateMixin:
                         continue  # Skip if still no valid coordinates
                     try:
                         lng, lat = self.reproject_coords(x, y)
-                    except Exception:
+                    except Exception as exc:
+                        # Per-location reprojection failure (e.g. coords
+                        # outside the CRS bounds). Skip silently so a few
+                        # bad locations don't break the whole map response;
+                        # log at debug level for diagnostics.
+                        logger.debug("Subsidence loc %s reprojection failed: %s", spec.id, exc)
                         continue
                     sub_node_id = getattr(spec, "node_id", 0) or getattr(spec, "gw_node", 0)
                     result["subsidence"].append(
@@ -622,7 +627,11 @@ class ResultsStateMixin:
 
                     try:
                         lng, lat = self.reproject_coords(x, y)
-                    except Exception:
+                    except Exception as exc:
+                        # See subsidence-loop comment above: per-location
+                        # reproject failure is silent-with-debug-log so the
+                        # rest of the response still renders.
+                        logger.debug("Tile drain %s reprojection failed: %s", td_id, exc)
                         continue
 
                     result["tile_drain"].append(

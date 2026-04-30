@@ -457,7 +457,7 @@ C  No data
 """)
 
         reader = GroundwaterReader()
-        with pytest.raises(FileFormatError, match="Could not find NWELLS"):
+        with pytest.raises(FileFormatError, match="Required keyword 'NWELLS' not found"):
             reader.read_wells(filepath)
 
     def test_read_wells_invalid_data(self, tmp_path: Path) -> None:

@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
+from pyiwfm.core.exceptions import ComponentError
 from pyiwfm.core.model import (
     IWFMModel,
     _build_reaches_from_node_reach_ids,
@@ -1575,7 +1576,7 @@ class TestValidateComponentsSWUZ:
         """Small watershed validation failure is captured."""
         model = IWFMModel(name="Test")
         mock_sw = MagicMock()
-        mock_sw.validate.side_effect = ValueError("SW error")
+        mock_sw.validate.side_effect = ComponentError("SW error")
         model.small_watersheds = mock_sw
 
         warnings = model.validate_components()
@@ -1586,7 +1587,7 @@ class TestValidateComponentsSWUZ:
         """Unsaturated zone validation failure is captured."""
         model = IWFMModel(name="Test")
         mock_uz = MagicMock()
-        mock_uz.validate.side_effect = ValueError("UZ error")
+        mock_uz.validate.side_effect = ComponentError("UZ error")
         model.unsaturated_zone = mock_uz
 
         warnings = model.validate_components()

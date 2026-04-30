@@ -440,13 +440,18 @@ class SqliteCacheLoader:
             try:
                 cur = conn.execute(f"SELECT COUNT(*) FROM {table}")  # noqa: S608
                 stats[table] = cur.fetchone()[0]
-            except Exception:
+            except sqlite3.DatabaseError as exc:
+                # Missing table or corrupted cache — log and report 0 so
+                # the caller can see the cache is incomplete instead of
+                # silently treating it as empty.
+                logger.warning("cache stats: failed to count %s: %s", table, exc)
                 stats[table] = 0
 
         # File size
         try:
             stats["file_size_mb"] = round(self.cache_path.stat().st_size / (1024 * 1024), 1)  # type: ignore[assignment]
-        except Exception:
+        except OSError as exc:
+            logger.warning("cache stats: failed to stat cache file: %s", exc)
             stats["file_size_mb"] = 0
 
         return stats

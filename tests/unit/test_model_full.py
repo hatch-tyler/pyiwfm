@@ -10,7 +10,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pyiwfm.core.exceptions import ValidationError
+from pyiwfm.core.exceptions import (
+    ComponentError,
+    MeshError,
+    StratigraphyError,
+    ValidationError,
+)
 from pyiwfm.core.model import IWFMModel
 
 # =============================================================================
@@ -336,7 +341,7 @@ class TestIWFMModelValidation:
 
     def test_validate_mesh_validation_failure(self, mock_mesh, mock_stratigraphy):
         """Test validation handles mesh validation failure."""
-        mock_mesh.validate.side_effect = Exception("Mesh error")
+        mock_mesh.validate.side_effect = MeshError("Mesh error")
         model = IWFMModel(name="Test", mesh=mock_mesh, stratigraphy=mock_stratigraphy)
         with pytest.raises(ValidationError) as exc_info:
             model.validate()
@@ -344,7 +349,7 @@ class TestIWFMModelValidation:
 
     def test_validate_stratigraphy_validation_failure(self, mock_mesh, mock_stratigraphy):
         """Test validation handles stratigraphy validation failure."""
-        mock_stratigraphy.validate.side_effect = Exception("Strat error")
+        mock_stratigraphy.validate.side_effect = StratigraphyError("Strat error")
         model = IWFMModel(name="Test", mesh=mock_mesh, stratigraphy=mock_stratigraphy)
         with pytest.raises(ValidationError) as exc_info:
             model.validate()
@@ -372,28 +377,28 @@ class TestIWFMModelValidateComponents:
 
     def test_validate_components_groundwater_failure(self, complete_model):
         """Test validate_components handles groundwater validation failure."""
-        complete_model.groundwater.validate.side_effect = Exception("GW error")
+        complete_model.groundwater.validate.side_effect = ComponentError("GW error")
         warnings = complete_model.validate_components()
         assert len(warnings) == 1
         assert "Groundwater validation" in warnings[0]
 
     def test_validate_components_streams_failure(self, complete_model):
         """Test validate_components handles stream validation failure."""
-        complete_model.streams.validate.side_effect = Exception("Stream error")
+        complete_model.streams.validate.side_effect = ComponentError("Stream error")
         warnings = complete_model.validate_components()
         assert len(warnings) == 1
         assert "Stream validation" in warnings[0]
 
     def test_validate_components_lakes_failure(self, complete_model):
         """Test validate_components handles lake validation failure."""
-        complete_model.lakes.validate.side_effect = Exception("Lake error")
+        complete_model.lakes.validate.side_effect = ComponentError("Lake error")
         warnings = complete_model.validate_components()
         assert len(warnings) == 1
         assert "Lake validation" in warnings[0]
 
     def test_validate_components_rootzone_failure(self, complete_model):
         """Test validate_components handles rootzone validation failure."""
-        complete_model.rootzone.validate.side_effect = Exception("RZ error")
+        complete_model.rootzone.validate.side_effect = ComponentError("RZ error")
         warnings = complete_model.validate_components()
         assert len(warnings) == 1
         assert "Root zone validation" in warnings[0]
@@ -405,8 +410,8 @@ class TestIWFMModelValidateComponents:
 
     def test_validate_components_multiple_failures(self, complete_model):
         """Test validate_components collects multiple failures."""
-        complete_model.groundwater.validate.side_effect = Exception("GW error")
-        complete_model.streams.validate.side_effect = Exception("Stream error")
+        complete_model.groundwater.validate.side_effect = ComponentError("GW error")
+        complete_model.streams.validate.side_effect = ComponentError("Stream error")
         warnings = complete_model.validate_components()
         assert len(warnings) == 2
 

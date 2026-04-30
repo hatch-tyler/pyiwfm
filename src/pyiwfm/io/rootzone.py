@@ -422,7 +422,7 @@ class RootZoneReader:
                 break
 
             if n_crops is None:
-                raise FileFormatError("Could not find NCROPS in file")
+                raise FileFormatError("Required keyword 'NCROPS' not found anywhere in file")
 
             # Read crop data
             for line in f:
@@ -487,7 +487,7 @@ class RootZoneReader:
                 break
 
             if n_elem is None:
-                raise FileFormatError("Could not find NELEM_SOIL in file")
+                raise FileFormatError("Required keyword 'NELEM_SOIL' not found anywhere in file")
 
             # Read parameter data
             for line in f:

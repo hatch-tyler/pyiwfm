@@ -15,7 +15,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pyiwfm.core.exceptions import ValidationError
+from pyiwfm.core.exceptions import (
+    ComponentError,
+    MeshError,
+    StratigraphyError,
+    ValidationError,
+)
 from pyiwfm.core.model import IWFMModel
 
 # =============================================================================
@@ -340,11 +345,11 @@ class TestValidate:
         assert errors == []
 
     def test_validate_with_mesh_error(self) -> None:
-        """Test validation when mesh validation fails."""
+        """Test validation when mesh validation raises MeshError."""
         model = IWFMModel(name="Test")
 
         mock_mesh = MagicMock()
-        mock_mesh.validate.side_effect = Exception("Mesh error")
+        mock_mesh.validate.side_effect = MeshError("Mesh error")
         mock_mesh.n_nodes = 100
         model.mesh = mock_mesh
 
@@ -356,8 +361,27 @@ class TestValidate:
         with pytest.raises(ValidationError) as excinfo:
             model.validate()
 
-        # Check that mesh error is in the error messages
         assert any("Mesh validation failed" in str(e) for e in excinfo.value.errors)
+
+    def test_validate_propagates_unexpected_exception(self) -> None:
+        """Programmer bugs (e.g. AttributeError) inside a callee's
+        validate() must propagate, not get stringified into the warning
+        list. The narrow catch only handles the contract-defined
+        exception types (MeshError / StratigraphyError)."""
+        model = IWFMModel(name="Test")
+
+        mock_mesh = MagicMock()
+        mock_mesh.validate.side_effect = AttributeError("oops, programmer bug")
+        mock_mesh.n_nodes = 100
+        model.mesh = mock_mesh
+
+        mock_strat = MagicMock()
+        mock_strat.validate.return_value = []
+        mock_strat.n_nodes = 100
+        model.stratigraphy = mock_strat
+
+        with pytest.raises(AttributeError, match="programmer bug"):
+            model.validate()
 
 
 # =============================================================================
@@ -499,15 +523,16 @@ class TestValidateComponents:
         assert warnings == []
 
     def test_validate_components_with_errors(self) -> None:
-        """Test validate_components when components have errors."""
+        """Components that raise ComponentError get stringified into the
+        warnings list (the documented contract)."""
         model = IWFMModel(name="Test")
 
         mock_gw = MagicMock()
-        mock_gw.validate.side_effect = Exception("GW error")
+        mock_gw.validate.side_effect = ComponentError("GW error")
         model.groundwater = mock_gw
 
         mock_streams = MagicMock()
-        mock_streams.validate.side_effect = Exception("Stream error")
+        mock_streams.validate.side_effect = ComponentError("Stream error")
         model.streams = mock_streams
 
         warnings = model.validate_components()
@@ -515,6 +540,18 @@ class TestValidateComponents:
         assert len(warnings) == 2
         assert any("Groundwater" in w for w in warnings)
         assert any("Stream" in w for w in warnings)
+
+    def test_validate_components_propagates_unexpected_exception(self) -> None:
+        """Programmer bugs in a component's validate() propagate
+        rather than getting silently turned into a warning."""
+        model = IWFMModel(name="Test")
+
+        mock_gw = MagicMock()
+        mock_gw.validate.side_effect = AttributeError("oops")
+        model.groundwater = mock_gw
+
+        with pytest.raises(AttributeError, match="oops"):
+            model.validate_components()
 
 
 # =============================================================================
@@ -1246,7 +1283,7 @@ class TestModelValidation:
         model.mesh = mock_mesh
 
         mock_strat = MagicMock()
-        mock_strat.validate.side_effect = Exception("Corrupt stratigraphy data")
+        mock_strat.validate.side_effect = StratigraphyError("Corrupt stratigraphy data")
         mock_strat.n_nodes = 100
         model.stratigraphy = mock_strat
 
@@ -1273,7 +1310,7 @@ class TestModelValidation:
         model = IWFMModel(name="MeshExc")
 
         mock_mesh = MagicMock()
-        mock_mesh.validate.side_effect = Exception("Duplicate nodes found")
+        mock_mesh.validate.side_effect = MeshError("Duplicate nodes found")
         mock_mesh.n_nodes = 50
         model.mesh = mock_mesh
 
@@ -1289,7 +1326,7 @@ class TestModelValidation:
         model = IWFMModel(name="LakeFail")
 
         mock_lakes = MagicMock()
-        mock_lakes.validate.side_effect = Exception("Lake has no elements")
+        mock_lakes.validate.side_effect = ComponentError("Lake has no elements")
         model.lakes = mock_lakes
 
         warnings = model.validate_components()
@@ -1303,7 +1340,7 @@ class TestModelValidation:
         model = IWFMModel(name="RZFail")
 
         mock_rz = MagicMock()
-        mock_rz.validate.side_effect = Exception("No crop types defined")
+        mock_rz.validate.side_effect = ComponentError("No crop types defined")
         model.rootzone = mock_rz
 
         warnings = model.validate_components()
@@ -1323,7 +1360,7 @@ class TestModelValidation:
 
         # Streams fail
         mock_streams = MagicMock()
-        mock_streams.validate.side_effect = Exception("Disconnected reach")
+        mock_streams.validate.side_effect = ComponentError("Disconnected reach")
         model.streams = mock_streams
 
         # Lakes pass
@@ -1333,7 +1370,7 @@ class TestModelValidation:
 
         # Root zone fails
         mock_rz = MagicMock()
-        mock_rz.validate.side_effect = Exception("Invalid soil params")
+        mock_rz.validate.side_effect = ComponentError("Invalid soil params")
         model.rootzone = mock_rz
 
         warnings = model.validate_components()
@@ -1351,19 +1388,19 @@ class TestModelValidation:
         model = IWFMModel(name="AllFail")
 
         mock_gw = MagicMock()
-        mock_gw.validate.side_effect = Exception("GW error")
+        mock_gw.validate.side_effect = ComponentError("GW error")
         model.groundwater = mock_gw
 
         mock_streams = MagicMock()
-        mock_streams.validate.side_effect = Exception("Stream error")
+        mock_streams.validate.side_effect = ComponentError("Stream error")
         model.streams = mock_streams
 
         mock_lakes = MagicMock()
-        mock_lakes.validate.side_effect = Exception("Lake error")
+        mock_lakes.validate.side_effect = ComponentError("Lake error")
         model.lakes = mock_lakes
 
         mock_rz = MagicMock()
-        mock_rz.validate.side_effect = Exception("RZ error")
+        mock_rz.validate.side_effect = ComponentError("RZ error")
         model.rootzone = mock_rz
 
         warnings = model.validate_components()

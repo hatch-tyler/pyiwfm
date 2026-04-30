@@ -21,7 +21,12 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from pyiwfm.core.exceptions import ValidationError
+from pyiwfm.core.exceptions import (
+    ComponentError,
+    MeshError,
+    StratigraphyError,
+    ValidationError,
+)
 from pyiwfm.core.loaders._common import (
     _COMPONENT_LOAD_EXCEPTIONS,
     _record_component_failure,
@@ -405,11 +410,18 @@ class IWFMModel:
         """
         Validate model structure and data.
 
+        The mesh and stratigraphy validators are contracted to raise
+        :class:`MeshError` and :class:`StratigraphyError` respectively
+        (with stratigraphy additionally returning a list of non-critical
+        warnings). Any other exception is a programmer bug and propagates.
+
         Returns:
-            List of validation errors (empty if valid)
+            Empty list. The list-returning shape is preserved for legacy
+            callers; the actual error list lives on the
+            :class:`ValidationError` raised below.
 
         Raises:
-            ValidationError: If critical validation fails
+            ValidationError: If validation finds any error.
         """
         errors: list[str] = []
 
@@ -419,7 +431,7 @@ class IWFMModel:
         else:
             try:
                 self.mesh.validate()
-            except Exception as e:
+            except MeshError as e:
                 errors.append(f"Mesh validation failed: {e}")
 
         # Validate stratigraphy
@@ -429,7 +441,7 @@ class IWFMModel:
             try:
                 warnings = self.stratigraphy.validate()
                 errors.extend(warnings)
-            except Exception as e:
+            except StratigraphyError as e:
                 errors.append(f"Stratigraphy validation failed: {e}")
 
         # Check mesh/stratigraphy consistency
@@ -908,46 +920,31 @@ class IWFMModel:
         """
         Validate all model components.
 
+        Each component validator is contracted (per
+        :meth:`pyiwfm.core.base_component.BaseComponent.validate`) to
+        raise :class:`ComponentError` on invalid state and return
+        ``None`` on success. Any other exception is a programmer bug and
+        propagates rather than being silently turned into a warning.
+
         Returns:
-            List of validation warnings/errors from components
+            List of validation warnings (one per component that raised
+            ``ComponentError``). Empty if all loaded components validate.
         """
         warnings: list[str] = []
-
-        if self.groundwater is not None:
+        for label, component in (
+            ("Groundwater", self.groundwater),
+            ("Stream", self.streams),
+            ("Lake", self.lakes),
+            ("Root zone", self.rootzone),
+            ("Small watershed", self.small_watersheds),
+            ("Unsaturated zone", self.unsaturated_zone),
+        ):
+            if component is None:
+                continue
             try:
-                self.groundwater.validate()
-            except Exception as e:
-                warnings.append(f"Groundwater validation: {e}")
-
-        if self.streams is not None:
-            try:
-                self.streams.validate()
-            except Exception as e:
-                warnings.append(f"Stream validation: {e}")
-
-        if self.lakes is not None:
-            try:
-                self.lakes.validate()
-            except Exception as e:
-                warnings.append(f"Lake validation: {e}")
-
-        if self.rootzone is not None:
-            try:
-                self.rootzone.validate()
-            except Exception as e:
-                warnings.append(f"Root zone validation: {e}")
-
-        if self.small_watersheds is not None:
-            try:
-                self.small_watersheds.validate()
-            except Exception as e:
-                warnings.append(f"Small watershed validation: {e}")
-
-        if self.unsaturated_zone is not None:
-            try:
-                self.unsaturated_zone.validate()
-            except Exception as e:
-                warnings.append(f"Unsaturated zone validation: {e}")
+                component.validate()
+            except ComponentError as e:
+                warnings.append(f"{label} validation: {e}")
 
         return warnings
 

@@ -15,7 +15,23 @@ from typing import Any
 import h5py
 import numpy as np
 
+from pyiwfm.core.exceptions import PyIWFMError
+
 logger = logging.getLogger(__name__)
+
+
+# Exceptions that legitimately surface from on-disk data comparisons:
+# I/O errors, missing HDF5 datasets / dict keys, shape/parse mismatches
+# in pandas/h5py, generic library errors, and the IWFM-typed family.
+# Programmer bugs (AttributeError, TypeError) propagate so they get
+# fixed instead of silently appearing as "comparison failed" lines.
+_COMPARISON_DATA_EXCEPTIONS = (
+    OSError,
+    KeyError,
+    ValueError,
+    RuntimeError,
+    PyIWFMError,
+)
 
 
 @dataclass
@@ -223,27 +239,27 @@ class ResultsDiffer:
                 hc = self.compare_heads_text()
                 if hc is not None:
                     result.head_comparison = hc
-        except Exception as exc:
+        except _COMPARISON_DATA_EXCEPTIONS as exc:
             result.errors.append(f"Head comparison failed: {exc}")
             logger.exception("Head comparison failed")
 
         # Compare final heads
         try:
             result.final_heads_match = self.compare_final_heads()
-        except Exception as exc:
+        except _COMPARISON_DATA_EXCEPTIONS as exc:
             result.errors.append(f"Final heads comparison failed: {exc}")
 
         # Compare budgets
         try:
             result.budget_comparisons = self.compare_budgets()
-        except Exception as exc:
+        except _COMPARISON_DATA_EXCEPTIONS as exc:
             result.errors.append(f"Budget comparison failed: {exc}")
             logger.exception("Budget comparison failed")
 
         # Compare hydrographs
         try:
             result.hydrograph_comparisons = self.compare_hydrographs()
-        except Exception as exc:
+        except _COMPARISON_DATA_EXCEPTIONS as exc:
             result.errors.append(f"Hydrograph comparison failed: {exc}")
             logger.exception("Hydrograph comparison failed")
 
@@ -461,7 +477,7 @@ class ResultsDiffer:
                     comp.max_rel_diff = max_rel
                     comp.within_tolerance = all_ok
 
-            except Exception as exc:
+            except _COMPARISON_DATA_EXCEPTIONS as exc:
                 comp.details.append(f"Error: {exc}")
                 comp.within_tolerance = False
 
@@ -521,7 +537,7 @@ class ResultsDiffer:
 
                 comp.within_tolerance = comp.n_poor_matches == 0
 
-            except Exception as exc:
+            except _COMPARISON_DATA_EXCEPTIONS as exc:
                 comp.within_tolerance = False
                 logger.warning("Failed to compare hydrograph %s: %s", name, exc)
 

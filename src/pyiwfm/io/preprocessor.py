@@ -194,7 +194,7 @@ def read_subregions_file(filepath: Path | str) -> dict[int, Subregion]:
             break
 
         if n_subregions is None:
-            raise FileFormatError("Could not find NSUBREGION in file")
+            raise FileFormatError("Required keyword 'NSUBREGION' not found anywhere in file")
 
         # Read subregion data
         for line in f:

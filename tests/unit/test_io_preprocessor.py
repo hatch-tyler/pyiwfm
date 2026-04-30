@@ -528,7 +528,7 @@ abc                                      / NSUBREGION
 C  Nothing else
 """
         )
-        with pytest.raises(FileFormatError, match="Could not find NSUBREGION"):
+        with pytest.raises(FileFormatError, match="Required keyword 'NSUBREGION' not found"):
             read_subregions_file(sr_file)
 
     def test_invalid_subregion_data(self, tmp_path: Path) -> None:

@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 
 from pyiwfm.components.groundwater import AppGW, AquiferParameters
-from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.core.exceptions import ComponentError, FileFormatError
 from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.core.model import IWFMModel, _apply_kh_anomalies, _apply_parametric_grids
 from pyiwfm.io.groundwater import KhAnomalyEntry
@@ -2274,7 +2274,7 @@ class TestSummaryAndValidation:
     def test_validate_components_with_small_watersheds(self) -> None:
         """validate_components calls validate on small_watersheds."""
         sw = MagicMock()
-        sw.validate.side_effect = ValueError("sw invalid")
+        sw.validate.side_effect = ComponentError("sw invalid")
         model = IWFMModel(name="Test", small_watersheds=sw)
         warnings = model.validate_components()
         assert any("Small watershed" in w for w in warnings)
@@ -2282,7 +2282,7 @@ class TestSummaryAndValidation:
     def test_validate_components_with_unsaturated_zone(self) -> None:
         """validate_components calls validate on unsaturated_zone."""
         uz = MagicMock()
-        uz.validate.side_effect = ValueError("uz invalid")
+        uz.validate.side_effect = ComponentError("uz invalid")
         model = IWFMModel(name="Test", unsaturated_zone=uz)
         warnings = model.validate_components()
         assert any("Unsaturated zone" in w for w in warnings)
@@ -2317,9 +2317,9 @@ class TestSummaryAndValidation:
     def test_validate_components_multiple_failures(self) -> None:
         """Multiple component validation failures all reported."""
         gw = MagicMock()
-        gw.validate.side_effect = ValueError("gw fail")
+        gw.validate.side_effect = ComponentError("gw fail")
         streams = MagicMock()
-        streams.validate.side_effect = ValueError("stream fail")
+        streams.validate.side_effect = ComponentError("stream fail")
         model = IWFMModel(name="Test", groundwater=gw, streams=streams)
         warnings = model.validate_components()
         assert len(warnings) == 2

@@ -126,7 +126,7 @@ C  No data
 """)
 
         reader = GroundwaterReader()
-        with pytest.raises(FileFormatError, match="Could not find N_SUBSIDENCE"):
+        with pytest.raises(FileFormatError, match="Required keyword 'N_SUBSIDENCE' not found"):
             reader.read_subsidence(filepath)
 
     def test_read_invalid_n_subsidence(self, tmp_path: Path) -> None:

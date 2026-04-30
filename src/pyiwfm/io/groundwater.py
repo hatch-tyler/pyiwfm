@@ -593,7 +593,7 @@ class GroundwaterReader:
                 break
 
             if n_wells is None:
-                raise FileFormatError("Could not find NWELLS in file")
+                raise FileFormatError("Required keyword 'NWELLS' not found anywhere in file")
 
             # Read well data
             for line in f:
@@ -681,7 +681,9 @@ class GroundwaterReader:
                 break
 
             if n_nodes is None or n_layers is None:
-                raise FileFormatError("Could not find NNODES or NLAYERS in file")
+                raise FileFormatError(
+                    "Required keyword 'NNODES or NLAYERS' not found anywhere in file"
+                )
 
             # Initialize heads array
             heads = np.zeros((n_nodes, n_layers))
@@ -744,7 +746,7 @@ class GroundwaterReader:
                 break
 
             if n_subsidence is None:
-                raise FileFormatError("Could not find N_SUBSIDENCE in file")
+                raise FileFormatError("Required keyword 'N_SUBSIDENCE' not found anywhere in file")
 
             # Read subsidence data
             for line in f:

@@ -327,7 +327,7 @@ class LakeReader:
                 break
 
             if n_lakes is None:
-                raise FileFormatError("Could not find NLAKES in file")
+                raise FileFormatError("Required keyword 'NLAKES' not found anywhere in file")
 
             # Read lake data — detect preprocessor vs simulation format
             lakes_read = 0
@@ -477,7 +477,9 @@ class LakeReader:
                 break
 
             if n_elements is None:
-                raise FileFormatError("Could not find NLAKE_ELEMENTS in file")
+                raise FileFormatError(
+                    "Required keyword 'NLAKE_ELEMENTS' not found anywhere in file"
+                )
 
             # Read element data
             for line in f:
@@ -544,7 +546,9 @@ class LakeReader:
                 break
 
             if n_curves is None:
-                raise FileFormatError("Could not find N_RATING_CURVES in file")
+                raise FileFormatError(
+                    "Required keyword 'N_RATING_CURVES' not found anywhere in file"
+                )
 
             # Read each rating curve
             curves_read = 0

@@ -547,7 +547,7 @@ class TestReadSubregionsFile:
         """File with only comments raises FileFormatError."""
         sr_file = tmp_path / "subregions.dat"
         sr_file.write_text("C  Only comments\nC  More comments\n")
-        with pytest.raises(FileFormatError, match="Could not find NSUBREGION"):
+        with pytest.raises(FileFormatError, match="Required keyword 'NSUBREGION' not found"):
             read_subregions_file(sr_file)
 
     def test_read_invalid_subregion_id(self, tmp_path: Path) -> None:

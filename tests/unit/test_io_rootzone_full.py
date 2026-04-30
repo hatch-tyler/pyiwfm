@@ -404,7 +404,7 @@ C  No data
 """)
 
         reader = RootZoneReader()
-        with pytest.raises(FileFormatError, match="Could not find NCROPS"):
+        with pytest.raises(FileFormatError, match="Required keyword 'NCROPS' not found"):
             reader.read_crop_types(filepath)
 
     def test_read_crop_types_invalid_data(self, tmp_path: Path) -> None:
@@ -456,7 +456,7 @@ xyz                            / NELEM_SOIL
 """)
 
         reader = RootZoneReader()
-        with pytest.raises(FileFormatError, match="Could not find NELEM_SOIL"):
+        with pytest.raises(FileFormatError, match="Required keyword 'NELEM_SOIL' not found"):
             reader.read_soil_params(filepath)
 
     def test_read_soil_params_invalid_data(self, tmp_path: Path) -> None:

@@ -386,7 +386,7 @@ INVALID                        / NSUBREGION
 
         with pytest.raises(FileFormatError) as exc_info:
             read_subregions_file(sr_file)
-        assert "Could not find NSUBREGION" in str(exc_info.value)
+        assert "Required keyword 'NSUBREGION' not found" in str(exc_info.value)
 
     def test_read_subregions_invalid_id(self, tmp_path):
         """Test error on invalid subregion ID."""

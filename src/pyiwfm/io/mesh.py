@@ -100,7 +100,7 @@ def read_nodes(filepath: Path | str) -> dict[int, Node]:
             break
 
         if n_nodes is None:
-            raise FileFormatError("Could not find NNODES in file")
+            raise FileFormatError("Required keyword 'NNODES' not found anywhere in file")
 
         # Check for optional FACT (conversion factor) line
         for line in f:
@@ -160,7 +160,9 @@ def read_nodes(filepath: Path | str) -> dict[int, Node]:
 
         if nodes_read != n_nodes:
             raise FileFormatError(
-                f"Node count mismatch: expected {n_nodes} nodes, got {nodes_read}"
+                f"Node count mismatch: NNODES header declared {n_nodes} "
+                f"but file contained {nodes_read}",
+                line_number=line_num,
             )
 
     return nodes
@@ -228,9 +230,9 @@ def read_elements(
             break
 
         if n_elem is None:
-            raise FileFormatError("Could not find NELEM in file")
+            raise FileFormatError("Required keyword 'NELEM' not found anywhere in file")
         if n_subregion is None:
-            raise FileFormatError("Could not find NSUBREGION in file")
+            raise FileFormatError("Required keyword 'NSUBREGION' not found anywhere in file")
 
         # Read subregion names (IWFM format has RNAME lines after NSUBREGION)
         subregion_names: dict[int, str] = {}
@@ -424,7 +426,7 @@ def read_stratigraphy(filepath: Path | str) -> Stratigraphy:
             break
 
         if n_layers is None:
-            raise FileFormatError("Could not find NLAYERS in file")
+            raise FileFormatError("Required keyword 'NLAYERS' not found anywhere in file")
 
         # Collect node data first to determine n_nodes
         node_data: list[tuple[int, list[float]]] = []

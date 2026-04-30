@@ -21,6 +21,7 @@ Query and export model data:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -31,6 +32,8 @@ from numpy.typing import NDArray
 
 from pyiwfm.core.aggregation import DataAggregator, create_aggregator_from_grid
 from pyiwfm.core.zones import ZoneDefinition
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -372,8 +375,13 @@ class ModelQueryAPI:
             try:
                 values = self.get_values(var, scale, layer, time_index, aggregation)
                 data[var] = [values.get(loc_id, np.nan) for loc_id in data["id"]]
-            except Exception:
-                # Variable not available
+            except (KeyError, ValueError, OSError) as exc:
+                # Variable not exposed by this dataset, dataset I/O failed,
+                # or the value-extraction routine reported a parse / shape
+                # mismatch. Log so users can distinguish "all NaN because
+                # the variable is missing" from "all NaN because of dry
+                # cells." Programmer bugs propagate.
+                logger.warning("ResultsQuery: variable %r unavailable (%s); filling NaN", var, exc)
                 data[var] = [np.nan] * len(data["id"])
 
         return pd.DataFrame(data)

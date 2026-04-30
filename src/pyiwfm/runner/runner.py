@@ -307,9 +307,13 @@ class IWFMRunner:
             )
             return -1, stdout, stderr, elapsed
 
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
+            # Subprocess could not be spawned (missing executable,
+            # permissions, ENOEXEC) or terminated abnormally. Surface
+            # the exception type alongside the message so users can
+            # distinguish a missing exe from a permission error.
             elapsed = datetime.now() - start_time
-            return -1, "", str(e), elapsed
+            return -1, "", f"{e.__class__.__name__}: {e}", elapsed
 
     def run_preprocessor(
         self,

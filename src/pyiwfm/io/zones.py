@@ -37,12 +37,15 @@ Write zone file:
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 from pyiwfm.core.zones import Zone, ZoneDefinition
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from pyiwfm.core.mesh import AppGrid
@@ -457,7 +460,11 @@ def auto_detect_zone_file(filepath: Path | str) -> str:
 
         return "iwfm"
 
-    except Exception:
+    except OSError as exc:
+        # Missing file / unreadable / permission error — return "unknown"
+        # so callers can fall through to a "format not detected" branch,
+        # but log so users aren't left guessing why detection failed.
+        logger.warning("auto_detect_zone_file: cannot read %s: %s", filepath, exc)
         return "unknown"
 
 

@@ -79,7 +79,7 @@ c  Lowercase c also works
 """
         )
 
-        with pytest.raises(FileFormatError, match="expected 4.*got 2"):
+        with pytest.raises(FileFormatError, match="declared 4.*contained 2"):
             read_nodes(node_file)
 
     def test_read_nodes_invalid_format(self, tmp_path: Path) -> None:
@@ -473,7 +473,7 @@ class TestReadNodesAdditional:
 C  No data here
 """
         )
-        with pytest.raises(FileFormatError, match="Could not find NNODES"):
+        with pytest.raises(FileFormatError, match="Required keyword 'NNODES' not found"):
             read_nodes(node_file)
 
     def test_read_nodes_invalid_nnodes_text(self, tmp_path: Path) -> None:
@@ -600,7 +600,7 @@ class TestReadElementsAdditional:
         """File with only comments and no NELEM raises error."""
         elem_file = tmp_path / "elems_empty.dat"
         elem_file.write_text("C  Empty file\n")
-        with pytest.raises(FileFormatError, match="Could not find NELEM"):
+        with pytest.raises(FileFormatError, match="Required keyword 'NELEM' not found"):
             read_elements(elem_file)
 
     def test_read_elements_invalid_nelem(self, tmp_path: Path) -> None:
@@ -614,7 +614,7 @@ class TestReadElementsAdditional:
         """Missing NSUBREGION raises error."""
         elem_file = tmp_path / "elems_nosub.dat"
         elem_file.write_text("2 / NELEM\nC  no subregion line\n")
-        with pytest.raises(FileFormatError, match="Could not find NSUBREGION"):
+        with pytest.raises(FileFormatError, match="Required keyword 'NSUBREGION' not found"):
             read_elements(elem_file)
 
     def test_read_elements_invalid_nsubregion(self, tmp_path: Path) -> None:
@@ -718,7 +718,7 @@ class TestReadStratigraphyAdditional:
         """File with no NLAYERS raises error."""
         strat_file = tmp_path / "strat_empty.dat"
         strat_file.write_text("C  Empty file\n")
-        with pytest.raises(FileFormatError, match="Could not find NLAYERS"):
+        with pytest.raises(FileFormatError, match="Required keyword 'NLAYERS' not found"):
             read_stratigraphy(strat_file)
 
     def test_read_strat_no_data(self, tmp_path: Path) -> None:

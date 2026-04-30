@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 from collections.abc import Callable
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -10,6 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pyiwfm.runner.results import SimulationResult
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from pyiwfm.runner.runner import IWFMRunner
@@ -372,9 +375,12 @@ class ScenarioManager:
 
             filepath.write_text("\n".join(modified_lines))
 
-        except Exception:
-            # If modification fails, leave file unchanged
-            pass
+        except OSError as exc:
+            # File-level read/write failure (permissions, missing file).
+            # We log and leave the file unchanged so the scenario can
+            # surface the issue downstream rather than silently
+            # "succeeding" with no modification applied.
+            logger.warning("scenario _apply_factor_modification: failed on %s: %s", filepath, exc)
 
     def run_scenario(
         self,

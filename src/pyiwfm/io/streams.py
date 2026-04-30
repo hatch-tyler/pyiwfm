@@ -498,7 +498,7 @@ class StreamReader:
                 break
 
             if n_nodes is None:
-                raise FileFormatError("Could not find NSTRNODES in file")
+                raise FileFormatError("Required keyword 'NSTRNODES' not found anywhere in file")
 
             # Read node data
             for line in f:
@@ -574,7 +574,7 @@ class StreamReader:
                 break
 
             if n_diversions is None:
-                raise FileFormatError("Could not find NDIVERSIONS in file")
+                raise FileFormatError("Required keyword 'NDIVERSIONS' not found anywhere in file")
 
             # Read diversion data
             for line in f:
