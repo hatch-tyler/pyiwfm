@@ -42,6 +42,20 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.budget``** is now a package (was a module),
+  collapsing the nine flat budget / zone-budget modules (``budget.py``,
+  ``zbudget.py``, ``budget_checks.py``, ``budget_control.py``,
+  ``zbudget_control.py``, ``budget_excel.py``, ``zbudget_excel.py``,
+  ``budget_pest.py``, ``budget_utils.py``) into one subpackage with
+  consistent naming (e.g. ``zbudget.py`` → ``budget/zone_reader.py``).
+  The package ``__init__.py`` re-exports every public symbol —
+  including the leaky ``parse_iwfm_datetime`` / ``iwfm_date_to_iso``
+  re-exports that callers had been importing from the flat
+  ``pyiwfm.io.budget``. The eight v1.x sibling paths
+  (``pyiwfm.io.zbudget``, ``pyiwfm.io.budget_checks``, etc.) are
+  **gone** in v2.0 — update imports and ``mock.patch`` strings. See
+  ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.rootzone``** is now a package (was a module),
   collapsing the nine flat root-zone modules (``rootzone.py``,
   ``rootzone_writer.py``, ``_rootzone_base.py``, ``rootzone_area.py``,
@@ -637,7 +651,7 @@ Added
   depletion, cumulative, max, total)
 - ``StreamDepletionReport``: Aggregate report across multiple reaches
 
-**Budget Checks** (``pyiwfm.io.budget_checks``)
+**Budget Checks** (``pyiwfm.io.budget.checks``)
 
 - ``check_budget_balance()``: Per-location mass balance sanity check with
   configurable tolerance
@@ -964,7 +978,7 @@ Added
 - Top-level ``pyiwfm`` package now exports AppGW, AppStream, AppLake, RootZone,
   AppSmallWatershed, AppUnsatZone for convenient ``from pyiwfm import AppGW``
 
-**Budget & Zone Budget Excel Export** (``pyiwfm.io.budget_excel``, ``pyiwfm.io.zbudget_excel``)
+**Budget & Zone Budget Excel Export** (``pyiwfm.io.budget.excel``, ``pyiwfm.io.budget.zone_excel``)
 
 - ``budget_to_excel()``: Export budget HDF5 data to formatted Excel workbooks
   (one sheet per location, bold titles/headers, auto-fit columns)
@@ -974,7 +988,7 @@ Added
 - Unit conversion factors (FACTLTOU/FACTAROU/FACTVLOU) applied per column type
   using codes from ``Budget_Parameters.f90``
 
-**Budget & Zone Budget Control File Parsers** (``pyiwfm.io.budget_control``, ``pyiwfm.io.zbudget_control``)
+**Budget & Zone Budget Control File Parsers** (``pyiwfm.io.budget.control``, ``pyiwfm.io.budget.zone_control``)
 
 - ``read_budget_control()``: Parse IWFM budget post-processor control files
   (FACTLTOU, UNITLTOU, FACTAROU, UNITAROU, FACTVLOU, UNITVLOU, dates,
@@ -983,7 +997,7 @@ Added
   (same pattern with zone definition file support)
 - ``BudgetControlConfig`` / ``ZBudgetControlConfig``: Typed dataclasses
 
-**Budget Utilities** (``pyiwfm.io.budget_utils``)
+**Budget Utilities** (``pyiwfm.io.budget._utils``)
 
 - ``apply_unit_conversion()``: Apply IWFM conversion factors per column type
 - ``format_title_lines()``: Substitute ``@UNITVL@``, ``@UNITAR@``, ``@LOCNAME@``,

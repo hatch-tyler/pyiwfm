@@ -683,7 +683,7 @@ def export_budget_excel(
             detail=f"Budget type '{budget_type}' not available",
         )
 
-    from pyiwfm.io.budget_excel import budget_to_excel
+    from pyiwfm.io.budget.excel import budget_to_excel
 
     # Determine location IDs
     location_ids: list[int] | None = None
@@ -740,7 +740,7 @@ def budget_sanity_check(
             detail=f"Budget type '{budget_type}' not available",
         )
 
-    from pyiwfm.io.budget_checks import check_budget_balance
+    from pyiwfm.io.budget.checks import check_budget_balance
 
     loc_idx = 0
     if location:

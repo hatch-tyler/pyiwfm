@@ -1,4 +1,4 @@
-"""Tests for pyiwfm.io.zbudget_control -- zbudget control file parser."""
+"""Tests for pyiwfm.io.budget.zone_control -- zbudget control file parser."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from pyiwfm.io.zbudget_control import ZBudgetControlConfig, read_zbudget_control
+from pyiwfm.io.budget.zone_control import ZBudgetControlConfig, read_zbudget_control
 
 
 @pytest.fixture()

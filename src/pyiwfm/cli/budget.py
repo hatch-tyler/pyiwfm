@@ -28,8 +28,8 @@ def add_budget_parser(subparsers: argparse._SubParsersAction) -> None:  # type: 
 
 def run_budget(args: argparse.Namespace) -> int:
     """Execute budget export from a control file."""
-    from pyiwfm.io.budget_control import read_budget_control
-    from pyiwfm.io.budget_excel import budget_control_to_excel
+    from pyiwfm.io.budget.control import read_budget_control
+    from pyiwfm.io.budget.excel import budget_control_to_excel
 
     control_path = Path(args.control_file)
     if not control_path.exists():

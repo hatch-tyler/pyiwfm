@@ -1,4 +1,4 @@
-"""Tests for pyiwfm.io.budget_utils — unit conversion, title formatting, time filtering."""
+"""Tests for pyiwfm.io.budget._utils — unit conversion, title formatting, time filtering."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from pyiwfm.io.budget_utils import apply_unit_conversion, filter_time_range, format_title_lines
+from pyiwfm.io.budget._utils import apply_unit_conversion, filter_time_range, format_title_lines
 
 
 class TestApplyUnitConversion:

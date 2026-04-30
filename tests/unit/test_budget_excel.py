@@ -1,4 +1,4 @@
-"""Tests for pyiwfm.io.budget_excel — budget Excel export."""
+"""Tests for pyiwfm.io.budget.excel — budget Excel export."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import pytest
 from openpyxl import load_workbook
 
 from pyiwfm.io.budget import ASCIIOutputInfo, BudgetHeader, LocationData, TimeStepInfo
-from pyiwfm.io.budget_excel import budget_to_excel
+from pyiwfm.io.budget.excel import budget_to_excel
 
 
 def _make_mock_reader(

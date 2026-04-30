@@ -28,8 +28,8 @@ def add_zbudget_parser(subparsers: argparse._SubParsersAction) -> None:  # type:
 
 def run_zbudget(args: argparse.Namespace) -> int:
     """Execute zbudget export from a control file."""
-    from pyiwfm.io.zbudget_control import read_zbudget_control
-    from pyiwfm.io.zbudget_excel import zbudget_control_to_excel
+    from pyiwfm.io.budget.zone_control import read_zbudget_control
+    from pyiwfm.io.budget.zone_excel import zbudget_control_to_excel
 
     control_path = Path(args.control_file)
     if not control_path.exists():

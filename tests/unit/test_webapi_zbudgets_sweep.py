@@ -129,7 +129,7 @@ class TestSyncActiveZones:
         assert info.area == 1500.0
 
     def test_sync_overwrites_empty_existing_zone(self) -> None:
-        from pyiwfm.io.zbudget import ZoneInfo as ZBZoneInfo
+        from pyiwfm.io.budget.zone_reader import ZoneInfo as ZBZoneInfo
         from pyiwfm.visualization.webapi.routes.zbudgets import _sync_active_zones
 
         # Pre-existing zone with no element_ids
@@ -158,7 +158,7 @@ class TestSyncActiveZones:
         assert info.area == 900.0
 
     def test_sync_does_not_overwrite_populated_zone(self) -> None:
-        from pyiwfm.io.zbudget import ZoneInfo as ZBZoneInfo
+        from pyiwfm.io.budget.zone_reader import ZoneInfo as ZBZoneInfo
         from pyiwfm.visualization.webapi.routes.zbudgets import _sync_active_zones
 
         existing = ZBZoneInfo(id=1, name="Zone X", n_elements=2, element_ids=[100, 200], area=500.0)

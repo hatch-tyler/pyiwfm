@@ -13,7 +13,7 @@ Example
 -------
 Read a zone budget file:
 
->>> from pyiwfm.io.zbudget import ZBudgetReader
+>>> from pyiwfm.io.budget.zone_reader import ZBudgetReader
 >>> reader = ZBudgetReader("GWZBud.hdf")
 >>> print(reader.zones)
 ['Zone 1', 'Zone 2', 'Zone 3']

@@ -456,7 +456,7 @@ ZBudget Module
 
 Reader for IWFM zone budget output files.
 
-.. automodule:: pyiwfm.io.zbudget
+.. automodule:: pyiwfm.io.budget.zone_reader
    :members:
    :undoc-members:
    :show-inheritance:
@@ -466,7 +466,7 @@ Budget Control File Parser
 
 Parser for IWFM budget post-processor control files (``.bud`` / ``.in``).
 
-.. automodule:: pyiwfm.io.budget_control
+.. automodule:: pyiwfm.io.budget.control
    :members:
    :undoc-members:
    :show-inheritance:
@@ -476,7 +476,7 @@ ZBudget Control File Parser
 
 Parser for IWFM zone budget post-processor control files.
 
-.. automodule:: pyiwfm.io.zbudget_control
+.. automodule:: pyiwfm.io.budget.zone_control
    :members:
    :undoc-members:
    :show-inheritance:
@@ -487,7 +487,7 @@ Budget Utilities
 Shared helpers for unit conversion, title-line formatting, and time filtering
 used by both budget and zone budget Excel export.
 
-.. automodule:: pyiwfm.io.budget_utils
+.. automodule:: pyiwfm.io.budget._utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -497,7 +497,7 @@ Budget Excel Export
 
 Excel workbook generation from budget HDF5 data (one sheet per location).
 
-.. automodule:: pyiwfm.io.budget_excel
+.. automodule:: pyiwfm.io.budget.excel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -507,7 +507,7 @@ ZBudget Excel Export
 
 Excel workbook generation from zone budget HDF5 data (one sheet per zone).
 
-.. automodule:: pyiwfm.io.zbudget_excel
+.. automodule:: pyiwfm.io.budget.zone_excel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -776,7 +776,7 @@ Budget Checks
 Mass balance sanity checks for IWFM budget data — detect timesteps where
 inflows, outflows, and storage change are out of balance.
 
-.. automodule:: pyiwfm.io.budget_checks
+.. automodule:: pyiwfm.io.budget.checks
    :members:
    :undoc-members:
    :show-inheritance:

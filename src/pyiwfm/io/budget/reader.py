@@ -927,7 +927,7 @@ class BudgetReader:
         # Apply unit conversion when any factor is non-unity
         needs_conversion = length_factor != 1.0 or area_factor != 1.0 or volume_factor != 1.0
         if needs_conversion:
-            from pyiwfm.io.budget_utils import apply_unit_conversion
+            from pyiwfm.io.budget._utils import apply_unit_conversion
 
             loc_idx = self.get_location_index(location)
             if len(self.header.location_data) == 1:

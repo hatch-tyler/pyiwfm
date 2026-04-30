@@ -1,4 +1,4 @@
-"""Tests for pyiwfm.io.zbudget_excel — zone budget Excel export."""
+"""Tests for pyiwfm.io.budget.zone_excel — zone budget Excel export."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ import pandas as pd
 import pytest
 from openpyxl import load_workbook
 
-from pyiwfm.io.zbudget import ZBudgetHeader, ZoneInfo
-from pyiwfm.io.zbudget_excel import zbudget_to_excel
+from pyiwfm.io.budget.zone_excel import zbudget_to_excel
+from pyiwfm.io.budget.zone_reader import ZBudgetHeader, ZoneInfo
 
 
 def _make_mock_zreader(

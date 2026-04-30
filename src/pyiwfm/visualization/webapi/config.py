@@ -21,11 +21,11 @@ if TYPE_CHECKING:
     from pyiwfm.core.zones import ZoneDefinition
     from pyiwfm.io.area_loader import AreaDataManager
     from pyiwfm.io.budget import BudgetReader
+    from pyiwfm.io.budget.zone_reader import ZBudgetReader
     from pyiwfm.io.cache_loader import SqliteCacheLoader
     from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
     from pyiwfm.io.simulation.messages import SimulationMessagesResult
     from pyiwfm.io.timeseries_io import LazyNodalLoader
-    from pyiwfm.io.zbudget import ZBudgetReader
 
 logger = logging.getLogger(__name__)
 

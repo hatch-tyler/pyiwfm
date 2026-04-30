@@ -43,7 +43,7 @@ class TestBudgetSanityCheck:
 
     def test_check_budget_balance(self):
         """check_budget_balance should detect balance issues."""
-        from pyiwfm.io.budget_checks import check_budget_balance
+        from pyiwfm.io.budget.checks import check_budget_balance
 
         reader = _make_mock_reader()
         report = check_budget_balance(reader, location_index=0)
@@ -52,7 +52,7 @@ class TestBudgetSanityCheck:
 
     def test_to_summary_dict(self):
         """to_summary_dict should return a serializable dict."""
-        from pyiwfm.io.budget_checks import check_budget_balance
+        from pyiwfm.io.budget.checks import check_budget_balance
 
         reader = _make_mock_reader()
         report = check_budget_balance(reader, location_index=0)

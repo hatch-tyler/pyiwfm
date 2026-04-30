@@ -1,5 +1,5 @@
 """
-Comprehensive tests for pyiwfm.io.zbudget module.
+Comprehensive tests for pyiwfm.io.budget.zone_reader module.
 
 Tests cover:
 - ZBudgetReader initialization
@@ -15,7 +15,7 @@ from datetime import datetime
 import numpy as np
 import pytest
 
-from pyiwfm.io.zbudget import (
+from pyiwfm.io.budget.zone_reader import (
     ZBUDGET_DATA_TYPES,
     ZBudgetHeader,
     ZBudgetReader,

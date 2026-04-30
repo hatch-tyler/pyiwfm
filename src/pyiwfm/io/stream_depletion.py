@@ -805,7 +805,7 @@ def write_stream_depletion_excel(
     - **One sheet per reach** — long-format time series matching the CSV
       columns (without the ``reach_id`` / ``reach_name`` prefix).
 
-    Mirrors the openpyxl-based pattern in :mod:`pyiwfm.io.budget_excel`.
+    Mirrors the openpyxl-based pattern in :mod:`pyiwfm.io.budget.excel`.
     """
     from openpyxl import Workbook
     from openpyxl.styles import Font

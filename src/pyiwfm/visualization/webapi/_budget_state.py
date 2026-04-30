@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
     from pyiwfm.core.zones import ZoneDefinition
     from pyiwfm.io.budget import BudgetReader
-    from pyiwfm.io.zbudget import ZBudgetReader
+    from pyiwfm.io.budget.zone_reader import ZBudgetReader
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +162,7 @@ class BudgetStateMixin:
             return None
 
         try:
-            from pyiwfm.io.zbudget import ZBudgetReader
+            from pyiwfm.io.budget.zone_reader import ZBudgetReader
 
             reader = ZBudgetReader(p)
             self._zbudget_readers[zbudget_type] = reader

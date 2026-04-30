@@ -809,6 +809,64 @@ strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
 
+### `pyiwfm.io.budget` (was a module, now a package) and the `budget_*`/`zbudget_*` cluster (gone)
+
+The nine flat budget modules (`budget.py`, `zbudget.py`,
+`budget_checks.py`, `budget_control.py`, `zbudget_control.py`,
+`budget_excel.py`, `zbudget_excel.py`, `budget_pest.py`,
+`budget_utils.py`) are now a single subpackage `pyiwfm/io/budget/`:
+
+| v1.x flat path                      | v2.x submodule                        |
+|-------------------------------------|---------------------------------------|
+| `pyiwfm.io.budget`                  | `pyiwfm.io.budget.reader`             |
+| `pyiwfm.io.zbudget`                 | `pyiwfm.io.budget.zone_reader`        |
+| `pyiwfm.io.budget_checks`           | `pyiwfm.io.budget.checks`             |
+| `pyiwfm.io.budget_control`          | `pyiwfm.io.budget.control`            |
+| `pyiwfm.io.zbudget_control`         | `pyiwfm.io.budget.zone_control`       |
+| `pyiwfm.io.budget_excel`            | `pyiwfm.io.budget.excel`              |
+| `pyiwfm.io.zbudget_excel`           | `pyiwfm.io.budget.zone_excel`         |
+| `pyiwfm.io.budget_pest`             | `pyiwfm.io.budget.pest`               |
+| `pyiwfm.io.budget_utils`            | `pyiwfm.io.budget._utils` (private)   |
+
+The package `__init__.py` re-exports every public symbol — including
+the leaky ``import-as`` re-exports of `parse_iwfm_datetime`,
+`iwfm_date_to_iso`, `DSS_DATA_TYPES`, and `UNIT_MARKERS` that the v1.x
+flat `budget.py` provided through implicit module-level bindings.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.budget import BudgetReader
+from pyiwfm.io.zbudget import ZBudgetReader
+from pyiwfm.io.budget_checks import check_budget_balance
+from pyiwfm.io.budget_control import read_budget_control
+from pyiwfm.io.budget_excel import budget_to_excel
+from pyiwfm.io.budget_pest import budget_to_pest_text
+from pyiwfm.io.budget_utils import filter_time_range
+from pyiwfm.io.zbudget_control import read_zbudget_control
+from pyiwfm.io.zbudget_excel import zbudget_to_excel
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.budget import (
+    BudgetReader,
+    ZBudgetReader,
+    check_budget_balance,
+    read_budget_control,
+    budget_to_excel,
+    budget_to_pest_text,
+    filter_time_range,
+    read_zbudget_control,
+    zbudget_to_excel,
+)
+```
+
+The eight v1.x sibling paths are **gone**. `mock.patch` strings need
+updating to `pyiwfm.io.budget.X` (the package re-export), or the
+deeper submodule path if the consumer is intra-package.
+
 ### `pyiwfm.io.rootzone` (was a module, now a package) and the `rootzone_*` cluster (gone)
 
 The nine flat root-zone modules (`rootzone.py`, `rootzone_writer.py`,

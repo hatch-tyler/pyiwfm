@@ -218,7 +218,7 @@ def export_budget_excel(
             detail=f"Budget type '{budget_type}' not available",
         )
 
-    from pyiwfm.io.budget_excel import budget_to_excel
+    from pyiwfm.io.budget.excel import budget_to_excel
 
     location_ids: list[int] | None = None
     if location:

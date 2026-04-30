@@ -7,7 +7,7 @@ inflows, outflows, or storage changes and computes per-timestep discrepancies.
 Example
 -------
 >>> from pyiwfm.io.budget import BudgetReader
->>> from pyiwfm.io.budget_checks import check_budget_balance
+>>> from pyiwfm.io.budget.checks import check_budget_balance
 >>> reader = BudgetReader("GW_Budget.hdf")
 >>> report = check_budget_balance(reader, location_index=0)
 >>> print(report.max_percent_error)

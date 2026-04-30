@@ -493,7 +493,7 @@ def get_element_budget(
         return {"element_id": element_id, "times": [], "columns": []}
 
     try:
-        from pyiwfm.io.zbudget import ZoneInfo as ZBZoneInfo
+        from pyiwfm.io.budget.zone_reader import ZoneInfo as ZBZoneInfo
 
         # Inject a temporary single-element zone
         zone_name = f"_diag_elem_{element_id}"

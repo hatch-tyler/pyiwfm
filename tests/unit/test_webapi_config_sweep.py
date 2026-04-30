@@ -470,7 +470,7 @@ class TestZBudgetReaders:
         mock_reader = MagicMock()
         mock_reader.descriptor = "GW ZBudget"
 
-        with patch("pyiwfm.io.zbudget.ZBudgetReader", return_value=mock_reader):
+        with patch("pyiwfm.io.budget.zone_reader.ZBudgetReader", return_value=mock_reader):
             result = ms.get_zbudget_reader("gw")
 
         assert result is mock_reader
@@ -497,7 +497,7 @@ class TestZBudgetReaders:
         ms._results_dir = tmp_path
 
         with patch(
-            "pyiwfm.io.zbudget.ZBudgetReader",
+            "pyiwfm.io.budget.zone_reader.ZBudgetReader",
             side_effect=Exception("corrupt file"),
         ):
             result = ms.get_zbudget_reader("gw")
@@ -517,7 +517,7 @@ class TestZBudgetReaders:
         mock_reader = MagicMock()
         mock_reader.descriptor = "GW ZBudget"
 
-        with patch("pyiwfm.io.zbudget.ZBudgetReader", return_value=mock_reader):
+        with patch("pyiwfm.io.budget.zone_reader.ZBudgetReader", return_value=mock_reader):
             result = ms.get_zbudget_reader("gw")
 
         assert result is mock_reader

@@ -73,16 +73,21 @@ from pyiwfm.io.binary import (  # noqa: F401
 from pyiwfm.io.binary import (  # noqa: F401
     StreamData as PreprocessorStreamData,
 )
-from pyiwfm.io.budget_checks import (  # noqa: F401
+from pyiwfm.io.budget.checks import (  # noqa: F401
     BalanceCheckResult,
     BudgetSanityReport,
     check_all_budgets,
     check_budget_balance,
 )
-from pyiwfm.io.budget_control import (  # noqa: F401
+from pyiwfm.io.budget.control import (  # noqa: F401
     BudgetControlConfig,
     BudgetOutputSpec,
     read_budget_control,
+)
+from pyiwfm.io.budget.zone_control import (  # noqa: F401
+    ZBudgetControlConfig,
+    ZBudgetOutputSpec,
+    read_zbudget_control,
 )
 from pyiwfm.io.cache_builder import (  # noqa: F401
     SqliteCacheBuilder,
@@ -469,11 +474,6 @@ from pyiwfm.io.writer_base import (  # noqa: F401
 from pyiwfm.io.writer_base import (  # noqa: F401
     TimeSeriesWriter as TimeSeriesWriterNew,
 )
-from pyiwfm.io.zbudget_control import (  # noqa: F401
-    ZBudgetControlConfig,
-    ZBudgetOutputSpec,
-    read_zbudget_control,
-)
 from pyiwfm.io.zones import (  # noqa: F401
     auto_detect_zone_file,
     read_geojson_zones,
@@ -526,15 +526,15 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "excel_julian_to_datetime": ("pyiwfm.io.budget", "excel_julian_to_datetime"),
     "julian_to_datetime": ("pyiwfm.io.budget", "julian_to_datetime"),
     # budget_excel (pandas + openpyxl)
-    "budget_control_to_excel": ("pyiwfm.io.budget_excel", "budget_control_to_excel"),
-    "budget_to_excel": ("pyiwfm.io.budget_excel", "budget_to_excel"),
+    "budget_control_to_excel": ("pyiwfm.io.budget.excel", "budget_control_to_excel"),
+    "budget_to_excel": ("pyiwfm.io.budget.excel", "budget_to_excel"),
     # budget_pest (pandas)
-    "budget_to_pest_instruction": ("pyiwfm.io.budget_pest", "budget_to_pest_instruction"),
-    "budget_to_pest_text": ("pyiwfm.io.budget_pest", "budget_to_pest_text"),
+    "budget_to_pest_instruction": ("pyiwfm.io.budget.pest", "budget_to_pest_instruction"),
+    "budget_to_pest_text": ("pyiwfm.io.budget.pest", "budget_to_pest_text"),
     # budget_utils (pandas)
-    "apply_unit_conversion": ("pyiwfm.io.budget_utils", "apply_unit_conversion"),
-    "filter_time_range": ("pyiwfm.io.budget_utils", "filter_time_range"),
-    "format_title_lines": ("pyiwfm.io.budget_utils", "format_title_lines"),
+    "apply_unit_conversion": ("pyiwfm.io.budget._utils", "apply_unit_conversion"),
+    "filter_time_range": ("pyiwfm.io.budget._utils", "filter_time_range"),
+    "format_title_lines": ("pyiwfm.io.budget._utils", "format_title_lines"),
     # hdf5 (h5py)
     "HDF5ModelReader": ("pyiwfm.io.hdf5", "HDF5ModelReader"),
     "HDF5ModelWriter": ("pyiwfm.io.hdf5", "HDF5ModelWriter"),
@@ -555,13 +555,13 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "LazyTabularLoader": ("pyiwfm.io.timeseries_io", "LazyTabularLoader"),
     "TimeSeriesCache": ("pyiwfm.io.timeseries_io", "TimeSeriesCache"),
     # zbudget (h5py + pandas)
-    "ZBUDGET_DATA_TYPES": ("pyiwfm.io.zbudget", "ZBUDGET_DATA_TYPES"),
-    "ZBudgetHeader": ("pyiwfm.io.zbudget", "ZBudgetHeader"),
-    "ZBudgetReader": ("pyiwfm.io.zbudget", "ZBudgetReader"),
-    "ZoneInfo": ("pyiwfm.io.zbudget", "ZoneInfo"),
+    "ZBUDGET_DATA_TYPES": ("pyiwfm.io.budget.zone_reader", "ZBUDGET_DATA_TYPES"),
+    "ZBudgetHeader": ("pyiwfm.io.budget.zone_reader", "ZBudgetHeader"),
+    "ZBudgetReader": ("pyiwfm.io.budget.zone_reader", "ZBudgetReader"),
+    "ZoneInfo": ("pyiwfm.io.budget.zone_reader", "ZoneInfo"),
     # zbudget_excel (pandas + openpyxl)
-    "zbudget_control_to_excel": ("pyiwfm.io.zbudget_excel", "zbudget_control_to_excel"),
-    "zbudget_to_excel": ("pyiwfm.io.zbudget_excel", "zbudget_to_excel"),
+    "zbudget_control_to_excel": ("pyiwfm.io.budget.zone_excel", "zbudget_control_to_excel"),
+    "zbudget_to_excel": ("pyiwfm.io.budget.zone_excel", "zbudget_to_excel"),
 }
 
 # Eagerly-imported names that are renamed re-exports kept for backwards

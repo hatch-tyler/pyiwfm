@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pyiwfm.io.budget import BudgetReader
+from pyiwfm.io.budget.reader import BudgetReader
 
 
 def budget_to_pest_text(

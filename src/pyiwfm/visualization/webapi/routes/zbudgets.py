@@ -105,7 +105,7 @@ def _sync_active_zones(reader: Any) -> None:
         logger.debug("No active zone definition to sync")
         return
 
-    from pyiwfm.io.zbudget import ZoneInfo as ZBZoneInfo
+    from pyiwfm.io.budget.zone_reader import ZoneInfo as ZBZoneInfo
 
     synced = 0
     for z in zone_def.iter_zones():

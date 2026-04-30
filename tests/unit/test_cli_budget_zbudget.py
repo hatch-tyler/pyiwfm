@@ -44,8 +44,8 @@ class TestRunBudget:
         result = run_budget(args)
         assert result == 1
 
-    @patch("pyiwfm.io.budget_excel.budget_control_to_excel")
-    @patch("pyiwfm.io.budget_control.read_budget_control")
+    @patch("pyiwfm.io.budget.excel.budget_control_to_excel")
+    @patch("pyiwfm.io.budget.control.read_budget_control")
     def test_success_returns_0(
         self, mock_read: MagicMock, mock_excel: MagicMock, tmp_path: Path
     ) -> None:
@@ -62,8 +62,8 @@ class TestRunBudget:
         mock_read.assert_called_once()
         mock_excel.assert_called_once_with(mock_config)
 
-    @patch("pyiwfm.io.budget_excel.budget_control_to_excel")
-    @patch("pyiwfm.io.budget_control.read_budget_control")
+    @patch("pyiwfm.io.budget.excel.budget_control_to_excel")
+    @patch("pyiwfm.io.budget.control.read_budget_control")
     def test_no_files_generated_returns_1(
         self, mock_read: MagicMock, mock_excel: MagicMock, tmp_path: Path
     ) -> None:
@@ -76,8 +76,8 @@ class TestRunBudget:
         result = run_budget(args)
         assert result == 1
 
-    @patch("pyiwfm.io.budget_excel.budget_control_to_excel")
-    @patch("pyiwfm.io.budget_control.read_budget_control")
+    @patch("pyiwfm.io.budget.excel.budget_control_to_excel")
+    @patch("pyiwfm.io.budget.control.read_budget_control")
     def test_output_dir_override(
         self, mock_read: MagicMock, mock_excel: MagicMock, tmp_path: Path
     ) -> None:
@@ -114,8 +114,8 @@ class TestRunZbudget:
         result = run_zbudget(args)
         assert result == 1
 
-    @patch("pyiwfm.io.zbudget_excel.zbudget_control_to_excel")
-    @patch("pyiwfm.io.zbudget_control.read_zbudget_control")
+    @patch("pyiwfm.io.budget.zone_excel.zbudget_control_to_excel")
+    @patch("pyiwfm.io.budget.zone_control.read_zbudget_control")
     def test_success_returns_0(
         self, mock_read: MagicMock, mock_excel: MagicMock, tmp_path: Path
     ) -> None:
@@ -132,8 +132,8 @@ class TestRunZbudget:
         mock_read.assert_called_once()
         mock_excel.assert_called_once_with(mock_config)
 
-    @patch("pyiwfm.io.zbudget_excel.zbudget_control_to_excel")
-    @patch("pyiwfm.io.zbudget_control.read_zbudget_control")
+    @patch("pyiwfm.io.budget.zone_excel.zbudget_control_to_excel")
+    @patch("pyiwfm.io.budget.zone_control.read_zbudget_control")
     def test_no_files_generated_returns_1(
         self, mock_read: MagicMock, mock_excel: MagicMock, tmp_path: Path
     ) -> None:
@@ -146,8 +146,8 @@ class TestRunZbudget:
         result = run_zbudget(args)
         assert result == 1
 
-    @patch("pyiwfm.io.zbudget_excel.zbudget_control_to_excel")
-    @patch("pyiwfm.io.zbudget_control.read_zbudget_control")
+    @patch("pyiwfm.io.budget.zone_excel.zbudget_control_to_excel")
+    @patch("pyiwfm.io.budget.zone_control.read_zbudget_control")
     def test_output_dir_override(
         self, mock_read: MagicMock, mock_excel: MagicMock, tmp_path: Path
     ) -> None:

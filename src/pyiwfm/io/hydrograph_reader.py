@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
 
-from pyiwfm.io.budget import parse_iwfm_datetime as _parse_iwfm_dt
+from pyiwfm.io.timeseries_ascii import parse_iwfm_datetime as _parse_iwfm_dt
 
 if TYPE_CHECKING:
     from pyiwfm.io.smp import SMPTimeSeries

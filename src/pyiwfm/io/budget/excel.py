@@ -1,8 +1,9 @@
 """
-Zone budget Excel export for IWFM post-processing.
+Budget Excel export for IWFM post-processing.
 
-Generates Excel workbooks from IWFM zone-budget HDF5 data with one sheet
-per zone, title lines, bold headers, and auto-fitted column widths.
+Generates Excel workbooks from IWFM budget HDF5 data with one sheet per
+location, title lines, bold headers, and auto-fitted column widths —
+matching the reference implementation in ``SGMOModeling/pywfm-budget-excel``.
 """
 
 from __future__ import annotations
@@ -16,9 +17,9 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
-from pyiwfm.io.budget_utils import filter_time_range
-from pyiwfm.io.zbudget import ZBudgetReader
-from pyiwfm.io.zbudget_control import ZBudgetControlConfig
+from pyiwfm.io.budget._utils import filter_time_range, format_title_lines
+from pyiwfm.io.budget.control import BudgetControlConfig
+from pyiwfm.io.budget.reader import BudgetReader
 
 logger = logging.getLogger(__name__)
 
@@ -32,45 +33,45 @@ def _make_sheet_name(name: str) -> str:
     return clean[:31]
 
 
-def zbudget_to_excel(
-    reader: ZBudgetReader,
+def budget_to_excel(
+    reader: BudgetReader,
     output_path: Path | str,
+    length_factor: float = 1.0,
     area_factor: float = 1.0,
     volume_factor: float = 1.0,
+    length_unit: str = "FEET",
     area_unit: str = "AC",
     volume_unit: str = "AC.FT.",
-    zone_ids: list[int] | None = None,
-    zone_def_file: Path | str | None = None,
+    location_ids: list[int] | None = None,
     begin_date: str | None = None,
     end_date: str | None = None,
     output_interval: str | None = None,
-    layer: int = 1,
 ) -> Path:
-    """Export zone budget data to an Excel workbook.
+    """Export budget data to an Excel workbook.
 
-    One sheet per zone.  Same formatting as budget export:
-    title area (bold), column headers (bold), data rows, auto-fit widths.
+    One sheet per location.  Each sheet contains:
+
+    - Title lines (bold) from ``ASCIIOutputInfo`` with unit substitution.
+    - Column headers (bold).
+    - Data rows with unit conversion applied.
+    - Auto-fitted column widths.
 
     Parameters
     ----------
-    reader : ZBudgetReader
-        Open zone-budget reader.
+    reader : BudgetReader
+        Open budget reader.
     output_path : Path or str
         Destination ``.xlsx`` file.
-    area_factor, volume_factor : float
-        FACTAROU / FACTVLOU from the control file.
-    area_unit, volume_unit : str
-        UNITAROU / UNITVLOU for title substitution.
-    zone_ids : list[int] or None
-        1-based zone IDs to include.  ``None`` or ``[-1]`` → all.
-    zone_def_file : Path or str or None
-        External zone definition file (not yet used — reserved).
+    length_factor, area_factor, volume_factor : float
+        FACTLTOU / FACTAROU / FACTVLOU from the control file.
+    length_unit, area_unit, volume_unit : str
+        UNITLTOU / UNITAROU / UNITVLOU for title-line substitution.
+    location_ids : list[int] or None
+        1-based location IDs to include.  ``None`` or ``[-1]`` → all.
     begin_date, end_date : str or None
         IWFM datetime strings for time filtering.
     output_interval : str or None
-        Reserved for future resampling.
-    layer : int
-        Model layer (1-based).
+        Not yet implemented — reserved for future resampling.
 
     Returns
     -------
@@ -79,57 +80,71 @@ def zbudget_to_excel(
     """
     output_path = Path(output_path)
 
-    # Determine which zones to export
-    all_zones = reader.zones
-    if zone_ids is None or zone_ids == [-1]:
-        zone_names = all_zones
-    elif not zone_ids:
-        zone_names = []
+    # Determine which locations to export
+    if location_ids is None or location_ids == [-1]:
+        loc_indices = list(range(reader.n_locations))
+    elif not location_ids:
+        loc_indices = []
     else:
-        zone_names = []
-        for zid in zone_ids:
-            if 1 <= zid <= len(all_zones):
-                zone_names.append(all_zones[zid - 1])
+        loc_indices = [lid - 1 for lid in location_ids]
 
     wb = Workbook()
+    # Remove the default sheet created by openpyxl
     if wb.active is not None:
         wb.remove(wb.active)
 
     bold_font = Font(bold=True)
 
-    for zone_name in zone_names:
-        sheet_name = _make_sheet_name(zone_name)
+    for loc_idx in loc_indices:
+        if loc_idx < 0 or loc_idx >= reader.n_locations:
+            logger.warning("Skipping out-of-range location index %d", loc_idx + 1)
+            continue
+
+        loc_name = reader.locations[loc_idx]
+        sheet_name = _make_sheet_name(loc_name)
         ws = wb.create_sheet(title=sheet_name)
 
-        # --- Title area ---
-        row_num = 1
-        title = f"{reader.descriptor} — {zone_name}"
-        ws.cell(row=row_num, column=1, value=title).font = bold_font
-        row_num += 1
+        # --- Title lines ---
+        titles = reader.header.ascii_output.titles
+        area_val = (
+            float(reader.header.areas[loc_idx])
+            if reader.header.areas is not None and loc_idx < len(reader.header.areas)
+            else None
+        )
+        formatted_titles = format_title_lines(
+            titles,
+            location_name=loc_name,
+            area=area_val,
+            length_unit=length_unit,
+            area_unit=area_unit,
+            volume_unit=volume_unit,
+        )
 
-        zone_info = reader.get_zone_info(zone_name)
-        if zone_info.area > 0:
-            area_line = f"Area: {zone_info.area * area_factor:.2f} {area_unit}"
-            ws.cell(row=row_num, column=1, value=area_line).font = bold_font
+        row_num = 1
+        for title in formatted_titles:
+            ws.cell(row=row_num, column=1, value=title).font = bold_font
             row_num += 1
 
-        unit_line = f"Volume Unit: {volume_unit}"
-        ws.cell(row=row_num, column=1, value=unit_line).font = bold_font
-        row_num += 1
-
-        # Blank row
+        # Blank row between titles and headers
         row_num += 1
 
         # --- Column headers ---
-        col_names = reader.data_names
-        all_headers = ["Time"] + col_names
+        col_headers = reader.get_column_headers(loc_idx)
+        time_header = "Time"
+        all_headers = [time_header] + col_headers
+
         for col_idx_h, header in enumerate(all_headers, start=1):
             cell = ws.cell(row=row_num, column=col_idx_h, value=header)
             cell.font = bold_font
         row_num += 1
 
         # --- Data rows (with unit conversion) ---
-        df = reader.get_dataframe(zone_name, layer=layer, volume_factor=volume_factor)
+        df = reader.get_dataframe(
+            loc_idx,
+            length_factor=length_factor,
+            area_factor=area_factor,
+            volume_factor=volume_factor,
+        )
         df = filter_time_range(df, begin_date, end_date)
 
         if isinstance(df.index, pd.DatetimeIndex):
@@ -161,6 +176,7 @@ def zbudget_to_excel(
                         max_width = max(max_width, len(str(cell.value)))
             ws.column_dimensions[col_letter].width = min(max_width + 2, 50)
 
+    # If no sheets were created, add a placeholder
     if not wb.sheetnames:
         wb.create_sheet(title="(no data)")
 
@@ -169,13 +185,13 @@ def zbudget_to_excel(
     return output_path
 
 
-def zbudget_control_to_excel(config: ZBudgetControlConfig) -> list[Path]:
-    """Process a full zbudget control file, generating one ``.xlsx`` per spec.
+def budget_control_to_excel(config: BudgetControlConfig) -> list[Path]:
+    """Process a full budget control file, generating one ``.xlsx`` per spec.
 
     Parameters
     ----------
-    config : ZBudgetControlConfig
-        Parsed zone-budget control configuration.
+    config : BudgetControlConfig
+        Parsed budget control configuration.
 
     Returns
     -------
@@ -184,31 +200,33 @@ def zbudget_control_to_excel(config: ZBudgetControlConfig) -> list[Path]:
     """
     created: list[Path] = []
 
-    for spec in config.zbudgets:
+    for spec in config.budgets:
         if not spec.hdf_file.exists():
-            logger.warning("ZBudget HDF5 file not found: %s", spec.hdf_file)
+            logger.warning("Budget HDF5 file not found: %s", spec.hdf_file)
             continue
 
-        reader = ZBudgetReader(spec.hdf_file)
+        reader = BudgetReader(spec.hdf_file)
 
+        # Ensure output has .xlsx extension
         out = spec.output_file
         if out.suffix.lower() not in (".xlsx", ".xls"):
             out = out.with_suffix(".xlsx")
 
-        result = zbudget_to_excel(
+        result = budget_to_excel(
             reader=reader,
             output_path=out,
+            length_factor=config.length_factor,
             area_factor=config.area_factor,
             volume_factor=config.volume_factor,
+            length_unit=config.length_unit,
             area_unit=config.area_unit,
             volume_unit=config.volume_unit,
-            zone_ids=spec.zone_ids if spec.zone_ids else None,
-            zone_def_file=spec.zone_def_file,
+            location_ids=spec.location_ids if spec.location_ids else None,
             begin_date=config.begin_date,
             end_date=config.end_date,
             output_interval=spec.output_interval,
         )
         created.append(result)
-        logger.info("Wrote %s (%d zones)", result, reader.n_zones)
+        logger.info("Wrote %s (%d locations)", result, reader.n_locations)
 
     return created

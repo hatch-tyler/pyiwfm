@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from pyiwfm.io.budget_pest import budget_to_pest_instruction, budget_to_pest_text
+from pyiwfm.io.budget.pest import budget_to_pest_instruction, budget_to_pest_text
 
 
 def _mock_reader(location_names: list[str], dfs: dict[int, pd.DataFrame]) -> MagicMock:
@@ -22,7 +22,7 @@ def _mock_reader(location_names: list[str], dfs: dict[int, pd.DataFrame]) -> Mag
 class TestBudgetToPestText:
     """Tests for budget_to_pest_text."""
 
-    @patch("pyiwfm.io.budget_pest.BudgetReader")
+    @patch("pyiwfm.io.budget.pest.BudgetReader")
     def test_basic_export(self, mock_cls: MagicMock) -> None:
         """Test basic text export with one location."""
         df = pd.DataFrame({"Inflow": [100.0, 200.0], "Outflow": [-50.0, -80.0]})
@@ -35,7 +35,7 @@ class TestBudgetToPestText:
             assert "gwb00_000000" in content
             assert "gwb00_000001" in content
 
-    @patch("pyiwfm.io.budget_pest.BudgetReader")
+    @patch("pyiwfm.io.budget.pest.BudgetReader")
     def test_prefix(self, mock_cls: MagicMock) -> None:
         """Test custom prefix."""
         df = pd.DataFrame({"Inflow": [100.0]})
@@ -50,7 +50,7 @@ class TestBudgetToPestText:
             content = out.read_text()
             assert "rzb00_000000" in content
 
-    @patch("pyiwfm.io.budget_pest.BudgetReader")
+    @patch("pyiwfm.io.budget.pest.BudgetReader")
     def test_location_subset(self, mock_cls: MagicMock) -> None:
         """Test exporting only selected locations."""
         df0 = pd.DataFrame({"Inflow": [100.0]})
@@ -67,7 +67,7 @@ class TestBudgetToPestText:
             assert "gwb01_000000" in content
             assert "gwb00" not in content
 
-    @patch("pyiwfm.io.budget_pest.BudgetReader")
+    @patch("pyiwfm.io.budget.pest.BudgetReader")
     def test_column_filter(self, mock_cls: MagicMock) -> None:
         """Test exporting only selected columns."""
         df = pd.DataFrame({"Inflow": [100.0], "Outflow": [-50.0]})
@@ -83,7 +83,7 @@ class TestBudgetToPestText:
             assert "Inflow" in content
             assert "Outflow" not in content
 
-    @patch("pyiwfm.io.budget_pest.BudgetReader")
+    @patch("pyiwfm.io.budget.pest.BudgetReader")
     def test_location_by_name(self, mock_cls: MagicMock) -> None:
         """Test selecting location by name string."""
         df = pd.DataFrame({"Inflow": [100.0]})
@@ -102,7 +102,7 @@ class TestBudgetToPestText:
 class TestBudgetToPestInstruction:
     """Tests for budget_to_pest_instruction."""
 
-    @patch("pyiwfm.io.budget_pest.BudgetReader")
+    @patch("pyiwfm.io.budget.pest.BudgetReader")
     def test_basic_instruction(self, mock_cls: MagicMock) -> None:
         """Test basic instruction file generation."""
         df = pd.DataFrame({"Inflow": [100.0, 200.0]})
@@ -116,7 +116,7 @@ class TestBudgetToPestInstruction:
             assert "!gwb00_000000!" in content
             assert "!gwb00_000001!" in content
 
-    @patch("pyiwfm.io.budget_pest.BudgetReader")
+    @patch("pyiwfm.io.budget.pest.BudgetReader")
     def test_instruction_with_column_filter(self, mock_cls: MagicMock) -> None:
         """Test instruction file with column filter."""
         df = pd.DataFrame({"Inflow": [100.0], "Outflow": [-50.0]})
