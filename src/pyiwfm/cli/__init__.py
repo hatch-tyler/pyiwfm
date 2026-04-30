@@ -10,6 +10,21 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import sys
+
+from pyiwfm.core.exceptions import FileFormatError, PyIWFMError
+
+
+def _format_user_error(exc: BaseException) -> str:
+    """Format an expected exception into a one-line user-facing message.
+
+    For ``FileFormatError`` we surface the optional line-number context.
+    Other ``PyIWFMError`` subclasses and OS-level errors collapse to
+    ``error: <ExceptionType>: <message>``.
+    """
+    if isinstance(exc, FileFormatError) and exc.line_number is not None:
+        return f"error: FileFormatError (line {exc.line_number}): {exc}"
+    return f"error: {exc.__class__.__name__}: {exc}"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -51,8 +66,16 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 0
 
-    # Dispatch to the subcommand handler
-    result: int = args.func(args)
+    # Top-level exception handler: turn known user-facing errors into
+    # clean stderr lines + exit code 1, instead of leaking a Python
+    # traceback. ``KeyboardInterrupt`` propagates so users can ^C
+    # cleanly. Truly unexpected exceptions also propagate so
+    # programmer bugs surface with full tracebacks.
+    try:
+        result: int = args.func(args)
+    except (PyIWFMError, FileNotFoundError, PermissionError, IsADirectoryError) as exc:
+        print(_format_user_error(exc), file=sys.stderr)
+        return 1
     return result
 
 

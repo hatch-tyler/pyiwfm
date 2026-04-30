@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from pyiwfm.visualization.webapi.config import ViewerSettings, model_state
+from pyiwfm.visualization.webapi.error_handlers import register_exception_handlers
 from pyiwfm.visualization.webapi.routes import (
     budgets_router,
     diagnostics_router,
@@ -80,6 +81,10 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Map pyiwfm-typed exceptions to structured JSON 4xx responses
+    # instead of letting them surface as default-handler 500s.
+    register_exception_handlers(app)
 
     app.include_router(model_router)
     app.include_router(mesh_router)
