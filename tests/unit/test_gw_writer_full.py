@@ -1,5 +1,5 @@
 """
-Comprehensive tests for pyiwfm.io.gw_writer module.
+Comprehensive tests for pyiwfm.io.groundwater.writer module.
 
 Tests the groundwater component writer for IWFM models.
 """
@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from pyiwfm.io.gw_writer import (
+from pyiwfm.io.groundwater.writer import (
     GWComponentWriter,
     GWWriterConfig,
     write_gw_component,

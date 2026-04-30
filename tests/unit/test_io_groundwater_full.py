@@ -27,12 +27,16 @@ from pyiwfm.components.groundwater import (
     Well,
 )
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.io.ascii.reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (
+    strip_inline_comment as _strip_comment,
+)
 from pyiwfm.io.groundwater import (
     GroundwaterReader,
     GroundwaterWriter,
     GWFileConfig,
-    _is_comment_line,
-    _strip_comment,
     read_initial_heads,
     read_wells,
     write_groundwater,

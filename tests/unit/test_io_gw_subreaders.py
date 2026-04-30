@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from pyiwfm.io.gw_boundary import (
+from pyiwfm.io.groundwater.boundary import (
     GeneralHeadBC,
     GWBoundaryConfig,
     GWBoundaryReader,
@@ -21,19 +21,19 @@ from pyiwfm.io.gw_boundary import (
     SpecifiedHeadBC,
     read_gw_boundary,
 )
-from pyiwfm.io.gw_pumping import (
+from pyiwfm.io.groundwater.pumping import (
     ElementPumpingSpec,
     PumpingConfig,
     PumpingReader,
     WellSpec,
     read_gw_pumping,
 )
-from pyiwfm.io.gw_subsidence import (
+from pyiwfm.io.groundwater.subsidence import (
     SubsidenceConfig,
     SubsidenceReader,
     read_gw_subsidence,
 )
-from pyiwfm.io.gw_tiledrain import (
+from pyiwfm.io.groundwater.tiledrain import (
     TD_DEST_OUTSIDE,
     TD_DEST_STREAM,
     TileDrainReader,

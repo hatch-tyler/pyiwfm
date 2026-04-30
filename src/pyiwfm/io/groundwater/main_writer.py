@@ -22,7 +22,7 @@ from pyiwfm.io.ascii.writer import (
 from pyiwfm.io.ascii.writer import (
     write_value as _write_value,
 )
-from pyiwfm.io.groundwater import GWMainFileConfig
+from pyiwfm.io.groundwater.reader import GWMainFileConfig
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray

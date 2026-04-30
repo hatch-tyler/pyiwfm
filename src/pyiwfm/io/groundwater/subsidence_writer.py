@@ -22,7 +22,7 @@ from pyiwfm.io.ascii.writer import (
 from pyiwfm.io.ascii.writer import (
     write_value as _write_value,
 )
-from pyiwfm.io.gw_subsidence import SubsidenceConfig
+from pyiwfm.io.groundwater.subsidence import SubsidenceConfig
 
 
 def write_subsidence_main(config: SubsidenceConfig, filepath: Path | str) -> Path:

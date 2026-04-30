@@ -1,4 +1,4 @@
-"""Deep tests for pyiwfm.io.gw_subsidence targeting uncovered reading paths.
+"""Deep tests for pyiwfm.io.groundwater.subsidence targeting uncovered reading paths.
 
 Covers:
 - v5.0 format (7 factors, interbed_dz, Kv/NEQ columns)
@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyiwfm.io.gw_subsidence import (
+from pyiwfm.io.groundwater.subsidence import (
     read_gw_subsidence,
 )
 

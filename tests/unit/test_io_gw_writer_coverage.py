@@ -329,7 +329,7 @@ class TestGWComponentWriterWriteMain:
 
     def test_write_main_creates_file(self, tmp_path: Path) -> None:
         """write_main() creates the GW main file using template."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = self._make_mock_gw_model()
         mock_engine = MagicMock()
@@ -346,7 +346,7 @@ class TestGWComponentWriterWriteMain:
 
     def test_write_main_with_aquifer_params(self, tmp_path: Path) -> None:
         """write_main() includes aquifer parameter data when present."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         params = MagicMock()
         params.kh = np.array([[5.0, 3.0], [4.0, 2.0], [3.5, 1.5]])
@@ -367,7 +367,7 @@ class TestGWComponentWriterWriteMain:
 
     def test_write_main_with_kh_anomalies(self, tmp_path: Path) -> None:
         """write_main() includes Kh anomaly section when present (lines 348-357)."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = self._make_mock_gw_model(
             kh_anomalies=["1  2  0.5", "3  4  1.2"],
@@ -385,7 +385,7 @@ class TestGWComponentWriterWriteMain:
 
     def test_write_main_with_return_flow_destinations(self, tmp_path: Path) -> None:
         """write_main() includes return flow destinations when present (lines 358-373)."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = self._make_mock_gw_model(
             return_flow_destinations={1: (0, 5), 3: (1, 10)},
@@ -403,7 +403,7 @@ class TestGWComponentWriterWriteMain:
 
     def test_write_main_with_heads(self, tmp_path: Path) -> None:
         """write_main() writes initial heads from model data."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         heads = np.array([[100.0, 80.0], [95.0, 75.0], [90.0, 70.0]])
         model = self._make_mock_gw_model(heads=heads)
@@ -424,7 +424,7 @@ class TestGWComponentWriterWriteBcMain:
 
     def test_write_bc_main_creates_file(self, tmp_path: Path) -> None:
         """write_bc_main() creates the BC main file using template."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         bc1 = SimpleNamespace(bc_type="specified_head", nodes=[1, 2], layer=1)
@@ -461,7 +461,7 @@ class TestGWComponentWriterWritePumpMain:
 
     def test_write_pump_main_with_elem_pumping(self, tmp_path: Path) -> None:
         """write_pump_main() creates pumping main file with element pumping flag."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         gw = MagicMock()
@@ -487,7 +487,7 @@ class TestGWComponentWriterWritePumpMain:
 
     def test_write_pump_main_with_wells_only(self, tmp_path: Path) -> None:
         """write_pump_main() sets well_spec_file for wells-only."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         gw = MagicMock()
@@ -515,7 +515,7 @@ class TestGWComponentWriterWriteTileDrains:
 
     def test_write_tile_drains_creates_file(self, tmp_path: Path) -> None:
         """write_tile_drains() creates tile drain file using template."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         drain = SimpleNamespace(
@@ -554,7 +554,7 @@ class TestGWComponentWriterWriteTileDrains:
 
     def test_write_tile_drains_with_factor_scaling(self, tmp_path: Path) -> None:
         """write_tile_drains() divides by factor to recover raw values."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         drain = SimpleNamespace(
@@ -598,7 +598,7 @@ class TestGWComponentWriterWriteSubsidence:
 
     def test_write_subsidence_creates_file(self, tmp_path: Path) -> None:
         """write_subsidence() creates subsidence file using template."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         gw = MagicMock()
@@ -625,7 +625,7 @@ class TestGWComponentWriterWriteAll:
 
     def test_write_all_with_all_components(self, tmp_path: Path) -> None:
         """write_all() writes all sub-files when all components are present."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         gw = MagicMock()
@@ -669,7 +669,7 @@ class TestGWComponentWriterWriteAll:
 
     def test_write_all_skips_absent_components(self, tmp_path: Path) -> None:
         """write_all() skips BC/pump/tile/subsidence when not present."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         gw = MagicMock()
@@ -700,7 +700,7 @@ class TestGWComponentWriterWriteAll:
 
     def test_write_all_write_defaults_false_no_gw(self, tmp_path: Path) -> None:
         """write_all(write_defaults=False) returns empty if gw is None."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         model.groundwater = None
@@ -723,7 +723,7 @@ class TestGWComponentWriterSpecBCFiles:
 
     def test_write_spec_head_bc(self, tmp_path: Path) -> None:
         """write_spec_head_bc() creates specified head BC file."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         bc = SimpleNamespace(
@@ -755,7 +755,7 @@ class TestGWComponentWriterSpecBCFiles:
 
     def test_write_spec_flow_bc(self, tmp_path: Path) -> None:
         """write_spec_flow_bc() creates specified flow BC file."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         bc = SimpleNamespace(
@@ -791,7 +791,7 @@ class TestGWComponentWriterHydrographAndFaceFlow:
 
     def test_write_hydrograph_specs_delegates_to_write_main(self, tmp_path: Path) -> None:
         """write_hydrograph_specs() delegates to write_main()."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         model.groundwater = MagicMock()
@@ -813,7 +813,7 @@ class TestGWComponentWriterHydrographAndFaceFlow:
 
     def test_write_face_flow_specs_delegates_to_write_main(self, tmp_path: Path) -> None:
         """write_face_flow_specs() delegates to write_main()."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         model.groundwater = MagicMock()
@@ -839,7 +839,7 @@ class TestGWComponentWriterConvenience:
 
     def test_write_gw_component_default_config(self, tmp_path: Path) -> None:
         """write_gw_component() creates default config when none provided."""
-        from pyiwfm.io.gw_writer import write_gw_component
+        from pyiwfm.io.groundwater.writer import write_gw_component
 
         model = MagicMock()
         model.groundwater = None
@@ -851,7 +851,7 @@ class TestGWComponentWriterConvenience:
         mock_writer.write_all.return_value = {"main": tmp_path / "GW" / "GW_MAIN.dat"}
 
         with patch(
-            "pyiwfm.io.gw_writer.GWComponentWriter",
+            "pyiwfm.io.groundwater.writer.GWComponentWriter",
             return_value=mock_writer,
         ):
             results = write_gw_component(model, tmp_path)
@@ -861,7 +861,7 @@ class TestGWComponentWriterConvenience:
 
     def test_write_gw_component_with_config(self, tmp_path: Path) -> None:
         """write_gw_component() uses provided config."""
-        from pyiwfm.io.gw_writer import GWWriterConfig, write_gw_component
+        from pyiwfm.io.groundwater.writer import GWWriterConfig, write_gw_component
 
         model = MagicMock()
         model.groundwater = None
@@ -875,7 +875,7 @@ class TestGWComponentWriterConvenience:
         mock_writer.write_all.return_value = {"main": tmp_path / "GW" / "GW_MAIN.dat"}
 
         with patch(
-            "pyiwfm.io.gw_writer.GWComponentWriter",
+            "pyiwfm.io.groundwater.writer.GWComponentWriter",
             return_value=mock_writer,
         ):
             results = write_gw_component(model, tmp_path, config=config)
@@ -889,7 +889,7 @@ class TestGWComponentWriterTsPumping:
 
     def test_write_ts_pumping_creates_file(self, tmp_path: Path) -> None:
         """write_ts_pumping() creates pumping time series file."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         gw = MagicMock()
@@ -923,35 +923,35 @@ class TestGWWriterConfigProperties:
 
     def test_gw_dir_property(self, tmp_path: Path) -> None:
         """gw_dir returns output_dir / gw_subdir."""
-        from pyiwfm.io.gw_writer import GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWWriterConfig
 
         config = GWWriterConfig(output_dir=tmp_path, gw_subdir="Groundwater")
         assert config.gw_dir == tmp_path / "Groundwater"
 
     def test_main_path_property(self, tmp_path: Path) -> None:
         """main_path returns gw_dir / main_file."""
-        from pyiwfm.io.gw_writer import GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWWriterConfig
 
         config = GWWriterConfig(output_dir=tmp_path, main_file="Custom_GW.dat")
         assert config.main_path == tmp_path / "GW" / "Custom_GW.dat"
 
     def test_bc_main_path_property(self, tmp_path: Path) -> None:
         """bc_main_path returns gw_dir / bc_main_file."""
-        from pyiwfm.io.gw_writer import GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWWriterConfig
 
         config = GWWriterConfig(output_dir=tmp_path, bc_main_file="MyBC.dat")
         assert config.bc_main_path == tmp_path / "GW" / "MyBC.dat"
 
     def test_pump_main_path_property(self, tmp_path: Path) -> None:
         """pump_main_path returns gw_dir / pump_main_file."""
-        from pyiwfm.io.gw_writer import GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWWriterConfig
 
         config = GWWriterConfig(output_dir=tmp_path, pump_main_file="MyPump.dat")
         assert config.pump_main_path == tmp_path / "GW" / "MyPump.dat"
 
     def test_format_property(self, tmp_path: Path) -> None:
         """format property returns 'iwfm_groundwater'."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         model.groundwater = None
@@ -966,7 +966,7 @@ class TestGWWriterConfigProperties:
 
     def test_write_method_delegates_to_write_all(self, tmp_path: Path) -> None:
         """write() delegates to write_all()."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = MagicMock()
         model.groundwater = None

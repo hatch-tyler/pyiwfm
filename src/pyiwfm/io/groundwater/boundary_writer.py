@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pyiwfm.io.ascii.writer import open_iwfm_file as _open_iwfm_file
 from pyiwfm.io.ascii.writer import write_value as _write_value
-from pyiwfm.io.gw_boundary import GWBoundaryConfig
+from pyiwfm.io.groundwater.boundary import GWBoundaryConfig
 
 
 def write_bc_main(config: GWBoundaryConfig, filepath: Path | str) -> Path:

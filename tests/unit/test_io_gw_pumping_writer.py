@@ -1,4 +1,4 @@
-"""Tests for pyiwfm.io.gw_pumping_writer module."""
+"""Tests for pyiwfm.io.groundwater.pumping_writer module."""
 
 from __future__ import annotations
 
@@ -14,14 +14,14 @@ from pyiwfm.io.ascii.writer import (
 from pyiwfm.io.ascii.writer import (
     write_value as _write_value,
 )
-from pyiwfm.io.gw_pumping import (
+from pyiwfm.io.groundwater.pumping import (
     ElementGroup,
     ElementPumpingSpec,
     PumpingConfig,
     WellPumpingSpec,
     WellSpec,
 )
-from pyiwfm.io.gw_pumping_writer import (
+from pyiwfm.io.groundwater.pumping_writer import (
     write_elem_pump_file,
     write_pumping_main,
     write_well_spec_file,
@@ -551,7 +551,7 @@ class TestWriterRoundtrip:
 
     def test_well_file_roundtrip(self, tmp_path: Path) -> None:
         """Write a well spec file and read it back, checking key values."""
-        from pyiwfm.io.gw_pumping import PumpingReader
+        from pyiwfm.io.groundwater.pumping import PumpingReader
 
         config = PumpingConfig(
             factor_xy=1.0,
@@ -614,7 +614,7 @@ class TestWriterRoundtrip:
 
     def test_elem_pump_file_roundtrip(self, tmp_path: Path) -> None:
         """Write an elem pump file and read it back."""
-        from pyiwfm.io.gw_pumping import PumpingReader
+        from pyiwfm.io.groundwater.pumping import PumpingReader
 
         config = PumpingConfig(
             elem_pumping_specs=[

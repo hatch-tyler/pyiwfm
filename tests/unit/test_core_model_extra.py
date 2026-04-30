@@ -371,7 +371,7 @@ class TestFromSimWithPPGroundwater:
 
         with (
             patch("pyiwfm.io.groundwater.GWMainFileReader") as mock_gw_cls,
-            patch("pyiwfm.io.gw_boundary.GWBoundaryReader") as mock_bc_cls,
+            patch("pyiwfm.io.groundwater.boundary.GWBoundaryReader") as mock_bc_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
             mock_bc_cls.return_value.read.return_value = bc_config
@@ -451,7 +451,7 @@ class TestFromSimWithPPGroundwater:
 
         with (
             patch("pyiwfm.io.groundwater.GWMainFileReader") as mock_gw_cls,
-            patch("pyiwfm.io.gw_pumping.PumpingReader") as mock_pump_cls,
+            patch("pyiwfm.io.groundwater.pumping.PumpingReader") as mock_pump_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
             mock_pump_cls.return_value.read.return_value = pump_config
@@ -492,7 +492,7 @@ class TestFromSimWithPPGroundwater:
 
         with (
             patch("pyiwfm.io.groundwater.GWMainFileReader") as mock_gw_cls,
-            patch("pyiwfm.io.gw_pumping.PumpingReader") as mock_pump_cls,
+            patch("pyiwfm.io.groundwater.pumping.PumpingReader") as mock_pump_cls,
             patch("pyiwfm.io.groundwater.GroundwaterReader") as mock_gw_reader_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
@@ -557,7 +557,7 @@ class TestFromSimWithPPGroundwater:
 
         with (
             patch("pyiwfm.io.groundwater.GWMainFileReader") as mock_gw_cls,
-            patch("pyiwfm.io.gw_tiledrain.TileDrainReader") as mock_td_cls,
+            patch("pyiwfm.io.groundwater.tiledrain.TileDrainReader") as mock_td_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
             mock_td_cls.return_value.read.return_value = td_config
@@ -595,7 +595,7 @@ class TestFromSimWithPPGroundwater:
 
         with (
             patch("pyiwfm.io.groundwater.GWMainFileReader") as mock_gw_cls,
-            patch("pyiwfm.io.gw_tiledrain.TileDrainReader") as mock_td_cls,
+            patch("pyiwfm.io.groundwater.tiledrain.TileDrainReader") as mock_td_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
             mock_td_cls.return_value.read.side_effect = ValueError("td fail")
@@ -649,7 +649,7 @@ class TestFromSimWithPPGroundwater:
 
         with (
             patch("pyiwfm.io.groundwater.GWMainFileReader") as mock_gw_cls,
-            patch("pyiwfm.io.gw_subsidence.SubsidenceReader") as mock_subs_cls,
+            patch("pyiwfm.io.groundwater.subsidence.SubsidenceReader") as mock_subs_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
             mock_subs_cls.return_value.read.return_value = subs_config
@@ -687,7 +687,7 @@ class TestFromSimWithPPGroundwater:
 
         with (
             patch("pyiwfm.io.groundwater.GWMainFileReader") as mock_gw_cls,
-            patch("pyiwfm.io.gw_subsidence.SubsidenceReader") as mock_subs_cls,
+            patch("pyiwfm.io.groundwater.subsidence.SubsidenceReader") as mock_subs_cls,
         ):
             mock_gw_cls.return_value.read.return_value = gw_config
             mock_subs_cls.return_value.read.side_effect = ValueError("subs fail")

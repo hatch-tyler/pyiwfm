@@ -809,6 +809,66 @@ strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
 
+### `pyiwfm.io.groundwater` (was a module, now a package) and the `gw_*` cluster (gone)
+
+The eleven flat groundwater modules are now a single subpackage
+`pyiwfm/io/groundwater/`. The short `gw_` prefix on the v1.x
+sibling modules was always at odds with the long-form
+`groundwater.py` reader name; the package layout resolves that —
+the directory carries the long-form name, and submodules inside
+drop the redundant `gw_` prefix entirely.
+
+| v1.x flat path                   | v2.x submodule                            |
+|----------------------------------|-------------------------------------------|
+| `pyiwfm.io.groundwater`          | `pyiwfm.io.groundwater.reader`            |
+| `pyiwfm.io.gw_writer`            | `pyiwfm.io.groundwater.writer`            |
+| `pyiwfm.io.gw_main_writer`       | `pyiwfm.io.groundwater.main_writer`       |
+| `pyiwfm.io.gw_boundary`          | `pyiwfm.io.groundwater.boundary`          |
+| `pyiwfm.io.gw_boundary_writer`   | `pyiwfm.io.groundwater.boundary_writer`   |
+| `pyiwfm.io.gw_pumping`           | `pyiwfm.io.groundwater.pumping`           |
+| `pyiwfm.io.gw_pumping_writer`    | `pyiwfm.io.groundwater.pumping_writer`    |
+| `pyiwfm.io.gw_subsidence`        | `pyiwfm.io.groundwater.subsidence`        |
+| `pyiwfm.io.gw_subsidence_writer` | `pyiwfm.io.groundwater.subsidence_writer` |
+| `pyiwfm.io.gw_tiledrain`         | `pyiwfm.io.groundwater.tiledrain`         |
+| `pyiwfm.io.gw_tiledrain_writer`  | `pyiwfm.io.groundwater.tiledrain_writer`  |
+
+The package `__init__.py` re-exports every public symbol so
+existing top-level imports keep working unchanged.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.groundwater import GroundwaterReader
+from pyiwfm.io.gw_writer import GWComponentWriter, write_gw_component
+from pyiwfm.io.gw_main_writer import write_gw_main_file
+from pyiwfm.io.gw_boundary import GWBoundaryReader
+from pyiwfm.io.gw_boundary_writer import write_general_head_bc
+from pyiwfm.io.gw_pumping import PumpingReader
+from pyiwfm.io.gw_pumping_writer import write_pumping_main
+from pyiwfm.io.gw_subsidence import SubsidenceReader
+from pyiwfm.io.gw_subsidence_writer import write_subsidence_main
+from pyiwfm.io.gw_tiledrain import TileDrainReader
+from pyiwfm.io.gw_tiledrain_writer import write_tile_drain_file
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.groundwater import (
+    GroundwaterReader,
+    GWComponentWriter, write_gw_component,
+    write_gw_main_file,
+    GWBoundaryReader, write_general_head_bc,
+    PumpingReader, write_pumping_main,
+    SubsidenceReader, write_subsidence_main,
+    TileDrainReader, write_tile_drain_file,
+)
+```
+
+The ten v1.x sibling paths are **gone**. `mock.patch` strings need
+updating to `pyiwfm.io.groundwater.X` (the package re-export), or
+the deeper submodule path if the consumer is intra-package.
+
 ### `pyiwfm.io.streams` (was a module, now a package) and the `stream_*` cluster (gone)
 
 The nine flat stream modules are now a single subpackage

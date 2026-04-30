@@ -862,7 +862,7 @@ class TestWriteGroundwaterComponent:
         }
 
         with patch(
-            "pyiwfm.io.gw_writer.GWComponentWriter",
+            "pyiwfm.io.groundwater.writer.GWComponentWriter",
             return_value=mock_gw_writer,
         ):
             writer._write_groundwater(result)
@@ -883,7 +883,7 @@ class TestWriteGroundwaterComponent:
         result = ModelWriteResult()
 
         with patch(
-            "pyiwfm.io.gw_writer.GWComponentWriter",
+            "pyiwfm.io.groundwater.writer.GWComponentWriter",
             side_effect=RuntimeError("GW write failed"),
         ):
             writer._write_groundwater(result)

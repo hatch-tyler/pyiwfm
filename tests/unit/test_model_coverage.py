@@ -899,7 +899,7 @@ class TestFromSimWithPP_Groundwater:
                 return_value=gw_config,
             ),
             patch(
-                "pyiwfm.io.gw_boundary.GWBoundaryReader.read",
+                "pyiwfm.io.groundwater.boundary.GWBoundaryReader.read",
                 return_value=bc_config,
             ),
         ):
@@ -956,7 +956,7 @@ class TestFromSimWithPP_Groundwater:
                 return_value=gw_config,
             ),
             patch(
-                "pyiwfm.io.gw_pumping.PumpingReader.read",
+                "pyiwfm.io.groundwater.pumping.PumpingReader.read",
                 return_value=pump_config,
             ),
         ):
@@ -1006,7 +1006,7 @@ class TestFromSimWithPP_Groundwater:
                 return_value=gw_config,
             ),
             patch(
-                "pyiwfm.io.gw_pumping.PumpingReader.read",
+                "pyiwfm.io.groundwater.pumping.PumpingReader.read",
                 side_effect=ValueError("bad pump file"),
             ),
             patch(
@@ -1069,7 +1069,7 @@ class TestFromSimWithPP_Groundwater:
                 return_value=gw_config,
             ),
             patch(
-                "pyiwfm.io.gw_tiledrain.TileDrainReader.read",
+                "pyiwfm.io.groundwater.tiledrain.TileDrainReader.read",
                 return_value=td_config,
             ),
         ):
@@ -1120,7 +1120,7 @@ class TestFromSimWithPP_Groundwater:
                 return_value=gw_config,
             ),
             patch(
-                "pyiwfm.io.gw_subsidence.SubsidenceReader.read",
+                "pyiwfm.io.groundwater.subsidence.SubsidenceReader.read",
                 return_value=subs_config,
             ),
         ):

@@ -158,7 +158,7 @@ Groundwater Writer
 
 Writer for IWFM groundwater component files using Jinja2 templates.
 
-.. automodule:: pyiwfm.io.gw_writer
+.. automodule:: pyiwfm.io.groundwater.writer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -168,7 +168,7 @@ Groundwater Boundary Conditions
 
 Reader for groundwater boundary condition files (specified head, general head).
 
-.. automodule:: pyiwfm.io.gw_boundary
+.. automodule:: pyiwfm.io.groundwater.boundary
    :members:
    :undoc-members:
    :show-inheritance:
@@ -178,7 +178,7 @@ Groundwater Pumping
 
 Reader for groundwater pumping specification files.
 
-.. automodule:: pyiwfm.io.gw_pumping
+.. automodule:: pyiwfm.io.groundwater.pumping
    :members:
    :undoc-members:
    :show-inheritance:
@@ -188,7 +188,7 @@ Groundwater Tile Drains
 
 Reader for groundwater tile drain specification files.
 
-.. automodule:: pyiwfm.io.gw_tiledrain
+.. automodule:: pyiwfm.io.groundwater.tiledrain
    :members:
    :undoc-members:
    :show-inheritance:
@@ -198,7 +198,7 @@ Groundwater Subsidence
 
 Reader for groundwater subsidence parameter files.
 
-.. automodule:: pyiwfm.io.gw_subsidence
+.. automodule:: pyiwfm.io.groundwater.subsidence
    :members:
    :undoc-members:
    :show-inheritance:

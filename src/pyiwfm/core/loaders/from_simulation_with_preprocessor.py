@@ -86,10 +86,10 @@ def load_from_simulation_with_preprocessor(
         _resolve_stream_node_coordinates,
     )
     from pyiwfm.io.groundwater import GroundwaterReader, GWMainFileReader
-    from pyiwfm.io.gw_boundary import GWBoundaryReader
-    from pyiwfm.io.gw_pumping import PumpingReader
-    from pyiwfm.io.gw_subsidence import SubsidenceReader
-    from pyiwfm.io.gw_tiledrain import TileDrainReader
+    from pyiwfm.io.groundwater.boundary import GWBoundaryReader
+    from pyiwfm.io.groundwater.pumping import PumpingReader
+    from pyiwfm.io.groundwater.subsidence import SubsidenceReader
+    from pyiwfm.io.groundwater.tiledrain import TileDrainReader
     from pyiwfm.io.lakes import LakeMainFileReader, LakeReader
     from pyiwfm.io.preprocessor import _resolve_path
     from pyiwfm.io.rootzone import RootZoneMainFileReader, RootZoneReader

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from pyiwfm.io.ascii.writer import open_iwfm_file as _open_iwfm_file
 from pyiwfm.io.ascii.writer import write_value as _write_value
-from pyiwfm.io.gw_tiledrain import TileDrainConfig
+from pyiwfm.io.groundwater.tiledrain import TileDrainConfig
 
 
 def write_tile_drain_file(config: TileDrainConfig, filepath: Path | str) -> Path:

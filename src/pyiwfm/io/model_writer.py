@@ -455,7 +455,7 @@ class CompleteModelWriter:
             return
 
         try:
-            from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+            from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
             gw_main_path = self.config.get_path("gw_main")
             gw_dir = gw_main_path.parent

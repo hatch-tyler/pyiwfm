@@ -42,6 +42,30 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.groundwater``** is now a package (was a module),
+  the largest cluster in the io restructure. Eleven flat
+  modules (``groundwater.py``, ``gw_writer.py``, ``gw_main_writer.py``,
+  ``gw_boundary[_writer].py``, ``gw_pumping[_writer].py``,
+  ``gw_subsidence[_writer].py``, ``gw_tiledrain[_writer].py``)
+  collapse into one subpackage. The naming inconsistency between the
+  long-form ``groundwater.py`` reader and the short-form ``gw_*.py``
+  siblings dissolves: the directory carries the full name, and
+  submodules inside drop the redundant ``gw_`` prefix
+  (e.g. ``gw_boundary.py`` → ``groundwater/boundary.py``,
+  ``gw_writer.py`` → ``groundwater/writer.py``). The package
+  ``__init__.py`` re-exports every public symbol; reader imports
+  (``from pyiwfm.io.groundwater import GroundwaterReader``) keep
+  working unchanged. The ten v1.x sibling paths are **gone** in
+  v2.0 — update imports and ``mock.patch`` strings. This is the
+  thirteenth and final PR of the io restructure plan; the eight
+  format-primitive and domain packages
+  (``ascii``, ``binary``, ``hdf5``, plus ``unsaturated_zone``,
+  ``small_watershed``, ``lakes``, ``simulation``, ``preprocessor``,
+  ``rootzone``, ``budget``, ``timeseries``, ``streams``,
+  ``groundwater``) replace 84 flat modules with 13 cohesive
+  subpackages plus the cross-cutting flat helpers. See
+  ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.streams``** is now a package (was a module),
   collapsing the nine flat stream modules (``streams.py``,
   ``stream_writer.py``, ``stream_bypass.py`` /
@@ -481,7 +505,7 @@ Changed
 Fixed
 ~~~~~
 
-- ``pyiwfm.io.gw_main_writer.write_gw_main_file`` now coalesces the
+- ``pyiwfm.io.groundwater.main_writer.write_gw_main_file`` now coalesces the
   per-cell ``f.write`` loop for aquifer parameters (and similarly for
   initial heads) into a single write per block. On a C2VSimFG-class
   model (~30k nodes × 4 layers) this collapses ~120k syscalls into one,

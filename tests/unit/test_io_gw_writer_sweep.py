@@ -1,4 +1,4 @@
-"""Sweep tests for pyiwfm.io.gw_writer targeting remaining uncovered lines.
+"""Sweep tests for pyiwfm.io.groundwater.writer targeting remaining uncovered lines.
 
 Covers:
 - _render_gw_main_roundtrip: parametric grids section (lines 381-397),
@@ -82,7 +82,7 @@ class TestRenderGWMainRoundtripParametricGrids:
             GWMainFileConfig,
             ParametricGridData,
         )
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         n_nodes = 9
         n_layers = 2
@@ -144,7 +144,7 @@ class TestRenderGWMainRoundtripPerNodeParams:
     def test_per_node_aquifer_params(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import AquiferParameters
         from pyiwfm.io.groundwater import GWMainFileConfig
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         n_nodes = 9
         n_layers = 2
@@ -198,7 +198,7 @@ class TestRenderGWMainRoundtripReturnFlow:
 
     def test_return_flow_flag_and_heads(self, tmp_path: Path) -> None:
         from pyiwfm.io.groundwater import GWMainFileConfig
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         n_nodes = 9
         n_layers = 2
@@ -240,7 +240,7 @@ class TestRenderGWMainRoundtripReturnFlow:
     def test_initial_heads_from_config(self, tmp_path: Path) -> None:
         """When gw.heads is None, uses cfg.initial_heads."""
         from pyiwfm.io.groundwater import GWMainFileConfig
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         n_nodes = 9
         n_layers = 2
@@ -286,7 +286,7 @@ class TestWriteElemPumpSpecs:
 
     def test_write_elem_pump_specs(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import ElementPumping
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         ep = ElementPumping(
             element_id=1,
@@ -319,7 +319,7 @@ class TestWriteElemPumpSpecs:
 
     def test_multiple_elem_pumps(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import ElementPumping
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         eps = [
             ElementPumping(
@@ -361,7 +361,7 @@ class TestWriteTileDrains:
 
     def test_basic_tile_drains(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import TileDrain
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         drains = {
             1: TileDrain(
@@ -397,7 +397,7 @@ class TestWriteTileDrains:
     def test_tile_drains_with_dest_type_int(self, tmp_path: Path) -> None:
         """Cover destination_type as integer (line 748)."""
         from pyiwfm.components.groundwater import TileDrain
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         drains = {
             1: TileDrain(
@@ -428,7 +428,7 @@ class TestWritePumpMain:
 
     def test_pump_main_with_elem_pumping(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import ElementPumping
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         ep = ElementPumping(
             element_id=2,
@@ -460,7 +460,7 @@ class TestWritePumpMain:
 
     def test_pump_main_with_wells_and_elem_pump(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import ElementPumping, Well
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         wells = {
             1: Well(
@@ -507,7 +507,7 @@ class TestWriteTsPumping:
 
     def test_ts_pumping_with_wells(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import Well
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         wells = {
             1: Well(id=1, x=50.0, y=50.0, element=1, name="W1"),
@@ -524,7 +524,7 @@ class TestWriteTsPumping:
 
     def test_ts_pumping_with_data(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import Well
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         wells = {
             1: Well(id=1, x=50.0, y=50.0, element=1),
@@ -554,7 +554,7 @@ class TestWriteAll:
 
     def test_write_all_with_tile_drains(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import TileDrain
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         drains = {
             1: TileDrain(id=1, element=2, elevation=55.0, conductance=0.03),
@@ -572,7 +572,7 @@ class TestWriteAll:
 
     def test_write_all_with_element_pumping(self, tmp_path: Path) -> None:
         from pyiwfm.components.groundwater import ElementPumping
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         eps = [
             ElementPumping(
@@ -605,7 +605,7 @@ class TestWriteAll:
 
     def test_write_all_no_gw(self, tmp_path: Path) -> None:
         """Write defaults even when no GW component is loaded."""
-        from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+        from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
         model = _make_model(gw=None)
 
@@ -625,14 +625,14 @@ class TestWriteGWComponent:
     """Cover the module-level write_gw_component function."""
 
     def test_convenience_function(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_writer import write_gw_component
+        from pyiwfm.io.groundwater.writer import write_gw_component
 
         model = _make_model(gw=_make_gw())
         results = write_gw_component(model, tmp_path / "Simulation")  # type: ignore[arg-type]
         assert "main" in results
 
     def test_with_custom_config(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_writer import GWWriterConfig, write_gw_component
+        from pyiwfm.io.groundwater.writer import GWWriterConfig, write_gw_component
 
         config = GWWriterConfig(output_dir=tmp_path / "Simulation", gw_subdir="Groundwater")
         model = _make_model(gw=_make_gw())

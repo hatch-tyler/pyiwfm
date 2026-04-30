@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 
-from pyiwfm.io.gw_main_writer import (
+from pyiwfm.io.groundwater.main_writer import (
     _format_aquifer_params_block,
     _format_initial_heads_block,
 )

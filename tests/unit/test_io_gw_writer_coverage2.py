@@ -1,8 +1,8 @@
-"""Coverage tests for pyiwfm.io.gw_writer module (GWComponentWriter).
+"""Coverage tests for pyiwfm.io.groundwater.writer module (GWComponentWriter).
 
 Note: test_io_gw_writer_coverage.py tests the older GroundwaterWriter from
 pyiwfm.io.groundwater. This file tests the newer GWComponentWriter from
-pyiwfm.io.gw_writer, targeting uncovered branches.
+pyiwfm.io.groundwater.writer, targeting uncovered branches.
 
 Covers:
 - GWWriterConfig defaults and properties (gw_dir, main_path, bc_main_path,
@@ -28,7 +28,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from pyiwfm.io.gw_writer import (
+from pyiwfm.io.groundwater.writer import (
     GWComponentWriter,
     GWWriterConfig,
     write_gw_component,
@@ -407,7 +407,7 @@ class TestGWWriterMisc:
         self, tmp_path: Path, bare_model: MagicMock, mock_engine: MagicMock
     ) -> None:
         """write_gw_component() convenience function works."""
-        with patch("pyiwfm.io.gw_writer.TemplateEngine", return_value=mock_engine):
+        with patch("pyiwfm.io.groundwater.writer.TemplateEngine", return_value=mock_engine):
             results = write_gw_component(bare_model, tmp_path)
         assert "main" in results
 
@@ -418,7 +418,7 @@ class TestGWWriterMisc:
         config = GWWriterConfig(output_dir=tmp_path, version="5.0")
         new_dir = tmp_path / "output2"
         new_dir.mkdir()
-        with patch("pyiwfm.io.gw_writer.TemplateEngine", return_value=mock_engine):
+        with patch("pyiwfm.io.groundwater.writer.TemplateEngine", return_value=mock_engine):
             results = write_gw_component(bare_model, new_dir, config=config)
         assert config.output_dir == new_dir
         assert "main" in results

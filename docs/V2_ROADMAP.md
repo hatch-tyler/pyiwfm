@@ -340,7 +340,7 @@ lines of shims.
 | `runner/pest.py` | 1,456 | `runner/pest/__init__.py`, `manager.py`, `templates.py`, `instructions.py`, `params.py`, `observations.py`, `postprocessor.py` (most submodules already exist as siblings — this PR cleans the entry-point file) |
 
 **Public API:** Unchanged. The `__init__.py` files re-export every
-public name so `from pyiwfm.io.gw_writer import GroundwaterWriter`
+public name so `from pyiwfm.io.groundwater.writer import GroundwaterWriter`
 still works.
 
 **Test strategy:** Existing tests pass unchanged. No new tests needed

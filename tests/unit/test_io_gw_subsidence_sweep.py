@@ -1,4 +1,4 @@
-"""Sweep tests for pyiwfm.io.gw_subsidence uncovered paths.
+"""Sweep tests for pyiwfm.io.groundwater.subsidence uncovered paths.
 
 Targets: tecplot/final_subs file paths, non-numeric NOUTS/FACTXY,
 hydrograph specs (hydtyp=0/1, short rows, / name), multi-line factors,
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from pyiwfm.io.gw_subsidence import SubsidenceReader
+from pyiwfm.io.groundwater.subsidence import SubsidenceReader
 
 # ---------------------------------------------------------------------------
 # Helpers

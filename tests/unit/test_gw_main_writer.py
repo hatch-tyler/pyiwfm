@@ -1,5 +1,5 @@
 """
-Comprehensive tests for pyiwfm.io.gw_main_writer module.
+Comprehensive tests for pyiwfm.io.groundwater.main_writer module.
 
 Tests the IWFM GW main file writer which serializes a GWMainFileConfig
 object to the IWFM-format groundwater component main file.
@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from pyiwfm.io.gw_main_writer import (
+from pyiwfm.io.groundwater.main_writer import (
     _write_comment,
     _write_path,
     _write_value,

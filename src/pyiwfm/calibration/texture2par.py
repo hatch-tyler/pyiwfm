@@ -1072,7 +1072,7 @@ class Texture2Par:
                 aq.aquitard_kv[:] = params["AqtKv"]  # type: ignore[index]
 
         # Write modified config
-        from pyiwfm.io.gw_main_writer import write_gw_main_file
+        from pyiwfm.io.groundwater.main_writer import write_gw_main_file
 
         write_gw_main_file(config, str(output_path))
         logger.info("Wrote GW file: %s", output_path)
@@ -1083,7 +1083,7 @@ class Texture2Par:
         output_path: Path,
     ) -> None:
         """Read subsidence file, replace SCE/SCI with computed values, write."""
-        from pyiwfm.io.gw_subsidence import SubsidenceReader
+        from pyiwfm.io.groundwater.subsidence import SubsidenceReader
 
         logger.info("Reading subsidence template: %s", input_path)
         reader = SubsidenceReader(str(input_path))  # type: ignore[call-arg]
@@ -1098,7 +1098,7 @@ class Texture2Par:
                     np_obj.elastic_sc = params["SCE"][i, :]  # type: ignore[assignment]
                     np_obj.inelastic_sc = params["SCI"][i, :]  # type: ignore[assignment]
 
-        from pyiwfm.io.gw_subsidence_writer import write_subsidence_main
+        from pyiwfm.io.groundwater.subsidence_writer import write_subsidence_main
 
         write_subsidence_main(config, str(output_path))
         logger.info("Wrote subsidence file: %s", output_path)

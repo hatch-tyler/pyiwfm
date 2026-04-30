@@ -215,7 +215,7 @@ def apply_parametric_subsidence(
     """
     import numpy as np
 
-    from pyiwfm.io.gw_subsidence import SubsidenceNodeParams
+    from pyiwfm.io.groundwater.subsidence import SubsidenceNodeParams
     from pyiwfm.io.parametric_grid import ParamElement, ParametricGrid, ParamNode
 
     node_ids = sorted(mesh.nodes.keys())

@@ -146,7 +146,7 @@ from pyiwfm.io.groundwater import (  # noqa: F401
     read_wells,
     write_groundwater,
 )
-from pyiwfm.io.gw_boundary import (  # noqa: F401
+from pyiwfm.io.groundwater.boundary import (  # noqa: F401
     ConstrainedGeneralHeadBC,
     GeneralHeadBC,
     GWBoundaryConfig,
@@ -155,7 +155,7 @@ from pyiwfm.io.gw_boundary import (  # noqa: F401
     SpecifiedHeadBC,
     read_gw_boundary,
 )
-from pyiwfm.io.gw_pumping import (  # noqa: F401
+from pyiwfm.io.groundwater.pumping import (  # noqa: F401
     ElementGroup,
     ElementPumpingSpec,
     PumpingConfig,
@@ -164,20 +164,20 @@ from pyiwfm.io.gw_pumping import (  # noqa: F401
     WellSpec,
     read_gw_pumping,
 )
-from pyiwfm.io.gw_subsidence import (  # noqa: F401
+from pyiwfm.io.groundwater.subsidence import (  # noqa: F401
     SubsidenceConfig,
     SubsidenceNodeParams,
     SubsidenceReader,
     read_gw_subsidence,
 )
-from pyiwfm.io.gw_tiledrain import (  # noqa: F401
+from pyiwfm.io.groundwater.tiledrain import (  # noqa: F401
     SubIrrigationSpec,
     TileDrainConfig,
     TileDrainReader,
     TileDrainSpec,
     read_gw_tiledrain,
 )
-from pyiwfm.io.gw_writer import (  # noqa: F401
+from pyiwfm.io.groundwater.writer import (  # noqa: F401
     GWComponentWriter,
     GWWriterConfig,
     write_gw_component,

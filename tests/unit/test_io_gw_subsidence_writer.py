@@ -1,4 +1,4 @@
-"""Tests for pyiwfm.io.gw_subsidence_writer module.
+"""Tests for pyiwfm.io.groundwater.subsidence_writer module.
 
 Covers write_subsidence_main (v4.0 and v5.0), write_subsidence_ic,
 write_gw_subsidence wrapper, _write_subsidence_params (v4.0 vs v5.0
@@ -12,13 +12,13 @@ from pathlib import Path
 
 import numpy as np
 
-from pyiwfm.io.gw_subsidence import (
+from pyiwfm.io.groundwater.subsidence import (
     ParametricSubsidenceData,
     SubsidenceConfig,
     SubsidenceHydrographSpec,
     SubsidenceNodeParams,
 )
-from pyiwfm.io.gw_subsidence_writer import (
+from pyiwfm.io.groundwater.subsidence_writer import (
     write_gw_subsidence,
     write_subsidence_ic,
     write_subsidence_main,

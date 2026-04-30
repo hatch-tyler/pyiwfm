@@ -18,7 +18,7 @@ from pyiwfm.io.ascii.reader import (
 from pyiwfm.io.ascii.reader import (
     strip_inline_comment as _strip_comment,
 )
-from pyiwfm.io.gw_boundary import (
+from pyiwfm.io.groundwater.boundary import (
     ConstrainedGeneralHeadBC,
     GeneralHeadBC,
     GWBoundaryConfig,
@@ -26,7 +26,7 @@ from pyiwfm.io.gw_boundary import (
     SpecifiedFlowBC,
     SpecifiedHeadBC,
 )
-from pyiwfm.io.gw_pumping import (
+from pyiwfm.io.groundwater.pumping import (
     DEST_ELEM_GROUP,
     DEST_ELEMENT,
     DEST_OUTSIDE,
@@ -45,7 +45,7 @@ from pyiwfm.io.gw_pumping import (
     WellSpec,
     read_gw_pumping,
 )
-from pyiwfm.io.gw_tiledrain import (
+from pyiwfm.io.groundwater.tiledrain import (
     TD_DEST_OUTSIDE,
     TD_DEST_STREAM,
     SubIrrigationSpec,

@@ -1,4 +1,4 @@
-"""Deep tests for pyiwfm.io.gw_writer targeting uncovered branches.
+"""Deep tests for pyiwfm.io.groundwater.writer targeting uncovered branches.
 
 Covers:
 - _render_gw_main_roundtrip() with HYDTYP=0 and HYDTYP=1 hydrograph specs
@@ -26,7 +26,7 @@ from pyiwfm.io.groundwater import (
     GWMainFileConfig,
     KhAnomalyEntry,
 )
-from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
 
 # ---------------------------------------------------------------------------
 # Helpers

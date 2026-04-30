@@ -252,7 +252,7 @@ class TestTileDrainVersionHeader:
         return filepath
 
     def test_with_version_header(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_tiledrain import TileDrainReader
+        from pyiwfm.io.groundwater.tiledrain import TileDrainReader
 
         content = (
             "C Tile Drain File\n"
@@ -276,7 +276,7 @@ class TestTileDrainVersionHeader:
 
     def test_without_version_header(self, tmp_path: Path) -> None:
         """Backward compat: files without version header still parse."""
-        from pyiwfm.io.gw_tiledrain import TileDrainReader
+        from pyiwfm.io.groundwater.tiledrain import TileDrainReader
 
         content = (
             "C Tile Drain File (no version)\n"
@@ -294,7 +294,7 @@ class TestTileDrainVersionHeader:
         assert len(config.tile_drains) == 1
 
     def test_with_sub_irrigation(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_tiledrain import TileDrainReader
+        from pyiwfm.io.groundwater.tiledrain import TileDrainReader
 
         content = (
             "#4.0\n"
@@ -325,7 +325,7 @@ class TestSubsidenceNOUTSSection:
         return filepath
 
     def test_with_nouts_section(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_subsidence import SubsidenceReader
+        from pyiwfm.io.groundwater.subsidence import SubsidenceReader
 
         content = (
             "#4.0\n"
@@ -355,7 +355,7 @@ class TestSubsidenceNOUTSSection:
 
     def test_nouts_zero_skips_factxy(self, tmp_path: Path) -> None:
         """When NOUTS=0, Fortran skips FACTXY and SUBHYDOUTFL lines."""
-        from pyiwfm.io.gw_subsidence import SubsidenceReader
+        from pyiwfm.io.groundwater.subsidence import SubsidenceReader
 
         content = (
             "#4.0\n"
@@ -376,7 +376,7 @@ class TestSubsidenceNOUTSSection:
 
     def test_nouts_with_node_params(self, tmp_path: Path) -> None:
         """Verify node params still parse correctly after NOUTS section."""
-        from pyiwfm.io.gw_subsidence import SubsidenceReader
+        from pyiwfm.io.groundwater.subsidence import SubsidenceReader
 
         content = (
             "#4.0\n"
@@ -407,7 +407,7 @@ class TestConstrainedGHBCReading:
     """Test that constrained GH BCs are read correctly."""
 
     def test_read_constrained_gh_bc(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_boundary import GWBoundaryReader
+        from pyiwfm.io.groundwater.boundary import GWBoundaryReader
 
         # Create the constrained GH sub-file
         cgh_content = (
@@ -452,7 +452,7 @@ class TestWellNameParsing:
     """Test that well names are parsed from / delimiter."""
 
     def test_well_name_from_spec(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_pumping import PumpingReader
+        from pyiwfm.io.groundwater.pumping import PumpingReader
 
         well_content = (
             "    2                               / NWELL\n"
@@ -484,7 +484,7 @@ class TestWellNameParsing:
         assert config.well_specs[1].name == "Well_Beta"
 
     def test_well_without_name(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_pumping import PumpingReader
+        from pyiwfm.io.groundwater.pumping import PumpingReader
 
         well_content = (
             "    1                               / NWELL\n"
@@ -522,13 +522,13 @@ class TestTileDrainWriterRoundtrip:
     """Test tile drain writer → reader roundtrip."""
 
     def test_roundtrip(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_tiledrain import (
+        from pyiwfm.io.groundwater.tiledrain import (
             SubIrrigationSpec,
             TileDrainConfig,
             TileDrainReader,
             TileDrainSpec,
         )
-        from pyiwfm.io.gw_tiledrain_writer import write_tile_drain_file
+        from pyiwfm.io.groundwater.tiledrain_writer import write_tile_drain_file
 
         config = TileDrainConfig(
             version="4.0",
@@ -570,12 +570,12 @@ class TestBoundaryWriterRoundtrip:
     """Test BC writer → reader roundtrip for constrained GH."""
 
     def test_constrained_gh_roundtrip(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_boundary import (
+        from pyiwfm.io.groundwater.boundary import (
             ConstrainedGeneralHeadBC,
             GWBoundaryConfig,
             GWBoundaryReader,
         )
-        from pyiwfm.io.gw_boundary_writer import (
+        from pyiwfm.io.groundwater.boundary_writer import (
             write_constrained_gh_bc,
         )
 
@@ -617,13 +617,13 @@ class TestPumpingWriterRoundtrip:
     """Test pumping writer → reader roundtrip."""
 
     def test_well_spec_roundtrip(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_pumping import (
+        from pyiwfm.io.groundwater.pumping import (
             PumpingConfig,
             PumpingReader,
             WellPumpingSpec,
             WellSpec,
         )
-        from pyiwfm.io.gw_pumping_writer import write_well_spec_file
+        from pyiwfm.io.groundwater.pumping_writer import write_well_spec_file
 
         config = PumpingConfig(
             factor_xy=1.0,
@@ -669,7 +669,7 @@ class TestSubsidenceHydrographSpec:
     """Test the new SubsidenceHydrographSpec dataclass."""
 
     def test_create(self) -> None:
-        from pyiwfm.io.gw_subsidence import SubsidenceHydrographSpec
+        from pyiwfm.io.groundwater.subsidence import SubsidenceHydrographSpec
 
         spec = SubsidenceHydrographSpec(id=1, hydtyp=0, layer=2, x=100.0, y=200.0, name="InSAR_1")
         assert spec.id == 1
@@ -686,7 +686,7 @@ class TestBCNOUTBSection:
     """Test that NOUTB section is read from BC main file."""
 
     def test_noutb_zero(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_boundary import GWBoundaryReader
+        from pyiwfm.io.groundwater.boundary import GWBoundaryReader
 
         content = (
             "                                   / Spec flow file\n"
@@ -702,7 +702,7 @@ class TestBCNOUTBSection:
         assert config.n_bc_output_nodes == 0
 
     def test_noutb_with_nodes(self, tmp_path: Path) -> None:
-        from pyiwfm.io.gw_boundary import GWBoundaryReader
+        from pyiwfm.io.groundwater.boundary import GWBoundaryReader
 
         content = (
             "                                   / Spec flow file\n"

@@ -15,14 +15,18 @@ import numpy as np
 import pytest
 
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.io.ascii.reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (
+    strip_inline_comment as _strip_comment,
+)
 from pyiwfm.io.groundwater import (
     GroundwaterReader,
     GWFileConfig,
     GWMainFileReader,
     KhAnomalyEntry,
     ParametricGridData,
-    _is_comment_line,
-    _strip_comment,
 )
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-"""Tests for pyiwfm.io.gw_boundary_writer module.
+"""Tests for pyiwfm.io.groundwater.boundary_writer module.
 
 Covers all five writer functions and the two private helpers,
 exercising both empty and populated BC lists, factor division logic,
@@ -15,14 +15,14 @@ from pyiwfm.io.ascii.writer import (
 from pyiwfm.io.ascii.writer import (
     write_value as _write_value,
 )
-from pyiwfm.io.gw_boundary import (
+from pyiwfm.io.groundwater.boundary import (
     ConstrainedGeneralHeadBC,
     GeneralHeadBC,
     GWBoundaryConfig,
     SpecifiedFlowBC,
     SpecifiedHeadBC,
 )
-from pyiwfm.io.gw_boundary_writer import (
+from pyiwfm.io.groundwater.boundary_writer import (
     write_bc_main,
     write_constrained_gh_bc,
     write_general_head_bc,

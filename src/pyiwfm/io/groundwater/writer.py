@@ -120,7 +120,7 @@ class GWComponentWriter(TemplateWriter):
 
     Example
     -------
-    >>> from pyiwfm.io.gw_writer import GWComponentWriter, GWWriterConfig
+    >>> from pyiwfm.io.groundwater.writer import GWComponentWriter, GWWriterConfig
     >>> config = GWWriterConfig(output_dir=Path("model/Simulation"))
     >>> writer = GWComponentWriter(model, config)
     >>> files = writer.write_all()
@@ -234,7 +234,7 @@ class GWComponentWriter(TemplateWriter):
         n_nodes = self.model.n_nodes
 
         # Use roundtrip path when gw_main_config is available (from reader)
-        from pyiwfm.io.groundwater import GWMainFileConfig
+        from pyiwfm.io.groundwater.reader import GWMainFileConfig
 
         gw_main_cfg = getattr(gw, "gw_main_config", None) if gw else None
         if isinstance(gw_main_cfg, GWMainFileConfig):
@@ -840,10 +840,10 @@ class GWComponentWriter(TemplateWriter):
         gw = self.model.groundwater
         subs_config = getattr(gw, "subsidence_config", None) if gw else None
 
-        from pyiwfm.io.gw_subsidence import SubsidenceConfig
+        from pyiwfm.io.groundwater.subsidence import SubsidenceConfig
 
         if isinstance(subs_config, SubsidenceConfig):
-            from pyiwfm.io.gw_subsidence_writer import write_subsidence_main
+            from pyiwfm.io.groundwater.subsidence_writer import write_subsidence_main
 
             result = write_subsidence_main(subs_config, output_path)
             logger.info(f"Wrote subsidence file: {output_path}")
