@@ -42,6 +42,18 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.hdf5``** is now a package (was a module): the file moved
+  to ``pyiwfm/io/hdf5/model.py`` with the package ``__init__.py``
+  re-exporting the public API. Top-level callers
+  (``from pyiwfm.io import HDF5ModelReader``) and direct-submodule
+  callers (``from pyiwfm.io.hdf5 import HDF5ModelReader``) are
+  unaffected. Optional new direct path:
+  ``from pyiwfm.io.hdf5.model import HDF5ModelReader``. First step of
+  a broader io restructure into format-primitive
+  (``ascii/``/``binary/``/``hdf5/``/``dss/``) and domain
+  (``groundwater/``/``streams/``/…) subpackages — see
+  ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **All text-mode file I/O across the codebase now uses explicit
   ``encoding="utf-8"``** (183 sites). Previously, ``open(path)``,
   ``Path.read_text()``, and ``Path.write_text()`` calls inherited the

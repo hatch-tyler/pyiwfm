@@ -659,6 +659,45 @@ work as before.
 
 ---
 
+## 10. `io/` restructure — format-primitive subpackages
+
+**Status:** _internal restructuring_ for top-level callers; _hard rename_
+for callers that imported submodule paths directly.
+
+`pyiwfm/io/` is being reorganised so each on-disk format gets its own
+subpackage (`hdf5/`, `binary/`, `ascii/`, `dss/`) and each IWFM model
+domain gets its own subpackage (`groundwater/`, `streams/`, etc.). The
+flat 84-file directory was hard to navigate; the new shape mirrors the
+structure of an IWFM model.
+
+The restructure ships **one cluster per PR**. Each section below
+documents the cluster's old → new path mapping.
+
+### `pyiwfm.io.hdf5` (was a module, now a package)
+
+The module `pyiwfm/io/hdf5.py` is now the package `pyiwfm/io/hdf5/`
+with a `model.py` submodule. The package's `__init__.py` re-exports the
+public API, so the existing path `from pyiwfm.io.hdf5 import X`
+continues to work unchanged for `HDF5ModelReader`, `HDF5ModelWriter`,
+`read_model_hdf5`, `write_model_hdf5`.
+
+**v1.x and v2.x — both work:**
+
+```python
+from pyiwfm.io.hdf5 import HDF5ModelReader, write_model_hdf5
+```
+
+**New direct path (optional):**
+
+```python
+from pyiwfm.io.hdf5.model import HDF5ModelReader  # v2.x only
+```
+
+`mock.patch("pyiwfm.io.hdf5.write_model_hdf5")` continues to work —
+the patch target resolves through the package's re-export.
+
+---
+
 ## 9. Strict-by-default loading at user-facing surfaces
 
 **Status:** _behaviour change_ at the CLI; opt-out flag provided.
