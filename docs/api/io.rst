@@ -370,7 +370,7 @@ Small Watershed Writer
 
 Writer for IWFM small watershed component files using Jinja2 templates.
 
-.. automodule:: pyiwfm.io.small_watershed_writer
+.. automodule:: pyiwfm.io.small_watershed.writer
    :members:
    :undoc-members:
    :show-inheritance:

@@ -679,7 +679,7 @@ class CompleteModelWriter:
         """Write or copy small watershed component files."""
         if self.model.small_watersheds is not None:
             try:
-                from pyiwfm.io.small_watershed_writer import (
+                from pyiwfm.io.small_watershed.writer import (
                     SmallWatershedComponentWriter,
                     SmallWatershedWriterConfig,
                 )

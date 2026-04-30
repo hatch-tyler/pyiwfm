@@ -24,7 +24,7 @@ from pyiwfm.io.small_watershed import (
 from pyiwfm.io.small_watershed import (
     WatershedGWNode as ReaderGWNode,
 )
-from pyiwfm.io.small_watershed_writer import (
+from pyiwfm.io.small_watershed.writer import (
     SmallWatershedComponentWriter,
     SmallWatershedWriterConfig,
     write_small_watershed_component,
@@ -449,7 +449,7 @@ class TestSmallWatershedReaderV41:
 
 class TestSmallWatershedWriter:
     def test_write_main(self, tmp_path):
-        from pyiwfm.io.small_watershed_writer import (
+        from pyiwfm.io.small_watershed.writer import (
             SmallWatershedComponentWriter,
             SmallWatershedWriterConfig,
         )
@@ -523,7 +523,7 @@ class TestSmallWatershedWriter:
 class TestSmallWatershedRoundTrip:
     def test_read_write_read(self, tmp_path):
         """Read a file, build component, write it back, re-read."""
-        from pyiwfm.io.small_watershed_writer import (
+        from pyiwfm.io.small_watershed.writer import (
             SmallWatershedComponentWriter,
             SmallWatershedWriterConfig,
         )

@@ -356,7 +356,7 @@ from pyiwfm.io.small_watershed import (  # noqa: F401
     WatershedSpec,
     read_small_watershed_main,
 )
-from pyiwfm.io.small_watershed_writer import (  # noqa: F401
+from pyiwfm.io.small_watershed.writer import (  # noqa: F401
     SmallWatershedComponentWriter,
     SmallWatershedWriterConfig,
     write_small_watershed_component,

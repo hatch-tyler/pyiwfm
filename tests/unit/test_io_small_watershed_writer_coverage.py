@@ -1,4 +1,4 @@
-"""Coverage tests for pyiwfm.io.small_watershed_writer module.
+"""Coverage tests for pyiwfm.io.small_watershed.writer module.
 
 Targets uncovered lines: 55, 91, 95, 118-121, 145-146, 177, 232-238, 285-293.
 
@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pyiwfm.io.small_watershed_writer import (
+from pyiwfm.io.small_watershed.writer import (
     SmallWatershedComponentWriter,
     SmallWatershedWriterConfig,
     write_small_watershed_component,
@@ -361,7 +361,7 @@ class TestWriteSmallWatershedConvenience:
     ) -> None:
         """write_small_watershed_component() with config=None creates default config."""
         with patch(
-            "pyiwfm.io.small_watershed_writer.TemplateEngine",
+            "pyiwfm.io.small_watershed.writer.TemplateEngine",
             return_value=mock_engine,
         ):
             results = write_small_watershed_component(bare_model, tmp_path)
@@ -376,7 +376,7 @@ class TestWriteSmallWatershedConvenience:
             version="5.0",
         )
         with patch(
-            "pyiwfm.io.small_watershed_writer.TemplateEngine",
+            "pyiwfm.io.small_watershed.writer.TemplateEngine",
             return_value=mock_engine,
         ):
             results = write_small_watershed_component(bare_model, tmp_path, config=custom_config)

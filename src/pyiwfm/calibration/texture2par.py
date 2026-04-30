@@ -1214,7 +1214,7 @@ class Texture2Par:
                     if "GWKS" in wp:
                         aq_param.baseflow_coeff = wp["GWKS"]
 
-        from pyiwfm.io.small_watershed_writer import SmallWatershedComponentWriter
+        from pyiwfm.io.small_watershed.writer import SmallWatershedComponentWriter
 
         writer = SmallWatershedComponentWriter(config)  # type: ignore[call-arg, arg-type]
         writer.write_main(str(output_path))  # type: ignore[call-arg]

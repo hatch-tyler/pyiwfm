@@ -503,7 +503,7 @@ class TestCompleteModelWriterSmallWatersheds:
         mock_sw_writer.write_all.return_value = {"main": config.get_path("swshed_main")}
 
         with patch(
-            "pyiwfm.io.small_watershed_writer.SmallWatershedComponentWriter",
+            "pyiwfm.io.small_watershed.writer.SmallWatershedComponentWriter",
             return_value=mock_sw_writer,
         ):
             writer._write_small_watersheds(result)
@@ -526,7 +526,7 @@ class TestCompleteModelWriterSmallWatersheds:
         result = ModelWriteResult()
 
         with patch(
-            "pyiwfm.io.small_watershed_writer.SmallWatershedComponentWriter",
+            "pyiwfm.io.small_watershed.writer.SmallWatershedComponentWriter",
             side_effect=RuntimeError("writer broken"),
         ):
             writer._write_small_watersheds(result)

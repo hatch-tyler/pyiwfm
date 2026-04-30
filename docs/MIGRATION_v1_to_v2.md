@@ -809,6 +809,55 @@ strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
 
+### `pyiwfm.io.small_watershed` (was a module, now a package) and `pyiwfm.io.small_watershed_writer` (gone)
+
+`pyiwfm/io/small_watershed.py` and `pyiwfm/io/small_watershed_writer.py`
+were two flat modules for the same domain. They're now the single
+package `pyiwfm/io/small_watershed/`:
+
+- `pyiwfm/io/small_watershed/reader.py` — was `small_watershed.py`
+  (`SmallWatershedMainReader`, `SmallWatershedMainConfig`,
+  `WatershedSpec`, `WatershedGWNode`, `WatershedAquiferParams`,
+  `WatershedRootZoneParams`, `WatershedInitialCondition`,
+  `read_small_watershed_main`).
+
+- `pyiwfm/io/small_watershed/writer.py` — was
+  `small_watershed_writer.py` (`SmallWatershedComponentWriter`,
+  `SmallWatershedWriterConfig`,
+  `write_small_watershed_component`).
+
+The package `__init__.py` re-exports both submodules' public API so
+the existing path `from pyiwfm.io.small_watershed import X` keeps
+working for every reader symbol and now also resolves every writer
+symbol.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.small_watershed import SmallWatershedMainReader
+from pyiwfm.io.small_watershed_writer import (
+    SmallWatershedComponentWriter,
+    write_small_watershed_component,
+)
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.small_watershed import (
+    SmallWatershedMainReader,
+    SmallWatershedComponentWriter,
+    write_small_watershed_component,
+)
+```
+
+The `from pyiwfm.io.small_watershed_writer import …` path is **gone**;
+update to `from pyiwfm.io.small_watershed import …`.
+
+`mock.patch("pyiwfm.io.small_watershed_writer.X")` strings need
+updating to `mock.patch("pyiwfm.io.small_watershed.X")` (re-exported
+on the package), not `pyiwfm.io.small_watershed.writer.X`.
+
 ### `pyiwfm.io.unsaturated_zone` (was a module, now a package) and `pyiwfm.io.unsaturated_zone_writer` (gone)
 
 `pyiwfm/io/unsaturated_zone.py` and `pyiwfm/io/unsaturated_zone_writer.py`

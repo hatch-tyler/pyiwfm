@@ -42,6 +42,17 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.small_watershed``** is now a package (was a module),
+  collapsing ``pyiwfm/io/small_watershed.py`` and
+  ``pyiwfm/io/small_watershed_writer.py`` into one subpackage:
+  ``pyiwfm/io/small_watershed/reader.py`` and
+  ``pyiwfm/io/small_watershed/writer.py``. The package ``__init__.py``
+  re-exports both submodules' public API; reader imports
+  (``from pyiwfm.io.small_watershed import SmallWatershedMainReader``)
+  keep working unchanged. The ``from pyiwfm.io.small_watershed_writer
+  import …`` path is **gone** in v2.0 — update imports and
+  ``mock.patch`` strings. See ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.unsaturated_zone``** is now a package (was a module),
   collapsing ``pyiwfm/io/unsaturated_zone.py`` and
   ``pyiwfm/io/unsaturated_zone_writer.py`` into one subpackage:
@@ -819,7 +830,7 @@ Added
 - ``from_config()``: Build component from reader config
 - ``validate()``: Check layer counts and element consistency
 
-**Small Watershed Writer** (``pyiwfm.io.small_watershed_writer``)
+**Small Watershed Writer** (``pyiwfm.io.small_watershed.writer``)
 
 - ``SmallWatershedComponentWriter``: Template-based writer for small watershed files
 - ``SmallWatershedWriterConfig``: Writer configuration with output paths
