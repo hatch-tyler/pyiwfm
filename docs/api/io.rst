@@ -135,7 +135,7 @@ Simulation Writer
 
 Writer for IWFM simulation main control files.
 
-.. automodule:: pyiwfm.io.simulation_writer
+.. automodule:: pyiwfm.io.simulation.writer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -743,7 +743,7 @@ Parser for IWFM ``SimulationMessages.out`` files, extracting messages by
 severity (INFO, WARN, FATAL) and spatial IDs (node, element, reach,
 layer) via regex patterns.
 
-.. automodule:: pyiwfm.io.simulation_messages
+.. automodule:: pyiwfm.io.simulation.messages
    :members:
    :undoc-members:
    :show-inheritance:

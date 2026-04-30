@@ -616,7 +616,7 @@ warnings, errors, and their spatial locations:
 
 .. code-block:: python
 
-   from pyiwfm.io.simulation_messages import SimulationMessagesReader
+   from pyiwfm.io.simulation.messages import SimulationMessagesReader
 
    reader = SimulationMessagesReader("SimulationMessages.out")
    result = reader.read()
@@ -626,7 +626,7 @@ warnings, errors, and their spatial locations:
    print(f"Errors: {result.error_count}")
 
    # Filter by severity
-   from pyiwfm.io.simulation_messages import MessageSeverity
+   from pyiwfm.io.simulation.messages import MessageSeverity
 
    warnings = result.filter_by_severity(MessageSeverity.WARN)
    for msg in warnings[:5]:
@@ -673,7 +673,7 @@ Key modules:
 
 - ``pyiwfm.io.smp`` -- SMP file reader/writer
 - ``pyiwfm.io.hydrograph_reader`` -- IWFM hydrograph ``.out`` file reader
-- ``pyiwfm.io.simulation_messages`` -- SimulationMessages.out parser
+- ``pyiwfm.io.simulation.messages`` -- SimulationMessages.out parser
 - ``pyiwfm.calibration.model_file_discovery`` -- Model file auto-discovery
 - ``pyiwfm.calibration.obs_well_spec`` -- Observation well specification reader
 - ``pyiwfm.calibration.iwfm2obs`` -- IWFM2OBS interpolation and model-discovery workflow

@@ -184,7 +184,7 @@ class TestFromSimulationWithPreprocessorStrict:
         from datetime import datetime
         from unittest.mock import MagicMock
 
-        from pyiwfm.io.simulation import TimeUnit
+        from pyiwfm.core.timeseries import TimeUnit
 
         cfg = MagicMock()
         cfg.groundwater_file = None

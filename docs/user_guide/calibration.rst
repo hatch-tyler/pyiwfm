@@ -15,7 +15,7 @@ Modules
     is IWFM's standard observation file with bore ID, date/time, value,
     and optional exclusion flags.
 
-``pyiwfm.io.simulation_messages``
+``pyiwfm.io.simulation.messages``
     Parse ``SimulationMessages.out`` to extract warnings, errors, and
     their spatial locations (node, element, reach, layer IDs via regex).
 

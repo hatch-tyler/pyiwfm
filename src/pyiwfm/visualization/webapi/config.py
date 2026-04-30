@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from pyiwfm.io.budget import BudgetReader
     from pyiwfm.io.cache_loader import SqliteCacheLoader
     from pyiwfm.io.hydrograph_reader import IWFMHydrographReader
-    from pyiwfm.io.simulation_messages import SimulationMessagesResult
+    from pyiwfm.io.simulation.messages import SimulationMessagesResult
     from pyiwfm.io.timeseries_io import LazyNodalLoader
     from pyiwfm.io.zbudget import ZBudgetReader
 

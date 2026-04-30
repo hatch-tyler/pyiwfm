@@ -12,12 +12,12 @@ errors, and spatial entity references.
 Reading Simulation Messages
 ---------------------------
 
-Use :class:`~pyiwfm.io.simulation_messages.SimulationMessagesReader` to parse
+Use :class:`~pyiwfm.io.simulation.messages.SimulationMessagesReader` to parse
 a ``SimulationMessages.out`` file:
 
 .. code-block:: python
 
-    from pyiwfm.io.simulation_messages import SimulationMessagesReader
+    from pyiwfm.io.simulation.messages import SimulationMessagesReader
 
     reader = SimulationMessagesReader("SimulationMessages.out")
     result = reader.read()
@@ -35,7 +35,7 @@ Messages are classified into four severity levels: ``MESSAGE``, ``INFO``,
 
 .. code-block:: python
 
-    from pyiwfm.io.simulation_messages import MessageSeverity
+    from pyiwfm.io.simulation.messages import MessageSeverity
 
     warnings = result.filter_by_severity(MessageSeverity.WARN)
     for msg in warnings[:5]:

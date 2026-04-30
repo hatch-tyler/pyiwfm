@@ -809,6 +809,57 @@ strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
 
+### `pyiwfm.io.simulation` (was a module, now a package) and `pyiwfm.io.simulation_writer`/`simulation_messages` (gone)
+
+`pyiwfm/io/simulation.py`, `pyiwfm/io/simulation_writer.py`, and
+`pyiwfm/io/simulation_messages.py` were three flat modules for the
+same domain. They're now the single package `pyiwfm/io/simulation/`:
+
+- `pyiwfm/io/simulation/reader.py` — was `simulation.py`
+  (`IWFMSimulationReader`, `SimulationReader`, `SimulationConfig`,
+  `SimulationFileConfig`, `SimulationWriter` (legacy free-form),
+  plus `read_iwfm_simulation`, `read_simulation`, `write_simulation`).
+
+- `pyiwfm/io/simulation/writer.py` — was `simulation_writer.py`
+  (`SimulationMainWriter`, `SimulationMainConfig`,
+  `write_simulation_main`).
+
+- `pyiwfm/io/simulation/messages.py` — was `simulation_messages.py`
+  (`SimulationMessagesReader`, `SimulationMessagesResult`,
+  `SimulationMessage`, `MessageSeverity`, `ConvergenceRecord`,
+  `ConvergenceHotspot`, `MassBalanceRecord`, `TimestepCutRecord`).
+
+The package `__init__.py` re-exports all three submodules' public API.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.simulation import IWFMSimulationReader
+from pyiwfm.io.simulation_writer import (
+    SimulationMainWriter, write_simulation_main,
+)
+from pyiwfm.io.simulation_messages import SimulationMessagesReader
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.simulation import (
+    IWFMSimulationReader,
+    SimulationMainWriter,
+    write_simulation_main,
+    SimulationMessagesReader,
+)
+```
+
+The `pyiwfm.io.simulation_writer` and `pyiwfm.io.simulation_messages`
+paths are **gone**; update to `from pyiwfm.io.simulation import …`.
+
+`mock.patch("pyiwfm.io.simulation_writer.X")` and
+`mock.patch("pyiwfm.io.simulation_messages.X")` strings need updating
+to `mock.patch("pyiwfm.io.simulation.X")` (re-exported on the
+package), not the deeper submodule paths.
+
 ### `pyiwfm.io.lakes` (was a module, now a package) and `pyiwfm.io.lake_writer` (gone)
 
 The plural-vs-singular mismatch (`lakes.py` reader, `lake_writer.py`

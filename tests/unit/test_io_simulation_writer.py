@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from pyiwfm.io.simulation_writer import (
+from pyiwfm.io.simulation.writer import (
     SimulationMainConfig,
     SimulationMainWriter,
     write_simulation_main,

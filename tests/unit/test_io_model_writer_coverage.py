@@ -750,7 +750,7 @@ class TestWriteSimulationMain:
 
         with (
             patch(
-                "pyiwfm.io.simulation_writer.SimulationMainWriter",
+                "pyiwfm.io.simulation.writer.SimulationMainWriter",
                 return_value=mock_sim_writer,
             ),
             patch(
@@ -782,7 +782,7 @@ class TestWriteSimulationMain:
         mock_sim_writer.write_main.return_value = tmp_path / "sim.in"
 
         with patch(
-            "pyiwfm.io.simulation_writer.SimulationMainWriter",
+            "pyiwfm.io.simulation.writer.SimulationMainWriter",
             return_value=mock_sim_writer,
         ) as MockSimWriter:
             writer._write_simulation_main()
@@ -806,7 +806,7 @@ class TestWriteSimulationMain:
         mock_sim_writer.write_main.return_value = tmp_path / "sim.in"
 
         with patch(
-            "pyiwfm.io.simulation_writer.SimulationMainWriter",
+            "pyiwfm.io.simulation.writer.SimulationMainWriter",
             return_value=mock_sim_writer,
         ) as MockSimWriter:
             writer._write_simulation_main()

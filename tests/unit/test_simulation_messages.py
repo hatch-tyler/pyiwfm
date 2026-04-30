@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from pathlib import Path
 
-from pyiwfm.io.simulation_messages import (
+from pyiwfm.io.simulation.messages import (
     ConvergenceRecord,
     MessageSeverity,
     SimulationMessage,

@@ -332,7 +332,7 @@ from pyiwfm.io.simulation import (  # noqa: F401
     read_simulation,
     write_simulation,
 )
-from pyiwfm.io.simulation_messages import (  # noqa: F401
+from pyiwfm.io.simulation.messages import (  # noqa: F401
     ConvergenceHotspot,
     ConvergenceRecord,
     MassBalanceRecord,
@@ -342,7 +342,7 @@ from pyiwfm.io.simulation_messages import (  # noqa: F401
     SimulationMessagesResult,
     TimestepCutRecord,
 )
-from pyiwfm.io.simulation_writer import (  # noqa: F401
+from pyiwfm.io.simulation.writer import (  # noqa: F401
     SimulationMainConfig,
     SimulationMainWriter,
     write_simulation_main,

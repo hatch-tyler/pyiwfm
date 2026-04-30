@@ -1,4 +1,4 @@
-"""Tests for pyiwfm.io.simulation_messages covering uncovered branches.
+"""Tests for pyiwfm.io.simulation.messages covering uncovered branches.
 
 Targets:
 - MessageSeverity enum values
@@ -16,7 +16,7 @@ from datetime import timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from pyiwfm.io.simulation_messages import (
+from pyiwfm.io.simulation.messages import (
     MessageSeverity,
     SimulationMessage,
     SimulationMessagesReader,

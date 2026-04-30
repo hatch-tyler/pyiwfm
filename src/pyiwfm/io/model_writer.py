@@ -826,7 +826,7 @@ class CompleteModelWriter:
 
     def _write_simulation_main(self) -> Path:
         """Write the Simulation_MAIN.IN file referencing all components."""
-        from pyiwfm.io.simulation_writer import (
+        from pyiwfm.io.simulation.writer import (
             SimulationMainConfig,
             SimulationMainWriter,
         )

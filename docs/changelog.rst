@@ -42,6 +42,20 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.simulation``** is now a package (was a module),
+  collapsing ``simulation.py`` (reader), ``simulation_writer.py``
+  (Jinja2 writer), and ``simulation_messages.py`` (``Message.out``
+  parser) into one subpackage:
+  ``pyiwfm/io/simulation/{reader,writer,messages}.py``. The package
+  ``__init__.py`` re-exports all three submodules' public API; reader
+  imports (``from pyiwfm.io.simulation import IWFMSimulationReader``)
+  keep working unchanged. Writer imports moved from
+  ``pyiwfm.io.simulation_writer`` and message-log imports from
+  ``pyiwfm.io.simulation_messages`` to ``pyiwfm.io.simulation`` (or
+  the deeper ``pyiwfm.io.simulation.writer`` /
+  ``pyiwfm.io.simulation.messages``); the v1.x flat paths are
+  **gone** in v2.0. See ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.lakes``** is now a package (was a module). The
   plural/singular mismatch between ``lakes.py`` (reader) and
   ``lake_writer.py`` (writer) dissolves: both are now submodules of
@@ -735,7 +749,7 @@ Added
 - ``SMPRecord``, ``SMPTimeSeries``: Typed containers for bore ID, datetime, value, exclusion flag
 - Fixed-width parsing with sentinel value (NaN) handling
 
-**SimulationMessages.out Parser** (``pyiwfm.io.simulation_messages``)
+**SimulationMessages.out Parser** (``pyiwfm.io.simulation.messages``)
 
 - ``SimulationMessagesReader``: Parse IWFM simulation diagnostic output files
 - ``SimulationMessage``: Structured message with severity, procedure, spatial IDs

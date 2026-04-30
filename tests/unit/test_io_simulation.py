@@ -19,17 +19,21 @@ import pytest
 
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.timeseries import TimeUnit
+from pyiwfm.io.ascii.reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (
+    strip_inline_comment as _strip_comment,
+)
 from pyiwfm.io.simulation import (
     SimulationConfig,
     SimulationFileConfig,
     SimulationReader,
     SimulationWriter,
-    _format_iwfm_datetime,
-    _is_comment_line,
-    _strip_comment,
     read_simulation,
     write_simulation,
 )
+from pyiwfm.io.simulation.reader import _format_iwfm_datetime
 
 # =============================================================================
 # Test Helper Functions

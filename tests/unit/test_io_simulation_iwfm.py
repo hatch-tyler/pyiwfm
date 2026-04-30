@@ -24,9 +24,9 @@ from pyiwfm.io.simulation import (
     IWFMSimulationReader,
     SimulationConfig,
     SimulationReader,
-    _parse_iwfm_datetime,
     read_iwfm_simulation,
 )
+from pyiwfm.io.simulation.reader import _parse_iwfm_datetime
 
 # =============================================================================
 # Test _parse_iwfm_datetime helper

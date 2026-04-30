@@ -26,7 +26,7 @@ from pyiwfm.io.rootzone_writer import (
     RootZoneWriterConfig,
     write_rootzone_component,
 )
-from pyiwfm.io.simulation_writer import (
+from pyiwfm.io.simulation.writer import (
     SimulationMainConfig,
     SimulationMainWriter,
     write_simulation_main,

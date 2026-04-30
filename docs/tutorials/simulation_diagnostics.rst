@@ -31,7 +31,7 @@ Step 1: Parse Simulation Messages
 
 .. code-block:: python
 
-    from pyiwfm.io.simulation_messages import SimulationMessagesReader
+    from pyiwfm.io.simulation.messages import SimulationMessagesReader
 
     reader = SimulationMessagesReader("SimulationMessages.out")
     result = reader.read()
@@ -49,7 +49,7 @@ Step 2: Filter by Severity
 
 .. code-block:: python
 
-    from pyiwfm.io.simulation_messages import MessageSeverity
+    from pyiwfm.io.simulation.messages import MessageSeverity
 
     # Get all fatal errors
     fatals = result.filter_by_severity(MessageSeverity.FATAL)

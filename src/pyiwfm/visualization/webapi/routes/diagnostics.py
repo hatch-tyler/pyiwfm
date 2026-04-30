@@ -13,7 +13,7 @@ from fastapi import APIRouter, Query
 from pyiwfm.visualization.webapi.config import model_state
 
 if TYPE_CHECKING:
-    from pyiwfm.io.simulation_messages import SimulationMessagesResult
+    from pyiwfm.io.simulation.messages import SimulationMessagesResult
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/diagnostics", tags=["diagnostics"])
 # Try to import convergence/mass-balance dataclasses (may not exist yet)
 _HAS_CONVERGENCE = False
 try:
-    from pyiwfm.io.simulation_messages import ConvergenceRecord  # noqa: F401
+    from pyiwfm.io.simulation.messages import ConvergenceRecord  # noqa: F401
 
     _HAS_CONVERGENCE = True
 except ImportError:
@@ -30,7 +30,7 @@ except ImportError:
 
 _HAS_MASS_BALANCE = False
 try:
-    from pyiwfm.io.simulation_messages import MassBalanceRecord  # noqa: F401
+    from pyiwfm.io.simulation.messages import MassBalanceRecord  # noqa: F401
 
     _HAS_MASS_BALANCE = True
 except ImportError:
@@ -76,7 +76,7 @@ def _get_diagnostics_result() -> SimulationMessagesResult | None:
         return None
 
     try:
-        from pyiwfm.io.simulation_messages import SimulationMessagesReader
+        from pyiwfm.io.simulation.messages import SimulationMessagesReader
 
         reader = SimulationMessagesReader(messages_file)
         result = reader.read()
@@ -170,7 +170,7 @@ def get_messages(
 
     # Filter by severity if requested
     if severity is not None:
-        from pyiwfm.io.simulation_messages import MessageSeverity
+        from pyiwfm.io.simulation.messages import MessageSeverity
 
         try:
             sev = MessageSeverity[severity.upper()]
@@ -393,7 +393,7 @@ def get_hotspot_context(
     timestep_index: int | None = Query(default=None, description="Center timestep for context"),
 ) -> dict[str, Any]:
     """Return spatial context and iteration history for a convergence hotspot."""
-    from pyiwfm.io.simulation_messages import _parse_variable_id
+    from pyiwfm.io.simulation.messages import _parse_variable_id
 
     entity_type, entity_id, layer = _parse_variable_id(variable)
     x, y = _resolve_hotspot_coords(entity_type, entity_id)
