@@ -20,7 +20,7 @@ import pytest
 
 from pyiwfm.core.model import IWFMModel
 from pyiwfm.core.stratigraphy import Stratigraphy
-from pyiwfm.io.mesh import read_stratigraphy, write_stratigraphy
+from pyiwfm.io.preprocessor.mesh import read_stratigraphy, write_stratigraphy
 
 
 def _find_stratigraphy_file(model_dir: Path) -> Path | None:

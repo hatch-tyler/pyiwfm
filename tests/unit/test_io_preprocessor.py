@@ -259,11 +259,15 @@ class TestSaveModelToPreProcessor:
 # =========================================================================
 
 from pyiwfm.core.exceptions import FileFormatError  # noqa: E402
-from pyiwfm.io.preprocessor import (  # noqa: E402
-    _is_comment_line,
+from pyiwfm.io.ascii.reader import (  # noqa: E402
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (  # noqa: E402
+    strip_inline_comment as _strip_comment,
+)
+from pyiwfm.io.preprocessor.reader import (  # noqa: E402
     _make_relative_path,
     _resolve_path,
-    _strip_comment,
     _write_subregions_file,
 )
 

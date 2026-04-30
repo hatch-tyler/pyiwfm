@@ -62,7 +62,7 @@ ASCII Mesh and Stratigraphy Files
 
 The three IWFM preprocessor subfiles -- node coordinates, element
 connectivity, and stratigraphy -- are read and written by a single
-canonical module, :mod:`pyiwfm.io.mesh`. ``PreProcessorWriter`` and the
+canonical module, :mod:`pyiwfm.io.preprocessor.mesh`. ``PreProcessorWriter`` and the
 top-level ``save_model_to_preprocessor`` orchestration helpers all
 delegate to these functions, so the on-disk format has one source of
 truth.
@@ -173,7 +173,7 @@ plus the main control file in one call. It delegates to the same
 
     from pathlib import Path
     from pyiwfm.io.config import PreProcessorFileConfig
-    from pyiwfm.io.preprocessor_writer import PreProcessorWriter
+    from pyiwfm.io.preprocessor.writer import PreProcessorWriter
 
     config = PreProcessorFileConfig(output_dir=Path("output/Preprocessor"))
     writer = PreProcessorWriter(model, config)

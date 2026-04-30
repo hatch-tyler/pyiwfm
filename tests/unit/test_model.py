@@ -661,8 +661,8 @@ class TestFromPreprocessor:
                 "pyiwfm.io.preprocessor.read_preprocessor_main",
                 return_value=mock_config,
             ),
-            patch("pyiwfm.io.mesh.read_nodes"),
-            patch("pyiwfm.io.mesh.read_elements"),
+            patch("pyiwfm.io.preprocessor.mesh.read_nodes"),
+            patch("pyiwfm.io.preprocessor.mesh.read_elements"),
         ):
             from pyiwfm.core.exceptions import FileFormatError
 
@@ -686,10 +686,10 @@ class TestFromPreprocessor:
                 return_value=mock_config,
             ),
             patch(
-                "pyiwfm.io.mesh.read_nodes",
+                "pyiwfm.io.preprocessor.mesh.read_nodes",
                 return_value=mock_nodes,
             ),
-            patch("pyiwfm.io.mesh.read_elements"),
+            patch("pyiwfm.io.preprocessor.mesh.read_elements"),
         ):
             from pyiwfm.core.exceptions import FileFormatError
 

@@ -1,10 +1,10 @@
 """
-Tests for :class:`pyiwfm.io.preprocessor_writer.PreProcessorWriter`.
+Tests for :class:`pyiwfm.io.preprocessor.writer.PreProcessorWriter`.
 
 These exercise *orchestration* — that the right files get written in the
 right order to the right paths. The on-disk IWFM ASCII format is tested
 in ``test_io_mesh.py`` against the canonical writers
-(:mod:`pyiwfm.io.mesh`) that ``PreProcessorWriter`` delegates to.
+(:mod:`pyiwfm.io.preprocessor.mesh`) that ``PreProcessorWriter`` delegates to.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ import numpy as np
 import pytest
 
 from pyiwfm.io.config import PreProcessorFileConfig
-from pyiwfm.io.preprocessor_writer import (
+from pyiwfm.io.preprocessor.writer import (
     PreProcessorWriter,
     write_preprocessor_files,
 )
@@ -222,7 +222,7 @@ class TestPreProcessorWriterWriteStratigraphy:
     def mock_model(self) -> MagicMock:
         """Create a mock model with a real Stratigraphy attached.
 
-        ``write_stratigraphy`` calls into :mod:`pyiwfm.io.mesh`, which uses
+        ``write_stratigraphy`` calls into :mod:`pyiwfm.io.preprocessor.mesh`, which uses
         ``Stratigraphy.get_all_aquitard_thicknesses()`` and reads
         ``n_nodes`` / ``n_layers``. Use the real dataclass so we exercise
         the real code path; the rest of the model can stay a ``MagicMock``.

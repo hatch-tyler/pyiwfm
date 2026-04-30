@@ -12,8 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from pyiwfm.io import mesh
 from pyiwfm.io.config import PreProcessorFileConfig
+from pyiwfm.io.preprocessor import mesh
 from pyiwfm.io.writer_base import TemplateWriter
 from pyiwfm.templates.engine import TemplateEngine
 
@@ -38,7 +38,7 @@ class PreProcessorWriter(TemplateWriter):
     Example
     -------
     >>> from pyiwfm.core.model import IWFMModel
-    >>> from pyiwfm.io.preprocessor_writer import PreProcessorWriter
+    >>> from pyiwfm.io.preprocessor.writer import PreProcessorWriter
     >>> from pyiwfm.io.config import PreProcessorFileConfig
     >>>
     >>> # Load a model
@@ -235,7 +235,7 @@ C*****************************************************************************
         return self._engine.render_string(template, **context)
 
     def write_nodes(self) -> Path:
-        """Write the node coordinates file via :func:`pyiwfm.io.mesh.write_nodes`."""
+        """Write the node coordinates file via :func:`pyiwfm.io.preprocessor.mesh.write_nodes`."""
         output_path = self.config.node_path
         self._ensure_dir(output_path)
 
@@ -248,7 +248,7 @@ C*****************************************************************************
         return output_path
 
     def write_elements(self) -> Path:
-        """Write the element file via :func:`pyiwfm.io.mesh.write_elements`."""
+        """Write the element file via :func:`pyiwfm.io.preprocessor.mesh.write_elements`."""
         output_path = self.config.element_path
         self._ensure_dir(output_path)
 
@@ -270,7 +270,7 @@ C*****************************************************************************
         return output_path
 
     def write_stratigraphy(self) -> Path:
-        """Write the stratigraphy file via :func:`pyiwfm.io.mesh.write_stratigraphy`."""
+        """Write the stratigraphy file via :func:`pyiwfm.io.preprocessor.mesh.write_stratigraphy`."""
         output_path = self.config.stratigraphy_path
         self._ensure_dir(output_path)
 
@@ -444,7 +444,7 @@ def write_preprocessor_files(
     Example
     -------
     >>> from pyiwfm.core.model import IWFMModel
-    >>> from pyiwfm.io.preprocessor_writer import write_preprocessor_files
+    >>> from pyiwfm.io.preprocessor.writer import write_preprocessor_files
     >>>
     >>> model = IWFMModel.from_preprocessor("model/Preprocessor.in")
     >>> results = write_preprocessor_files(model, "output/Preprocessor")

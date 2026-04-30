@@ -31,7 +31,7 @@ Added
   prints a one-line stderr banner when a CLI load succeeded with
   ``--allow-partial-load`` but some components still failed.
 
-- ``pyiwfm.io.mesh.write_nodes`` / ``write_elements`` / ``write_stratigraphy``
+- ``pyiwfm.io.preprocessor.mesh.write_nodes`` / ``write_elements`` / ``write_stratigraphy``
   gained keyword-only parameters for the canonical preprocessor format:
   ``factor=`` (FACTXY for nodes, FACTEL for stratigraphy) and, for
   ``write_elements``, ``subregion_names=`` / ``n_subregions=`` (the latter
@@ -41,6 +41,19 @@ Added
 
 Changed
 ~~~~~~~
+
+- **``pyiwfm.io.preprocessor``** is now a package (was a module),
+  collapsing ``preprocessor.py`` (main-file reader),
+  ``preprocessor_writer.py`` (Jinja2 writer), and ``mesh.py`` (the
+  canonical nodes/elements/stratigraphy reader-writer pair, renamed
+  from ``ascii.py`` earlier in v2.0) into one subpackage:
+  ``pyiwfm/io/preprocessor/{reader,writer,mesh}.py``. The package
+  ``__init__.py`` re-exports all three submodules' public API. The
+  preprocessor *binary* format remains a separate module under
+  ``pyiwfm.io.binary.preprocessor`` (PR β). The
+  ``pyiwfm.io.preprocessor_writer`` and ``pyiwfm.io.mesh`` paths are
+  **gone** in v2.0 — update imports and ``mock.patch`` strings. See
+  ``docs/MIGRATION_v1_to_v2.md`` § 10.
 
 - **``pyiwfm.io.simulation``** is now a package (was a module),
   collapsing ``simulation.py`` (reader), ``simulation_writer.py``
@@ -147,7 +160,7 @@ Changed
   to opt back into the historical permissive behaviour; a stderr banner
   is printed on startup so you're aware you're running degraded.
 
-- **Renamed** ``pyiwfm.io.ascii`` → ``pyiwfm.io.mesh``. The module
+- **Renamed** ``pyiwfm.io.ascii`` → ``pyiwfm.io.preprocessor.mesh``. The module
   contained only the six mesh + stratigraphy preprocessor-subfile
   functions (``read_nodes``, ``read_elements``, ``read_stratigraphy``,
   and the ``write_*`` counterparts), not generic ASCII utilities; the
@@ -155,10 +168,10 @@ Changed
   re-exports through ``pyiwfm.io`` keep the same names, so callers that
   use ``from pyiwfm.io import read_nodes`` are unaffected. Direct
   submodule imports must update ``from pyiwfm.io.ascii import ...`` →
-  ``from pyiwfm.io.mesh import ...``.
+  ``from pyiwfm.io.preprocessor.mesh import ...``.
 
 - **Unified the IWFM ASCII writer for nodes / elements / stratigraphy**
-  on a single canonical implementation in ``pyiwfm.io.mesh``. The three
+  on a single canonical implementation in ``pyiwfm.io.preprocessor.mesh``. The three
   parallel writer surfaces that previously coexisted (``mesh.write_*``,
   ``PreProcessorWriter.write_nodes/_elements/_stratigraphy``,
   ``preprocessor_writer.write_*_file``) are now collapsed:
@@ -175,10 +188,10 @@ Removed
   candidate helpers to populate it after a codebase audit. The
   empty package was creating discoverability confusion.
 
-- ``pyiwfm.io.preprocessor_writer.write_nodes_file`` /
+- ``pyiwfm.io.preprocessor.writer.write_nodes_file`` /
   ``write_elements_file`` / ``write_stratigraphy_file`` (and their
   ``pyiwfm.io`` re-exports) — replaced by the unified
-  ``pyiwfm.io.mesh.write_nodes`` / ``write_elements`` /
+  ``pyiwfm.io.preprocessor.mesh.write_nodes`` / ``write_elements`` /
   ``write_stratigraphy`` taking the canonical ``dict[int, Node]`` /
   ``dict[int, Element]`` / ``Stratigraphy`` domain types. Callers
   holding raw NumPy arrays should construct the domain objects (see

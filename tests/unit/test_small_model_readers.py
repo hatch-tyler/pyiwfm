@@ -67,7 +67,7 @@ class TestPreprocessorMain:
 class TestNodeReader:
     def test_read_nodes(self, small_model_path: Path) -> None:
         """Read nodes.dat and verify 441 nodes with correct coordinates."""
-        from pyiwfm.io.mesh import read_nodes
+        from pyiwfm.io.preprocessor.mesh import read_nodes
 
         nodes_file = small_model_path / "Preprocessor" / "Nodes.dat"
         nodes = read_nodes(nodes_file)
@@ -83,7 +83,7 @@ class TestNodeReader:
         assert nodes[441].y == pytest.approx(4_400_000.0 + 20 * 2_000.0)
 
     def test_node_ids_are_one_based(self, small_model_path: Path) -> None:
-        from pyiwfm.io.mesh import read_nodes
+        from pyiwfm.io.preprocessor.mesh import read_nodes
 
         nodes = read_nodes(small_model_path / "Preprocessor" / "Nodes.dat")
         assert 1 in nodes
@@ -99,7 +99,7 @@ class TestNodeReader:
 class TestElementReader:
     def test_read_elements(self, small_model_path: Path) -> None:
         """Read elements.dat and verify 400 elements with subregion assignments."""
-        from pyiwfm.io.mesh import read_elements
+        from pyiwfm.io.preprocessor.mesh import read_elements
 
         elem_file = small_model_path / "Preprocessor" / "Elements.dat"
         elements, n_subregions, subregion_names = read_elements(elem_file)
@@ -111,7 +111,7 @@ class TestElementReader:
 
     def test_element_subregions(self, small_model_path: Path) -> None:
         """South half (rows 0-9) = subregion 1, north half = subregion 2."""
-        from pyiwfm.io.mesh import read_elements
+        from pyiwfm.io.preprocessor.mesh import read_elements
 
         elements, _, _ = read_elements(small_model_path / "Preprocessor" / "Elements.dat")
         # Element 1 is in first row → subregion 1
@@ -121,7 +121,7 @@ class TestElementReader:
 
     def test_element_vertices(self, small_model_path: Path) -> None:
         """First element should be a quad with 4 vertices."""
-        from pyiwfm.io.mesh import read_elements
+        from pyiwfm.io.preprocessor.mesh import read_elements
 
         elements, _, _ = read_elements(small_model_path / "Preprocessor" / "Elements.dat")
         verts = elements[1].vertices
@@ -138,7 +138,7 @@ class TestElementReader:
 class TestStratigraphyReader:
     def test_read_stratigraphy(self, small_model_path: Path) -> None:
         """Read stratigraphy.dat and verify 2 layers, 441 nodes."""
-        from pyiwfm.io.mesh import read_stratigraphy
+        from pyiwfm.io.preprocessor.mesh import read_stratigraphy
 
         strat = read_stratigraphy(small_model_path / "Preprocessor" / "Stratigraphy.dat")
 
@@ -150,7 +150,7 @@ class TestStratigraphyReader:
 
     def test_ground_surface_elevations(self, small_model_path: Path) -> None:
         """Most nodes have gs_elev=500, lake-bed nodes are lower."""
-        from pyiwfm.io.mesh import read_stratigraphy
+        from pyiwfm.io.preprocessor.mesh import read_stratigraphy
 
         strat = read_stratigraphy(small_model_path / "Preprocessor" / "Stratigraphy.dat")
 

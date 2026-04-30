@@ -16,7 +16,7 @@ ASCII Module
 
 The ASCII module provides readers and writers for IWFM's text-based file formats.
 
-.. automodule:: pyiwfm.io.mesh
+.. automodule:: pyiwfm.io.preprocessor.mesh
    :members:
    :undoc-members:
    :show-inheritance:
@@ -112,7 +112,7 @@ PreProcessor Writer
 
 Writer for IWFM preprocessor input files (nodes, elements, stratigraphy).
 
-.. automodule:: pyiwfm.io.preprocessor_writer
+.. automodule:: pyiwfm.io.preprocessor.writer
    :members:
    :undoc-members:
    :show-inheritance:

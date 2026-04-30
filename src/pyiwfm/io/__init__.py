@@ -197,14 +197,6 @@ from pyiwfm.io.lakes.writer import (  # noqa: F401
     LakeWriterConfig,
     write_lake_component,
 )
-from pyiwfm.io.mesh import (  # noqa: F401
-    read_elements,
-    read_nodes,
-    read_stratigraphy,
-    write_elements,
-    write_nodes,
-    write_stratigraphy,
-)
 from pyiwfm.io.model_loader import (  # noqa: F401
     CommentAwareModelLoader,
     CompleteModelLoader,
@@ -237,7 +229,15 @@ from pyiwfm.io.preprocessor import (  # noqa: F401
     save_model_to_preprocessor,
     write_preprocessor_main,
 )
-from pyiwfm.io.preprocessor_writer import (  # noqa: F401
+from pyiwfm.io.preprocessor.mesh import (  # noqa: F401
+    read_elements,
+    read_nodes,
+    read_stratigraphy,
+    write_elements,
+    write_nodes,
+    write_stratigraphy,
+)
+from pyiwfm.io.preprocessor.writer import (  # noqa: F401
     PreProcessorWriter,
     write_preprocessor_files,
 )

@@ -13,17 +13,23 @@ import pytest
 from pyiwfm.core.exceptions import FileFormatError
 from pyiwfm.core.mesh import Subregion
 from pyiwfm.core.model import IWFMModel
+from pyiwfm.io.ascii.reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (
+    strip_inline_comment as _strip_comment,
+)
 from pyiwfm.io.preprocessor import (
     PreProcessorConfig,
-    _is_comment_line,
-    _make_relative_path,
-    _resolve_path,
-    _strip_comment,
     read_preprocessor_main,
     read_subregions_file,
     save_complete_model,
     save_model_to_preprocessor,
     write_preprocessor_main,
+)
+from pyiwfm.io.preprocessor.reader import (
+    _make_relative_path,
+    _resolve_path,
 )
 
 # =============================================================================
@@ -487,9 +493,9 @@ class TestWritePreprocessorMain:
 class TestSaveModelToPreprocessor:
     """Test save_model_to_preprocessor function."""
 
-    @patch("pyiwfm.io.preprocessor.write_nodes")
-    @patch("pyiwfm.io.preprocessor.write_elements")
-    @patch("pyiwfm.io.preprocessor.write_stratigraphy")
+    @patch("pyiwfm.io.preprocessor.reader.write_nodes")
+    @patch("pyiwfm.io.preprocessor.reader.write_elements")
+    @patch("pyiwfm.io.preprocessor.reader.write_stratigraphy")
     def test_save_model_with_mesh(
         self, mock_write_strat, mock_write_elem, mock_write_nodes, tmp_path
     ):
@@ -513,9 +519,9 @@ class TestSaveModelToPreprocessor:
         mock_write_nodes.assert_called_once()
         mock_write_elem.assert_called_once()
 
-    @patch("pyiwfm.io.preprocessor.write_nodes")
-    @patch("pyiwfm.io.preprocessor.write_elements")
-    @patch("pyiwfm.io.preprocessor.write_stratigraphy")
+    @patch("pyiwfm.io.preprocessor.reader.write_nodes")
+    @patch("pyiwfm.io.preprocessor.reader.write_elements")
+    @patch("pyiwfm.io.preprocessor.reader.write_stratigraphy")
     def test_save_model_with_stratigraphy(
         self, mock_write_strat, mock_write_elem, mock_write_nodes, tmp_path
     ):
@@ -535,8 +541,8 @@ class TestSaveModelToPreprocessor:
         assert config.stratigraphy_file == tmp_path / "stratigraphy.dat"
         mock_write_strat.assert_called_once()
 
-    @patch("pyiwfm.io.preprocessor.write_nodes")
-    @patch("pyiwfm.io.preprocessor.write_elements")
+    @patch("pyiwfm.io.preprocessor.reader.write_nodes")
+    @patch("pyiwfm.io.preprocessor.reader.write_elements")
     def test_save_creates_output_directory(self, mock_write_elem, mock_write_nodes, tmp_path):
         """Test that output directory is created if it doesn't exist."""
         output_dir = tmp_path / "new_dir" / "nested"
@@ -555,8 +561,8 @@ class TestSaveModelToPreprocessor:
 
         assert output_dir.exists()
 
-    @patch("pyiwfm.io.preprocessor.write_nodes")
-    @patch("pyiwfm.io.preprocessor.write_elements")
+    @patch("pyiwfm.io.preprocessor.reader.write_nodes")
+    @patch("pyiwfm.io.preprocessor.reader.write_elements")
     def test_save_uses_default_name(self, mock_write_elem, mock_write_nodes, tmp_path):
         """Test that default name is used if model has no name."""
         model = MagicMock()
@@ -675,7 +681,7 @@ class TestSaveCompleteModel:
         mock_writer_cls.assert_called_once()
 
     @patch("pyiwfm.io.simulation.SimulationWriter")
-    @patch("pyiwfm.io.preprocessor.save_model_to_preprocessor")
+    @patch("pyiwfm.io.preprocessor.reader.save_model_to_preprocessor")
     def test_save_creates_output_directory(self, mock_save_pp, mock_sim_writer, tmp_path):
         """Test that output directory is created."""
         output_dir = tmp_path / "new_output" / "nested"

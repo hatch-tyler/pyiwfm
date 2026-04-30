@@ -8,7 +8,7 @@ readers (groundwater, streams, lakes, …) live in their own modules.
 
 The writers are the canonical serializers for these three files. Other
 modules that need to write nodes/elements/stratigraphy (e.g.
-:class:`pyiwfm.io.preprocessor_writer.PreProcessorWriter`) delegate
+:class:`pyiwfm.io.preprocessor.writer.PreProcessorWriter`) delegate
 here so the on-disk format has a single source of truth.
 """
 

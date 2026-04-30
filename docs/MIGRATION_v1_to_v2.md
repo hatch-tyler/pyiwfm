@@ -560,7 +560,7 @@ of ``stream_diversion_writer._write_element_group`` are unaffected
 Two changes that landed together after the original seven v2.0 PRs but
 before the v2.0.0a1 tag.
 
-### `pyiwfm.io.ascii` → `pyiwfm.io.mesh`
+### `pyiwfm.io.ascii` → `pyiwfm.io.preprocessor.mesh`
 
 **Status:** _hard rename_.
 
@@ -584,7 +584,7 @@ from pyiwfm.io.ascii import read_nodes, write_nodes
 **v2.x:**
 
 ```python
-from pyiwfm.io.mesh import read_nodes, write_nodes
+from pyiwfm.io.preprocessor.mesh import read_nodes, write_nodes
 
 # Or — preferred — the unchanged top-level re-export:
 from pyiwfm.io import read_nodes, write_nodes
@@ -597,14 +597,14 @@ from pyiwfm.io import read_nodes, write_nodes
 patch("pyiwfm.io.ascii.read_nodes", ...)
 
 # v2.x
-patch("pyiwfm.io.mesh.read_nodes", ...)
+patch("pyiwfm.io.preprocessor.mesh.read_nodes", ...)
 ```
 
 ### `write_nodes_file` / `write_elements_file` / `write_stratigraphy_file` removed
 
 **Status:** _hard removal_ — the array-shape standalone writers in
-`pyiwfm.io.preprocessor_writer` are deleted. Use the canonical
-`pyiwfm.io.mesh.write_*` functions, which take the domain types
+`pyiwfm.io.preprocessor.writer` are deleted. Use the canonical
+`pyiwfm.io.preprocessor.mesh.write_*` functions, which take the domain types
 directly.
 
 Three parallel writer surfaces previously coexisted: `mesh.write_*`
@@ -612,7 +612,7 @@ took `dict[int, Node]`/`dict[int, Element]`/`Stratigraphy`,
 `PreProcessorWriter.write_*` took an `IWFMModel`, and the standalone
 `write_*_file` functions took raw NumPy arrays — each with its own
 slightly-different output format. They are now collapsed onto a single
-canonical implementation in `pyiwfm.io.mesh`. The class methods on
+canonical implementation in `pyiwfm.io.preprocessor.mesh`. The class methods on
 `PreProcessorWriter` are thin orchestration delegates; the array-shape
 standalones are gone (zero production callers existed).
 
@@ -620,7 +620,7 @@ standalones are gone (zero production callers existed).
 
 ```python
 import numpy as np
-from pyiwfm.io.preprocessor_writer import write_nodes_file
+from pyiwfm.io.preprocessor.writer import write_nodes_file
 
 write_nodes_file(
     "output/nodes.dat",
@@ -634,7 +634,7 @@ write_nodes_file(
 **v2.x:**
 
 ```python
-from pyiwfm.io.mesh import write_nodes
+from pyiwfm.io.preprocessor.mesh import write_nodes
 from pyiwfm.core.mesh import Node
 
 nodes = {
@@ -808,6 +808,65 @@ The five v1.x paths (`pyiwfm.io.iwfm_reader`, `pyiwfm.io.iwfm_writer`,
 strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
+
+### `pyiwfm.io.preprocessor` (was a module, now a package) and `pyiwfm.io.preprocessor_writer`/`pyiwfm.io.mesh` (gone)
+
+`pyiwfm/io/preprocessor.py` (the main-file reader),
+`pyiwfm/io/preprocessor_writer.py` (the Jinja2 writer), and
+`pyiwfm/io/mesh.py` (the canonical nodes / elements / stratigraphy
+preprocessor-subfile reader/writer pair, renamed from `ascii.py` in
+v2.0 PR α) are now collapsed into one subpackage:
+
+- `pyiwfm/io/preprocessor/reader.py` — was `preprocessor.py`
+  (`read_preprocessor_main`, `read_subregions_file`,
+  `write_preprocessor_main`, `save_model_to_preprocessor`,
+  `save_complete_model`, `PreProcessorConfig`).
+
+- `pyiwfm/io/preprocessor/writer.py` — was `preprocessor_writer.py`
+  (`PreProcessorWriter`, `write_preprocessor_files`).
+
+- `pyiwfm/io/preprocessor/mesh.py` — was `pyiwfm/io/mesh.py`
+  (`read_nodes`, `read_elements`, `read_stratigraphy`, `write_nodes`,
+  `write_elements`, `write_stratigraphy`).
+
+The preprocessor *binary* format lives in
+`pyiwfm/io/binary/preprocessor.py` (split off in PR β); the
+preprocessor `__init__.py` does **not** re-export it. Use
+`from pyiwfm.io.binary import PreprocessorBinaryReader` for that.
+
+The package `__init__.py` re-exports all three submodules' public
+API.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.preprocessor import read_preprocessor_main
+from pyiwfm.io.preprocessor_writer import PreProcessorWriter
+from pyiwfm.io.mesh import read_nodes, write_stratigraphy
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.preprocessor import (
+    read_preprocessor_main,
+    PreProcessorWriter,
+    read_nodes,
+    write_stratigraphy,
+)
+```
+
+The `pyiwfm.io.preprocessor_writer` and `pyiwfm.io.mesh` paths are
+**gone**; update to `from pyiwfm.io.preprocessor import …`.
+
+`mock.patch("pyiwfm.io.preprocessor_writer.X")` and
+`mock.patch("pyiwfm.io.mesh.X")` strings need updating to
+`mock.patch("pyiwfm.io.preprocessor.X")` (re-exported on the package).
+Note that for the reader's internal call sites (e.g.
+`save_model_to_preprocessor` calling `write_elements`), the consumer
+module is `pyiwfm.io.preprocessor.reader`, so patches that target
+those internal lookups should use
+`mock.patch("pyiwfm.io.preprocessor.reader.write_elements")`.
 
 ### `pyiwfm.io.simulation` (was a module, now a package) and `pyiwfm.io.simulation_writer`/`simulation_messages` (gone)
 
@@ -1103,10 +1162,10 @@ version from `<2` to `>=2,<3`:
       - `convert_headall_to_hdf(...)` → `TimeSeriesCache.from_iwfm_headall_text(...)`
       - `convert_hydrograph_to_hdf(...)` → `TimeSeriesCache.from_iwfm_hydrograph_text(...)`
       - `pyiwfm.visualization.webapi.{slicing,properties}` → `pyiwfm.io.{slicing,properties}`
-      - `pyiwfm.io.ascii` → `pyiwfm.io.mesh` (see [§ 8](#8-mesh--stratigraphy-writer-unification))
-      - `pyiwfm.io.preprocessor_writer.write_{nodes,elements,stratigraphy}_file`
+      - `pyiwfm.io.ascii` → `pyiwfm.io.preprocessor.mesh` (see [§ 8](#8-mesh--stratigraphy-writer-unification))
+      - `pyiwfm.io.preprocessor.writer.write_{nodes,elements,stratigraphy}_file`
         — removed; build domain objects and call
-        `pyiwfm.io.mesh.write_{nodes,elements,stratigraphy}` instead
+        `pyiwfm.io.preprocessor.mesh.write_{nodes,elements,stratigraphy}` instead
 - [ ] **CLI behaviour:** `pyiwfm viewer` / `pyiwfm export` now exit
       with code 1 when any component fails to load (see [§ 9](#9-strict-by-default-loading-at-user-facing-surfaces)).
       If your CI / scripts depended on the silent partial-load

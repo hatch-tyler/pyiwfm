@@ -417,7 +417,7 @@ class CompleteModelWriter:
             Mapping of file type to output path.
         """
         from pyiwfm.io.config import PreProcessorFileConfig
-        from pyiwfm.io.preprocessor_writer import PreProcessorWriter
+        from pyiwfm.io.preprocessor.writer import PreProcessorWriter
 
         pp_main_path = self.config.get_path("preprocessor_main")
         pp_dir = pp_main_path.parent

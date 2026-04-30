@@ -26,7 +26,7 @@ from pyiwfm.io.ascii.reader import (
 from pyiwfm.io.ascii.reader import (
     strip_inline_comment as _strip_comment,
 )
-from pyiwfm.io.mesh import (
+from pyiwfm.io.preprocessor.mesh import (
     write_elements,
     write_nodes,
     write_stratigraphy,

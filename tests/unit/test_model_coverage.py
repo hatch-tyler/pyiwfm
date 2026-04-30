@@ -422,8 +422,8 @@ class TestFromPreprocessor:
                 "pyiwfm.io.preprocessor.read_preprocessor_main",
                 return_value=pp_config,
             ),
-            patch("pyiwfm.io.mesh.read_nodes", return_value=nodes),
-            patch("pyiwfm.io.mesh.read_elements", return_value=elements),
+            patch("pyiwfm.io.preprocessor.mesh.read_nodes", return_value=nodes),
+            patch("pyiwfm.io.preprocessor.mesh.read_elements", return_value=elements),
             patch("pyiwfm.core.mesh.AppGrid", return_value=mesh_mock),
         )
 
@@ -455,7 +455,7 @@ class TestFromPreprocessor:
                 return_value=mock_pp_config,
             ),
             patch(
-                "pyiwfm.io.mesh.read_nodes",
+                "pyiwfm.io.preprocessor.mesh.read_nodes",
                 return_value={1: MagicMock()},
             ),
         ):
@@ -608,7 +608,7 @@ class TestFromPreprocessor:
             patches[2],
             patches[3],
             patch(
-                "pyiwfm.io.mesh.read_stratigraphy",
+                "pyiwfm.io.preprocessor.mesh.read_stratigraphy",
                 return_value=mock_strat,
             ),
         ):

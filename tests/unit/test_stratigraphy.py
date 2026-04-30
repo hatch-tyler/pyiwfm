@@ -391,7 +391,7 @@ class TestFromThicknesses:
 
     def test_from_thicknesses_matches_reader(self, tmp_path) -> None:  # type: ignore[no-untyped-def]
         """from_thicknesses + write_stratigraphy + read_stratigraphy round-trip."""
-        from pyiwfm.io.mesh import read_stratigraphy, write_stratigraphy
+        from pyiwfm.io.preprocessor.mesh import read_stratigraphy, write_stratigraphy
 
         gs_elev = np.array([500.0, 600.0, 700.0])
         aquitard = np.array([[5.0, 10.0], [0.0, 20.0], [2.0, 0.0]])

@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 
 from pyiwfm.io.config import PreProcessorFileConfig
-from pyiwfm.io.preprocessor_writer import (
+from pyiwfm.io.preprocessor.writer import (
     PreProcessorWriter,
     write_preprocessor_files,
 )
@@ -380,16 +380,20 @@ class TestConvenienceFunctions:
 
 
 from pyiwfm.core.exceptions import FileFormatError  # noqa: E402
+from pyiwfm.io.ascii.reader import (  # noqa: E402
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (  # noqa: E402
+    strip_inline_comment as _strip_comment,
+)
 from pyiwfm.io.preprocessor import (  # noqa: E402
     PreProcessorConfig,
-    _is_comment_line,
-    _resolve_path,
-    _strip_comment,
     read_preprocessor_main,
     read_subregions_file,
     save_model_to_preprocessor,
     write_preprocessor_main,
 )
+from pyiwfm.io.preprocessor.reader import _resolve_path  # noqa: E402
 
 
 class TestHelperFunctions:
