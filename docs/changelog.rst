@@ -42,6 +42,15 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.groundwater.reader``** split: ``GWMainFileReader`` /
+  ``GWMainFileConfig`` moved to a new ``groundwater/main_reader.py``
+  (~1075 LOC). The package ``__init__.py`` re-exports both symbols so
+  callers that import from ``pyiwfm.io.groundwater`` are unaffected.
+  Two intra-package importers (``main_writer.py``, ``writer.py``)
+  updated to point at the new submodule for ``GWMainFileConfig``.
+  ``groundwater/reader.py`` drops from 1876 to ~837 LOC. Internal-only
+  follow-up to the io restructure (no migration-guide entry needed).
+
 - **``pyiwfm.io.streams.reader``** split: ``StreamMainFileReader`` /
   ``StreamMainFileConfig`` moved to a new ``streams/main_reader.py``
   (~590 LOC), and ``StreamSpecReader`` / ``StreamReachSpec`` moved to

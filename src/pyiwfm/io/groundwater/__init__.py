@@ -10,8 +10,13 @@ per-feature reader/writer pairs (``gw_boundary``,
 
 - :mod:`pyiwfm.io.groundwater.reader` — was ``groundwater.py``
   (`GroundwaterReader`, `GroundwaterWriter` (legacy free-form),
-  `GWFileConfig`, `GWMainFileConfig`, `GWMainFileReader`, plus
-  `read_*` / `write_groundwater` functions and dataclasses).
+  `GWFileConfig`, the `read_*` / `write_groundwater` per-file
+  functions, and the dataclasses `KhAnomalyEntry`,
+  `ParametricGridData`, `FaceFlowSpec`).
+- :mod:`pyiwfm.io.groundwater.main_reader` — `GWMainFileConfig` +
+  `GWMainFileReader` (the hierarchical main-file dispatcher). Split
+  out of ``reader.py`` once the package layout was in place; now
+  ~1075 LOC instead of 1875.
 - :mod:`pyiwfm.io.groundwater.writer` — was ``gw_writer.py``
   (`GWComponentWriter`, `GWWriterConfig`, `write_gw_component`).
 - :mod:`pyiwfm.io.groundwater.main_writer` — was ``gw_main_writer.py``
@@ -53,6 +58,11 @@ from pyiwfm.io.groundwater.boundary_writer import (
     write_specified_flow_bc,
     write_specified_head_bc,
 )
+from pyiwfm.io.groundwater.main_reader import (
+    GWMainFileConfig,
+    GWMainFileReader,
+    read_gw_main_file,
+)
 from pyiwfm.io.groundwater.main_writer import write_gw_main_file
 from pyiwfm.io.groundwater.pumping import (
     ElementGroup,
@@ -73,11 +83,8 @@ from pyiwfm.io.groundwater.reader import (
     GroundwaterReader,
     GroundwaterWriter,
     GWFileConfig,
-    GWMainFileConfig,
-    GWMainFileReader,
     KhAnomalyEntry,
     ParametricGridData,
-    read_gw_main_file,
     read_initial_heads,
     read_subsidence,
     read_wells,
