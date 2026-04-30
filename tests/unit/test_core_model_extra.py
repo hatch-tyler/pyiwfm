@@ -1033,7 +1033,7 @@ class TestFromSimWithPPStreamDetails:
 
         with (
             patch("pyiwfm.io.streams.StreamMainFileReader") as mock_sc_cls,
-            patch("pyiwfm.io.stream_bypass.BypassSpecReader") as mock_byp_cls,
+            patch("pyiwfm.io.streams.bypass.BypassSpecReader") as mock_byp_cls,
         ):
             mock_sc_cls.return_value.read.return_value = stream_config
             mock_byp_cls.return_value.read.return_value = byp_config
@@ -1084,7 +1084,7 @@ class TestFromSimWithPPStreamDetails:
 
         with (
             patch("pyiwfm.io.streams.StreamMainFileReader") as mock_sc_cls,
-            patch("pyiwfm.io.stream_diversion.DiversionSpecReader") as mock_div_cls,
+            patch("pyiwfm.io.streams.diversion.DiversionSpecReader") as mock_div_cls,
         ):
             mock_sc_cls.return_value.read.return_value = stream_config
             mock_div_cls.return_value.read.return_value = div_config
@@ -1111,7 +1111,7 @@ class TestFromSimWithPPStreamDetails:
 
         with (
             patch("pyiwfm.io.streams.StreamMainFileReader") as mock_sc_cls,
-            patch("pyiwfm.io.stream_inflow.InflowReader") as mock_inf_cls,
+            patch("pyiwfm.io.streams.inflow.InflowReader") as mock_inf_cls,
         ):
             mock_sc_cls.return_value.read.return_value = stream_config
             mock_inf_cls.return_value.read.return_value = inflow_config

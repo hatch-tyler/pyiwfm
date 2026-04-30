@@ -19,7 +19,7 @@ from pathlib import Path
 
 from pyiwfm.io.ascii.writer import open_iwfm_file as _open_iwfm_file
 from pyiwfm.io.ascii.writer import write_value as _write_value
-from pyiwfm.io.stream_inflow import InflowConfig
+from pyiwfm.io.streams.inflow import InflowConfig
 
 
 def write_stream_inflow(config: InflowConfig, filepath: Path | str) -> Path:

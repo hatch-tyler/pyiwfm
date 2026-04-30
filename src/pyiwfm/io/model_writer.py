@@ -511,7 +511,7 @@ class CompleteModelWriter:
             return
 
         try:
-            from pyiwfm.io.stream_writer import (
+            from pyiwfm.io.streams.writer import (
                 StreamComponentWriter,
                 StreamWriterConfig,
             )

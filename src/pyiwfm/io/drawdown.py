@@ -709,7 +709,7 @@ def write_drawdown_timeseries_excel(
     - **One sheet per location** — long-format ``time, drawdown``.
 
     Mirrors the openpyxl-based pattern in
-    :mod:`pyiwfm.io.stream_depletion`.
+    :mod:`pyiwfm.io.streams.depletion`.
     """
     from openpyxl import Workbook
     from openpyxl.styles import Font

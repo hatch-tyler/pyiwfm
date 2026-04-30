@@ -1185,7 +1185,7 @@ class Texture2Par:
                             node.conductivity *= reach_multipliers[reach_id]
                         break
 
-        from pyiwfm.io.stream_writer import StreamComponentWriter
+        from pyiwfm.io.streams.writer import StreamComponentWriter
 
         writer = StreamComponentWriter(config)  # type: ignore[call-arg]
         writer.write_main(str(output_path))  # type: ignore[call-arg]

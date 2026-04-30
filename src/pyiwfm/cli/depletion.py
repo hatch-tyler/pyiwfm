@@ -14,7 +14,7 @@ model (the simulation main file is auto-discovered via
 ``cli._model_finder.find_simulation_file``). Both models must have
 declared the required budget output (stream reach budget for the
 default reach-level analysis, stream node budget for ``--node-level``);
-:class:`~pyiwfm.io.stream_depletion.BudgetOutputMissingError` is raised
+:class:`~pyiwfm.io.streams.depletion.BudgetOutputMissingError` is raised
 with an actionable message if not.
 """
 
@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.io.stream_depletion import (
+    from pyiwfm.io.streams.depletion import (
         StreamDepletionReport,
         StreamNodeDepletionReport,
     )
@@ -206,7 +206,7 @@ def run_depletion(args: argparse.Namespace) -> int:
     """Execute the depletion analysis end-to-end."""
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-    from pyiwfm.io.stream_depletion import (
+    from pyiwfm.io.streams.depletion import (
         DEFAULT_SA_COLUMN,
         BudgetOutputMissingError,
         compute_stream_depletion_from_models,

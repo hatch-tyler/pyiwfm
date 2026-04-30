@@ -41,7 +41,7 @@ class TestStreamDepletion:
         — the default ``DEFAULT_SA_COLUMN`` matches the IWFM v5+
         ``"Stream-Aquifer Interaction Within Model"`` column.
         """
-        from pyiwfm.io.stream_depletion import _extract_stream_flow
+        from pyiwfm.io.streams.depletion import _extract_stream_flow
 
         headers = ["Upstream Inflow (+)", "Gain from GW (+)", "Outflow (-)"]
         base_vals = np.array([[100, 50, -120], [100, 55, -125]], dtype=np.float64)
@@ -55,7 +55,7 @@ class TestStreamDepletion:
 
     def test_result_to_dict(self) -> None:
         """StreamDepletionResult.to_dict should be serializable."""
-        from pyiwfm.io.stream_depletion import StreamDepletionResult
+        from pyiwfm.io.streams.depletion import StreamDepletionResult
 
         result = StreamDepletionResult(
             reach_id=1,
@@ -77,7 +77,7 @@ class TestStreamDepletion:
 
     def test_report_to_dict(self) -> None:
         """StreamDepletionReport.to_dict should aggregate correctly."""
-        from pyiwfm.io.stream_depletion import StreamDepletionReport, StreamDepletionResult
+        from pyiwfm.io.streams.depletion import StreamDepletionReport, StreamDepletionResult
 
         r1 = StreamDepletionResult(
             reach_id=1,
@@ -113,7 +113,7 @@ class TestStreamDepletion:
         """
         import pytest
 
-        from pyiwfm.io.stream_depletion import _extract_stream_flow
+        from pyiwfm.io.streams.depletion import _extract_stream_flow
 
         headers = ["Upstream Inflow (+)", "Downstream Outflow (-)"]
         values = np.array([[100, -60], [120, -80]], dtype=np.float64)
@@ -123,7 +123,7 @@ class TestStreamDepletion:
 
     def test_extract_stream_flow_exact_column_match(self) -> None:
         """Exact column header match returns the named column verbatim."""
-        from pyiwfm.io.stream_depletion import _extract_stream_flow
+        from pyiwfm.io.streams.depletion import _extract_stream_flow
 
         headers = ["Upstream Inflow (+)", "Gain from GW (+)", "Outflow (-)"]
         values = np.array([[100, 50, -120], [100, 30, -100]], dtype=np.float64)
@@ -137,7 +137,7 @@ class TestStreamDepletion:
 
         import pytest
 
-        from pyiwfm.io.stream_depletion import _find_stream_budget
+        from pyiwfm.io.streams.depletion import _find_stream_budget
 
         with tempfile.TemporaryDirectory() as tmpdir:
             from pathlib import Path
@@ -147,7 +147,7 @@ class TestStreamDepletion:
 
     def test_cumulative_depletion_is_cumsum(self) -> None:
         """Cumulative depletion should be the running sum of per-timestep depletion."""
-        from pyiwfm.io.stream_depletion import StreamDepletionResult
+        from pyiwfm.io.streams.depletion import StreamDepletionResult
 
         depletion = np.array([10.0, 20.0, 5.0])
         cumulative = np.cumsum(depletion)

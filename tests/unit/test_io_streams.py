@@ -24,12 +24,16 @@ from pyiwfm.components.stream import (
     StrmReach,
 )
 from pyiwfm.core.exceptions import FileFormatError
+from pyiwfm.io.ascii.reader import (
+    is_comment_line as _is_comment_line,
+)
+from pyiwfm.io.ascii.reader import (
+    strip_inline_comment as _strip_comment,
+)
 from pyiwfm.io.streams import (
     StreamFileConfig,
     StreamReader,
     StreamWriter,
-    _is_comment_line,
-    _strip_comment,
     read_diversions,
     read_stream_nodes,
     write_stream,

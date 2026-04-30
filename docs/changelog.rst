@@ -42,6 +42,21 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.streams``** is now a package (was a module),
+  collapsing the nine flat stream modules (``streams.py``,
+  ``stream_writer.py``, ``stream_bypass.py`` /
+  ``stream_bypass_writer.py``, ``stream_diversion.py`` /
+  ``stream_diversion_writer.py``, ``stream_inflow.py`` /
+  ``stream_inflow_writer.py``, ``stream_depletion.py``) into one
+  subpackage. The plural/singular asymmetry between ``streams.py`` and
+  the ``stream_*.py`` siblings dissolves: ``pyiwfm/io/streams/`` carries
+  the plural, submodules inside drop the redundant ``stream_`` prefix
+  (e.g. ``stream_bypass.py`` → ``streams/bypass.py``). The package
+  ``__init__.py`` re-exports every public symbol; reader imports keep
+  working unchanged. The eight v1.x sibling paths are **gone** in
+  v2.0 — update imports and ``mock.patch`` strings. See
+  ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.timeseries``** is now a package (was a module),
   collapsing five flat modules (``timeseries.py``,
   ``timeseries_ascii.py``, ``timeseries_writer.py``,
@@ -335,7 +350,7 @@ Added
 - New user guide page ``docs/user_guide/mutating_models.rst`` walks
   through the calibration workflow.
 
-**Stream depletion analysis suite** (``pyiwfm.io.stream_depletion``,
+**Stream depletion analysis suite** (``pyiwfm.io.streams.depletion``,
 ``pyiwfm.visualization.{plot,map}_depletion``, ``pyiwfm depletion`` CLI)
 
 - ``BudgetOutputMissingError`` raised when a model required for
@@ -455,7 +470,7 @@ Added
 Changed
 ~~~~~~~
 
-- ``pyiwfm.io.stream_depletion._extract_stream_flow`` now requires an
+- ``pyiwfm.io.streams.depletion._extract_stream_flow`` now requires an
   exact column-name match (default ``"Stream-Aquifer Interaction
   Within Model"``). The previous substring matching against
   ``"gain from gw"`` / ``"stream-aquifer"`` and the ``(+)/(-)`` column
@@ -657,7 +672,7 @@ Added
 - Web viewer: *Color By: Drawdown* mode in Results Map with diverging color
   scale and reference timestep slider
 
-**Stream Depletion** (``pyiwfm.io.stream_depletion``)
+**Stream Depletion** (``pyiwfm.io.streams.depletion``)
 
 - ``compute_stream_depletion()``: Compare baseline and pumping-scenario model
   runs to quantify per-reach stream flow depletion

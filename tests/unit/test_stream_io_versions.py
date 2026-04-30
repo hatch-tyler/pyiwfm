@@ -621,7 +621,7 @@ class TestStreamWriterV40:
 
     def test_write_v40_bed_params_4_cols(self, tmp_path: Path) -> None:
         from pyiwfm.core.model import IWFMModel
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
+        from pyiwfm.io.streams.writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         for i in range(1, 4):
@@ -647,7 +647,7 @@ class TestStreamWriterV40:
 
     def test_write_v40_interaction_type(self, tmp_path: Path) -> None:
         from pyiwfm.core.model import IWFMModel
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
+        from pyiwfm.io.streams.writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))
@@ -661,7 +661,7 @@ class TestStreamWriterV40:
 
     def test_write_v40_evaporation_section(self, tmp_path: Path) -> None:
         from pyiwfm.core.model import IWFMModel
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
+        from pyiwfm.io.streams.writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))
@@ -683,7 +683,7 @@ class TestStreamWriterV50:
 
     def test_write_v50_cross_section(self, tmp_path: Path) -> None:
         from pyiwfm.core.model import IWFMModel
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
+        from pyiwfm.io.streams.writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         for i in range(1, 4):
@@ -710,7 +710,7 @@ class TestStreamWriterV50:
 
     def test_write_v50_initial_conditions(self, tmp_path: Path) -> None:
         from pyiwfm.core.model import IWFMModel
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
+        from pyiwfm.io.streams.writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         for i in range(1, 4):
@@ -729,7 +729,7 @@ class TestStreamWriterV50:
 
     def test_write_v50_no_wetted_perimeter(self, tmp_path: Path) -> None:
         from pyiwfm.core.model import IWFMModel
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
+        from pyiwfm.io.streams.writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))
@@ -743,7 +743,7 @@ class TestStreamWriterV50:
 
     def test_write_v50_final_flow_file(self, tmp_path: Path) -> None:
         from pyiwfm.core.model import IWFMModel
-        from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
+        from pyiwfm.io.streams.writer import StreamComponentWriter, StreamWriterConfig
 
         stream = AppStream()
         stream.add_node(StrmNode(id=1, x=0.0, y=0.0))

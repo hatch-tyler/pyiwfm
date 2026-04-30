@@ -17,7 +17,7 @@ from pathlib import Path
 
 from pyiwfm.io.ascii.writer import open_iwfm_file as _open_iwfm_file
 from pyiwfm.io.ascii.writer import write_value as _write_value
-from pyiwfm.io.stream_bypass import BypassSpecConfig
+from pyiwfm.io.streams.bypass import BypassSpecConfig
 
 
 def write_bypass_spec(config: BypassSpecConfig, filepath: Path | str) -> Path:

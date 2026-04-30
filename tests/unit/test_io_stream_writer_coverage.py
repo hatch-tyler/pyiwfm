@@ -1,4 +1,4 @@
-"""Coverage tests for pyiwfm.io.stream_writer module.
+"""Coverage tests for pyiwfm.io.streams.writer module.
 
 Targets uncovered branches and edge cases including:
 - StreamWriterConfig default and custom properties
@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pyiwfm.io.stream_writer import (
+from pyiwfm.io.streams.writer import (
     StreamComponentWriter,
     StreamWriterConfig,
     write_stream_component,
@@ -443,7 +443,7 @@ class TestStreamWriterMisc:
         self, tmp_path: Path, bare_model: MagicMock, mock_engine: MagicMock
     ) -> None:
         """write_stream_component() convenience function works."""
-        with patch("pyiwfm.io.stream_writer.TemplateEngine", return_value=mock_engine):
+        with patch("pyiwfm.io.streams.writer.TemplateEngine", return_value=mock_engine):
             results = write_stream_component(bare_model, tmp_path)
         assert "main" in results
 
@@ -452,7 +452,7 @@ class TestStreamWriterMisc:
     ) -> None:
         """write_stream_component() uses provided config."""
         config = StreamWriterConfig(output_dir=tmp_path, version="5.0")
-        with patch("pyiwfm.io.stream_writer.TemplateEngine", return_value=mock_engine):
+        with patch("pyiwfm.io.streams.writer.TemplateEngine", return_value=mock_engine):
             results = write_stream_component(bare_model, tmp_path, config=config)
         assert "main" in results
         # Config output_dir is updated to match the passed output_dir

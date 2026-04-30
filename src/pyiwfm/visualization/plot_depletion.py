@@ -1,6 +1,6 @@
 """Stream depletion plots (Phase 2.2.a-ii).
 
-Time-series plots over a :class:`~pyiwfm.io.stream_depletion.StreamDepletionReport`.
+Time-series plots over a :class:`~pyiwfm.io.streams.depletion.StreamDepletionReport`.
 All functions accept an optional ``ax`` and return the populated
 :class:`matplotlib.axes.Axes` so callers can compose figures or restyle.
 
@@ -23,7 +23,7 @@ from matplotlib.axes import Axes  # noqa: E402
 if TYPE_CHECKING:
     import pandas as pd
 
-    from pyiwfm.io.stream_depletion import StreamDepletionReport
+    from pyiwfm.io.streams.depletion import StreamDepletionReport
 
 
 def _resolve_reaches(

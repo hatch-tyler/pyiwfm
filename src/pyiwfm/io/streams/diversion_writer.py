@@ -23,7 +23,7 @@ from typing import TextIO
 from pyiwfm.io.ascii.writer import open_iwfm_file as _open_iwfm_file
 from pyiwfm.io.ascii.writer import write_element_group as _shared_write_element_group
 from pyiwfm.io.ascii.writer import write_value as _write_value
-from pyiwfm.io.stream_diversion import DiversionSpecConfig
+from pyiwfm.io.streams.diversion import DiversionSpecConfig
 
 
 def write_diversion_spec(config: DiversionSpecConfig, filepath: Path | str) -> Path:
@@ -81,7 +81,7 @@ def _write_diversion_line(
         div: DiversionSpec instance
         has_spills: Whether to write 16-column format with spill fields
     """
-    from pyiwfm.io.stream_diversion import DiversionSpec
+    from pyiwfm.io.streams.diversion import DiversionSpec
 
     assert isinstance(div, DiversionSpec)
 
@@ -132,7 +132,7 @@ def _write_element_group(f: TextIO, group: object) -> None:
         f: Open file handle
         group: ElementGroup instance
     """
-    from pyiwfm.io.stream_diversion import ElementGroup
+    from pyiwfm.io.streams.diversion import ElementGroup
 
     assert isinstance(group, ElementGroup)
     _shared_write_element_group(f, group.id, group.elements)
@@ -152,7 +152,7 @@ def _write_recharge_zone(f: TextIO, rz: object) -> None:
         f: Open file handle
         rz: RechargeZoneDest instance
     """
-    from pyiwfm.io.stream_diversion import RechargeZoneDest
+    from pyiwfm.io.streams.diversion import RechargeZoneDest
 
     assert isinstance(rz, RechargeZoneDest)
 

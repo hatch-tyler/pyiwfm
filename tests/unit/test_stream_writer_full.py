@@ -1,5 +1,5 @@
 """
-Comprehensive tests for pyiwfm.io.stream_writer module.
+Comprehensive tests for pyiwfm.io.streams.writer module.
 
 Tests cover:
 - StreamWriterConfig dataclass and properties
@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pyiwfm.io.stream_writer import (
+from pyiwfm.io.streams.writer import (
     StreamComponentWriter,
     StreamWriterConfig,
     write_stream_component,

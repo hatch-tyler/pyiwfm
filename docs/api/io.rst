@@ -221,7 +221,7 @@ Stream Writer
 
 Writer for IWFM stream component files using Jinja2 templates.
 
-.. automodule:: pyiwfm.io.stream_writer
+.. automodule:: pyiwfm.io.streams.writer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -231,7 +231,7 @@ Stream Diversion
 
 Reader for stream diversion specification files.
 
-.. automodule:: pyiwfm.io.stream_diversion
+.. automodule:: pyiwfm.io.streams.diversion
    :members:
    :undoc-members:
    :show-inheritance:
@@ -241,7 +241,7 @@ Stream Bypass
 
 Reader for stream bypass specification files.
 
-.. automodule:: pyiwfm.io.stream_bypass
+.. automodule:: pyiwfm.io.streams.bypass
    :members:
    :undoc-members:
    :show-inheritance:
@@ -251,7 +251,7 @@ Stream Inflow
 
 Reader for stream inflow data files.
 
-.. automodule:: pyiwfm.io.stream_inflow
+.. automodule:: pyiwfm.io.streams.inflow
    :members:
    :undoc-members:
    :show-inheritance:
@@ -765,7 +765,7 @@ Stream Depletion
 Compare baseline and pumping-scenario model runs to quantify stream flow
 depletion at individual reaches.
 
-.. automodule:: pyiwfm.io.stream_depletion
+.. automodule:: pyiwfm.io.streams.depletion
    :members:
    :undoc-members:
    :show-inheritance:

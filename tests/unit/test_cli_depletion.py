@@ -21,7 +21,7 @@ from pyiwfm.cli.depletion import (
     add_depletion_parser,
     run_depletion,
 )
-from pyiwfm.io.stream_depletion import (
+from pyiwfm.io.streams.depletion import (
     BudgetOutputMissingError,
     StreamDepletionReport,
     StreamDepletionResult,
@@ -212,7 +212,7 @@ class TestRunDepletion:
         result = run_depletion(args)
         assert result == 2
 
-    @patch("pyiwfm.io.stream_depletion.compute_stream_depletion_from_models")
+    @patch("pyiwfm.io.streams.depletion.compute_stream_depletion_from_models")
     @patch("pyiwfm.cli.depletion._load_model_from_dir")
     def test_reach_mode_writes_tabular_output(
         self,
@@ -235,7 +235,7 @@ class TestRunDepletion:
         first_line = out.read_text().splitlines()[0]
         assert first_line.startswith("reach_id,")
 
-    @patch("pyiwfm.io.stream_depletion.compute_stream_depletion_from_models")
+    @patch("pyiwfm.io.streams.depletion.compute_stream_depletion_from_models")
     @patch("pyiwfm.cli.depletion._load_model_from_dir")
     def test_reach_mode_renders_plots(
         self,
@@ -262,7 +262,7 @@ class TestRunDepletion:
         assert (plot_dir / "depletion_timeseries.png").exists()
         assert (plot_dir / "depletion_summary.png").exists()
 
-    @patch("pyiwfm.io.stream_depletion.compute_stream_node_depletion")
+    @patch("pyiwfm.io.streams.depletion.compute_stream_node_depletion")
     @patch("pyiwfm.cli.depletion._load_model_from_dir")
     def test_node_level_writes_json_report(
         self,
@@ -288,7 +288,7 @@ class TestRunDepletion:
         loaded = json.loads(out.read_text())
         assert loaded["n_stream_nodes"] == 1
 
-    @patch("pyiwfm.io.stream_depletion.compute_stream_node_depletion")
+    @patch("pyiwfm.io.streams.depletion.compute_stream_node_depletion")
     @patch("pyiwfm.cli.depletion._load_model_from_dir")
     def test_node_level_warns_on_non_json_extension(
         self,
@@ -314,7 +314,7 @@ class TestRunDepletion:
         loaded = json.loads(out.read_text())
         assert "stream_nodes" in loaded
 
-    @patch("pyiwfm.io.stream_depletion.compute_stream_depletion_from_models")
+    @patch("pyiwfm.io.streams.depletion.compute_stream_depletion_from_models")
     @patch("pyiwfm.cli.depletion._load_model_from_dir")
     def test_missing_budget_output_returns_1_with_message(
         self,
@@ -342,7 +342,7 @@ class TestRunDepletion:
         # The remediation hint mentions the IWFM input lines
         assert "STRMRCHBUDFL" in err
 
-    @patch("pyiwfm.io.stream_depletion.compute_stream_depletion_from_models")
+    @patch("pyiwfm.io.streams.depletion.compute_stream_depletion_from_models")
     @patch("pyiwfm.cli.depletion._load_model_from_dir")
     def test_missing_sa_column_returns_1(
         self,

@@ -110,7 +110,7 @@ class StreamComponentWriter(TemplateWriter):
 
     Example
     -------
-    >>> from pyiwfm.io.stream_writer import StreamComponentWriter, StreamWriterConfig
+    >>> from pyiwfm.io.streams.writer import StreamComponentWriter, StreamWriterConfig
     >>> config = StreamWriterConfig(output_dir=Path("model/Simulation"))
     >>> writer = StreamComponentWriter(model, config)
     >>> files = writer.write_all()

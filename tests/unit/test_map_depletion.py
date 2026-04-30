@@ -18,7 +18,7 @@ from matplotlib.collections import LineCollection, PathCollection
 from pyiwfm.components.stream import AppStream, StrmNode, StrmReach
 from pyiwfm.core.mesh import AppGrid, Element, Node
 from pyiwfm.core.model import IWFMModel
-from pyiwfm.io.stream_depletion import (
+from pyiwfm.io.streams.depletion import (
     StreamDepletionReport,
     StreamDepletionResult,
     StreamNodeDepletionReport,

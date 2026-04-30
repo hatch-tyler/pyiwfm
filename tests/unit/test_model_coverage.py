@@ -1584,7 +1584,7 @@ class TestFromSimWithPP_Streams:
                 return_value=stream_config,
             ),
             patch(
-                "pyiwfm.io.stream_diversion.DiversionSpecReader.read",
+                "pyiwfm.io.streams.diversion.DiversionSpecReader.read",
                 return_value=div_config,
             ),
         ):
@@ -1661,7 +1661,7 @@ class TestFromSimWithPP_Streams:
                 return_value=stream_config,
             ),
             patch(
-                "pyiwfm.io.stream_bypass.BypassSpecReader.read",
+                "pyiwfm.io.streams.bypass.BypassSpecReader.read",
                 return_value=byp_config,
             ),
         ):
@@ -1812,7 +1812,7 @@ class TestFromSimWithPP_Streams:
                 return_value=stream_config,
             ),
             patch(
-                "pyiwfm.io.stream_inflow.InflowReader.read",
+                "pyiwfm.io.streams.inflow.InflowReader.read",
                 return_value=inflow_config,
             ),
         ):
@@ -2518,7 +2518,7 @@ class TestStreamDeepLoading:
                 return_value=stream_config,
             ),
             patch(
-                "pyiwfm.io.stream_bypass.BypassSpecReader.read",
+                "pyiwfm.io.streams.bypass.BypassSpecReader.read",
                 return_value=byp_config,
             ),
         ):
@@ -2575,7 +2575,7 @@ class TestStreamDeepLoading:
                 return_value=stream_config,
             ),
             patch(
-                "pyiwfm.io.stream_bypass.BypassSpecReader.read",
+                "pyiwfm.io.streams.bypass.BypassSpecReader.read",
                 return_value=byp_config,
             ),
         ):
@@ -2630,7 +2630,7 @@ class TestStreamDeepLoading:
                 return_value=stream_config,
             ),
             patch(
-                "pyiwfm.io.stream_bypass.BypassSpecReader.read",
+                "pyiwfm.io.streams.bypass.BypassSpecReader.read",
                 return_value=byp_config,
             ),
         ):
@@ -2664,7 +2664,7 @@ class TestStreamDeepLoading:
                 return_value=stream_config,
             ),
             patch(
-                "pyiwfm.io.stream_diversion.DiversionSpecReader.read",
+                "pyiwfm.io.streams.diversion.DiversionSpecReader.read",
                 side_effect=ValueError("bad div file"),
             ),
         ):
@@ -2699,7 +2699,7 @@ class TestStreamDeepLoading:
                 return_value=stream_config,
             ),
             patch(
-                "pyiwfm.io.stream_bypass.BypassSpecReader.read",
+                "pyiwfm.io.streams.bypass.BypassSpecReader.read",
                 side_effect=ValueError("bad bypass file"),
             ),
         ):
@@ -2732,7 +2732,7 @@ class TestStreamDeepLoading:
                 return_value=stream_config,
             ),
             patch(
-                "pyiwfm.io.stream_inflow.InflowReader.read",
+                "pyiwfm.io.streams.inflow.InflowReader.read",
                 side_effect=ValueError("bad inflow file"),
             ),
         ):

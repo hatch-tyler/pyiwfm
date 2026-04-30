@@ -1,4 +1,4 @@
-"""Sweep tests for pyiwfm.io.stream_writer targeting specific uncovered lines.
+"""Sweep tests for pyiwfm.io.streams.writer targeting specific uncovered lines.
 
 Covers:
 - Lines 362-364: budget_node_ids not-a-list and AttributeError fallback
@@ -19,7 +19,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from pyiwfm.io.stream_writer import (
+from pyiwfm.io.streams.writer import (
     StreamComponentWriter,
     StreamWriterConfig,
 )

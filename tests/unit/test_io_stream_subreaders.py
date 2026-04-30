@@ -12,20 +12,20 @@ from pathlib import Path
 
 import pytest
 
-from pyiwfm.io.stream_bypass import (
+from pyiwfm.io.streams.bypass import (
     BYPASS_DEST_LAKE,
     BYPASS_DEST_STREAM,
     BypassSpecReader,
     read_bypass_spec,
 )
-from pyiwfm.io.stream_diversion import (
+from pyiwfm.io.streams.diversion import (
     DEST_ELEMENT,
     DEST_OUTSIDE,
     DiversionSpecConfig,
     DiversionSpecReader,
     read_diversion_spec,
 )
-from pyiwfm.io.stream_inflow import (
+from pyiwfm.io.streams.inflow import (
     InflowConfig,
     InflowReader,
     InflowSpec,

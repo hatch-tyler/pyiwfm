@@ -23,7 +23,7 @@ import numpy as np
 import pytest
 from matplotlib.axes import Axes
 
-from pyiwfm.io.stream_depletion import StreamDepletionReport, StreamDepletionResult
+from pyiwfm.io.streams.depletion import StreamDepletionReport, StreamDepletionResult
 from pyiwfm.visualization.plot_depletion import (
     plot_cumulative_depletion,
     plot_depletion_summary_bar,

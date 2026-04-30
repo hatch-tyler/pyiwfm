@@ -31,7 +31,7 @@ from pyiwfm.io.simulation.writer import (
     SimulationMainWriter,
     write_simulation_main,
 )
-from pyiwfm.io.stream_writer import (
+from pyiwfm.io.streams.writer import (
     StreamComponentWriter,
     StreamWriterConfig,
     write_stream_component,

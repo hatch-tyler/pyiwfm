@@ -921,7 +921,7 @@ class TestWriteStreamsComponent:
         }
 
         with patch(
-            "pyiwfm.io.stream_writer.StreamComponentWriter",
+            "pyiwfm.io.streams.writer.StreamComponentWriter",
             return_value=mock_strm_writer,
         ):
             writer._write_streams(result)
@@ -941,7 +941,7 @@ class TestWriteStreamsComponent:
         result = ModelWriteResult()
 
         with patch(
-            "pyiwfm.io.stream_writer.StreamComponentWriter",
+            "pyiwfm.io.streams.writer.StreamComponentWriter",
             side_effect=RuntimeError("stream writer failed"),
         ):
             writer._write_streams(result)

@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 
 from pyiwfm.core.model import IWFMModel
-from pyiwfm.io.stream_depletion import (
+from pyiwfm.io.streams.depletion import (
     DEFAULT_SA_COLUMN,
     BudgetOutputMissingError,
     StreamNodeDepletionReport,

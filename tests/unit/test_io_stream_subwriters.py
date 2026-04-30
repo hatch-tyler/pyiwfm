@@ -1,9 +1,9 @@
 """Tests for stream sub-writer modules.
 
 Covers:
-- pyiwfm.io.stream_bypass_writer.write_bypass_spec
-- pyiwfm.io.stream_diversion_writer.write_diversion_spec
-- pyiwfm.io.stream_inflow_writer.write_stream_inflow
+- pyiwfm.io.streams.bypass_writer.write_bypass_spec
+- pyiwfm.io.streams.diversion_writer.write_diversion_spec
+- pyiwfm.io.streams.inflow_writer.write_stream_inflow
 
 Each writer is exercised with zero-count configs, populated configs with
 various field combinations, and output text verification.
@@ -15,25 +15,25 @@ from pathlib import Path
 
 import numpy as np
 
-from pyiwfm.io.stream_bypass import (
+from pyiwfm.io.streams.bypass import (
     BypassRatingTable,
     BypassSeepageZone,
     BypassSpec,
     BypassSpecConfig,
 )
-from pyiwfm.io.stream_bypass_writer import write_bypass_spec
-from pyiwfm.io.stream_diversion import (
+from pyiwfm.io.streams.bypass_writer import write_bypass_spec
+from pyiwfm.io.streams.diversion import (
     DiversionSpec,
     DiversionSpecConfig,
     ElementGroup,
     RechargeZoneDest,
 )
-from pyiwfm.io.stream_diversion_writer import write_diversion_spec
-from pyiwfm.io.stream_inflow import (
+from pyiwfm.io.streams.diversion_writer import write_diversion_spec
+from pyiwfm.io.streams.inflow import (
     InflowConfig,
     InflowSpec,
 )
-from pyiwfm.io.stream_inflow_writer import write_stream_inflow
+from pyiwfm.io.streams.inflow_writer import write_stream_inflow
 
 # ===========================================================================
 # write_bypass_spec

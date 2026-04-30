@@ -809,6 +809,63 @@ strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
 
+### `pyiwfm.io.streams` (was a module, now a package) and the `stream_*` cluster (gone)
+
+The nine flat stream modules are now a single subpackage
+`pyiwfm/io/streams/`:
+
+| v1.x flat path                        | v2.x submodule                        |
+|---------------------------------------|---------------------------------------|
+| `pyiwfm.io.streams`                   | `pyiwfm.io.streams.reader`            |
+| `pyiwfm.io.stream_writer`             | `pyiwfm.io.streams.writer`            |
+| `pyiwfm.io.stream_bypass`             | `pyiwfm.io.streams.bypass`            |
+| `pyiwfm.io.stream_bypass_writer`      | `pyiwfm.io.streams.bypass_writer`     |
+| `pyiwfm.io.stream_diversion`          | `pyiwfm.io.streams.diversion`         |
+| `pyiwfm.io.stream_diversion_writer`   | `pyiwfm.io.streams.diversion_writer`  |
+| `pyiwfm.io.stream_inflow`             | `pyiwfm.io.streams.inflow`            |
+| `pyiwfm.io.stream_inflow_writer`      | `pyiwfm.io.streams.inflow_writer`     |
+| `pyiwfm.io.stream_depletion`          | `pyiwfm.io.streams.depletion`         |
+
+The plural-vs-singular asymmetry (`streams.py` reader, `stream_*.py`
+sub-files) is resolved by the package layout: the directory carries
+the plural; submodule files inside drop the redundant prefix.
+
+The package `__init__.py` re-exports every public symbol so existing
+``from pyiwfm.io.streams import StreamReader`` keeps working unchanged.
+
+**v1.x:**
+
+```python
+from pyiwfm.io.streams import StreamReader
+from pyiwfm.io.stream_writer import (
+    StreamComponentWriter, write_stream_component,
+)
+from pyiwfm.io.stream_bypass import BypassSpecReader
+from pyiwfm.io.stream_bypass_writer import write_bypass_spec
+from pyiwfm.io.stream_diversion import DiversionSpecReader
+from pyiwfm.io.stream_diversion_writer import write_diversion_spec
+from pyiwfm.io.stream_inflow import InflowReader
+from pyiwfm.io.stream_inflow_writer import write_stream_inflow
+from pyiwfm.io.stream_depletion import compute_stream_depletion
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.streams import (
+    StreamReader,
+    StreamComponentWriter, write_stream_component,
+    BypassSpecReader, write_bypass_spec,
+    DiversionSpecReader, write_diversion_spec,
+    InflowReader, write_stream_inflow,
+    compute_stream_depletion,
+)
+```
+
+The eight v1.x sibling paths are **gone**. `mock.patch` strings need
+updating to `pyiwfm.io.streams.X` (the package re-export), or the
+deeper submodule path if the consumer is intra-package.
+
 ### `pyiwfm.io.timeseries` (was a module, now a package) and the `timeseries_*` cluster (gone)
 
 The five flat time-series modules are now a single subpackage

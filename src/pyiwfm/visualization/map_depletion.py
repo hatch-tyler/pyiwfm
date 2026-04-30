@@ -8,11 +8,11 @@ Two granularities:
 
 - :func:`plot_depletion_map` / :func:`export_depletion_geojson` —
   reach-level (one polyline per reach, colored by reach metric) over
-  a :class:`~pyiwfm.io.stream_depletion.StreamDepletionReport`.
+  a :class:`~pyiwfm.io.streams.depletion.StreamDepletionReport`.
 - :func:`plot_stream_node_depletion_map` /
   :func:`export_stream_node_depletion_geojson` — node-level (one
   point per stream node, sized/colored by node metric) over a
-  :class:`~pyiwfm.io.stream_depletion.StreamNodeDepletionReport`.
+  :class:`~pyiwfm.io.streams.depletion.StreamNodeDepletionReport`.
 
 Time-series plots over the same reports live in
 :mod:`pyiwfm.visualization.plot_depletion`.
@@ -35,7 +35,7 @@ from matplotlib.collections import LineCollection  # noqa: E402
 
 if TYPE_CHECKING:
     from pyiwfm.core.model import IWFMModel
-    from pyiwfm.io.stream_depletion import (
+    from pyiwfm.io.streams.depletion import (
         StreamDepletionReport,
         StreamNodeDepletionReport,
     )

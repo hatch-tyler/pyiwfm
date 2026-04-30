@@ -3,7 +3,7 @@ Stream Depletion Analysis
 
 This tutorial demonstrates how to compare baseline and pumping-scenario model
 runs to quantify stream flow depletion using
-:func:`~pyiwfm.io.stream_depletion.compute_stream_depletion`.
+:func:`~pyiwfm.io.streams.depletion.compute_stream_depletion`.
 
 .. contents:: Table of Contents
    :local:
@@ -34,7 +34,7 @@ Step 1: Compute Stream Depletion
 
 .. code-block:: python
 
-    from pyiwfm.io.stream_depletion import compute_stream_depletion
+    from pyiwfm.io.streams.depletion import compute_stream_depletion
 
     report = compute_stream_depletion(
         baseline_dir="baseline_model/Results",
@@ -59,7 +59,7 @@ To analyze only specific reaches:
 Step 2: Inspect Individual Reaches
 ------------------------------------
 
-Each :class:`~pyiwfm.io.stream_depletion.StreamDepletionResult` contains
+Each :class:`~pyiwfm.io.streams.depletion.StreamDepletionResult` contains
 per-reach depletion data:
 
 .. code-block:: python

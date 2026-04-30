@@ -18,7 +18,7 @@ import numpy as np
 import pytest
 from openpyxl import load_workbook
 
-from pyiwfm.io.stream_depletion import (
+from pyiwfm.io.streams.depletion import (
     StreamDepletionReport,
     StreamDepletionResult,
     write_stream_depletion_csv,

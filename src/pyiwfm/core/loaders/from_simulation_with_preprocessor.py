@@ -94,10 +94,10 @@ def load_from_simulation_with_preprocessor(
     from pyiwfm.io.preprocessor import _resolve_path
     from pyiwfm.io.rootzone import RootZoneMainFileReader, RootZoneReader
     from pyiwfm.io.simulation import SimulationReader
-    from pyiwfm.io.stream_bypass import BypassSpecReader
-    from pyiwfm.io.stream_diversion import DiversionSpecReader
-    from pyiwfm.io.stream_inflow import InflowReader
     from pyiwfm.io.streams import StreamMainFileReader, StreamReader, StreamSpecReader
+    from pyiwfm.io.streams.bypass import BypassSpecReader
+    from pyiwfm.io.streams.diversion import DiversionSpecReader
+    from pyiwfm.io.streams.inflow import InflowReader
 
     # First load mesh and stratigraphy from preprocessor.
     #

@@ -372,36 +372,6 @@ from pyiwfm.io.smp import (  # noqa: F401
     SMPTimeSeries,
     SMPWriter,
 )
-from pyiwfm.io.stream_bypass import (  # noqa: F401
-    BypassRatingTable,
-    BypassSpec,
-    BypassSpecConfig,
-    BypassSpecReader,
-    read_bypass_spec,
-)
-from pyiwfm.io.stream_depletion import (  # noqa: F401
-    StreamDepletionReport,
-    StreamDepletionResult,
-    compute_stream_depletion,
-)
-from pyiwfm.io.stream_diversion import (  # noqa: F401
-    DiversionSpec,
-    DiversionSpecConfig,
-    DiversionSpecReader,
-    RechargeZoneDest,
-    read_diversion_spec,
-)
-from pyiwfm.io.stream_inflow import (  # noqa: F401
-    InflowConfig,
-    InflowReader,
-    InflowSpec,
-    read_stream_inflow,
-)
-from pyiwfm.io.stream_writer import (  # noqa: F401
-    StreamComponentWriter,
-    StreamWriterConfig,
-    write_stream_component,
-)
 from pyiwfm.io.streams import (  # noqa: F401
     CrossSectionRow,
     StreamBedParamRow,
@@ -420,6 +390,36 @@ from pyiwfm.io.streams import (  # noqa: F401
     read_stream_spec,
     stream_version_ge,
     write_stream,
+)
+from pyiwfm.io.streams.bypass import (  # noqa: F401
+    BypassRatingTable,
+    BypassSpec,
+    BypassSpecConfig,
+    BypassSpecReader,
+    read_bypass_spec,
+)
+from pyiwfm.io.streams.depletion import (  # noqa: F401
+    StreamDepletionReport,
+    StreamDepletionResult,
+    compute_stream_depletion,
+)
+from pyiwfm.io.streams.diversion import (  # noqa: F401
+    DiversionSpec,
+    DiversionSpecConfig,
+    DiversionSpecReader,
+    RechargeZoneDest,
+    read_diversion_spec,
+)
+from pyiwfm.io.streams.inflow import (  # noqa: F401
+    InflowConfig,
+    InflowReader,
+    InflowSpec,
+    read_stream_inflow,
+)
+from pyiwfm.io.streams.writer import (  # noqa: F401
+    StreamComponentWriter,
+    StreamWriterConfig,
+    write_stream_component,
 )
 from pyiwfm.io.supply_adjust import (  # noqa: F401
     SupplyAdjustment,
