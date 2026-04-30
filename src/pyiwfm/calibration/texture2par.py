@@ -1126,7 +1126,7 @@ class Texture2Par:
                         elem_data.total_porosity[lyr] = params["PN"][i, lyr]
                         elem_data.lambda_param[lyr] = params["PI"][i, lyr]
 
-        from pyiwfm.io.unsaturated_zone_writer import UnsatZoneComponentWriter
+        from pyiwfm.io.unsaturated_zone.writer import UnsatZoneComponentWriter
 
         writer = UnsatZoneComponentWriter(config)  # type: ignore[call-arg, arg-type]
         writer.write_main(str(output_path))  # type: ignore[call-arg]

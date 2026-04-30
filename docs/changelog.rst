@@ -42,6 +42,19 @@ Added
 Changed
 ~~~~~~~
 
+- **``pyiwfm.io.unsaturated_zone``** is now a package (was a module),
+  collapsing ``pyiwfm/io/unsaturated_zone.py`` and
+  ``pyiwfm/io/unsaturated_zone_writer.py`` into one subpackage:
+  ``pyiwfm/io/unsaturated_zone/reader.py`` (was ``unsaturated_zone.py``)
+  and ``pyiwfm/io/unsaturated_zone/writer.py`` (was
+  ``unsaturated_zone_writer.py``). The package ``__init__.py``
+  re-exports both submodules' public API so every reader and writer
+  symbol is now importable from ``pyiwfm.io.unsaturated_zone``. The
+  ``from pyiwfm.io.unsaturated_zone_writer import …`` path is **gone**
+  in v2.0 — update imports and ``mock.patch`` strings. First domain
+  package in the io restructure plan; ``small_watershed/``, ``lakes/``,
+  etc. follow. See ``docs/MIGRATION_v1_to_v2.md`` § 10.
+
 - **``pyiwfm.io.ascii``** is now a format-primitive package collecting
   every IWFM ASCII helper. ``pyiwfm/io/iwfm_reader.py`` →
   ``pyiwfm/io/ascii/reader.py``, ``pyiwfm/io/iwfm_writer.py`` →
@@ -812,7 +825,7 @@ Added
 - ``SmallWatershedWriterConfig``: Writer configuration with output paths
 - Jinja2 template for IWFM v4.0 format with geospatial, root zone, and aquifer sections
 
-**Unsaturated Zone Writer** (``pyiwfm.io.unsaturated_zone_writer``)
+**Unsaturated Zone Writer** (``pyiwfm.io.unsaturated_zone.writer``)
 
 - ``UnsatZoneComponentWriter``: Template-based writer for unsaturated zone files
 - ``UnsatZoneWriterConfig``: Writer configuration with output paths

@@ -455,7 +455,7 @@ from pyiwfm.io.unsaturated_zone import (  # noqa: F401
     UnsatZoneMainReader,
     read_unsaturated_zone_main,
 )
-from pyiwfm.io.unsaturated_zone_writer import (  # noqa: F401
+from pyiwfm.io.unsaturated_zone.writer import (  # noqa: F401
     UnsatZoneComponentWriter,
     UnsatZoneWriterConfig,
     write_unsaturated_zone_component,

@@ -1,4 +1,4 @@
-"""Coverage tests for pyiwfm.io.unsaturated_zone_writer module.
+"""Coverage tests for pyiwfm.io.unsaturated_zone.writer module.
 
 Targets uncovered lines and branches including:
 - UnsatZoneWriterConfig.unsatzone_dir with empty subdir (line 57)
@@ -20,7 +20,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from pyiwfm.io.unsaturated_zone_writer import (
+from pyiwfm.io.unsaturated_zone.writer import (
     UnsatZoneComponentWriter,
     UnsatZoneWriterConfig,
     write_unsaturated_zone_component,
@@ -440,7 +440,7 @@ class TestWriteUnsatZoneConvenience:
         Covers lines 257-260, 264-265.
         """
         with patch(
-            "pyiwfm.io.unsaturated_zone_writer.TemplateEngine",
+            "pyiwfm.io.unsaturated_zone.writer.TemplateEngine",
             return_value=mock_engine,
         ):
             results = write_unsaturated_zone_component(bare_model, tmp_path)
@@ -457,7 +457,7 @@ class TestWriteUnsatZoneConvenience:
         new_dir = tmp_path / "custom_out"
         new_dir.mkdir()
         with patch(
-            "pyiwfm.io.unsaturated_zone_writer.TemplateEngine",
+            "pyiwfm.io.unsaturated_zone.writer.TemplateEngine",
             return_value=mock_engine,
         ):
             results = write_unsaturated_zone_component(bare_model, new_dir, config=config)
@@ -473,7 +473,7 @@ class TestWriteUnsatZoneConvenience:
         Covers line 257 (output_dir = Path(output_dir)).
         """
         with patch(
-            "pyiwfm.io.unsaturated_zone_writer.TemplateEngine",
+            "pyiwfm.io.unsaturated_zone.writer.TemplateEngine",
             return_value=mock_engine,
         ):
             results = write_unsaturated_zone_component(bare_model, str(tmp_path))

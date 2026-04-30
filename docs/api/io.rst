@@ -102,7 +102,7 @@ PreProcessor Binary
 
 Reader for IWFM preprocessor binary output files.
 
-.. automodule:: pyiwfm.io.preprocessor_binary
+.. automodule:: pyiwfm.io.binary.preprocessor
    :members:
    :undoc-members:
    :show-inheritance:
@@ -390,7 +390,7 @@ Unsaturated Zone Writer
 
 Writer for IWFM unsaturated zone component files using Jinja2 templates.
 
-.. automodule:: pyiwfm.io.unsaturated_zone_writer
+.. automodule:: pyiwfm.io.unsaturated_zone.writer
    :members:
    :undoc-members:
    :show-inheritance:

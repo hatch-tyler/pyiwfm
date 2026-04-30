@@ -19,7 +19,7 @@ from pyiwfm.io.unsaturated_zone import (
     UnsatZoneMainConfig,
     UnsatZoneMainReader,
 )
-from pyiwfm.io.unsaturated_zone_writer import (
+from pyiwfm.io.unsaturated_zone.writer import (
     UnsatZoneComponentWriter,
     UnsatZoneWriterConfig,
     write_unsaturated_zone_component,
@@ -220,7 +220,7 @@ class TestUnsatZoneReader:
 
 class TestUnsatZoneWriter:
     def test_write_main(self, tmp_path):
-        from pyiwfm.io.unsaturated_zone_writer import (
+        from pyiwfm.io.unsaturated_zone.writer import (
             UnsatZoneComponentWriter,
             UnsatZoneWriterConfig,
         )
@@ -270,7 +270,7 @@ class TestUnsatZoneWriter:
 
     def test_write_disabled(self, tmp_path):
         """Write with n_layers=0 should produce a minimal file."""
-        from pyiwfm.io.unsaturated_zone_writer import (
+        from pyiwfm.io.unsaturated_zone.writer import (
             UnsatZoneComponentWriter,
             UnsatZoneWriterConfig,
         )
@@ -299,7 +299,7 @@ class TestUnsatZoneWriter:
 class TestUnsatZoneRoundTrip:
     def test_read_write_read(self, tmp_path):
         """Build config -> component -> write -> re-read."""
-        from pyiwfm.io.unsaturated_zone_writer import (
+        from pyiwfm.io.unsaturated_zone.writer import (
             UnsatZoneComponentWriter,
             UnsatZoneWriterConfig,
         )

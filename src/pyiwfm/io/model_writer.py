@@ -725,7 +725,7 @@ class CompleteModelWriter:
         """Write or copy unsaturated zone component files."""
         if self.model.unsaturated_zone is not None:
             try:
-                from pyiwfm.io.unsaturated_zone_writer import (
+                from pyiwfm.io.unsaturated_zone.writer import (
                     UnsatZoneComponentWriter,
                     UnsatZoneWriterConfig,
                 )

@@ -809,6 +809,55 @@ strings need updating to `mock.patch("pyiwfm.io.ascii.X")` — patch the
 package re-export, not the deep submodule, because the consumers
 import through the package.
 
+### `pyiwfm.io.unsaturated_zone` (was a module, now a package) and `pyiwfm.io.unsaturated_zone_writer` (gone)
+
+`pyiwfm/io/unsaturated_zone.py` and `pyiwfm/io/unsaturated_zone_writer.py`
+were two flat modules for the same domain. They're now the single
+package `pyiwfm/io/unsaturated_zone/`:
+
+- `pyiwfm/io/unsaturated_zone/reader.py` — was `unsaturated_zone.py`
+  (`UnsatZoneMainReader`, `UnsatZoneMainConfig`,
+  `UnsatZoneElementData`, `read_unsaturated_zone_main`).
+
+- `pyiwfm/io/unsaturated_zone/writer.py` — was
+  `unsaturated_zone_writer.py` (`UnsatZoneComponentWriter`,
+  `UnsatZoneWriterConfig`, `write_unsaturated_zone_component`).
+
+The package `__init__.py` re-exports both submodules' public API so
+the existing path `from pyiwfm.io.unsaturated_zone import X` keeps
+working for every reader symbol and now also resolves every writer
+symbol (which previously needed
+`from pyiwfm.io.unsaturated_zone_writer import …`).
+
+**v1.x:**
+
+```python
+from pyiwfm.io.unsaturated_zone import UnsatZoneMainReader
+from pyiwfm.io.unsaturated_zone_writer import (
+    UnsatZoneComponentWriter,
+    write_unsaturated_zone_component,
+)
+```
+
+**v2.x:**
+
+```python
+from pyiwfm.io.unsaturated_zone import (
+    UnsatZoneMainReader,
+    UnsatZoneComponentWriter,
+    write_unsaturated_zone_component,
+)
+```
+
+The `from pyiwfm.io.unsaturated_zone_writer import …` path is **gone**;
+update to `from pyiwfm.io.unsaturated_zone import …`.
+
+`mock.patch("pyiwfm.io.unsaturated_zone_writer.X")` strings need
+updating to `mock.patch("pyiwfm.io.unsaturated_zone.X")` (re-exported
+on the package) — not `pyiwfm.io.unsaturated_zone.writer.X`, because
+consumers import through the package re-export, not the deep
+submodule.
+
 ---
 
 ## 9. Strict-by-default loading at user-facing surfaces

@@ -554,7 +554,7 @@ class TestCompleteModelWriterUnsaturatedZone:
         mock_uz_writer.write_all.return_value = {"main": config.get_path("unsatzone_main")}
 
         with patch(
-            "pyiwfm.io.unsaturated_zone_writer.UnsatZoneComponentWriter",
+            "pyiwfm.io.unsaturated_zone.writer.UnsatZoneComponentWriter",
             return_value=mock_uz_writer,
         ):
             writer._write_unsaturated_zone(result)
@@ -1188,7 +1188,7 @@ class TestUnsaturatedZoneFallbacks:
         result = ModelWriteResult()
 
         with patch(
-            "pyiwfm.io.unsaturated_zone_writer.UnsatZoneComponentWriter",
+            "pyiwfm.io.unsaturated_zone.writer.UnsatZoneComponentWriter",
             side_effect=RuntimeError("uz writer broken"),
         ):
             writer._write_unsaturated_zone(result)
