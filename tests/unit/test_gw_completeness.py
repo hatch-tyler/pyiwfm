@@ -46,8 +46,11 @@ class TestBoundaryConditionConstrainedGH:
 
     def test_constrained_gh_requires_conductance(self) -> None:
         from pyiwfm.components.groundwater import BoundaryCondition
+        from pyiwfm.core.exceptions import ComponentError
 
-        with pytest.raises(ValueError, match="constrained_general_head BC requires conductance"):
+        with pytest.raises(
+            ComponentError, match="constrained_general_head BC requires conductance"
+        ):
             BoundaryCondition(
                 id=1,
                 bc_type="constrained_general_head",
@@ -75,8 +78,9 @@ class TestBoundaryConditionConstrainedGH:
 
     def test_invalid_bc_type_raises(self) -> None:
         from pyiwfm.components.groundwater import BoundaryCondition
+        from pyiwfm.core.exceptions import ComponentError
 
-        with pytest.raises(ValueError, match="bc_type must be one of"):
+        with pytest.raises(ComponentError, match="bc_type .* is invalid"):
             BoundaryCondition(
                 id=1,
                 bc_type="invalid_type",

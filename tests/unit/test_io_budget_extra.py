@@ -907,17 +907,21 @@ class TestGetLocationIndex:
         assert reader.get_location_index(2) == 2
 
     def test_index_by_int_out_of_range(self, tmp_path: Path) -> None:
+        from pyiwfm.core.exceptions import IWFMIOError
+
         p = tmp_path / "budget.hdf"
         _create_hdf5_budget(p, n_locations=2, location_names=["A", "B"])
         reader = BudgetReader(p)
-        with pytest.raises(IndexError, match="out of range"):
+        with pytest.raises(IWFMIOError, match="out of range"):
             reader.get_location_index(5)
 
     def test_index_by_int_negative(self, tmp_path: Path) -> None:
+        from pyiwfm.core.exceptions import IWFMIOError
+
         p = tmp_path / "budget.hdf"
         _create_hdf5_budget(p, n_locations=2, location_names=["A", "B"])
         reader = BudgetReader(p)
-        with pytest.raises(IndexError, match="out of range"):
+        with pytest.raises(IWFMIOError, match="out of range"):
             reader.get_location_index(-1)
 
     def test_index_by_name_exact(self, tmp_path: Path) -> None:
@@ -935,10 +939,12 @@ class TestGetLocationIndex:
         assert reader.get_location_index("BETA") == 1
 
     def test_index_by_name_not_found(self, tmp_path: Path) -> None:
+        from pyiwfm.core.exceptions import IWFMIOError
+
         p = tmp_path / "budget.hdf"
         _create_hdf5_budget(p, n_locations=2, location_names=["Alpha", "Beta"])
         reader = BudgetReader(p)
-        with pytest.raises(KeyError, match="not found"):
+        with pytest.raises(IWFMIOError, match="not found"):
             reader.get_location_index("Gamma")
 
 

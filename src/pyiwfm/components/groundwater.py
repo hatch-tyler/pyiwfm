@@ -175,14 +175,22 @@ class BoundaryCondition:
             "constrained_general_head",
         )
         if self.bc_type not in valid_types:
-            raise ValueError(f"bc_type must be one of {valid_types}")
+            raise ComponentError(
+                f"bc_type {self.bc_type!r} is invalid; must be one of {valid_types}"
+            )
 
         if len(self.nodes) != len(self.values):
-            raise ValueError("nodes and values must have same length")
+            raise ComponentError(
+                f"BoundaryCondition: nodes and values length mismatch "
+                f"({len(self.nodes)} vs {len(self.values)})"
+            )
 
         if self.bc_type in ("general_head", "constrained_general_head"):
             if len(self.conductance) != len(self.nodes):
-                raise ValueError(f"{self.bc_type} BC requires conductance for each node")
+                raise ComponentError(
+                    f"{self.bc_type} BC requires conductance for each node "
+                    f"({len(self.conductance)} conductance values vs {len(self.nodes)} nodes)"
+                )
 
     def __repr__(self) -> str:
         return f"BoundaryCondition(id={self.id}, type={self.bc_type}, n_nodes={len(self.nodes)})"

@@ -87,3 +87,36 @@ class ConnectorError(PyIWFMError):
     """Error related to component connector operations."""
 
     pass
+
+
+class IWFMSubprocessError(PyIWFMError):
+    """Raised when an IWFM external executable (preprocessor, simulation,
+    Budget, ZBudget, ResultsExtract, …) fails to spawn or returns a
+    non-zero exit code.
+
+    Attributes
+    ----------
+    cmd : list[str] | str | None
+        The command that was invoked (argv list when known).
+    returncode : int | None
+        The subprocess exit code, or ``None`` if the process never
+        spawned (e.g. the executable couldn't be found).
+    stdout : str
+        Captured standard output (may be empty).
+    stderr : str
+        Captured standard error (may be empty).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        cmd: list[str] | str | None = None,
+        returncode: int | None = None,
+        stdout: str = "",
+        stderr: str = "",
+    ) -> None:
+        super().__init__(message)
+        self.cmd = cmd
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr

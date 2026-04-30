@@ -153,12 +153,18 @@ class TestDownloadFromGithub:
         mock_platform: MagicMock,
         tmp_path: Path,
     ) -> None:
-        """RuntimeError is raised when download fails."""
+        """IWFMSubprocessError is raised when download fails (the typed
+        exception carries the URL via ``cmd`` for handler formatting)."""
+        from pyiwfm.core.exceptions import IWFMSubprocessError
+
         mock_urlretrieve.side_effect = OSError("Network error")
 
         mgr = IWFMExecutableManager(version="2025.0.1747")
-        with pytest.raises(RuntimeError, match="Failed to download"):
+        with pytest.raises(IWFMSubprocessError, match="Failed to download") as excinfo:
             mgr.download_from_github(dest=tmp_path)
+
+        # The cmd= attribute carries the URL that failed
+        assert excinfo.value.cmd is not None and "github.com" in str(excinfo.value.cmd)
 
 
 # ---------------------------------------------------------------------------

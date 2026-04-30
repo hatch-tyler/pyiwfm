@@ -326,20 +326,24 @@ class TestLocationIndex:
         assert reader.get_location_index("subregion 1") == 0
 
     def test_get_location_index_invalid_int(self, mock_hdf5_file):
-        """Test invalid integer index raises error."""
+        """Invalid integer index -> IWFMIOError (out of range)."""
+        from pyiwfm.core.exceptions import IWFMIOError
+
         reader = BudgetReader(mock_hdf5_file)
 
-        with pytest.raises(IndexError):
+        with pytest.raises(IWFMIOError, match="out of range"):
             reader.get_location_index(10)
 
-        with pytest.raises(IndexError):
+        with pytest.raises(IWFMIOError, match="out of range"):
             reader.get_location_index(-1)
 
     def test_get_location_index_invalid_name(self, mock_hdf5_file):
-        """Test invalid name raises error."""
+        """Unknown location name -> IWFMIOError (not found)."""
+        from pyiwfm.core.exceptions import IWFMIOError
+
         reader = BudgetReader(mock_hdf5_file)
 
-        with pytest.raises(KeyError):
+        with pytest.raises(IWFMIOError, match="not found"):
             reader.get_location_index("Invalid Zone")
 
 
@@ -756,33 +760,43 @@ class TestBudgetReaderEdgeCases:
     """Test edge cases in BudgetReader."""
 
     def test_invalid_location_negative_index(self, mock_hdf5_file):
-        """Test that a negative integer index raises IndexError."""
+        """A negative integer index raises IWFMIOError (out of range)."""
+        from pyiwfm.core.exceptions import IWFMIOError
+
         reader = BudgetReader(mock_hdf5_file)
-        with pytest.raises(IndexError, match="out of range"):
+        with pytest.raises(IWFMIOError, match="out of range"):
             reader.get_location_index(-1)
 
     def test_invalid_location_too_large_index(self, mock_hdf5_file):
-        """Test that an index beyond range raises IndexError."""
+        """An index beyond range raises IWFMIOError (out of range)."""
+        from pyiwfm.core.exceptions import IWFMIOError
+
         reader = BudgetReader(mock_hdf5_file)
-        with pytest.raises(IndexError, match="out of range"):
+        with pytest.raises(IWFMIOError, match="out of range"):
             reader.get_location_index(100)
 
     def test_invalid_location_name(self, mock_hdf5_file):
-        """Test that an unknown location name raises KeyError."""
+        """An unknown location name raises IWFMIOError (not found)."""
+        from pyiwfm.core.exceptions import IWFMIOError
+
         reader = BudgetReader(mock_hdf5_file)
-        with pytest.raises(KeyError, match="not found"):
+        with pytest.raises(IWFMIOError, match="not found"):
             reader.get_location_index("Nonexistent Region")
 
     def test_get_values_invalid_location(self, mock_hdf5_file):
-        """Test get_values with invalid location propagates error."""
+        """get_values with invalid location propagates IWFMIOError."""
+        from pyiwfm.core.exceptions import IWFMIOError
+
         reader = BudgetReader(mock_hdf5_file)
-        with pytest.raises(KeyError):
+        with pytest.raises(IWFMIOError):
             reader.get_values("No Such Place")
 
     def test_get_column_headers_invalid_location(self, mock_hdf5_file):
-        """Test get_column_headers with invalid location propagates error."""
+        """get_column_headers with invalid location propagates IWFMIOError."""
+        from pyiwfm.core.exceptions import IWFMIOError
+
         reader = BudgetReader(mock_hdf5_file)
-        with pytest.raises(KeyError):
+        with pytest.raises(IWFMIOError):
             reader.get_column_headers("Fake Zone")
 
     def test_get_dataframe_with_string_column_names(self, mock_hdf5_file):

@@ -14,6 +14,7 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from pyiwfm.core.exceptions import IWFMSubprocessError
 from pyiwfm.runner.runner import IWFMExecutables, find_iwfm_executables
 
 logger = logging.getLogger(__name__)
@@ -173,9 +174,15 @@ class IWFMExecutableManager:
 
             try:
                 urllib.request.urlretrieve(url, str(archive_path))
-            except Exception as exc:
-                raise RuntimeError(
-                    f"Failed to download IWFM executables from {url}: {exc}"
+            except OSError as exc:
+                # Network / DNS / disk failure during the GitHub download.
+                # Wrap with IWFMSubprocessError so callers (CLI, web API)
+                # see a typed pyiwfm exception they can map to a structured
+                # error response, rather than a bare urllib.error.URLError
+                # or OSError.
+                raise IWFMSubprocessError(
+                    f"Failed to download IWFM executables from {url}: {exc}",
+                    cmd=url,
                 ) from exc
 
             # Extract archive

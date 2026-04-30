@@ -36,6 +36,7 @@ import numpy as np
 import pandas as pd
 from numpy.typing import NDArray
 
+from pyiwfm.core.exceptions import IWFMIOError
 from pyiwfm.io.timeseries_ascii import iwfm_date_to_iso as iwfm_date_to_iso
 from pyiwfm.io.timeseries_ascii import parse_iwfm_datetime as parse_iwfm_datetime
 
@@ -631,18 +632,27 @@ class BudgetReader:
         return self.header.timestep.n_timesteps
 
     def get_location_index(self, location: str | int) -> int:
-        """Get location index from name or index."""
+        """Get location index from name or index.
+
+        Raises
+        ------
+        IWFMIOError
+            If ``location`` is an out-of-range integer or a name that
+            doesn't match any location in the file. Both failure modes
+            collapse to one typed exception so callers (CLI, web API)
+            can produce a single structured error response.
+        """
         if isinstance(location, int):
             if 0 <= location < self.n_locations:
                 return location
-            raise IndexError(f"Location index {location} out of range [0, {self.n_locations})")
+            raise IWFMIOError(f"Location index {location} out of range [0, {self.n_locations})")
 
         # Search by name
         for i, name in enumerate(self.locations):
             if name == location or name.lower() == location.lower():
                 return i
 
-        raise KeyError(f"Location '{location}' not found. Available: {self.locations}")
+        raise IWFMIOError(f"Location '{location}' not found. Available: {self.locations}")
 
     def get_column_headers(self, location: str | int = 0) -> list[str]:
         """

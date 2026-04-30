@@ -28,8 +28,10 @@ class TestBCInvalidType:
     """Test BoundaryCondition with invalid bc_type."""
 
     def test_bc_invalid_type(self) -> None:
-        """Invalid bc_type -> ValueError."""
-        with pytest.raises(ValueError, match="bc_type must be one of"):
+        """Invalid bc_type -> ComponentError."""
+        from pyiwfm.core.exceptions import ComponentError
+
+        with pytest.raises(ComponentError, match="bc_type .* is invalid"):
             BoundaryCondition(id=1, bc_type="invalid", nodes=[1], values=[10.0], layer=1)
 
 
@@ -37,8 +39,10 @@ class TestBCNodesValuesMismatch:
     """Test BoundaryCondition nodes/values length mismatch."""
 
     def test_bc_nodes_values_mismatch(self) -> None:
-        """nodes and values different lengths -> ValueError."""
-        with pytest.raises(ValueError, match="same length"):
+        """nodes and values different lengths -> ComponentError."""
+        from pyiwfm.core.exceptions import ComponentError
+
+        with pytest.raises(ComponentError, match="length mismatch"):
             BoundaryCondition(
                 id=1,
                 bc_type="specified_head",
@@ -52,8 +56,10 @@ class TestBCGeneralHeadValidation:
     """Test general_head BC requires conductance."""
 
     def test_bc_general_head_missing_conductance(self) -> None:
-        """General head BC without conductance -> ValueError."""
-        with pytest.raises(ValueError, match="conductance"):
+        """General head BC without conductance -> ComponentError."""
+        from pyiwfm.core.exceptions import ComponentError
+
+        with pytest.raises(ComponentError, match="conductance"):
             BoundaryCondition(
                 id=1,
                 bc_type="general_head",

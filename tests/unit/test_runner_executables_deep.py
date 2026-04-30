@@ -207,12 +207,14 @@ class TestDownloadFromGithubPaths:
 
     def test_default_dest_when_none(self) -> None:
         """When dest=None, defaults to cache directory."""
+        from pyiwfm.core.exceptions import IWFMSubprocessError
+
         mgr = IWFMExecutableManager(version="1.2.3")
         with patch.object(mgr, "download_from_github", wraps=mgr.download_from_github):
             with patch("pyiwfm.runner.executables._detect_platform", return_value="Windows"):
                 with patch("pyiwfm.runner.executables.urllib.request.urlretrieve") as mock_dl:
                     mock_dl.side_effect = OSError("skip actual download")
-                    with pytest.raises(RuntimeError):
+                    with pytest.raises(IWFMSubprocessError):
                         mgr.download_from_github(dest=None)
 
 
