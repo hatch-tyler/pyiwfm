@@ -139,11 +139,32 @@ The Python implementations in ``calibration/iwfm2obs.py``,
   elevations and hydraulic conductivity was replaced with array slicing
   + matrix-vector products. Typical speedup: **~2-3×**.
 
-Heavy workloads (>10k extraction locations, e.g. InSAR-pixel subsidence
-calibration) are still slower in pure Python than the Fortran reference
-implementation. ``calibration.results_extraction`` exposes a
-``FortranBackend`` class that wraps the
-``ResultsExtract.exe`` binary if you have it on PATH; that is currently
-the recommended fast path for very heavy runs. A pyiwfm-native
-acceleration option (``pip install pyiwfm[fast-calib]``) using a
-Numba-JIT kernel is planned for v2.0.0b1.
+Three engines are available for the FE-interpolation hot path
+(``ResultsExtractor.extract`` and ``HeadAllExtractor.extract``):
+
+1. **Pure-numpy (default)** — vectorised across layers per spec; ships
+   with every pyiwfm install, no extra deps. Fast enough for typical
+   PEST-iteration workloads (10–100 locations).
+
+2. **Numba JIT** — install with ``pip install pyiwfm[fast-calib]``.
+   Triggers a ~80ms one-time JIT compile on first call (cached in
+   ``~/.numba/`` for future runs), then closes most of the gap to
+   the Fortran reference implementation. Benchmarks on a synthetic
+   5,000-location workload: pure-numpy 32 ms/frame, Numba 78 μs/frame
+   — about **400× faster**. Recommended for >1,000-location runs
+   (e.g. InSAR-pixel subsidence calibration).
+
+3. **Fortran subprocess** — ``ResultsExtract.exe`` from the IWFM
+   distribution wrapped via ``calibration.results_extraction.FortranBackend``.
+   Use when the .exe is already on PATH and the workload is so heavy
+   that even Numba's per-call setup cost matters (10k+ locations,
+   3650+ timesteps). Black-box reference implementation; pyiwfm
+   parses its output and presents the same ``ExtractionResult`` shape.
+
+Engine selection at runtime: ``calibration.results_extraction`` and
+``calibration.headall_extraction`` automatically use the Numba kernel
+when the ``fast-calib`` extra is installed; no code change is needed.
+The selected engine is logged at INFO level via the
+``pyiwfm.calibration._kernels`` logger when the kernel first loads.
+``FortranBackend`` is a separate class that callers instantiate
+explicitly when they want it.

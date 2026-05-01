@@ -9,6 +9,26 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 [Unreleased]
 ------------
 
+Added
+~~~~~
+
+- **Numba JIT kernel for the calibration FE-interpolation hot path**.
+  New ``pyiwfm.calibration._kernels`` module hosts both a pure-numpy
+  fallback (always available) and a ``@numba.njit(cache=True)`` JIT
+  kernel that activates when ``numba`` is installed. ``ResultsExtractor``
+  and ``HeadAllExtractor`` route through the kernel automatically;
+  no caller code change is needed. Synthetic benchmark on a
+  5,000-location workload: pure-numpy 32 ms/frame → Numba 78 μs/frame
+  (~400× speedup). Closes most of the gap to the Fortran
+  ``ResultsExtract.exe`` reference implementation for the heaviest
+  pyiwfm-native workloads. Opt-in via ``pip install pyiwfm[fast-calib]``
+  (the ~50MB ``numba`` install is not in the default install path so
+  users who never run results_extraction don't pay the cost).
+  Numerical equivalence between numpy and Numba paths is verified by
+  ``tests/unit/test_calibration_kernels.py``. See
+  ``docs/user_guide/calibration.rst`` § Performance for the
+  three-engine story (pure-numpy / Numba / FortranBackend).
+
 Changed
 ~~~~~~~
 

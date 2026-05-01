@@ -211,41 +211,64 @@ class HeadAllExtractor:
 
         result = ExtractionResult(times=times, data_type="HEAD")
 
-        # Build list of active wells with pre-computed index arrays
-        active_wells: list[tuple[str, NDArray, NDArray]] = []
+        # Build flat CSR-style arrays for the FE-interpolation kernel.
+        # See pyiwfm.calibration._kernels for the contract; both pure-
+        # numpy and Numba JIT backends accept this layout.
+        from pyiwfm.calibration._kernels import (
+            interp_fe_frame,
+            log_engine_status,
+        )
+
+        log_engine_status()
+
+        active_names: list[str] = []
+        node_indices_chunks: list[NDArray[np.int64]] = []
+        coeffs_chunks: list[NDArray[np.float64]] = []
+        offsets_list: list[int] = [0]
         for well in self._wells:
             if well.name not in self._fe_weights:
                 continue
             fe_info = self._fe_weights[well.name]
-            node_indices = np.array([nid - 1 for nid in fe_info["node_ids"]])
-            coeffs = fe_info["weights"]
-            active_wells.append((well.name, node_indices, coeffs))
+            node_indices_chunks.append(
+                np.asarray([nid - 1 for nid in fe_info["node_ids"]], dtype=np.int64)
+            )
+            coeffs_chunks.append(np.asarray(fe_info["weights"], dtype=np.float64))
+            offsets_list.append(offsets_list[-1] + len(fe_info["node_ids"]))
+            active_names.append(well.name)
 
-        # Pre-allocate per-layer arrays for all active wells
-        per_layer_arrays: dict[str, NDArray[np.float64]] = {}
-        for name, _, _ in active_wells:
-            per_layer_arrays[name] = np.full((n_times, n_layers), np.nan, dtype=np.float64)
+        n_active = len(active_names)
+        if n_active == 0:
+            return result
 
-        # Outer loop: timesteps (each frame read once)
-        # Per-frame FE interpolation. Inner per-layer loop is hoisted
-        # into one matrix-vector product (`coeffs @ sub`) per
-        # (well, timestep), eliminating Python overhead per layer.
-        # NaN propagation matches the loop version: any NaN in input
-        # nodes for a layer leaves that layer NaN in the output.
+        node_indices_flat = np.concatenate(node_indices_chunks)
+        coeffs_flat = np.concatenate(coeffs_chunks)
+        spec_offsets = np.asarray(offsets_list, dtype=np.int64)
+        frame_output = np.empty((n_active, n_layers), dtype=np.float64)
+
+        per_layer_arrays: dict[str, NDArray[np.float64]] = {
+            name: np.full((n_times, n_layers), np.nan, dtype=np.float64) for name in active_names
+        }
+
+        # Outer loop: timesteps (each frame read once). The kernel
+        # computes FE-interpolated values for ALL wells against this
+        # frame in one call.
         for ti, ts_idx in enumerate(time_indices):
             frame = loader.get_frame(ts_idx)  # (n_nodes, n_layers)
-            for name, node_indices, coeffs in active_wells:
-                sub = frame[node_indices, :]  # (n_fe_nodes, n_layers)
-                nan_per_layer = np.any(np.isnan(sub), axis=0)
-                interpolated = coeffs @ sub  # (n_layers,)
-                interpolated = np.where(nan_per_layer, np.nan, interpolated)
-                per_layer_arrays[name][ti, :] = interpolated
+            interp_fe_frame(
+                frame,
+                node_indices_flat,
+                coeffs_flat,
+                spec_offsets,
+                frame_output,
+            )
+            for s, name in enumerate(active_names):
+                per_layer_arrays[name][ti, :] = frame_output[s, :]
 
         # Populate result and compute T-weighted multi-layer heads.
         # The T-weighted aggregation is vectorised across timesteps
         # using zero-fill-on-NaN + broadcasted weights — same algorithm
         # as the per-ts loop, no Python overhead per timestep.
-        for name, _, _ in active_wells:
+        for name in active_names:
             per_layer = per_layer_arrays[name]
             result.per_layer[name] = per_layer
             result.names.append(name)

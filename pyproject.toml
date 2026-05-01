@@ -83,8 +83,15 @@ docs = [
     "triangle>=20200424 ; python_version < '3.14'",
     "gmsh>=4.11",
 ]
+fast-calib = [
+    # Numba JIT kernel for the calibration FE-interpolation hot path.
+    # See pyiwfm.calibration._kernels and docs/user_guide/calibration.rst
+    # § Performance. Adds ~50MB (numba + bundled LLVM); not in [all] so
+    # users who never run results_extraction don't pay the cost.
+    "numba>=0.59",
+]
 all = [
-    "pyiwfm[mesh,viz,webapi,pest]",
+    "pyiwfm[mesh,viz,webapi,pest,fast-calib]",
 ]
 
 [project.scripts]

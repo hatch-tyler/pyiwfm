@@ -255,49 +255,83 @@ class ResultsExtractor:
             incremental=self._incremental,
         )
 
-        # Build list of active specs with pre-computed index arrays
-        active_specs: list[tuple[ExtractionSpec, NDArray, NDArray]] = []
+        # Build flat CSR-style arrays for the FE-interpolation kernel.
+        # Both backends (pure-numpy and Numba JIT) take the same flat
+        # layout — see calibration/_kernels.py for the contract.
+        from pyiwfm.calibration._kernels import (
+            get_engine_name,
+            interp_fe_frame,
+            log_engine_status,
+        )
+
+        log_engine_status()
+
+        active_names: list[str] = []
+        node_indices_chunks: list[NDArray[np.int64]] = []
+        coeffs_chunks: list[NDArray[np.float64]] = []
+        offsets_list: list[int] = [0]
         for spec in self._specs:
             if spec.name not in self._fe_weights:
                 continue
             fe_info = self._fe_weights[spec.name]
-            node_indices = np.array([nid - 1 for nid in fe_info["node_ids"]])
-            coeffs = fe_info["weights"]
-            active_specs.append((spec, node_indices, coeffs))
+            node_indices_chunks.append(
+                np.asarray([nid - 1 for nid in fe_info["node_ids"]], dtype=np.int64)
+            )
+            coeffs_chunks.append(np.asarray(fe_info["weights"], dtype=np.float64))
+            offsets_list.append(offsets_list[-1] + len(fe_info["node_ids"]))
+            active_names.append(spec.name)
 
-        # Pre-allocate per-layer arrays
-        per_layer_arrays: dict[str, NDArray[np.float64]] = {}
-        for spec, _, _ in active_specs:
-            per_layer_arrays[spec.name] = np.full((n_times, n_layers), np.nan, dtype=np.float64)
+        n_active = len(active_names)
+        if n_active == 0:
+            return result
 
-        # Outer loop: timesteps (each frame read once). The inner work
-        # used to loop over layers and call np.dot once per (location,
-        # layer) — that's a Python-overhead-bound inner loop. We hoist
-        # the per-layer work into one matrix-vector product per
-        # (location, timestep): coeffs @ frame[node_indices, :] gives
-        # the FE-interpolated value for every layer at once. NaN
-        # propagation matches the loop version: any NaN in the input
-        # nodes for a given layer leaves that layer NaN in the output.
+        node_indices_flat = np.concatenate(node_indices_chunks)
+        coeffs_flat = np.concatenate(coeffs_chunks)
+        spec_offsets = np.asarray(offsets_list, dtype=np.int64)
+
+        # One contiguous (n_active, n_layers) buffer reused per frame —
+        # the kernel writes here in place. Per-frame copies into the
+        # final per-layer arrays land below.
+        frame_output = np.empty((n_active, n_layers), dtype=np.float64)
+
+        # Pre-allocate per-layer arrays for each spec (the public-facing
+        # output structure)
+        per_layer_arrays: dict[str, NDArray[np.float64]] = {
+            name: np.full((n_times, n_layers), np.nan, dtype=np.float64) for name in active_names
+        }
+
+        logger.info(
+            "Extracting %d locations × %d timesteps × %d layers via %s kernel",
+            n_active,
+            n_times,
+            n_layers,
+            get_engine_name(),
+        )
+
+        # Outer loop: timesteps (each frame read once). The kernel
+        # computes FE-interpolated values for ALL specs against this
+        # frame in one call — Numba inner loop runs in compiled C;
+        # pure-numpy runs the same algorithm in a tight Python for-loop.
         for ti, ts_idx in enumerate(time_indices):
             frame = loader.get_frame(ts_idx)  # (n_nodes, n_layers)
-            for spec, node_indices, coeffs in active_specs:
-                sub = frame[node_indices, :]  # (n_fe_nodes, n_layers)
-                # Per-layer NaN if ANY input node is NaN — matches the
-                # `if not np.any(np.isnan(vals))` check from the loop.
-                nan_per_layer = np.any(np.isnan(sub), axis=0)
-                # One matrix-vector product replaces the per-layer dot.
-                # nansum(coeffs * sub) would also work but np.dot via
-                # `coeffs @ sub` is the canonical numpy idiom.
-                interpolated = coeffs @ sub  # (n_layers,)
-                # Where any input node was NaN, propagate NaN.
-                interpolated = np.where(nan_per_layer, np.nan, interpolated)
-                per_layer_arrays[spec.name][ti, :] = interpolated
+            interp_fe_frame(
+                frame,
+                node_indices_flat,
+                coeffs_flat,
+                spec_offsets,
+                frame_output,
+            )
+            # Distribute kernel output into per-spec arrays.
+            for s, name in enumerate(active_names):
+                per_layer_arrays[name][ti, :] = frame_output[s, :]
 
         # Populate result and aggregate
-        for spec, _, _ in active_specs:
-            per_layer = per_layer_arrays[spec.name]
-            result.per_layer.setdefault(spec.name, per_layer)
-            result.names.append(spec.name)
+        spec_by_name = {spec.name: spec for spec in self._specs}
+        for name in active_names:
+            spec = spec_by_name[name]
+            per_layer = per_layer_arrays[name]
+            result.per_layer.setdefault(name, per_layer)
+            result.names.append(name)
 
             aggregated = self._aggregate_layers(per_layer, spec, n_layers)
 
@@ -305,9 +339,9 @@ class ResultsExtractor:
                 incr = np.full(n_times, np.nan, dtype=np.float64)
                 incr[0] = 0.0
                 incr[1:] = aggregated[1:] - aggregated[:-1]
-                result.values[spec.name] = incr
+                result.values[name] = incr
             else:
-                result.values[spec.name] = aggregated
+                result.values[name] = aggregated
 
         logger.info(
             "Extracted %s for %d points across %d timesteps",
