@@ -106,3 +106,44 @@ CLI Commands
    pyiwfm iwfm2obs --deduplicate-smp GW_OUT.smp --output GW_OUT_dedup.smp
 
 See the :doc:`/tutorials/calibration` tutorial for a complete walkthrough.
+
+Performance
+-----------
+
+The calibration pipeline runs once per PEST iteration, so its speed is
+the wall-clock bottleneck for parameter-estimation runs that drive the
+model 50–500 times.
+
+The Python implementations in ``calibration/iwfm2obs.py``,
+``calibration/results_extraction.py``, and
+``calibration/headall_extraction.py`` were vectorised in v2.0.0a2:
+
+- **FE interpolation per timestep** — the inner per-layer loop
+  (``for layer in range(n_layers): np.dot(coeffs, vals)``) was hoisted
+  into a single matrix-vector product (``coeffs @ frame[node_indices, :]``)
+  that computes all layers at once. Typical speedup: **~3× per frame**.
+
+- **Multi-layer aggregation** (``_aggregate_layers``) — the per-timestep
+  loop over (n_times) timesteps applying T-weighted averaging or
+  layer-summation was replaced with a single broadcasted numpy
+  expression. Typical speedup on a 365-timestep × 4-layer workload:
+  **~80× on the aggregation pass alone**.
+
+- **Composite-head computation** (``iwfm2obs_from_model``) — the
+  triple-nested loop building per-(timestep, layer) Python work was
+  replaced with one batched matrix-vector product per well. Typical
+  speedup: **~5×**.
+
+- **T-weighted layer-weight computation** (``compute_multilayer_weights``)
+  — the per-layer dict-build for FE interpolation of layer top/bottom
+  elevations and hydraulic conductivity was replaced with array slicing
+  + matrix-vector products. Typical speedup: **~2-3×**.
+
+Heavy workloads (>10k extraction locations, e.g. InSAR-pixel subsidence
+calibration) are still slower in pure Python than the Fortran reference
+implementation. ``calibration.results_extraction`` exposes a
+``FortranBackend`` class that wraps the
+``ResultsExtract.exe`` binary if you have it on PATH; that is currently
+the recommended fast path for very heavy runs. A pyiwfm-native
+acceleration option (``pip install pyiwfm[fast-calib]``) using a
+Numba-JIT kernel is planned for v2.0.0b1.

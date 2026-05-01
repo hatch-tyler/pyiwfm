@@ -9,8 +9,30 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 [Unreleased]
 ------------
 
-(no entries yet — work in progress on the ``next`` branch lands here
-between alpha tags.)
+Changed
+~~~~~~~
+
+- **Vectorised the calibration FE-interpolation hot paths** in
+  ``calibration/results_extraction.py``,
+  ``calibration/headall_extraction.py``, and
+  ``calibration/iwfm2obs.py``. The triple-nested
+  ``for ti in timesteps: for spec: for layer: np.dot(coeffs, vals)``
+  loop was replaced with one matrix-vector product per
+  (location, timestep) that computes all layers at once
+  (``coeffs @ frame[node_indices, :]``). The per-timestep
+  ``_aggregate_layers`` T-weighted/sum loops were replaced with
+  broadcasted numpy expressions. The ``iwfm2obs_from_model``
+  composite-head computation was reduced from a triple-nested
+  Python loop with per-(timestep, layer) f-string + dict lookup to
+  one batched matrix-vector product per well. The
+  ``compute_multilayer_weights`` per-layer dict-build for FE
+  interpolation of layer top/bottom elevations and hydraulic
+  conductivity was replaced with array slicing + matrix-vector
+  products. Numerical results are bit-identical to the loop
+  versions; benchmarks show ~3× per frame on FE interpolation,
+  ~80× on aggregation, ~5× on composite-head, ~2-3× on
+  multilayer-weights. See ``docs/user_guide/calibration.rst``
+  Performance section.
 
 [2.0.0a1] - 2026-04-30
 ----------------------

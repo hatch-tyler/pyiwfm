@@ -561,41 +561,33 @@ def compute_multilayer_weights(
         interp = FEInterpolator(grid)
         _elem_id, node_ids, weights = interp.interpolate(well.x, well.y)
 
-    # Interpolate layer elevations at well location
-    layer_tops = np.zeros(n_layers)
-    layer_bots = np.zeros(n_layers)
+    # Interpolate layer top/bottom elevations at the well location.
+    # Vectorised across layers — pull the FE-node rows from the
+    # stratigraphy arrays once, then take a single matrix-vector
+    # product per layer-of-stack via `weights @ slice`.
+    node_idx = np.asarray([nid - 1 for nid in node_ids], dtype=np.int64)
+    weights_arr = np.asarray(weights, dtype=np.float64)
+    top_slice = stratigraphy.top_elev[node_idx, :]  # (n_fe_nodes, n_layers)
+    bot_slice = stratigraphy.bottom_elev[node_idx, :]
+    layer_tops = weights_arr @ top_slice  # (n_layers,)
+    layer_bots = weights_arr @ bot_slice  # (n_layers,)
 
-    for k in range(n_layers):
-        # Layer top = bottom of layer above (or ground surface for first)
-        top_vals = {}
-        bot_vals = {}
-        for nid in node_ids:
-            idx = nid - 1  # 1-based to 0-based
-            top_vals[nid] = float(stratigraphy.top_elev[idx, k])
-            bot_vals[nid] = float(stratigraphy.bottom_elev[idx, k])
-
-        # Weighted interpolation using shape functions
-        layer_tops[k] = sum(top_vals[nid] * weights[i] for i, nid in enumerate(node_ids))
-        layer_bots[k] = sum(bot_vals[nid] * weights[i] for i, nid in enumerate(node_ids))
-
-    # Compute screen-layer intersection thickness
+    # Compute screen-layer intersection thickness. Vectorised:
+    # min/max with broadcasted scalars → element-wise clamp on overlap.
     bos = well.bottom_of_screen
     tos = well.top_of_screen
-
-    thicknesses = np.zeros(n_layers)
-    for k in range(n_layers):
-        overlap_top = min(tos, layer_tops[k])
-        overlap_bot = max(bos, layer_bots[k])
-        thicknesses[k] = max(0.0, overlap_top - overlap_bot)
+    overlap_top = np.minimum(tos, layer_tops)
+    overlap_bot = np.maximum(bos, layer_bots)
+    thicknesses = np.maximum(0.0, overlap_top - overlap_bot)
 
     # Get HK at well location for each layer
-    hk_at_well = np.zeros(n_layers)
     if hydraulic_conductivity.ndim == 1:
         hk_at_well = hydraulic_conductivity.copy()
     else:
-        for k in range(n_layers):
-            hk_vals = {nid: hydraulic_conductivity[k, nid - 1] for nid in node_ids}
-            hk_at_well[k] = sum(hk_vals[nid] * weights[i] for i, nid in enumerate(node_ids))
+        # Same vectorisation: pull FE-node columns once, single
+        # matrix-vector product across layers.
+        hk_slice = hydraulic_conductivity[:, node_idx]  # (n_layers, n_fe_nodes)
+        hk_at_well = hk_slice @ weights_arr  # (n_layers,)
 
     # Transmissivity per layer
     t_k = thicknesses * hk_at_well
@@ -608,7 +600,7 @@ def compute_multilayer_weights(
         w[nonzero[0] if len(nonzero) > 0 else 0] = 1.0
         return w
 
-    return t_k / t_total
+    return np.asarray(t_k / t_total, dtype=np.float64)
 
 
 def compute_composite_subsidence(
@@ -1145,18 +1137,25 @@ def iwfm2obs_from_model(
             first_layer = next(iter(layer_series.values()))
             times = first_layer.times
 
-            composites: list[tuple[datetime, float]] = []
-            for t_idx in range(len(times)):
-                layer_vals = np.zeros(n_layers)
-                for k in range(n_layers):
-                    lid = f"{spec.name}%{k + 1}"
-                    if lid in gw_results:
-                        layer_vals[k] = gw_results[lid].values[t_idx]
-                weighted = float(np.sum(layer_vals * all_weights[i]))
-                dt = times[t_idx].astype("datetime64[us]").astype(datetime)
-                composites.append((dt, weighted))
-
-            composite_results[spec.name] = composites
+            # Vectorised composite-head computation. The inner loop
+            # used to f-string-format a layer id and dict-lookup it
+            # once per (timestep, layer) — that's n_times × n_layers
+            # Python overhead, dominant for typical wells with N=hundreds
+            # of timesteps. Now the per-layer dict lookup happens once
+            # per layer (n_layers times total), filling a
+            # (n_times, n_layers) array; the weighted average is one
+            # batched matrix-vector product across all timesteps.
+            layer_matrix = np.zeros((len(times), n_layers))
+            for k in range(n_layers):
+                lid = f"{spec.name}%{k + 1}"
+                if lid in gw_results:
+                    layer_matrix[:, k] = gw_results[lid].values
+            weighted_per_ts = layer_matrix @ all_weights[i]  # (n_times,)
+            # Vectorise the datetime conversion the same way.
+            dt_arr = times.astype("datetime64[us]").astype(object)
+            composite_results[spec.name] = list(
+                zip(dt_arr.tolist(), weighted_per_ts.tolist(), strict=True)
+            )
 
         # Write outputs
         if composite_results:

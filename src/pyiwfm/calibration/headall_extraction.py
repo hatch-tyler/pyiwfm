@@ -227,15 +227,24 @@ class HeadAllExtractor:
             per_layer_arrays[name] = np.full((n_times, n_layers), np.nan, dtype=np.float64)
 
         # Outer loop: timesteps (each frame read once)
+        # Per-frame FE interpolation. Inner per-layer loop is hoisted
+        # into one matrix-vector product (`coeffs @ sub`) per
+        # (well, timestep), eliminating Python overhead per layer.
+        # NaN propagation matches the loop version: any NaN in input
+        # nodes for a layer leaves that layer NaN in the output.
         for ti, ts_idx in enumerate(time_indices):
             frame = loader.get_frame(ts_idx)  # (n_nodes, n_layers)
             for name, node_indices, coeffs in active_wells:
-                for layer in range(n_layers):
-                    vals = frame[node_indices, layer]
-                    if not np.any(np.isnan(vals)):
-                        per_layer_arrays[name][ti, layer] = float(np.dot(coeffs, vals))
+                sub = frame[node_indices, :]  # (n_fe_nodes, n_layers)
+                nan_per_layer = np.any(np.isnan(sub), axis=0)
+                interpolated = coeffs @ sub  # (n_layers,)
+                interpolated = np.where(nan_per_layer, np.nan, interpolated)
+                per_layer_arrays[name][ti, :] = interpolated
 
-        # Populate result and compute T-weighted multi-layer heads
+        # Populate result and compute T-weighted multi-layer heads.
+        # The T-weighted aggregation is vectorised across timesteps
+        # using zero-fill-on-NaN + broadcasted weights — same algorithm
+        # as the per-ts loop, no Python overhead per timestep.
         for name, _, _ in active_wells:
             per_layer = per_layer_arrays[name]
             result.per_layer[name] = per_layer
@@ -243,16 +252,13 @@ class HeadAllExtractor:
 
             t_weights = self._t_weights.get(name)
             if t_weights is not None:
-                ml_heads = np.full(n_times, np.nan, dtype=np.float64)
-                for ti in range(n_times):
-                    layer_heads = per_layer[ti, :]
-                    valid = ~np.isnan(layer_heads)
-                    if valid.any():
-                        w = t_weights[valid]
-                        w_sum = w.sum()
-                        if w_sum > 0:
-                            ml_heads[ti] = float(np.dot(w, layer_heads[valid]) / w_sum)
-                result.values[name] = ml_heads
+                valid = ~np.isnan(per_layer)
+                masked_vals = np.where(valid, per_layer, 0.0)
+                masked_w = np.where(valid, t_weights[None, :], 0.0)
+                numerator = np.sum(masked_vals * masked_w, axis=1)
+                denominator = np.sum(masked_w, axis=1)
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    result.values[name] = np.where(denominator > 0, numerator / denominator, np.nan)
 
         logger.info(
             "Extracted heads for %d wells across %d timesteps",

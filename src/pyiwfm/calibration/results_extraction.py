@@ -270,14 +270,28 @@ class ResultsExtractor:
         for spec, _, _ in active_specs:
             per_layer_arrays[spec.name] = np.full((n_times, n_layers), np.nan, dtype=np.float64)
 
-        # Outer loop: timesteps (each frame read once)
+        # Outer loop: timesteps (each frame read once). The inner work
+        # used to loop over layers and call np.dot once per (location,
+        # layer) — that's a Python-overhead-bound inner loop. We hoist
+        # the per-layer work into one matrix-vector product per
+        # (location, timestep): coeffs @ frame[node_indices, :] gives
+        # the FE-interpolated value for every layer at once. NaN
+        # propagation matches the loop version: any NaN in the input
+        # nodes for a given layer leaves that layer NaN in the output.
         for ti, ts_idx in enumerate(time_indices):
             frame = loader.get_frame(ts_idx)  # (n_nodes, n_layers)
             for spec, node_indices, coeffs in active_specs:
-                for layer in range(n_layers):
-                    vals = frame[node_indices, layer]
-                    if not np.any(np.isnan(vals)):
-                        per_layer_arrays[spec.name][ti, layer] = float(np.dot(coeffs, vals))
+                sub = frame[node_indices, :]  # (n_fe_nodes, n_layers)
+                # Per-layer NaN if ANY input node is NaN — matches the
+                # `if not np.any(np.isnan(vals))` check from the loop.
+                nan_per_layer = np.any(np.isnan(sub), axis=0)
+                # One matrix-vector product replaces the per-layer dot.
+                # nansum(coeffs * sub) would also work but np.dot via
+                # `coeffs @ sub` is the canonical numpy idiom.
+                interpolated = coeffs @ sub  # (n_layers,)
+                # Where any input node was NaN, propagate NaN.
+                interpolated = np.where(nan_per_layer, np.nan, interpolated)
+                per_layer_arrays[spec.name][ti, :] = interpolated
 
         # Populate result and aggregate
         for spec, _, _ in active_specs:
@@ -328,35 +342,44 @@ class ResultsExtractor:
             result = per_layer[:, spec.layer - 1].copy()
 
         elif self._data_type == "SUBSIDENCE":
-            # Sum over all layers (additive compaction)
-            for ti in range(n_times):
-                valid = ~np.isnan(per_layer[ti, :])
-                if valid.any():
-                    result[ti] = np.nansum(per_layer[ti, :])
+            # Sum over all layers (additive compaction). Vectorised over
+            # timesteps: any-valid mask lets us return NaN for timesteps
+            # that have no valid layers, matching the per-ts loop.
+            valid = ~np.isnan(per_layer)  # (n_times, n_layers)
+            any_valid = np.any(valid, axis=1)
+            sums = np.nansum(per_layer, axis=1)  # (n_times,) — 0 when all-NaN
+            result = np.where(any_valid, sums, np.nan)
 
         elif spec.layer == -1 and self._data_type == "HEAD":
-            # T-weighted multi-layer average
+            # T-weighted multi-layer average. Vectorised: zero out NaN
+            # entries in both the values and the broadcast weight array,
+            # then divide. Matches the per-ts loop's behaviour of
+            # skipping NaN layers and returning NaN when no valid layers
+            # contribute (denominator falls to 0).
             t_weights = self._t_weights.get(spec.name)
             if t_weights is not None:
-                for ti in range(n_times):
-                    valid = ~np.isnan(per_layer[ti, :])
-                    if valid.any():
-                        w = t_weights[valid]
-                        w_sum = w.sum()
-                        if w_sum > 0:
-                            result[ti] = float(np.dot(w, per_layer[ti, valid]) / w_sum)
+                valid = ~np.isnan(per_layer)
+                masked_vals = np.where(valid, per_layer, 0.0)
+                masked_w = np.where(valid, t_weights[None, :], 0.0)
+                numerator = np.sum(masked_vals * masked_w, axis=1)
+                denominator = np.sum(masked_w, axis=1)
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    result = np.where(denominator > 0, numerator / denominator, np.nan)
 
         else:
             # layer == 0, HEAD: average over active layers only.
             # Matches Fortran ResultsExtract which uses Stratigraphy%ActiveNode
             # to exclude inactive layers from the average.
             active_mask = self._active_layers.get(spec.name)
-            for ti in range(n_times):
-                valid = ~np.isnan(per_layer[ti, :])
-                if active_mask is not None:
-                    valid &= active_mask
-                if valid.any():
-                    result[ti] = float(np.mean(per_layer[ti, valid]))
+            valid = ~np.isnan(per_layer)
+            if active_mask is not None:
+                valid &= active_mask[None, :]
+            counts = np.sum(valid, axis=1)
+            masked_vals = np.where(valid, per_layer, 0.0)
+            sums = np.sum(masked_vals, axis=1)
+            with np.errstate(invalid="ignore"):
+                means = np.where(counts > 0, sums / counts, np.nan)
+            result = means
 
         return result
 
