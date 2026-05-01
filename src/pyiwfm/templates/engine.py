@@ -19,7 +19,11 @@ from numpy.typing import NDArray
 if TYPE_CHECKING:
     from pyiwfm.io.ascii.comment_metadata import CommentMetadata
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+
+# jinja2 is imported lazily inside ``TemplateEngine.__init__`` rather than
+# at module load time. The import costs ~30ms (loading the Jinja parser
+# and grammar tables) and only matters for write paths — read-only callers
+# of ``import pyiwfm`` shouldn't pay for it.
 
 # Default template directories
 TEMPLATES_DIR = Path(__file__).parent / "iwfm"
@@ -46,6 +50,10 @@ class TemplateEngine:
             template_dir: Custom template directory (optional)
             use_package_templates: If True, also load built-in templates
         """
+        # Lazy jinja2 import — see module-level note. Subsequent
+        # constructor calls are free thanks to sys.modules caching.
+        from jinja2 import ChoiceLoader, Environment, FileSystemLoader, select_autoescape
+
         loaders = []
 
         # Add custom template directory if provided
@@ -60,8 +68,6 @@ class TemplateEngine:
                 loaders.append(FileSystemLoader(str(LEGACY_TEMPLATES_DIR)))
 
         if loaders:
-            from jinja2 import ChoiceLoader
-
             self.env = Environment(
                 loader=ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0],
                 # Autoescape intentionally off: templates produce Fortran input

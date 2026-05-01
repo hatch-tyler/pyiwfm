@@ -349,6 +349,8 @@ class AppGrid:
         self._node_id_to_idx = None
         self._centroid_cache = None
         self._element_id_to_idx = None
+        self._subregion_areas_cache: dict[int, float] | None = None
+        self._boundary_node_ids_cache: list[int] | None = None
 
     def _build_node_mapping(self) -> None:
         """Build mapping from node ID to array index."""
@@ -530,18 +532,24 @@ class AppGrid:
         """
         Compute total area for each subregion.
 
+        Cached on first call; invalidated by ``_invalidate_cache()``.
+        Returns a copy so callers can mutate freely without poisoning
+        the cached dict.
+
         Returns
         -------
         dict[int, float]
             Dictionary mapping subregion ID to total area.
         """
-        areas: dict[int, float] = {}
-        for elem in self.elements.values():
-            sr_id = elem.subregion
-            if sr_id not in areas:
-                areas[sr_id] = 0.0
-            areas[sr_id] += elem.area
-        return areas
+        if self._subregion_areas_cache is None:
+            areas: dict[int, float] = {}
+            for elem in self.elements.values():
+                sr_id = elem.subregion
+                if sr_id not in areas:
+                    areas[sr_id] = 0.0
+                areas[sr_id] += elem.area
+            self._subregion_areas_cache = areas
+        return dict(self._subregion_areas_cache)
 
     def get_element_areas_array(self) -> NDArray[np.float64]:
         """
@@ -561,8 +569,16 @@ class AppGrid:
         return areas
 
     def get_boundary_node_ids(self) -> list[int]:
-        """Return list of boundary node IDs."""
-        return [nid for nid, node in self.nodes.items() if node.is_boundary]
+        """Return list of boundary node IDs.
+
+        Cached on first call; invalidated by ``_invalidate_cache()``.
+        Returns a copy so callers can mutate freely.
+        """
+        if self._boundary_node_ids_cache is None:
+            self._boundary_node_ids_cache = [
+                nid for nid, node in self.nodes.items() if node.is_boundary
+            ]
+        return list(self._boundary_node_ids_cache)
 
     def iter_nodes(self) -> Iterator[Node]:
         """Iterate over nodes in ID order."""

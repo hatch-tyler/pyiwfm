@@ -55,7 +55,14 @@ jobs:
       # parameterization that don't appear on 3.11+. mypy still runs in
       # the standalone `typecheck` job on Python 3.12, which uses the
       # current stubs and is the project's canonical type-check surface.
-      - run: pytest tests/unit/ -x --tb=short
+      # `-n auto` parallelises the unit test suite via pytest-xdist (already
+      # in [dev]). Cuts wall-clock from ~115s to ~30-50s on a 4-core runner.
+      # `-x` stays so a real failure short-circuits the matrix.
+      - run: pytest tests/unit/ -n auto -x --tb=short
+      # The coverage run stays serial — coverage.py + pytest-xdist can race
+      # on the .coverage SQLite file across worker processes. Coverage isn't
+      # latency-critical (one job out of the matrix), so the simpler
+      # serial run is the right trade.
       - run: pytest tests/unit/ --cov=pyiwfm --cov-report=xml
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
       - uses: codecov/codecov-action@v6
@@ -79,7 +86,9 @@ jobs:
       - run: pip install -e ".[docs]"
       # -W escalates Sphinx warnings to errors so doc-rot (broken refs,
       # missing modules, malformed RST) fails CI instead of silently shipping.
-      - run: sphinx-build -W docs docs/_build
+      # -j auto runs the build in parallel processes (typically 2-4× speedup
+      # for the autodoc-heavy module pages).
+      - run: sphinx-build -W -j auto docs docs/_build
 
   webapi-smoke:
     runs-on: ${{ matrix.os }}
@@ -124,4 +133,4 @@ jobs:
       - name: Install gmsh runtime deps
         run: sudo apt-get update && sudo apt-get install -y libglu1-mesa
       - run: pip install -e ".[all,dev]"
-      - run: pytest tests/integration/ -v --tb=short
+      - run: pytest tests/integration/ -n auto -v --tb=short
