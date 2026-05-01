@@ -88,10 +88,28 @@ See `DOCKER.md` for full configuration (env vars: PORT, TITLE, MODE, MODEL_PATH)
 src/pyiwfm/
 ├── core/              # Mesh, Stratigraphy, TimeSeries, IWFMModel, BaseComponent ABC, model_factory
 ├── components/        # Groundwater, Stream, Lake, RootZone, SmallWatershed, UnsaturatedZone (all inherit BaseComponent)
-├── io/                # 50+ file type readers/writers (ASCII, binary, HDF5, HEC-DSS), writer_config_base
-│                      # Also: timeseries_io (LazyNodalLoader, LazyTabularLoader,
-│                      # TimeSeriesCache), hydrograph_reader (text), area_loader,
-│                      # cache_builder, cache_loader (generic data loaders, no web deps)
+├── io/                # 13 subpackages (4 format-primitive + 9 domain) replacing
+│                      # 84 flat modules from v1.x. v1.x flat paths are gone.
+│                      # See docs/MIGRATION_v1_to_v2.md § 10 for the full mapping.
+│   ├── ascii/         #   format-primitive: line/comment helpers, comment metadata
+│   ├── binary/        #   format-primitive: Fortran binary + preprocessor binary
+│   ├── hdf5/          #   format-primitive: HDF5 archive (HDF5ModelReader/Writer)
+│   ├── dss/           #   format-primitive: HEC-DSS time-series (existing)
+│   ├── groundwater/   #   domain: reader/main_reader/writer + boundary/pumping/subsidence/tiledrain pairs
+│   ├── streams/       #   domain: reader/main_reader/writer/spec + bypass/diversion/inflow pairs + depletion
+│   ├── timeseries/    #   domain: reader/ascii/writer/lazy/compat (LazyNodalLoader, LazyTabularLoader, TimeSeriesCache)
+│   ├── budget/        #   domain: reader/zone_reader/checks/control/zone_control/excel/zone_excel/pest/_utils
+│   ├── rootzone/      #   domain: reader/writer/_base/area/native/nonponded/ponded/urban/v4x
+│   ├── preprocessor/  #   domain: reader/writer/mesh (canonical nodes/elements/stratigraphy)
+│   ├── simulation/    #   domain: reader/writer/messages
+│   ├── lakes/         #   domain: reader/writer
+│   ├── small_watershed/   # domain: reader/writer
+│   ├── unsaturated_zone/  # domain: reader/writer
+│   └── # cross-cutting flat modules (no clean cluster): base.py, writer_base.py,
+│       # writer_config_base.py, config.py, model_loader.py, model_writer.py,
+│       # model_packager.py, hydrograph_reader.py, drawdown.py, properties.py,
+│       # slicing.py, parametric_grid.py, smp.py, supply_adjust.py, zones.py,
+│       # cache_builder.py, cache_loader.py, area_loader.py
 ├── calibration/       # IWFM2OBS interpolation, model file discovery, obs well spec,
 │                      # multi-layer T-weighted averaging, CalcTypHyd, fuzzy c-means clustering
 ├── runner/            # IWFMRunner (subprocess execution), PEST++ integration, Scenario manager

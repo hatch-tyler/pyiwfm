@@ -1,34 +1,37 @@
 # Migrating from pyiwfm v1.x to v2.0
 
-> **Status:** v2.0 implementation complete on the
-> [`next` branch](V2_ROADMAP.md) as of 2026-04-27. Seven PRs landed
-> (see [§ Implementation status](#implementation-status) below). This
-> guide is ready to ship with the `v2.0.0a1` tag. The maintainer
-> tagging the alpha should also remove this file from `exclude_patterns`
-> in `docs/conf.py` so it appears in the published docs.
-
 This guide walks you through upgrading a project from pyiwfm v1.x to
-v2.0. See the [v2 roadmap](V2_ROADMAP.md) for the design rationale and
-the per-PR audit notes.
+v2.0. See `docs/V2_ROADMAP.md` in the source tree for the design rationale.
 
 ## TL;DR
 
 - **No deprecation shims.** v2.0 is a clean break — every renamed
-  module / class / function landed as a hard rename. The migration
-  guide (this document) carries the rename mapping.
-- **What changed in practice is small.** PR 1 renamed two loader
-  classes and consolidated converter functions; PR 4 moved two files
-  from `webapi/` to `io/`. Everything else (PRs 2, 5, 6, 7) was
-  internal restructuring with public APIs unchanged.
-- **`IWFMModel.from_*` classmethods are unchanged** — PR 2 split their
+  module / class / function landed as a hard rename. This document is
+  the rename mapping.
+- **The biggest change is the `pyiwfm.io/` restructure
+  ([§ 10](#10-io-restructure--format-primitive-subpackages))** — 84
+  flat modules collapse into 13 cohesive subpackages (4
+  format-primitive: `ascii/`, `binary/`, `hdf5/`, `dss/`; and 9
+  domain: `groundwater/`, `streams/`, `timeseries/`, `budget/`,
+  `rootzone/`, `preprocessor/`, `simulation/`, `lakes/`,
+  `small_watershed/`, `unsaturated_zone/`). Most callers use
+  `from pyiwfm.io import X` and are **unaffected** because the package
+  `__init__.py` re-exports everything; direct submodule importers
+  (e.g. `from pyiwfm.io.gw_writer import …`) need to update.
+- **The other v2.0 work is smaller in scope.** § 1 renamed two loader
+  classes; § 4 moved two files from `webapi/` to `io/`; § 8 unified
+  the mesh/stratigraphy writers; § 9 made CLI strict-by-default.
+  §§ 2, 3, 5, 6, 7 were internal restructuring with public APIs
+  unchanged.
+- **`IWFMModel.from_*` classmethods are unchanged** — § 2 split their
   bodies into `core/loaders/` but the dispatchers stay.
 - **`BaseComponent` users:** the v1.x docstring was misleading about
-  `validate()` returning a list of error strings. PR 3 corrected the
+  `validate()` returning a list of error strings. § 3 corrected the
   docstring; the actual contract (raise `ComponentError` on invalid
   state, return `None` on success) was already what every shipped
   component did. **No new abstract methods were added** — the
   speculative `to_dict`/`from_dict`/`clone`/`validate_against`
-  proposals were deferred (see [Section 3](#3-basecomponent-docstring-fix-pr-3)).
+  proposals were deferred (see [§ 3](#3-basecomponent-docstring-fix-pr-3)).
 
 ## Try v2 today
 
@@ -40,46 +43,61 @@ pip install --pre 'pyiwfm>=2.0.0a1,<3'
 python your_script.py
 ```
 
-If your code is affected by the renames in [Sections 1](#1-headhydrograph-cluster-consolidation)
-or [4](#4-move-webapislicingpy-and-webapipropertiespy-to-io), you'll
-see `ImportError` on first run. The error message names the missing
-module — match it against the corresponding section below to find the
-new path.
+If your code is affected by any of the renames listed in this guide,
+you'll see `ImportError` on first run. The error message names the
+missing module — search this document for that name to find the new
+path. The single biggest source of `ImportError`s will be direct
+submodule importers in
+[§ 10 (io restructure)](#10-io-restructure--format-primitive-subpackages);
+that section's path-mapping tables tell you what each old path moved
+to.
 
 ## Implementation status
 
-All seven PRs landed on the `next` branch between 2026-04-27 and
+All v2.0 work landed on the `next` branch between 2026-04-27 and
 the v2.0.0a1 tag. The "Outcome" column flags what differed from the
-original [v2 roadmap](V2_ROADMAP.md) targets:
+original v2 roadmap (`docs/V2_ROADMAP.md`) targets:
 
-| § | PR | Topic | Outcome |
+| § | PR(s) | Topic | Outcome |
 |---|---|---|---|
 | [1](#1-headhydrograph-cluster-consolidation) | 1 | Head/hydrograph cluster | Two classes (`LazyNodalLoader`, `LazyTabularLoader`) instead of one — divergent data shapes |
 | [2](#2-coremodelpy-constructor-split) | 2 | `core/model.py` constructor split | As designed: 2,498 → 958 lines |
 | [3](#3-basecomponent-docstring-fix-pr-3) | 3 | `BaseComponent` contract | **Deferred** speculative `to_dict`/`from_dict`/`clone`/`validate_against` (no current caller); shipped docstring fix only |
 | [4](#4-move-webapislicingpy-and-webapipropertiespy-to-io) | 4 | webapi → io move | As designed: pure rename |
-| [5](#5-split-runnerpestpy-into-a-package-writercache-splits-deferred) | 5 | Large writer splits | **Partial:** `runner/pest.py` split as designed; `gw_writer`/`stream_writer`/`cache_builder` deferred (single-class methods, would need mixins for cosmetic gain) |
+| [5](#5-split-runnerpestpy-into-a-package-writercache-splits-deferred) | 5 | Large writer splits | **Partial:** `runner/pest.py` split as designed; `gw_writer`/`stream_writer`/`cache_builder` deferred at the time, then largely addressed in § 10 below |
 | [6](#6-rootzone-v5-reader-consolidation) | 6 | Rootzone v5+ ABC | **Smaller than projected:** plan's −1,575 line target was based on assuming all 5 modules duplicated; actual was 3 modules and netted −32 lines, but real win is the architectural seam |
 | [7](#7-component-writer-scaffolding-pr-7) | 7 | BaseComponentWriter ABC | **Partial:** shipped `open_iwfm_file` + `write_element_group` shared helpers; deferred the speculative `BaseComponentWriter` strategy class (per-writer format diversity makes a uniform `WriteSpec` schema awkward) |
+| [8](#8-mesh--stratigraphy-writer-unification) | post-7 follow-up | Mesh + stratigraphy writer unification | Three parallel writer surfaces collapsed into one canonical implementation in `pyiwfm.io.preprocessor.mesh`. |
+| [9](#9-strict-by-default-loading-at-user-facing-surfaces) | post-7 follow-up | Strict-by-default CLI loading | `pyiwfm viewer` / `pyiwfm export` now raise on broken component files instead of silently dropping them. Opt out with `--allow-partial-load`. |
+| [10](#10-io-restructure--format-primitive-subpackages) | 1–15 of the io restructure | `io/` restructure — 84 flat → 13 subpackages | **The biggest section in this guide.** All flat `pyiwfm.io.<X>` paths for the 13 covered domains/formats are gone; use the package re-exports from `pyiwfm.io.<package>`. Includes the deferred big-file splits (`groundwater/reader.py` and `streams/reader.py`). |
 
-The "deferred" items in PRs 3, 5, and 7 follow the same pattern: an
+The "deferred" items in §§ 3, 5, and 7 follow the same pattern: an
 audit found no concrete caller would benefit from the proposed
 abstraction, and CLAUDE.md's "don't add abstractions beyond what the
 task requires" pushes back. Each deferral is documented in its
 section below with a recovery path if a real consumer appears later.
 
+> **Section ordering note:** § 10 (io restructure) appears in the file
+> *before* § 9 (strict-by-default CLI loading) because § 10 was
+> drafted as the io work landed and § 9 was a smaller standalone
+> change merged afterwards. The numbering reflects the order in
+> which each change was *designed*, not the order in which they
+> appear in the file. Use the table of contents to navigate.
+
 ## How to read this guide
 
-The seven subsections below correspond one-to-one with the seven PRs
-that shipped to v2.0:
+The ten subsections below cover every public-API change in v2.0:
 
-1. [Head/hydrograph cluster consolidation (PR 1)](#1-headhydrograph-cluster-consolidation)
-2. [`core/model.py` constructor split (PR 2)](#2-coremodelpy-constructor-split)
-3. [`BaseComponent` docstring fix (PR 3)](#3-basecomponent-docstring-fix-pr-3)
-4. [Move `webapi/slicing.py` and `webapi/properties.py` to `io/` (PR 4)](#4-move-webapislicingpy-and-webapipropertiespy-to-io)
-5. [Split `runner/pest.py` into a package (PR 5)](#5-split-runnerpestpy-into-a-package-writercache-splits-deferred)
-6. [Rootzone v5+ reader consolidation (PR 6)](#6-rootzone-v5-reader-consolidation)
-7. [Component-writer scaffolding (PR 7)](#7-component-writer-scaffolding-pr-7)
+1. [Head/hydrograph cluster consolidation](#1-headhydrograph-cluster-consolidation)
+2. [`core/model.py` constructor split](#2-coremodelpy-constructor-split)
+3. [`BaseComponent` docstring fix](#3-basecomponent-docstring-fix-pr-3)
+4. [Move `webapi/slicing.py` and `webapi/properties.py` to `io/`](#4-move-webapislicingpy-and-webapipropertiespy-to-io)
+5. [Split `runner/pest.py` into a package](#5-split-runnerpestpy-into-a-package-writercache-splits-deferred)
+6. [Rootzone v5+ reader consolidation](#6-rootzone-v5-reader-consolidation)
+7. [Component-writer scaffolding](#7-component-writer-scaffolding-pr-7)
+8. [Mesh + stratigraphy writer unification](#8-mesh--stratigraphy-writer-unification)
+9. [Strict-by-default loading at user-facing surfaces](#9-strict-by-default-loading-at-user-facing-surfaces)
+10. [`io/` restructure — format-primitive subpackages](#10-io-restructure--format-primitive-subpackages)
 
 Within each section, every individual API change uses this template:
 
@@ -1488,4 +1506,4 @@ methods because no concrete caller would benefit from them; see
 - **Docs:** [user guide](user_guide/index.rst), [API reference](api/index.rst)
 - **Issue tracker:** https://github.com/hatch-tyler/pyiwfm/issues —
   prefix v2-related issues with `[v2]` in the title for triage
-- **Roadmap context:** [V2_ROADMAP.md](V2_ROADMAP.md)
+- **Roadmap context:** `docs/V2_ROADMAP.md` in the source tree

@@ -171,6 +171,7 @@ Contents
    :caption: Development
 
    changelog
+   MIGRATION_v1_to_v2
    contributing
 
 Indices and tables

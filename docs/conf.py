@@ -32,6 +32,11 @@ extensions = [
     "myst_parser",
 ]
 
+# -- MyST parser settings ----------------------------------------------------
+# Auto-generate anchors for h1-h3 so markdown documents (notably the
+# migration guide) can use intra-document `[link](#section-slug)` references.
+myst_heading_anchors = 3
+
 # -- Plot directive settings -------------------------------------------------
 # Configuration for matplotlib plot rendering in documentation
 plot_include_source = True
@@ -124,9 +129,6 @@ exclude_patterns = [
     "PEST_INTERFACE_DESIGN.md",
     "PLAN_Complete_IO_Implementation.md",
     "V2_ROADMAP.md",
-    # MIGRATION_v1_to_v2.md is currently a template; move it INTO the
-    # toctree (not the exclude list) when v2.0.0a1 is tagged.
-    "MIGRATION_v1_to_v2.md",
 ]
 
 # Source suffix

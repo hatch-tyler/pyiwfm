@@ -9,6 +9,18 @@ and this project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0
 [Unreleased]
 ------------
 
+(no entries yet — work in progress on the ``next`` branch lands here
+between alpha tags.)
+
+[2.0.0a1] - 2026-04-30
+----------------------
+
+First v2.0 alpha release. Cuts the line between the v1.x series (which
+remains supported on ``master``) and the v2.0 series on ``next``. Every
+entry below was previously labelled ``[Unreleased]``; reclassified to
+``[2.0.0a1]`` at tag-cut time. See ``docs/MIGRATION_v1_to_v2.md`` for
+the full guide to upgrading.
+
 Added
 ~~~~~
 
