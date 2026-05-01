@@ -141,3 +141,16 @@ def filter_time_range(
     if end_dt is not None:
         df = df[df.index <= end_dt]
     return df
+
+
+def make_sheet_name(name: str) -> str:
+    """Create a valid Excel sheet name (max 31 chars, no invalid chars).
+
+    Excel forbids ``[]:*?/\\`` in sheet names and caps the length at 31.
+    Invalid characters are replaced with ``_``; the result is truncated.
+    """
+    invalid = r"[]:*?/\\"
+    clean = name
+    for ch in invalid:
+        clean = clean.replace(ch, "_")
+    return clean[:31]

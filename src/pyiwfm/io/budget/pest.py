@@ -81,12 +81,20 @@ def budget_to_pest_text(
                 continue
             df = df[available]
 
-        for ts_idx, (_, row) in enumerate(df.iterrows()):
-            for col in df.columns:
-                pest_name = f"{prefix}{loc_idx:02d}_{ts_idx:06d}"
-                value = float(row[col])
+        # Avoid df.iterrows() — slow row-by-row iteration. Pull the
+        # underlying numpy array once and stride through it; column
+        # names are budget-header strings (spaces, special chars) so
+        # itertuples would mangle them.
+        columns = list(df.columns)
+        data = df.to_numpy()
+        loc_name = loc_names[loc_idx]
+        for ts_idx in range(data.shape[0]):
+            ts_row = data[ts_idx]
+            pest_name = f"{prefix}{loc_idx:02d}_{ts_idx:06d}"
+            for col_idx, col in enumerate(columns):
+                value = float(ts_row[col_idx])
                 rows.append(
-                    f"{pest_name:<20s} {loc_names[loc_idx]:<20s} {col:<30s} {ts_idx:>8d} {value:>20.8e}"
+                    f"{pest_name:<20s} {loc_name:<20s} {col:<30s} {ts_idx:>8d} {value:>20.8e}"
                 )
 
     output_path.write_text("\n".join(rows) + "\n" if rows else "")

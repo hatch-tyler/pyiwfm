@@ -89,7 +89,7 @@ def open_iwfm_file(filepath: Path | str, header: str) -> Iterator[TextIO]:
         # v1.x:
         filepath = Path(filepath)
         ensure_parent_dir(filepath)
-        with open(filepath, "w") as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             write_comment(f, "IWFM ... File")
             ...
 

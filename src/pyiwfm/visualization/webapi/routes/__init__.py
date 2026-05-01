@@ -2,6 +2,8 @@
 API route modules for the FastAPI web viewer.
 """
 
+from __future__ import annotations
+
 from pyiwfm.visualization.webapi.routes.budgets import router as budgets_router
 from pyiwfm.visualization.webapi.routes.diagnostics import router as diagnostics_router
 from pyiwfm.visualization.webapi.routes.export import router as export_router

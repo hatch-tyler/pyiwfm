@@ -17,20 +17,11 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
-from pyiwfm.io.budget._utils import filter_time_range, format_title_lines
+from pyiwfm.io.budget._utils import filter_time_range, format_title_lines, make_sheet_name
 from pyiwfm.io.budget.control import BudgetControlConfig
 from pyiwfm.io.budget.reader import BudgetReader
 
 logger = logging.getLogger(__name__)
-
-
-def _make_sheet_name(name: str) -> str:
-    """Create a valid Excel sheet name (max 31 chars, no invalid chars)."""
-    invalid = r"[]:*?/\\"
-    clean = name
-    for ch in invalid:
-        clean = clean.replace(ch, "_")
-    return clean[:31]
 
 
 def budget_to_excel(
@@ -101,7 +92,7 @@ def budget_to_excel(
             continue
 
         loc_name = reader.locations[loc_idx]
-        sheet_name = _make_sheet_name(loc_name)
+        sheet_name = make_sheet_name(loc_name)
         ws = wb.create_sheet(title=sheet_name)
 
         # --- Title lines ---

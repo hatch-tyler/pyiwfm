@@ -23,6 +23,8 @@ Example:
     ...     dss.write_regular_timeseries(str(pathname), values, start_date)
 """
 
+from __future__ import annotations
+
 from pyiwfm.io.dss.pathname import (
     PARAMETER_CODES,
     VALID_INTERVALS,

@@ -16,20 +16,11 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
-from pyiwfm.io.budget._utils import filter_time_range
+from pyiwfm.io.budget._utils import filter_time_range, make_sheet_name
 from pyiwfm.io.budget.zone_control import ZBudgetControlConfig
 from pyiwfm.io.budget.zone_reader import ZBudgetReader
 
 logger = logging.getLogger(__name__)
-
-
-def _make_sheet_name(name: str) -> str:
-    """Create a valid Excel sheet name (max 31 chars, no invalid chars)."""
-    invalid = r"[]:*?/\\"
-    clean = name
-    for ch in invalid:
-        clean = clean.replace(ch, "_")
-    return clean[:31]
 
 
 def zbudget_to_excel(
@@ -98,7 +89,7 @@ def zbudget_to_excel(
     bold_font = Font(bold=True)
 
     for zone_name in zone_names:
-        sheet_name = _make_sheet_name(zone_name)
+        sheet_name = make_sheet_name(zone_name)
         ws = wb.create_sheet(title=sheet_name)
 
         # --- Title area ---
