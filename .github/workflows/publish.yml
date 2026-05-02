@@ -59,12 +59,38 @@ jobs:
       - name: Extract version from tag
         id: version
         run: echo "number=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Determine if release is stable
+        id: stable
+        # PEP 440 stable releases match `vMAJOR.MINOR.PATCH` with no suffix.
+        # Pre-releases (vX.Y.Za1, vX.Y.Zb2, vX.Y.Zrc1) and dev builds
+        # (vX.Y.Z.devN) only get the version-tag; the `:latest` Docker tag
+        # stays pinned to the latest stable release so
+        # `docker pull <user>/pyiwfm` keeps returning the stable image.
+        run: |
+          if [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is_stable=true" >> "$GITHUB_OUTPUT"
+            echo "Tag ${GITHUB_REF_NAME} is a stable release; will publish :latest"
+          else
+            echo "is_stable=false" >> "$GITHUB_OUTPUT"
+            echo "Tag ${GITHUB_REF_NAME} is a pre-release; skipping :latest"
+          fi
+      - name: Build Docker tag list
+        id: tags
+        run: |
+          tags="${{ secrets.DOCKERHUB_USERNAME }}/pyiwfm:${{ github.ref_name }}"
+          if [ "${{ steps.stable.outputs.is_stable }}" = "true" ]; then
+            tags="${tags}
+          ${{ secrets.DOCKERHUB_USERNAME }}/pyiwfm:latest"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           build-args: |
             VERSION=${{ steps.version.outputs.number }}
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/pyiwfm:${{ github.ref_name }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/pyiwfm:latest
+          tags: ${{ steps.tags.outputs.tags }}
