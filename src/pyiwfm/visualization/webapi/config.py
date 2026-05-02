@@ -101,6 +101,7 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         self._cache_loader: SqliteCacheLoader | None = None
         self._no_cache: bool = False  # Set True to disable cache
         self._rebuild_cache: bool = False  # Set True to force rebuild
+        self._cache_dir_override: Path | None = None  # CLI/programmatic override
 
     @property
     def model(self) -> IWFMModel | None:
@@ -144,6 +145,7 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs",
         no_cache: bool = False,
         rebuild_cache: bool = False,
+        cache_dir: Path | None = None,
     ) -> None:
         """Set the model and reset caches.
 
@@ -151,7 +153,7 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         seeing partially reset state.
         """
         with self._lock:
-            self._set_model_unlocked(model, crs, no_cache, rebuild_cache)
+            self._set_model_unlocked(model, crs, no_cache, rebuild_cache, cache_dir)
 
     def _set_model_unlocked(
         self,
@@ -159,6 +161,7 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         crs: str,
         no_cache: bool,
         rebuild_cache: bool,
+        cache_dir: Path | None = None,
     ) -> None:
         """Internal model setter (caller holds lock)."""
         self._model = model
@@ -202,6 +205,7 @@ class ModelState(MeshStateMixin, ResultsStateMixin, BudgetStateMixin, CacheState
         self._cache_loader = None
         self._no_cache = no_cache
         self._rebuild_cache = rebuild_cache
+        self._cache_dir_override = Path(cache_dir) if cache_dir is not None else None
 
         # Determine results directory from model metadata
         sim_file = model.metadata.get("simulation_file")

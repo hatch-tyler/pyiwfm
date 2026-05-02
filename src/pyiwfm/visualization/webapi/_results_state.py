@@ -92,8 +92,12 @@ class ResultsStateMixin:
                     loader = self._reconvert_head_hdf(head_path, n_layers)
                 self._head_loader = loader
             elif suffix in (".out", ".txt", ".dat"):
-                # Convert text file to HDF on-the-fly, cache alongside the original
-                hdf_cache = head_path.with_suffix(".head_cache.hdf")
+                # Convert text file to HDF on-the-fly, cache in pyiwfm_cache/.
+                legacy_cache = head_path.with_suffix(".head_cache.hdf")
+                hdf_cache = self._cache_path_for(  # type: ignore[attr-defined]
+                    legacy_cache.name,
+                    legacy_path=legacy_cache,
+                )
                 if not hdf_cache.exists() or hdf_cache.stat().st_mtime < head_path.stat().st_mtime:
                     from pyiwfm.io.timeseries.lazy import TimeSeriesCache
 
@@ -240,7 +244,7 @@ class ResultsStateMixin:
             from pyiwfm.io.area_loader import AreaDataManager
 
             mgr = AreaDataManager()
-            cache_dir = self._results_dir or Path(".")
+            cache_dir = self.get_cache_dir() or self._results_dir or Path(".")  # type: ignore[attr-defined]
             mgr.load_from_rootzone(rz, cache_dir)
             self._area_manager = mgr
             logger.info("Area manager initialized: %d timesteps", mgr.n_timesteps)
@@ -281,8 +285,11 @@ class ResultsStateMixin:
                 logger.warning("Failed to load hydrograph HDF5 %s: %s", path, e)
 
         if suffix in (".out", ".txt", ".dat"):
-            # Try auto-converting to HDF5 cache
-            hdf_cache = path.parent / (path.name + ".hydrograph_cache.hdf")
+            # Try auto-converting to HDF5 cache (in pyiwfm_cache/).
+            legacy_cache = path.parent / (path.name + ".hydrograph_cache.hdf")
+            hdf_cache = self._cache_path_for(  # type: ignore[attr-defined]
+                legacy_cache.name, legacy_path=legacy_cache
+            )
             try:
                 if not hdf_cache.exists() or hdf_cache.stat().st_mtime < path.stat().st_mtime:
                     from pyiwfm.io.timeseries.lazy import TimeSeriesCache

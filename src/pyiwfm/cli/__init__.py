@@ -37,6 +37,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Register subcommands
     from pyiwfm.cli.budget import add_budget_parser
+    from pyiwfm.cli.cache import add_cache_parser
     from pyiwfm.cli.calctyphyd import add_calctyphyd_parser
     from pyiwfm.cli.depletion import add_depletion_parser
     from pyiwfm.cli.drawdown import add_drawdown_parser
@@ -59,6 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     add_package_parser(subparsers)
     add_run_parser(subparsers)
     add_pest_parser(subparsers)
+    add_cache_parser(subparsers)
 
     args = parser.parse_args(argv)
 

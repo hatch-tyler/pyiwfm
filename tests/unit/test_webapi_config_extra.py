@@ -1027,7 +1027,9 @@ class TestAreaManager:
             result = state.get_area_manager()
 
         assert result is mock_mgr
-        mock_mgr.load_from_rootzone.assert_called_once_with(rz, tmp_path)
+        # AreaDataManager receives the consolidated cache subdir, not the
+        # bare results_dir, after the v2.0 cache-dir refactor.
+        mock_mgr.load_from_rootzone.assert_called_once_with(rz, tmp_path / "pyiwfm_cache")
 
     def test_creates_manager_default_cache_dir(self):
         """When _results_dir is None, uses Path('.')."""

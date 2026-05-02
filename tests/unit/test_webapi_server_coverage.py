@@ -121,6 +121,7 @@ class TestLaunchViewer:
                     crs="EPSG:4326",
                     no_cache=False,
                     rebuild_cache=False,
+                    cache_dir=None,
                 )
 
     def test_opens_browser_when_requested(self) -> None:

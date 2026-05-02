@@ -132,6 +132,7 @@ def launch_viewer(
     crs: str = "+proj=utm +zone=10 +datum=NAD83 +units=us-ft +no_defs",
     no_cache: bool = False,
     rebuild_cache: bool = False,
+    cache_dir: Path | None = None,
     observation_paths: list[Path] | None = None,
 ) -> None:
     """
@@ -157,6 +158,10 @@ def launch_viewer(
         Disable SQLite cache layer
     rebuild_cache : bool
         Force rebuild of SQLite cache
+    cache_dir : Path, optional
+        Override the cache directory.  Takes precedence over the
+        ``PYIWFM_CACHE_DIR`` env var and the default
+        ``<results_dir>/pyiwfm_cache/`` location.
     observation_paths : list[Path], optional
         Observation files (.smp, .csv) or directories to load at startup
     """
@@ -180,6 +185,7 @@ def launch_viewer(
         crs=crs,
         no_cache=no_cache,
         rebuild_cache=rebuild_cache,
+        cache_dir=cache_dir,
     )
 
     # Load observations if provided

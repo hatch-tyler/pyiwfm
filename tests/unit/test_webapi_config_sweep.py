@@ -588,14 +588,20 @@ class TestGetCachePathSourceDirFallback:
     """Cover _get_cache_path source_dir metadata fallback (line 1530)."""
 
     def test_source_dir_fallback(self, tmp_path: Path) -> None:
-        """Line 1530: When results_dir is None, use source_dir from metadata."""
+        """When results_dir is None, use source_dir from metadata.
+
+        After the v2.0 cache-dir refactor the file lives in a
+        ``pyiwfm_cache/`` subfolder rather than directly next to the
+        source data.
+        """
         ms = _make_model_state()
         model = _mock_model(metadata={"source_dir": str(tmp_path)})
         ms._model = model
         ms._results_dir = None
 
         result = ms._get_cache_path()
-        assert result == tmp_path / "model_cache.db"
+        assert result == tmp_path / "pyiwfm_cache" / "model_cache.db"
+        assert (tmp_path / "pyiwfm_cache").is_dir()
 
 
 # ---------------------------------------------------------------------------

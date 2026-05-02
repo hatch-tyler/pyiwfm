@@ -88,6 +88,16 @@ def add_viewer_parser(subparsers: argparse._SubParsersAction) -> None:  # type: 
         help="Force rebuild of SQLite cache on startup",
     )
     p.add_argument(
+        "--cache-dir",
+        type=Path,
+        default=None,
+        metavar="DIR",
+        help=(
+            "Directory to write cache files to. Overrides the PYIWFM_CACHE_DIR "
+            "env var and the default <results-dir>/pyiwfm_cache/ location."
+        ),
+    )
+    p.add_argument(
         "--observations",
         nargs="+",
         type=Path,
@@ -189,6 +199,7 @@ def run_viewer(args: argparse.Namespace) -> int:
             crs=args.crs,
             no_cache=getattr(args, "no_cache", False),
             rebuild_cache=getattr(args, "rebuild_cache", False),
+            cache_dir=getattr(args, "cache_dir", None),
             observation_paths=getattr(args, "observations", None),
         )
 

@@ -26,6 +26,7 @@ class CacheStateMixin:
     _cache_loader: SqliteCacheLoader | None
     _no_cache: bool
     _rebuild_cache: bool
+    _cache_dir_override: Path | None
     _budget_readers: dict[str, Any]
     _area_manager: AreaDataManager | None
 
@@ -143,14 +144,84 @@ class CacheStateMixin:
             return None
 
     def _get_cache_path(self) -> Path | None:
-        """Determine the cache file path from model source."""
+        """Resolve the SQLite cache file path inside the consolidated cache dir.
+
+        Migrates a legacy ``model_cache.db`` (and any sibling intermediate
+        HDF caches) sitting next to the source data on first access, so
+        users don't pay an unnecessary rebuild after the v2.0 refactor.
+        """
+        cache_dir = self.get_cache_dir()
+        if cache_dir is None:
+            return None
+        from pyiwfm.io.cache_paths import SQLITE_CACHE_NAME, migrate_legacy_caches
+
+        legacy_dirs: list[Path] = []
         if self._results_dir is not None:
-            return self._results_dir / "model_cache.db"
-        # Fall back to model source directory
+            legacy_dirs.append(self._results_dir)
         src = self._model.metadata.get("source_dir", "") if self._model else ""
         if src:
-            return Path(src) / "model_cache.db"
-        return None
+            legacy_dirs.append(Path(src))
+
+        head_paths: list[Path] = []
+        head_meta = self._model.metadata.get("head_output_file", "") if self._model else ""
+        if head_meta:
+            head_paths.append(Path(head_meta))
+
+        hydro_paths: list[Path] = []
+        for key in (
+            "gw_hydrograph_file",
+            "stream_hydrograph_file",
+            "subsidence_hydrograph_file",
+            "tile_drain_hydrograph_file",
+        ):
+            val = self._model.metadata.get(key, "") if self._model else ""
+            if val:
+                hydro_paths.append(Path(val))
+
+        migrate_legacy_caches(
+            cache_dir,
+            legacy_dirs=legacy_dirs,
+            head_source_paths=head_paths,
+            hydrograph_source_paths=hydro_paths,
+        )
+        return cache_dir / SQLITE_CACHE_NAME
+
+    def get_cache_dir(self) -> Path | None:
+        """Get (and create) the directory where pyiwfm caches should live."""
+        from pyiwfm.io.cache_paths import resolve_cache_dir
+
+        src = self._model.metadata.get("source_dir", "") if self._model else ""
+        return resolve_cache_dir(
+            results_dir=self._results_dir,
+            source_dir=Path(src) if src else None,
+            override=self._cache_dir_override,
+        )
+
+    def _cache_path_for(self, name: str, legacy_path: Path | None = None) -> Path:
+        """Return the cache path for ``name``, migrating ``legacy_path`` if present.
+
+        Falls back to the legacy path (or current directory) if no cache
+        directory can be resolved -- for example in tests that exercise
+        loaders without a model loaded.
+        """
+        cache_dir = self.get_cache_dir()
+        if cache_dir is None:
+            return legacy_path if legacy_path is not None else Path(name)
+        target = cache_dir / name
+        if (
+            legacy_path is not None
+            and legacy_path.exists()
+            and not target.exists()
+            and legacy_path.resolve() != target.resolve()
+        ):
+            try:
+                import shutil
+
+                shutil.move(str(legacy_path), str(target))
+                logger.info("Migrated legacy cache: %s -> %s", legacy_path, target)
+            except OSError as e:
+                logger.warning("Could not migrate %s -> %s: %s", legacy_path, target, e)
+        return target
 
     def get_cached_head_by_element(
         self, frame_idx: int, layer: int
