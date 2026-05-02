@@ -54,7 +54,7 @@ Changed
   multilayer-weights. See ``docs/user_guide/calibration.rst``
   Performance section.
 
-[2.0.0a1] - 2026-04-30
+[2.0.0a1] - 2026-05-01
 ----------------------
 
 First v2.0 alpha release. Cuts the line between the v1.x series (which
